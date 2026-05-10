@@ -80,7 +80,6 @@ function Tab({
       }`}
     >
       {tab.faviconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={tab.faviconUrl} alt="" width={14} height={14} className="rounded-sm" />
       ) : (
         <div className="h-3.5 w-3.5 rounded-sm bg-current opacity-30" />

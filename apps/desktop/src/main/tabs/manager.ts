@@ -1,7 +1,7 @@
 // Tab manager. Owns one WebContentsView per tab, attaches them to the
 // main BaseWindow, and broadcasts state changes to the renderer.
 
-import { BrowserWindow, WebContentsView } from 'electron';
+import { type BrowserWindow, WebContentsView } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { IPC, type TabState, type LayoutBounds } from '../../shared/ipc.js';
 import { historyStore } from '../storage/history.js';

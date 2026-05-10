@@ -2,7 +2,7 @@
 // The actual tool runtime is injected by the desktop app's main process,
 // so this package stays free of any Electron imports.
 
-import { z } from 'zod';
+import type { z } from 'zod';
 
 export type ToolName =
   | 'navigate'

@@ -3,6 +3,7 @@
 // never duplicate string literals across processes.
 
 import type { ClaudeModelId } from '@bullebrowser/agent-core';
+import type { AgentStepEvent } from './agent-events.js';
 
 export const IPC = {
   // Tabs
@@ -170,7 +171,7 @@ export interface BrowserBridge {
     run(req: AgentRunRequest): Promise<{ runId: string }>;
     cancel(runId: string): Promise<void>;
     onStep(
-      cb: (event: { runId: string; step: import('./agent-events.js').AgentStepEvent }) => void,
+      cb: (event: { runId: string; step: AgentStepEvent }) => void,
     ): () => void;
     onConfirmRequest(
       cb: (event: { runId: string; id: string; message: string }) => void,

@@ -65,8 +65,8 @@ export async function runAgent(input: AgentInput): Promise<string> {
         model: input.model,
         max_tokens: 4096,
         system: input.systemPrompt,
-        tools,
-        messages,
+        tools: tools as unknown as Anthropic.Messages.ToolUnion[],
+        messages: messages as unknown as Anthropic.Messages.MessageParam[],
       },
       { signal: input.context.signal },
     );

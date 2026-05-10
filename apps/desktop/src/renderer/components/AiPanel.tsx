@@ -6,6 +6,7 @@ import type { ClaudeModelId } from '@bullebrowser/agent-core';
 import { useAgentStore } from '../state/agent-store.js';
 import { useBrowserStore } from '../state/browser-store.js';
 import type { AppSettings } from '../../shared/ipc.js';
+import type { AgentStepEvent } from '../../shared/agent-events.js';
 
 const MODELS: { id: ClaudeModelId; label: string }[] = [
   { id: 'claude-opus-4-7', label: 'Opus 4.7 (most capable)' },
@@ -224,7 +225,7 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   );
 }
 
-function stepLabel(step: import('../../shared/agent-events.js').AgentStepEvent): string {
+function stepLabel(step: AgentStepEvent): string {
   switch (step.kind) {
     case 'thinking':
       return '· Thinking…';

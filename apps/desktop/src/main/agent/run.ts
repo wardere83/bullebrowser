@@ -3,7 +3,7 @@
 // and forwards every step over IPC to the renderer.
 
 import { randomUUID } from 'node:crypto';
-import { BrowserWindow } from 'electron';
+import { type BrowserWindow } from 'electron';
 import {
   DEFAULT_MODEL,
   findSkill,
