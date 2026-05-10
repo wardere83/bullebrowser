@@ -5,15 +5,15 @@ import { BrowserMockup } from '@/components/BrowserMockup';
 const HIGHLIGHTS = [
   {
     title: 'Grant scanner',
-    body: 'Sweep SAM.gov and Grants.gov for opportunities matching your keywords. The agent runs the searches, extracts the listings, and returns a comparison table sorted by deadline.',
+    body: 'Tell the agent what you fund or pursue. It opens SAM.gov and Grants.gov, runs the searches, follows listings into detail pages, and returns a comparison table sorted by deadline — no copy-paste, no tab juggling.',
   },
   {
     title: 'RFP comparator',
-    body: 'Paste 2 to 4 RFP URLs. The agent reads each, lifts the deadline, scope, eligibility, value, and evaluation criteria, and returns a side-by-side breakdown.',
+    body: 'Paste 2 to 4 RFP URLs. The agent reads each end-to-end, lifts the deadline, scope, eligibility, value, and evaluation criteria, and hands back a side-by-side breakdown ready for a go/no-go memo.',
   },
   {
     title: 'Compliance review',
-    body: 'Drop a document and the agent flags clauses against EEO, FERPA, ADA — plus any checklist items you add. Quoted clauses with section references.',
+    body: 'Drop a document. The agent reads every clause, flags issues against EEO, FERPA, and ADA — plus your own checklist — and returns quoted clauses with section references for fast partner review.',
   },
 ];
 
@@ -25,17 +25,18 @@ export default function HomePage() {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-              By {product.vendor}
+              Agentic AI · By {product.vendor}
             </div>
             <h1 className="text-4xl font-bold leading-tight md:text-5xl">
-              {product.tagline}.
+              An AI agent that drives a real browser — so you don&apos;t have to.
             </h1>
             <p className="mt-4 max-w-xl text-base text-ink-inverse/80">
-              {product.name} is a desktop browser with a built-in AI agent that
-              can navigate, read, and extract from the web on your behalf.
-              Purpose-built for grant research, RFP triage, and compliance
-              review. Bring your own Anthropic API key — your prompts go
-              straight to your provider, never to {product.vendor}.
+              {product.name} is a desktop browser with a Claude-powered agent
+              that opens tabs, reads pages, fills forms, and extracts
+              structured data on your behalf. Purpose-built for grant
+              scanning, RFP triage, and compliance review — the work that
+              eats your week. Bring your own Anthropic API key; your prompts
+              go straight to your provider, never to {product.vendor}.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <DownloadButton />
@@ -51,10 +52,11 @@ export default function HomePage() {
       </section>
 
       <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="text-3xl font-bold">Built for the work you actually do.</h2>
+        <h2 className="text-3xl font-bold">The agent does the work. You ship the deliverable.</h2>
         <p className="mt-2 max-w-2xl text-ink-secondary">
           Three preset skills for the most common research tasks at nonprofits,
-          government agencies, and the firms that serve them.
+          government agencies, and the firms that serve them — each one a
+          one-prompt replacement for an afternoon of browser tabs.
         </p>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {HIGHLIGHTS.map((h) => (
@@ -89,9 +91,10 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-20 text-center">
-        <h2 className="text-3xl font-bold">Ready to try it?</h2>
+        <h2 className="text-3xl font-bold">Put the agent to work.</h2>
         <p className="mt-2 text-ink-secondary">
-          Free download. Works on macOS, Windows, and Linux.
+          Free download. macOS, Windows, and Linux. Bring your own Anthropic
+          API key.
         </p>
         <div className="mt-8 inline-block">
           <DownloadButton />
