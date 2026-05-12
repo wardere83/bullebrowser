@@ -25,7 +25,7 @@ const __dirname = dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 
 async function createWindow() {
-  const preloadPath = join(__dirname, '../preload/index.js');
+  const preloadPath = join(__dirname, '../preload/index.cjs');
   mainWindow = createBrowserWindow({ preloadPath });
   tabManager.attachWindow(mainWindow);
   registerIpc(mainWindow);
