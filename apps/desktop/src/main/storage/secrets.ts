@@ -16,12 +16,22 @@ export function hasApiKey(): boolean {
 }
 
 export function setApiKey(plain: string): void {
+  const trimmed = plain.trim();
+  if (!trimmed) throw new Error('API key is empty.');
+  if (!/^sk-ant-/.test(trimmed)) {
+    throw new Error(
+      "That doesn't look like an Anthropic API key. Anthropic keys start with 'sk-ant-'.",
+    );
+  }
+  if (trimmed.length < 40) {
+    throw new Error('API key is too short to be valid.');
+  }
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error(
       'Secure storage is unavailable on this system. Aborting key save.',
     );
   }
-  const cipher = safeStorage.encryptString(plain).toString('base64');
+  const cipher = safeStorage.encryptString(trimmed).toString('base64');
   store.set('apiKeyEncrypted', cipher);
 }
 

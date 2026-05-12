@@ -27,8 +27,16 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async readPage(tabId: string) {
     const wc = this.wcFor(tabId);
-    const text = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as string;
-    return { title: wc.getTitle(), url: wc.getURL(), text };
+    const result = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as
+      | { text: string }
+      | { error: string };
+    if ('error' in result) {
+      throw new Error(
+        `${result.error} The read_page tool only supports HTML pages. ` +
+          `For PDFs or other documents, ask the user to convert to HTML or paste the text directly.`,
+      );
+    }
+    return { title: wc.getTitle(), url: wc.getURL(), text: result.text };
   }
 
   async click(tabId: string, target: string) {
@@ -48,12 +56,17 @@ export class DesktopToolRuntime implements ToolRuntime {
   }
 
   async extract(tabId: string, schema: Record<string, unknown>) {
-    // Render-side best-effort extractor: pulls all text + visible structure,
-    // then returns the schema echoed plus the raw text for the model to
-    // re-shape. This avoids a second model round-trip just for extraction.
+    // Render-side best-effort extractor: returns the requested schema echo
+    // plus a structured dump of the visible page (headings, links, tables,
+    // and readable body text) so the agent can re-shape it without a
+    // second navigation round-trip.
     const wc = this.wcFor(tabId);
-    const dump = (await wc.executeJavaScript(EXTRACT_STRUCTURED)) as unknown;
-    return { data: { _schema: schema, _document: dump } };
+    const structured = (await wc.executeJavaScript(EXTRACT_STRUCTURED)) as unknown;
+    const readable = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as
+      | { text: string }
+      | { error: string };
+    const text = 'text' in readable ? readable.text : '';
+    return { data: { _schema: schema, _document: structured, _text: text } };
   }
 
   async screenshot(tabId: string) {
@@ -140,11 +153,21 @@ export class DesktopToolRuntime implements ToolRuntime {
 
 const EXTRACT_READABLE_TEXT = `
   (function () {
+    const ct = (document.contentType || '').toLowerCase();
+    if (ct && !ct.includes('html') && !ct.includes('xml') && !ct.includes('text/plain')) {
+      return { error: 'Page content type is ' + ct + ' (not HTML).' };
+    }
+    if (!document.body) {
+      return { error: 'Document has no body to read.' };
+    }
     const clone = document.cloneNode(true);
     clone.querySelectorAll('script, style, noscript, iframe, svg').forEach((n) => n.remove());
     const main = clone.querySelector('main, article, [role="main"]') || clone.body;
     const text = (main.innerText || main.textContent || '').replace(/\\n{3,}/g, '\\n\\n').trim();
-    return text.slice(0, 50_000);
+    if (!text) {
+      return { error: 'Page is empty or rendered entirely client-side.' };
+    }
+    return { text: text.slice(0, 50_000) };
   })();
 `;
 
@@ -204,21 +227,50 @@ function TYPE_FN(target: string, text: string): string {
       el = forId ? document.getElementById(forId) : labelMatch.querySelector('input, textarea');
     }
     if (!el) {
+      const inputs = Array.from(
+        document.querySelectorAll('input, textarea, [contenteditable=""], [contenteditable="true"]'),
+      );
       el =
-        Array.from(document.querySelectorAll('input, textarea')).find((i) => {
+        inputs.find((i) => {
           const ph = (i as HTMLInputElement).placeholder?.toLowerCase() ?? '';
-          const aria = (i as HTMLInputElement).getAttribute('aria-label')?.toLowerCase() ?? '';
-          return ph.includes(tl) || aria.includes(tl);
+          const aria = i.getAttribute('aria-label')?.toLowerCase() ?? '';
+          const labelledBy = i.getAttribute('aria-labelledby');
+          let labelledText = '';
+          if (labelledBy) {
+            labelledText = labelledBy
+              .split(/\s+/)
+              .map((id) => document.getElementById(id)?.innerText?.toLowerCase() ?? '')
+              .join(' ');
+          }
+          const name = (i as HTMLInputElement).name?.toLowerCase() ?? '';
+          return (
+            ph.includes(tl) ||
+            aria.includes(tl) ||
+            labelledText.includes(tl) ||
+            name.includes(tl)
+          );
         }) ?? null;
     }
   }
   if (!el) throw new Error(`No input matched: ${target}`);
-  const input = el as HTMLInputElement | HTMLTextAreaElement;
-  input.focus();
-  input.value = text;
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-  return input.outerHTML.slice(0, 200);
+  const html = el as HTMLElement;
+  html.focus();
+  const isCE = html.isContentEditable;
+  if (isCE) {
+    html.textContent = text;
+    html.dispatchEvent(new InputEvent('input', { bubbles: true, data: text }));
+  } else {
+    const input = el as HTMLInputElement | HTMLTextAreaElement;
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+      'value',
+    )?.set;
+    if (nativeSetter) nativeSetter.call(input, text);
+    else input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  return html.outerHTML.slice(0, 200);
 }
 
 function WAIT_FOR_SELECTOR(selector: string, timeoutMs: number): Promise<boolean> {

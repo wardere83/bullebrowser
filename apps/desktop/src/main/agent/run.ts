@@ -16,6 +16,7 @@ import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { conversationStore } from '../storage/conversations.js';
 import { tabManager } from '../tabs/manager.js';
 import { getApiKey } from '../storage/secrets.js';
+import { getSettings } from '../storage/settings.js';
 import { DesktopToolRuntime } from './runtime.js';
 
 interface ActiveRun {
@@ -75,7 +76,16 @@ export async function startAgentRun(
   });
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
-  const systemPrompt = skill ? `${BASE_SYSTEM}\n\n${skill.systemPrompt}` : BASE_SYSTEM;
+  const userChecklist =
+    skill?.id === 'compliance_review' ? getSettings().complianceChecklist : [];
+  const checklistAppendix =
+    userChecklist.length > 0
+      ? '\n\nUser-provided checklist items (run these in addition to the defaults above, using the same Status legend):\n' +
+        userChecklist.map((i) => `- ${i}`).join('\n')
+      : '';
+  const systemPrompt = skill
+    ? `${BASE_SYSTEM}\n\n${skill.systemPrompt}${checklistAppendix}`
+    : BASE_SYSTEM;
 
   const ctx: ToolContext = {
     activeTabId,

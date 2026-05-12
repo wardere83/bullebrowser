@@ -17,6 +17,7 @@ export function SettingsModal() {
   const [keyDraft, setKeyDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -42,11 +43,14 @@ export function SettingsModal() {
   const saveKey = async () => {
     if (!keyDraft.trim()) return;
     setSaving(true);
+    setKeyError(null);
     try {
       await window.bullebrowser.secrets.setApiKey(keyDraft.trim());
       setHasKey(true);
       setKeyDraft('');
       setSavedAt(Date.now());
+    } catch (err) {
+      setKeyError(err instanceof Error ? err.message : 'Failed to save API key.');
     } finally {
       setSaving(false);
     }
@@ -83,22 +87,30 @@ export function SettingsModal() {
               </button>
             </div>
           ) : (
-            <div className="mt-2 flex gap-2">
-              <input
-                type="password"
-                value={keyDraft}
-                onChange={(e) => setKeyDraft(e.target.value)}
-                placeholder="sk-ant-…"
-                className="flex-1 rounded border border-line px-2 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-              <button
-                type="button"
-                onClick={saveKey}
-                disabled={saving || !keyDraft.trim()}
-                className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
-              >
-                {saving ? 'Saving…' : 'Save'}
-              </button>
+            <div className="mt-2 space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={keyDraft}
+                  onChange={(e) => {
+                    setKeyDraft(e.target.value);
+                    if (keyError) setKeyError(null);
+                  }}
+                  placeholder="sk-ant-…"
+                  className="flex-1 rounded border border-line px-2 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={saveKey}
+                  disabled={saving || !keyDraft.trim()}
+                  className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+              {keyError && (
+                <div className="text-xs text-danger">{keyError}</div>
+              )}
             </div>
           )}
         </div>

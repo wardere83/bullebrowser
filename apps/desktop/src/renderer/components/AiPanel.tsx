@@ -21,7 +21,9 @@ export function AiPanel() {
   const startRun = useAgentStore((s) => s.startRun);
   const status = useAgentStore((s) => s.status);
   const steps = useAgentStore((s) => s.steps);
+  const runId = useAgentStore((s) => s.runId);
   const openSettings = useBrowserStore((s) => s.openSettings);
+  const showSettings = useBrowserStore((s) => s.showSettings);
   const [draft, setDraft] = useState('');
   const [skillId, setSkillId] = useState<string>('');
   const [model, setModel] = useState<ClaudeModelId>('claude-opus-4-7');
@@ -43,6 +45,15 @@ export function AiPanel() {
       }
     })();
   }, [setConversations, setCurrent]);
+
+  // Re-check API key presence whenever the Settings modal closes — the user
+  // may have just added or cleared a key.
+  useEffect(() => {
+    if (showSettings) return;
+    void (async () => {
+      setHasKey(await window.bullebrowser.secrets.hasApiKey());
+    })();
+  }, [showSettings]);
 
   const send = async () => {
     if (!draft.trim() || !current) return;
@@ -154,14 +165,27 @@ export function AiPanel() {
             rows={3}
             className="flex-1 resize-none rounded border border-line bg-white p-2 text-sm text-ink-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:bg-surface-muted"
           />
-          <button
-            type="button"
-            onClick={() => void send()}
-            disabled={!hasKey || !draft.trim() || status === 'running'}
-            className="h-9 rounded bg-primary px-3 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
-          >
-            Send
-          </button>
+          {status === 'running' ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (runId) void window.bullebrowser.agent.cancel(runId);
+              }}
+              className="h-9 rounded border border-danger bg-white px-3 text-sm font-medium text-danger hover:bg-danger/10"
+              title="Cancel the running agent"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={!hasKey || !draft.trim()}
+              className="h-9 rounded bg-primary px-3 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
+            >
+              Send
+            </button>
+          )}
         </div>
       </footer>
     </aside>
