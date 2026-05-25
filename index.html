@@ -3,191 +3,226 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BulleBrowser — The Agentic Browser by Bulle Consulting</title>
-<meta name="description" content="A desktop browser with a built-in AI agent purpose-built for grant scanning, RFP triage, and compliance review. Bring your own Anthropic API key — your prompts go to your provider, never to us." />
-<meta property="og:title" content="BulleBrowser — Your Browser, With An Agent Inside" />
-<meta property="og:description" content="The agentic browser for grants, RFPs, and compliance work." />
+<title>BulleBrowser &mdash; The Agentic Browser</title>
+<meta name="description" content="A desktop browser with a built-in AI agent for grant scanning, RFP triage, and compliance review. Bring your own Anthropic API key &mdash; your prompts go to your provider, never to us." />
+<meta name="theme-color" content="#2B3E50" />
+<meta property="og:title" content="BulleBrowser &mdash; The Agentic Browser" />
+<meta property="og:description" content="A desktop browser with a built-in AI agent. By Bulle Consulting." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://bullebrowser.com" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --orange: #F26B2A; --orange-deep: #D9521A; --orange-soft: #FCE4D6;
-    --navy: #0F2845; --navy-light: #1E3A5F;
-    --ink: #1A1F2E; --ink-2: #4F5567; --ink-3: #7A8095;
-    --bg: #FFFFFF; --bg-2: #F7F4F0; --bg-3: #FBF7F2;
-    --line: rgba(15,40,69,0.10); --line-strong: rgba(15,40,69,0.18);
-    --shadow-sm: 0 1px 2px rgba(15,40,69,0.06), 0 1px 3px rgba(15,40,69,0.04);
-    --shadow-md: 0 6px 18px rgba(15,40,69,0.08), 0 2px 4px rgba(15,40,69,0.05);
-    --shadow-lg: 0 16px 40px rgba(15,40,69,0.10), 0 6px 12px rgba(15,40,69,0.06);
-    --radius: 14px; --radius-lg: 20px;
-    --serif: 'DM Serif Display', 'Times New Roman', serif;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --container: 1180px;
-  }
-  *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-  img, svg { display: block; max-width: 100%; height: auto; }
-  a { color: inherit; text-decoration: none; }
-  a:hover { color: var(--orange); }
-  h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.15; color: var(--navy); margin: 0; letter-spacing: -0.01em; }
-  h1 { font-size: clamp(2.2rem, 4.6vw, 3.6rem); }
-  h2 { font-size: clamp(1.8rem, 3.4vw, 2.6rem); }
-  h3 { font-size: 1.25rem; letter-spacing: -0.005em; }
-  p { margin: 0 0 1em; color: var(--ink-2); }
-  .container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 24px; }
-  .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--orange); margin-bottom: 14px; }
-  .eyebrow::before { content: ''; width: 28px; height: 2px; background: var(--orange); }
-  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 999px; font-weight: 600; font-size: 0.95rem; transition: all 200ms ease; cursor: pointer; border: none; font-family: inherit; }
-  .btn-primary { background: var(--orange); color: #fff; box-shadow: 0 4px 14px rgba(242,107,42,0.30); }
-  .btn-primary:hover { background: var(--orange-deep); color: #fff; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(242,107,42,0.36); }
-  .btn-ghost { background: transparent; color: var(--navy); border: 1.5px solid var(--line-strong); }
-  .btn-ghost:hover { border-color: var(--orange); color: var(--orange); }
-  .btn .ar { transition: transform 200ms ease; }
-  .btn:hover .ar { transform: translateX(3px); }
-  .nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: saturate(140%) blur(14px); border-bottom: 1px solid var(--line); }
-  .nav-row { display: flex; align-items: center; justify-content: space-between; height: 76px; }
-  .nav-brand { display: flex; align-items: center; gap: 12px; }
-  .nav-mark { width: 38px; height: 38px; border-radius: 10px; background: var(--navy); color: var(--orange); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 22px; line-height: 1; }
-  .nav-word { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--navy); }
-  .nav-links { display: flex; align-items: center; gap: 36px; }
-  .nav-links a { font-size: 0.95rem; font-weight: 500; color: var(--ink); }
-  .nav-cta { display: flex; align-items: center; gap: 14px; }
-  .nav-phone { font-weight: 600; color: var(--orange); font-size: 0.95rem; }
-  .nav-toggle { display: none; background: none; border: none; padding: 8px; cursor: pointer; color: var(--navy); }
-  .hero { position: relative; overflow: hidden; background: linear-gradient(160deg, var(--navy) 0%, var(--navy-light) 55%, #2A4F7A 100%); color: #fff; }
-  .hero::after { content: ''; position: absolute; right: -120px; top: -100px; width: 520px; height: 520px; background: radial-gradient(circle at center, rgba(242,107,42,0.30) 0%, transparent 65%); pointer-events: none; }
-  .hero-inner { display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; padding: 88px 0 96px; position: relative; z-index: 1; }
-  .hero h1 { color: #fff; }
-  .hero h1 .accent { color: var(--orange); font-style: italic; }
-  .hero-sub { font-size: 1.1rem; color: rgba(255,255,255,0.85); max-width: 540px; margin: 22px 0 32px; }
-  .hero-eyebrow { color: var(--orange); }
-  .hero-eyebrow::before { background: var(--orange); }
-  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; }
-  .hero-trust { display: flex; align-items: center; gap: 18px; font-size: 0.85rem; color: rgba(255,255,255,0.65); flex-wrap: wrap; }
-  .hero-trust strong { color: #fff; }
-  .hero-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: var(--radius-lg); padding: 14px; backdrop-filter: blur(8px); box-shadow: var(--shadow-lg); }
-  .browser-frame { background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.20); }
-  .browser-bar { background: #ECEEF3; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
-  .browser-dot { width: 11px; height: 11px; border-radius: 50%; }
-  .browser-url { flex: 1; background: #fff; border-radius: 6px; padding: 5px 12px; font-size: 0.8rem; color: var(--ink-2); font-family: ui-monospace, monospace; margin-left: 10px; }
-  .browser-body { background: #fff; padding: 18px; }
-  .agent-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
-  .agent-row:last-child { border-bottom: none; }
-  .agent-icon { width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px; background: var(--orange-soft); color: var(--orange-deep); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; }
-  .agent-row strong { color: var(--navy); font-size: 0.88rem; }
-  .agent-row span { color: var(--ink-2); font-size: 0.82rem; display: block; margin-top: 2px; }
+:root {
+  --color-primary-slate: #2B3E50;
+  --color-accent-teal:  #00B4D8;
+  --color-bg-white:     #FFFFFF;
+  --color-text-body:    #4F5862;
+  --color-bg-light:     #F4F6F8;
+  --navy-2:             #3A4F66;
+  --navy-soft:          rgba(43,62,80,0.06);
+  --gold-soft:          rgba(0,180,216,0.10);
+  --line:               rgba(43,62,80,0.08);
+  --line-strong:        rgba(43,62,80,0.16);
+  --text-heading:       #2B3E50;
+  --text-muted:         #6B7280;
+  --radius-sm:          8px;
+  --radius:             14px;
+  --radius-lg:          20px;
+  --shadow-sm:          0 1px 2px rgba(43,62,80,0.06), 0 1px 3px rgba(43,62,80,0.04);
+  --shadow-md:          0 6px 24px rgba(43,62,80,0.08), 0 2px 6px rgba(43,62,80,0.04);
+  --shadow-lg:          0 20px 50px rgba(43,62,80,0.10);
+  --ease:               cubic-bezier(0.22, 1, 0.36, 1);
+  --t:                  240ms;
+  --font:               'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  --container:          1180px;
+}
+* { box-sizing: border-box; }
+*::selection { background: var(--color-accent-teal); color: var(--color-primary-slate); }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--color-bg-white); color: var(--color-text-body); font-family: var(--font); font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: 'cv02','cv03','cv04','cv11'; }
+img, svg { display: block; max-width: 100%; height: auto; }
+a { color: var(--color-primary-slate); text-decoration: none; transition: color var(--t) var(--ease); }
+a:hover { color: var(--color-accent-teal); }
+h1, h2, h3, h4 { color: var(--text-heading); margin: 0; font-weight: 600; letter-spacing: -0.022em; line-height: 1.08; }
+h1 { font-size: clamp(2.6rem, 5.4vw, 4.4rem); font-weight: 700; letter-spacing: -0.034em; line-height: 1.04; }
+h2 { font-size: clamp(2rem, 3.8vw, 3.1rem); letter-spacing: -0.026em; line-height: 1.08; }
+h3 { font-size: 1.32rem; font-weight: 600; letter-spacing: -0.014em; line-height: 1.25; }
+p  { margin: 0 0 1em; }
+.lead { font-size: 1.22rem; color: var(--text-muted); line-height: 1.5; }
+.container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 28px; }
+.eyebrow { display: inline-block; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-accent-teal); margin-bottom: 18px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 28px; border-radius: 999px; font-weight: 500; font-size: 0.98rem; transition: all var(--t) var(--ease); cursor: pointer; border: 1px solid transparent; font-family: inherit; line-height: 1; }
+.btn-primary { background: var(--color-primary-slate); color: #fff; }
+.btn-primary:hover { background: var(--navy-2); color: #fff; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-gold { background: var(--color-accent-teal); color: var(--color-primary-slate); font-weight: 600; }
+.btn-gold:hover { background: #33C5E0; color: var(--color-primary-slate); transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0,180,216,0.30); }
+.btn-ghost { background: transparent; color: var(--color-primary-slate); border-color: var(--line-strong); }
+.btn-ghost:hover { color: var(--color-primary-slate); border-color: var(--color-primary-slate); }
+.btn .ar { display: inline-block; transition: transform var(--t) var(--ease); }
+.btn:hover .ar { transform: translateX(3px); }
+
+/* NAV */
+.nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.78); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
+.nav-row { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.nav-brand { display: flex; align-items: center; gap: 11px; font-weight: 600; color: var(--color-primary-slate); }
+.nav-brand:hover { color: var(--color-primary-slate); }
+.nav-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--color-primary-slate); color: var(--color-accent-teal); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+.nav-word { font-size: 1.02rem; letter-spacing: -0.01em; }
+.nav-links { display: flex; align-items: center; gap: 36px; }
+.nav-links a { font-size: 0.92rem; color: var(--color-text-body); font-weight: 500; }
+.nav-links a:hover { color: var(--color-primary-slate); }
+.nav-cta { display: flex; align-items: center; gap: 12px; }
+.nav-cta .btn { padding: 9px 18px; font-size: 0.88rem; }
+.nav-toggle { display: none; background: none; border: none; padding: 6px; cursor: pointer; color: var(--color-primary-slate); }
+
+/* HERO */
+.hero { position: relative; padding: 140px 0 120px; text-align: center; background: var(--color-bg-white); overflow: hidden; }
+.hero h1 { max-width: 16ch; margin: 0 auto 24px; }
+.hero h1 .gold { color: var(--color-accent-teal); }
+.hero-lead { max-width: 620px; margin: 0 auto 44px; }
+.hero-actions { display: inline-flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.hero-trust { margin-top: 44px; font-size: 0.86rem; color: var(--text-muted); letter-spacing: 0.01em; }
+.hero-trust strong { color: var(--color-primary-slate); font-weight: 600; }
+.hero-visual { margin-top: 84px; max-width: 980px; margin-left: auto; margin-right: auto; padding: 0 16px; }
+.browser-frame { background: var(--color-bg-white); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--line); }
+.browser-bar { background: var(--color-bg-light); padding: 14px 18px; display: flex; align-items: center; gap: 8px; }
+.browser-dot { width: 11px; height: 11px; border-radius: 50%; background: rgba(43,62,80,0.18); }
+.browser-dot:nth-child(2) { background: rgba(43,62,80,0.13); }
+.browser-dot:nth-child(3) { background: rgba(43,62,80,0.10); }
+.browser-url { flex: 1; background: var(--color-bg-white); border-radius: 6px; padding: 6px 14px; font-size: 0.8rem; color: var(--text-muted); font-family: ui-monospace, 'SF Mono', Menlo, monospace; margin-left: 12px; text-align: left; border: 1px solid var(--line); }
+.browser-body { background: var(--color-bg-white); padding: 32px 40px; }
+.agent-row { display: flex; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); align-items: flex-start; text-align: left; }
+.agent-row:last-child { border-bottom: none; }
+.agent-icon { width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; background: var(--navy-soft); color: var(--color-primary-slate); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; }
+.agent-row strong { color: var(--color-primary-slate); font-size: 0.95rem; font-weight: 600; display: block; margin-bottom: 2px; }
+.agent-row span { color: var(--text-muted); font-size: 0.88rem; }
+
+/* SECTIONS */
+section { padding: 130px 0; }
+section.alt { background: var(--color-bg-light); }
+.section-head { text-align: center; max-width: 720px; margin: 0 auto 80px; }
+.section-head .eyebrow { color: var(--color-accent-teal); }
+.section-head .lead { margin-top: 18px; }
+
+/* THREE SKILLS */
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.skill-card { background: var(--color-bg-white); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 44px 36px; transition: all 320ms var(--ease); display: flex; flex-direction: column; }
+.skill-card:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.skill-icon { width: 52px; height: 52px; border-radius: 12px; background: var(--color-primary-slate); color: var(--color-accent-teal); display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+.skill-icon svg { width: 24px; height: 24px; }
+.skill-card h3 { margin-bottom: 12px; }
+.skill-card p { font-size: 1rem; color: var(--color-text-body); line-height: 1.6; flex: 1; }
+.skill-card .more { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 0.9rem; color: var(--color-primary-slate); margin-top: 24px; }
+.skill-card .more:hover { color: var(--color-accent-teal); }
+.skill-card .more svg { transition: transform var(--t) var(--ease); }
+.skill-card .more:hover svg { transform: translateX(3px); }
+
+/* VISION */
+.vision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 96px; align-items: center; }
+.vision-text .eyebrow { color: var(--color-accent-teal); }
+.vision-text h2 { margin-bottom: 22px; }
+.vision-text p { font-size: 1.08rem; line-height: 1.6; color: var(--color-text-body); }
+.vision-list { list-style: none; padding: 0; margin: 32px 0 0; display: grid; gap: 16px; }
+.vision-list li { display: flex; gap: 14px; align-items: flex-start; color: var(--color-primary-slate); font-size: 0.98rem; font-weight: 500; }
+.vision-list svg { flex-shrink: 0; margin-top: 4px; color: var(--color-accent-teal); }
+.vision-quote { background: var(--color-primary-slate); border-radius: var(--radius-lg); padding: 56px 48px; color: #fff; position: relative; overflow: hidden; }
+.vision-quote::before { content: ''; position: absolute; top: -80px; right: -80px; width: 240px; height: 240px; background: radial-gradient(circle at center, rgba(0,180,216,0.20), transparent 70%); }
+.vision-quote-mark { color: var(--color-accent-teal); font-size: 3rem; line-height: 1; font-weight: 700; }
+.vision-quote-text { font-size: 1.65rem; line-height: 1.32; font-weight: 500; letter-spacing: -0.012em; margin: 18px 0 28px; }
+.vision-quote-attr { font-size: 0.85rem; color: rgba(255,255,255,0.6); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* HOW IT WORKS — minimalist horizontal steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; }
+.step { position: relative; }
+.step-num { font-size: 0.78rem; letter-spacing: 0.14em; color: var(--color-accent-teal); font-weight: 600; margin-bottom: 18px; }
+.step h3 { margin-bottom: 12px; }
+.step p { color: var(--color-text-body); font-size: 1rem; line-height: 1.6; margin: 0; }
+
+/* PROMISES */
+.promises { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.promise { background: var(--color-bg-white); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 36px 32px; }
+.promise-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: var(--color-accent-teal); margin-bottom: 16px; }
+.promise-tag .dot { width: 6px; height: 6px; background: var(--color-accent-teal); border-radius: 50%; }
+.promise h3 { margin-bottom: 10px; }
+.promise p { font-size: 0.96rem; line-height: 1.6; color: var(--color-text-body); margin: 0; }
+
+/* STATS BAND */
+.stats { background: var(--color-primary-slate); color: #fff; padding: 96px 0; position: relative; overflow: hidden; }
+.stats::after { content: ''; position: absolute; right: -120px; bottom: -120px; width: 360px; height: 360px; background: radial-gradient(circle at center, rgba(0,180,216,0.18), transparent 70%); pointer-events: none; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; text-align: center; position: relative; }
+.stat-num { font-size: 3.6rem; color: var(--color-accent-teal); line-height: 1; font-weight: 700; letter-spacing: -0.03em; }
+.stat-label { font-size: 0.82rem; letter-spacing: 0.10em; text-transform: uppercase; color: rgba(255,255,255,0.7); margin-top: 14px; font-weight: 500; }
+
+/* CTA */
+.cta { padding: 130px 0; text-align: center; }
+.cta h2 { max-width: 18ch; margin: 0 auto 18px; }
+.cta .lead { max-width: 520px; margin: 0 auto 40px; }
+.cta-actions { display: inline-flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+/* FOOTER */
+footer { background: var(--color-primary-slate); color: rgba(255,255,255,0.65); padding: 88px 0 32px; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 56px; }
+.footer-brand-row { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+.footer-brand-row .nav-mark { background: rgba(255,255,255,0.10); }
+.footer-brand-row .nav-word { color: #fff; }
+footer p { color: rgba(255,255,255,0.6); font-size: 0.93rem; line-height: 1.6; }
+.footer-col h4 { color: #fff; font-size: 0.78rem; letter-spacing: 0.10em; text-transform: uppercase; font-weight: 600; margin: 0 0 18px; }
+.footer-col ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.footer-col a { color: rgba(255,255,255,0.65); font-size: 0.92rem; }
+.footer-col a:hover { color: var(--color-accent-teal); }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,0.10); margin-top: 64px; padding-top: 26px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: rgba(255,255,255,0.50); font-size: 0.85rem; }
+
+/* RESPONSIVE */
+@media (max-width: 1023px) {
+  .nav-links, .nav-cta .nav-only-desktop { display: none; }
+  .nav-toggle { display: inline-flex; }
+  .hero { padding: 96px 0 84px; }
+  .hero-visual { margin-top: 56px; }
+  .grid-3, .promises, .steps { grid-template-columns: 1fr; }
+  .vision-grid { grid-template-columns: 1fr; gap: 56px; }
+  .vision-quote { padding: 44px 36px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 56px 24px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
   section { padding: 96px 0; }
-  section.alt { background: var(--bg-3); }
-  .section-head { text-align: center; max-width: 740px; margin: 0 auto 56px; }
-  .section-head .eyebrow { justify-content: center; }
-  .section-head p { color: var(--ink-2); font-size: 1.05rem; margin-top: 14px; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-  .svc-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 36px 30px; transition: all 250ms ease; position: relative; overflow: hidden; }
-  .svc-card::before { content: ''; position: absolute; left: 0; top: 0; height: 4px; width: 100%; background: var(--orange); transform: scaleX(0); transform-origin: left; transition: transform 300ms ease; }
-  .svc-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: transparent; }
-  .svc-card:hover::before { transform: scaleX(1); }
-  .svc-icon { width: 64px; height: 64px; border-radius: 16px; background: var(--orange-soft); color: var(--orange-deep); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
-  .svc-icon svg { width: 30px; height: 30px; }
-  .svc-card h3 { margin-bottom: 10px; }
-  .svc-card p { color: var(--ink-2); font-size: 0.95rem; }
-  .svc-link { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.9rem; color: var(--orange); margin-top: 16px; }
-  .vision-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 64px; align-items: center; }
-  .vision-image { position: relative; }
-  .vision-image-frame { aspect-ratio: 4 / 5; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg); background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%); display: flex; align-items: center; justify-content: center; padding: 40px; color: #fff; position: relative; }
-  .vision-image-frame::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 30%, rgba(242,107,42,0.20), transparent 60%); }
-  .vision-quote { position: relative; z-index: 1; text-align: center; }
-  .vision-quote svg { color: var(--orange); margin: 0 auto 20px; }
-  .vision-quote-text { font-family: var(--serif); font-size: 1.6rem; line-height: 1.3; }
-  .vision-quote-attr { font-size: 0.85rem; color: rgba(255,255,255,0.7); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 18px; }
-  .vision-badge { position: absolute; right: -24px; bottom: 32px; background: var(--orange); color: #fff; padding: 22px 24px; border-radius: var(--radius); box-shadow: var(--shadow-lg); text-align: center; min-width: 130px; }
-  .vision-badge-num { font-family: var(--serif); font-size: 2.6rem; line-height: 1; }
-  .vision-badge-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.9; margin-top: 6px; }
-  .vision-text h2 { margin-bottom: 18px; }
-  .vision-list { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 14px; }
-  .vision-list li { display: flex; gap: 14px; align-items: flex-start; color: var(--ink); font-size: 0.98rem; }
-  .vision-list svg { flex-shrink: 0; margin-top: 4px; color: var(--orange); }
-  .promises { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-  .promise { background: #fff; border-radius: var(--radius-lg); padding: 36px 28px; box-shadow: var(--shadow-sm); border: 1px solid var(--line); display: flex; gap: 22px; align-items: flex-start; transition: all 250ms ease; }
-  .promise:hover { box-shadow: var(--shadow-md); }
-  .promise-num { width: 54px; height: 54px; flex-shrink: 0; border-radius: 50%; background: var(--navy); color: var(--orange); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 1.4rem; }
-  .promise h3 { margin-bottom: 8px; }
-  .promise p { font-size: 0.93rem; margin: 0; }
-  .stats { background: var(--navy); color: #fff; padding: 72px 0; position: relative; overflow: hidden; }
-  .stats::before { content: ''; position: absolute; left: -120px; bottom: -120px; width: 360px; height: 360px; background: radial-gradient(circle at center, rgba(242,107,42,0.25), transparent 65%); }
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; position: relative; }
-  .stat-num { font-family: var(--serif); font-size: 3rem; color: var(--orange); line-height: 1; }
-  .stat-label { font-size: 0.85rem; letter-spacing: 0.10em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-top: 10px; }
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; counter-reset: step; }
-  .step { padding: 32px 28px; border-radius: var(--radius-lg); background: #fff; border: 1px solid var(--line); position: relative; }
-  .step::before { counter-increment: step; content: counter(step, decimal-leading-zero); position: absolute; right: 24px; top: 22px; font-family: var(--serif); font-size: 2.4rem; color: var(--orange-soft); line-height: 1; }
-  .step h3 { margin-bottom: 10px; padding-right: 50px; }
-  .step p { font-size: 0.93rem; margin: 0; }
-  .quote-strip { background: var(--bg-3); padding: 88px 0; }
-  .quote-card { background: #fff; border-radius: var(--radius-lg); padding: 48px; box-shadow: var(--shadow-md); text-align: center; max-width: 820px; margin: 0 auto; position: relative; }
-  .quote-card::before { content: '\201C'; position: absolute; top: -28px; left: 50%; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: var(--orange); color: #fff; font-family: var(--serif); font-size: 3.2rem; line-height: 64px; }
-  .quote-text { font-family: var(--serif); font-size: 1.4rem; color: var(--navy); line-height: 1.4; margin: 14px 0 22px; }
-  .quote-meta { color: var(--ink-2); font-size: 0.92rem; }
-  .quote-meta strong { color: var(--navy); }
-  .cta { background: linear-gradient(135deg, var(--orange) 0%, var(--orange-deep) 100%); color: #fff; padding: 80px 0; text-align: center; }
-  .cta h2 { color: #fff; margin-bottom: 14px; }
-  .cta p { color: rgba(255,255,255,0.9); font-size: 1.05rem; max-width: 580px; margin: 0 auto 28px; }
-  .cta-btn { background: #fff; color: var(--orange-deep); }
-  .cta-btn:hover { background: var(--navy); color: #fff; }
-  .cta-secondary { color: #fff; border-color: rgba(255,255,255,0.4); }
-  .cta-secondary:hover { background: rgba(255,255,255,0.10); color: #fff; border-color: #fff; }
-  footer { background: var(--navy); color: rgba(255,255,255,0.75); padding: 72px 0 28px; }
-  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; }
-  .footer-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-  .footer-brand .nav-mark { background: rgba(255,255,255,0.10); color: var(--orange); }
-  .footer-brand .nav-word { color: #fff; }
-  footer p { color: rgba(255,255,255,0.65); font-size: 0.93rem; }
-  .footer-col h4 { color: #fff; font-family: var(--sans); font-size: 0.85rem; letter-spacing: 0.10em; text-transform: uppercase; margin: 0 0 18px; }
-  .footer-col ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-  .footer-col a { color: rgba(255,255,255,0.70); font-size: 0.92rem; }
-  .footer-col a:hover { color: var(--orange); }
-  .footer-bottom { border-top: 1px solid rgba(255,255,255,0.10); margin-top: 56px; padding-top: 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: rgba(255,255,255,0.55); font-size: 0.85rem; }
-  @media (max-width: 980px) {
-    .nav-links, .nav-phone { display: none; }
-    .nav-toggle { display: inline-flex; }
-    .hero-inner { grid-template-columns: 1fr; padding: 64px 0 72px; gap: 40px; }
-    .grid-3, .promises, .steps { grid-template-columns: 1fr 1fr; }
-    .vision-grid { grid-template-columns: 1fr; gap: 40px; }
-    .vision-badge { right: 16px; }
-    .stats-grid { grid-template-columns: 1fr 1fr; gap: 40px 20px; }
-    .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
-    section { padding: 72px 0; }
-  }
-  @media (max-width: 640px) {
-    .container { padding: 0 20px; }
-    .nav-row { height: 64px; }
-    section { padding: 60px 0; }
-    .grid-3, .promises, .steps { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: 1fr 1fr; gap: 36px 16px; }
-    .stat-num { font-size: 2.4rem; }
-    .footer-grid { grid-template-columns: 1fr; gap: 32px; }
-    .quote-card { padding: 36px 24px; }
-    .quote-text { font-size: 1.15rem; }
-    .vision-badge { position: static; margin-top: 16px; display: inline-block; }
-    .hero { background: linear-gradient(170deg, var(--navy) 0%, var(--navy-light) 100%); }
-    .hero-sub { font-size: 1rem; }
-    .btn { padding: 12px 22px; }
-    .section-head { margin-bottom: 36px; }
-  }
-  @media (max-width: 380px) {
-    .nav-word { font-size: 0.95rem; }
-    .stats-grid { grid-template-columns: 1fr; }
-  }
-  .nav-drawer { display: none; position: fixed; top: 76px; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--line); box-shadow: var(--shadow-md); padding: 18px 24px 22px; z-index: 99; }
-  .nav-drawer.open { display: block; }
-  .nav-drawer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
-  .nav-drawer a { color: var(--ink); font-weight: 500; font-size: 1rem; }
-  .nav-drawer .btn { width: 100%; justify-content: center; margin-top: 12px; }
-  .skip-link { position: absolute; left: -9999px; background: var(--navy); color: #fff; padding: 10px 16px; z-index: 200; }
-  .skip-link:focus { left: 12px; top: 12px; }
+  .section-head { margin-bottom: 56px; }
+}
+@media (max-width: 640px) {
+  .container { padding: 0 22px; }
+  .nav-row { height: 58px; }
+  body { font-size: 16px; }
+  .lead { font-size: 1.08rem; }
+  .hero { padding: 72px 0 60px; }
+  .hero-actions .btn { padding: 13px 22px; font-size: 0.93rem; }
+  .browser-body { padding: 18px 22px; }
+  .agent-row { padding: 12px 0; }
+  section { padding: 72px 0; }
+  .stats { padding: 72px 0; }
+  .stats-grid { gap: 44px 18px; }
+  .stat-num { font-size: 2.8rem; }
+  .vision-quote { padding: 36px 28px; }
+  .vision-quote-text { font-size: 1.3rem; }
+  .skill-card, .promise { padding: 32px 26px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 36px; }
+  .cta { padding: 84px 0; }
+}
+@media (max-width: 380px) {
+  .container { padding: 0 18px; }
+  .stats-grid { grid-template-columns: 1fr; }
+}
+
+/* Mobile drawer */
+.nav-drawer { display: none; position: fixed; top: 64px; left: 0; right: 0; background: rgba(255,255,255,0.96); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-md); padding: 22px 28px 28px; z-index: 99; }
+.nav-drawer.open { display: block; }
+.nav-drawer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
+.nav-drawer a { color: var(--color-primary-slate); font-weight: 500; font-size: 1.05rem; }
+.nav-drawer .btn { width: 100%; justify-content: center; margin-top: 18px; }
+
+/* Skip link */
+.skip-link { position: absolute; left: -9999px; background: var(--color-primary-slate); color: #fff; padding: 10px 16px; z-index: 200; }
+.skip-link:focus { left: 12px; top: 12px; }
 </style>
 </head>
 <body>
@@ -199,17 +234,16 @@
       <span class="nav-mark" aria-hidden="true">B</span>
       <span class="nav-word">BulleBrowser</span>
     </a>
-    <div class="nav-links">
+    <div class="nav-links" role="navigation">
       <a href="#skills">Skills</a>
       <a href="#how">How it works</a>
       <a href="#privacy">Privacy</a>
       <a href="#download">Download</a>
     </div>
     <div class="nav-cta">
-      <span class="nav-phone">By Bulle Consulting</span>
-      <a href="#download" class="btn btn-primary">Get the app</a>
+      <a href="#download" class="btn btn-gold">Download</a>
       <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
   </div>
@@ -221,104 +255,102 @@
     <li><a href="#privacy">Privacy</a></li>
     <li><a href="#download">Download</a></li>
   </ul>
-  <a href="#download" class="btn btn-primary">Get the app</a>
+  <a href="#download" class="btn btn-gold">Download</a>
 </div>
 
 <main id="main">
+
 <section class="hero">
-  <div class="container hero-inner">
-    <div>
-      <div class="eyebrow hero-eyebrow">Agentic AI · By Bulle Consulting</div>
-      <h1>Find that <span class="accent">Missing piece</span><br />in your research workflow</h1>
-      <p class="hero-sub">BulleBrowser is a desktop browser with a built-in AI agent that opens tabs, reads pages, fills forms, and pulls structured data on your behalf. Purpose-built for grant scanning, RFP triage, and compliance review — the work that eats your week.</p>
-      <div class="hero-actions">
-        <a href="#download" class="btn btn-primary">Download free <span class="ar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></a>
-        <a href="#how" class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,0.4)">See how it works</a>
-      </div>
-      <div class="hero-trust">
-        <span><strong>BYOK.</strong> Your Anthropic key, your prompts. We never see them.</span>
-      </div>
+  <div class="container">
+    <div class="eyebrow">Agentic AI &middot; By Bulle Consulting</div>
+    <h1>A browser that runs the <span class="gold">research</span> for you.</h1>
+    <p class="lead hero-lead">BulleBrowser is a desktop browser with a built-in AI agent. Tell it what you need &mdash; a grant scan, an RFP comparison, a compliance review &mdash; and watch it open tabs, read pages, and return a structured answer.</p>
+    <div class="hero-actions">
+      <a href="#download" class="btn btn-primary">Download free <span class="ar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></a>
+      <a href="#how" class="btn btn-ghost">See how it works</a>
     </div>
-    <div class="hero-card" aria-hidden="true">
-      <div class="browser-frame">
-        <div class="browser-bar">
-          <span class="browser-dot" style="background:#FF5F57"></span>
-          <span class="browser-dot" style="background:#FEBC2E"></span>
-          <span class="browser-dot" style="background:#28C840"></span>
-          <span class="browser-url">grants.gov / search · agent working&hellip;</span>
+    <p class="hero-trust"><strong>Bring your own Anthropic API key.</strong> Your prompts go directly to your provider &mdash; never through us.</p>
+  </div>
+  <div class="hero-visual" aria-hidden="true">
+    <div class="browser-frame">
+      <div class="browser-bar">
+        <span class="browser-dot"></span>
+        <span class="browser-dot"></span>
+        <span class="browser-dot"></span>
+        <span class="browser-url">grants.gov &nbsp;&middot;&nbsp; agent working&hellip;</span>
+      </div>
+      <div class="browser-body">
+        <div class="agent-row">
+          <span class="agent-icon">G</span>
+          <div><strong>Grant scanner</strong><span>Found 14 open grants under the workforce-equity tag. Building comparison table sorted by deadline.</span></div>
         </div>
-        <div class="browser-body">
-          <div class="agent-row"><span class="agent-icon">G</span><div><strong>Grant scanner</strong><span>Found 14 open grants under the workforce-equity tag. Building comparison table sorted by deadline&hellip;</span></div></div>
-          <div class="agent-row"><span class="agent-icon">R</span><div><strong>RFP comparator</strong><span>Read 3 RFP documents. Lifted scope, eligibility, value, and evaluation criteria into a side-by-side.</span></div></div>
-          <div class="agent-row"><span class="agent-icon">C</span><div><strong>Compliance review</strong><span>Flagged 6 clauses against EEO, FERPA, and ADA. Returned quoted text with section references.</span></div></div>
+        <div class="agent-row">
+          <span class="agent-icon">R</span>
+          <div><strong>RFP comparator</strong><span>Read 3 RFP documents end-to-end. Lifted scope, eligibility, value, and evaluation criteria.</span></div>
+        </div>
+        <div class="agent-row">
+          <span class="agent-icon">C</span>
+          <div><strong>Compliance review</strong><span>Flagged 6 clauses against EEO, FERPA, and ADA. Quoted clauses with section references attached.</span></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section id="skills">
+<section id="skills" class="alt">
   <div class="container">
     <div class="section-head">
-      <div class="eyebrow">Where can we help you</div>
-      <h2>The agent does the work.<br />You ship the deliverable.</h2>
-      <p>Three preset skills for the most common research tasks at nonprofits, government agencies, and the firms that serve them &mdash; each one a one-prompt replacement for an afternoon of browser tabs.</p>
+      <div class="eyebrow">Three agentic skills</div>
+      <h2>The agent does the work. You ship the deliverable.</h2>
+      <p class="lead">Preset skills for the most common research tasks at nonprofits, government agencies, and the firms that serve them.</p>
     </div>
     <div class="grid-3">
-      <article class="svc-card">
-        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></div>
+      <article class="skill-card">
+        <div class="skill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></div>
         <h3>Grant Scanner</h3>
-        <p>Tell the agent what you fund or pursue. It opens SAM.gov and Grants.gov, runs the searches, follows listings into detail pages, and returns a comparison table sorted by deadline &mdash; no copy-paste, no tab juggling.</p>
-        <a class="svc-link" href="#how">See it in action <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></a>
+        <p>Tell the agent what you fund or pursue. It opens SAM.gov and Grants.gov, runs the searches, follows listings into detail pages, and returns a comparison table sorted by deadline.</p>
+        <a class="more" href="#how">Learn more <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </article>
-      <article class="svc-card">
-        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="13" rx="1"/></svg></div>
+      <article class="skill-card">
+        <div class="skill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="13" rx="1"/></svg></div>
         <h3>RFP Comparator</h3>
         <p>Paste 2 to 4 RFP URLs. The agent reads each end-to-end, lifts the deadline, scope, eligibility, value, and evaluation criteria, and hands back a side-by-side breakdown ready for a go / no-go memo.</p>
-        <a class="svc-link" href="#how">See it in action <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></a>
+        <a class="more" href="#how">Learn more <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </article>
-      <article class="svc-card">
-        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></div>
+      <article class="skill-card">
+        <div class="skill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg></div>
         <h3>Compliance Review</h3>
         <p>Drop a document. The agent reads every clause, flags issues against EEO, FERPA, and ADA &mdash; plus your own checklist &mdash; and returns quoted clauses with section references for fast partner review.</p>
-        <a class="svc-link" href="#how">See it in action <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></a>
+        <a class="more" href="#how">Learn more <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       </article>
     </div>
   </div>
 </section>
 
-<section class="alt">
+<section>
   <div class="container">
     <div class="vision-grid">
-      <div class="vision-image">
-        <div class="vision-image-frame">
-          <div class="vision-quote">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
-            <p class="vision-quote-text">The only source of knowledge is experience.</p>
-            <p class="vision-quote-attr">&mdash; Hassan Wardere, CEO</p>
-          </div>
-        </div>
-        <div class="vision-badge">
-          <div class="vision-badge-num">25</div>
-          <div class="vision-badge-label">step task cap</div>
-        </div>
-      </div>
       <div class="vision-text">
-        <div class="eyebrow">Our introductions</div>
-        <h2>Built by consultants<br />who run this work every day.</h2>
-        <p>BulleBrowser is the tool we wanted ourselves. Bulle Consulting works with community colleges, nonprofits, and public agencies on grant strategy, RFP review, and EEO compliance &mdash; and a third of that work used to be tabs. We rebuilt the browser around the agent loop so the research half disappears and the strategy half is what you spend your day on.</p>
+        <div class="eyebrow">Built by people who use it</div>
+        <h2>The tool we wanted ourselves.</h2>
+        <p>Bulle Consulting works with community colleges, nonprofits, and public agencies on grant strategy, RFP review, and EEO compliance &mdash; and a third of that work used to live in browser tabs. So we rebuilt the browser around the agent loop. The research half disappears. The strategy half is what your day is actually spent on.</p>
         <ul class="vision-list">
-          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>A Claude-powered agent wired directly to the active tab</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>A Claude-powered agent wired to the active tab</span></li>
           <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Bring your own Anthropic API key &mdash; never routed through us</span></li>
-          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Per-tool destructive-action confirmation; nothing surprises you</span></li>
-          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Open source on GitHub; auditable from the agent loop down</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Per-tool destructive-action confirmation</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Open source. Auditable from the agent loop down.</span></li>
         </ul>
       </div>
+      <aside class="vision-quote">
+        <div class="vision-quote-mark">&ldquo;</div>
+        <p class="vision-quote-text">The only source of knowledge is experience.</p>
+        <p class="vision-quote-attr">Hassan Wardere &middot; CEO, Bulle Consulting</p>
+      </aside>
     </div>
   </div>
 </section>
 
-<section id="how">
+<section id="how" class="alt">
   <div class="container">
     <div class="section-head">
       <div class="eyebrow">How it works</div>
@@ -326,48 +358,46 @@
     </div>
     <div class="steps">
       <article class="step">
+        <div class="step-num">01</div>
         <h3>Open a tab. Pick a skill.</h3>
-        <p>Launch BulleBrowser, choose Grant Scanner, RFP Comparator, or Compliance Review from the agent panel &mdash; or just describe the task in plain English.</p>
+        <p>Launch BulleBrowser, choose Grant Scanner, RFP Comparator, or Compliance Review from the agent panel &mdash; or describe the task in plain English.</p>
       </article>
       <article class="step">
+        <div class="step-num">02</div>
         <h3>Watch the agent work.</h3>
-        <p>The agent navigates real sites with Chrome DevTools Protocol &mdash; clicking, scrolling, reading pages &mdash; and streams every step into the side panel so you can follow along.</p>
+        <p>The agent drives real sites with Chrome DevTools Protocol &mdash; clicking, scrolling, reading pages &mdash; and streams every step into the side panel so you can follow along.</p>
       </article>
       <article class="step">
+        <div class="step-num">03</div>
         <h3>Get a structured result.</h3>
-        <p>A comparison table, a clause-by-clause memo, a sorted list of opportunities. Copy it into your deck or doc and ship the deliverable.</p>
+        <p>A comparison table. A clause-by-clause memo. A sorted list of opportunities. Copy it into your deck or doc and ship the deliverable.</p>
       </article>
     </div>
   </div>
 </section>
 
-<section id="privacy" class="alt">
+<section id="privacy">
   <div class="container">
     <div class="section-head">
-      <div class="eyebrow">Our promises</div>
-      <h2>Your data, your provider.<br />Our code, audited end-to-end.</h2>
+      <div class="eyebrow">Privacy by design</div>
+      <h2>Your data, your provider.</h2>
+      <p class="lead">No telemetry, no routing through Bulle, no surprises in the agent loop.</p>
     </div>
     <div class="promises">
       <div class="promise">
-        <div class="promise-num">01</div>
-        <div>
-          <h3>Bring your own key</h3>
-          <p>Your Anthropic API key lives encrypted in your OS keychain. Prompts and responses go directly between your machine and Anthropic &mdash; never through Bulle.</p>
-        </div>
+        <div class="promise-tag"><span class="dot"></span> Bring your own key</div>
+        <h3>Direct to Anthropic.</h3>
+        <p>Your API key lives encrypted in the OS keychain. Prompts and responses move between your machine and Anthropic directly &mdash; we never see them.</p>
       </div>
       <div class="promise">
-        <div class="promise-num">02</div>
-        <div>
-          <h3>Local by default</h3>
-          <p>History, conversations, and saved skills live on your disk. There is no telemetry in v1. Your research stays where you can see it.</p>
-        </div>
+        <div class="promise-tag"><span class="dot"></span> Local by default</div>
+        <h3>Your research stays put.</h3>
+        <p>History, conversations, and saved skills live on your disk. There is no telemetry in v1, and your research stays where you can see it.</p>
       </div>
       <div class="promise">
-        <div class="promise-num">03</div>
-        <div>
-          <h3>No surprises</h3>
-          <p>Destructive actions require explicit confirmation. A hard 25-step cap per task keeps agent runs predictable, traceable, and cheap.</p>
-        </div>
+        <div class="promise-tag"><span class="dot"></span> No surprises</div>
+        <h3>Confirmed every step.</h3>
+        <p>Destructive actions require explicit confirmation. A hard 25-step cap per task keeps agent runs predictable, traceable, and cheap.</p>
       </div>
     </div>
   </div>
@@ -379,38 +409,31 @@
       <div><div class="stat-num">3</div><div class="stat-label">Agentic skills</div></div>
       <div><div class="stat-num">25</div><div class="stat-label">Step cap per task</div></div>
       <div><div class="stat-num">0</div><div class="stat-label">Bytes routed through Bulle</div></div>
-      <div><div class="stat-num">3</div><div class="stat-label">Platforms &mdash; Mac, Win, Linux</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="quote-strip">
-  <div class="container">
-    <div class="quote-card">
-      <p class="quote-text">A browser that runs the research half of the workflow &mdash; so the consulting half is what your day is actually spent on.</p>
-      <p class="quote-meta"><strong>Bulle Consulting</strong> &middot; Grant strategy, RFP review, and EEO compliance for community colleges, nonprofits, and public agencies.</p>
+      <div><div class="stat-num">3</div><div class="stat-label">Platforms supported</div></div>
     </div>
   </div>
 </section>
 
 <section id="download" class="cta">
   <div class="container">
-    <h2>Put the agent to work.</h2>
-    <p>Free download. macOS, Windows, and Linux. Bring your own Anthropic API key &mdash; your prompts stay yours.</p>
-    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
-      <a class="btn cta-btn" href="https://github.com/wardere83/bullebrowser/releases/latest" target="_blank" rel="noopener">Download for desktop <span class="ar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></a>
-      <a class="btn btn-ghost cta-secondary" href="https://github.com/wardere83/bullebrowser" target="_blank" rel="noopener">View on GitHub</a>
+    <div class="eyebrow">Put the agent to work</div>
+    <h2>Free download. Mac, Windows, Linux.</h2>
+    <p class="lead">Bring your own Anthropic API key. Your prompts stay yours.</p>
+    <div class="cta-actions">
+      <a class="btn btn-gold" href="https://github.com/wardere83/bullebrowser/releases/latest" target="_blank" rel="noopener">Download for desktop <span class="ar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></a>
+      <a class="btn btn-ghost" href="https://github.com/wardere83/bullebrowser" target="_blank" rel="noopener">View on GitHub</a>
     </div>
   </div>
 </section>
+
 </main>
 
 <footer>
   <div class="container">
     <div class="footer-grid">
       <div>
-        <div class="footer-brand">
-          <span class="nav-mark">B</span>
+        <div class="footer-brand-row">
+          <span class="nav-mark" aria-hidden="true">B</span>
           <span class="nav-word">BulleBrowser</span>
         </div>
         <p>An agentic desktop browser by Bulle Consulting. Purpose-built for grants, RFPs, and compliance work.</p>
@@ -449,21 +472,21 @@
 </footer>
 
 <script>
-  (function(){
-    var t = document.getElementById('navToggle');
-    var d = document.getElementById('navDrawer');
-    if (!t || !d) return;
-    t.addEventListener('click', function(){
-      var open = d.classList.toggle('open');
-      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+(function(){
+  var t = document.getElementById('navToggle');
+  var d = document.getElementById('navDrawer');
+  if (!t || !d) return;
+  t.addEventListener('click', function(){
+    var open = d.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  d.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){
+      d.classList.remove('open');
+      t.setAttribute('aria-expanded', 'false');
     });
-    d.querySelectorAll('a').forEach(function(a){
-      a.addEventListener('click', function(){
-        d.classList.remove('open');
-        t.setAttribute('aria-expanded', 'false');
-      });
-    });
-  })();
+  });
+})();
 </script>
 </body>
 </html>
