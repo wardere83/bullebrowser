@@ -30,7 +30,38 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Track which window is currently the IPC target. When a new window
+// is created (e.g., the macOS dock reactivate path), we want to re-target
+// the agent + window-open handlers at that window rather than crash by
+// double-registering ipcMain.handle.
+let currentWindow: BrowserWindow | null = null;
+let handlersRegistered = false;
+
+const ALL_CHANNELS: readonly string[] = [
+  IPC.TAB_LIST, IPC.TAB_CREATE, IPC.TAB_CLOSE, IPC.TAB_SWITCH, IPC.TAB_NAVIGATE,
+  IPC.TAB_RELOAD, IPC.TAB_BACK, IPC.TAB_FORWARD, IPC.TAB_REORDER,
+  IPC.LAYOUT_SET_BOUNDS,
+  IPC.HISTORY_LIST, IPC.HISTORY_CLEAR,
+  IPC.BOOKMARK_LIST, IPC.BOOKMARK_ADD, IPC.BOOKMARK_REMOVE,
+  IPC.SETTINGS_GET, IPC.SETTINGS_SET,
+  IPC.SECRET_HAS_API_KEY, IPC.SECRET_SET_API_KEY, IPC.SECRET_CLEAR_API_KEY,
+  IPC.CONVERSATION_LIST, IPC.CONVERSATION_GET, IPC.CONVERSATION_NEW, IPC.CONVERSATION_DELETE,
+  IPC.AGENT_RUN, IPC.AGENT_CANCEL, IPC.AGENT_CONFIRM_REPLY,
+  IPC.APP_GET_INFO, IPC.APP_QUIT,
+];
+
 export function registerIpc(win: BrowserWindow) {
+  // Re-target window-scoped concerns every call (the window can change on
+  // macOS reactivate). Channel handlers themselves register only once.
+  currentWindow = win;
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  if (handlersRegistered) return;
+  handlersRegistered = true;
+  for (const ch of ALL_CHANNELS) ipcMain.removeHandler(ch);
+
   // tabs
   ipcMain.handle(IPC.TAB_LIST, () => tabManager.list());
   ipcMain.handle(IPC.TAB_CREATE, (_e, url?: string) => tabManager.create(url));
@@ -70,7 +101,10 @@ export function registerIpc(win: BrowserWindow) {
   ipcMain.handle(IPC.CONVERSATION_DELETE, (_e, id: string) => conversationStore.delete(id));
 
   // agent
-  ipcMain.handle(IPC.AGENT_RUN, (_e, req: AgentRunRequest) => startAgentRun(win, req));
+  ipcMain.handle(IPC.AGENT_RUN, (_e, req: AgentRunRequest) => {
+    if (!currentWindow) throw new Error('No active window to host the agent run.');
+    return startAgentRun(currentWindow, req);
+  });
   ipcMain.handle(IPC.AGENT_CANCEL, (_e, runId: string) => cancelAgentRun(runId));
   ipcMain.handle(
     IPC.AGENT_CONFIRM_REPLY,
@@ -98,9 +132,4 @@ export function registerIpc(win: BrowserWindow) {
   });
   ipcMain.handle(IPC.APP_QUIT, () => app.quit());
 
-  // open external links from chrome
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
 }

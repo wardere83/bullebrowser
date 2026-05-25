@@ -41,3 +41,4 @@ playwright-report/
 
 # Vercel
 .vercel
+.npm-global/
