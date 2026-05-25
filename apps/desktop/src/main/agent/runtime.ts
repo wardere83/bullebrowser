@@ -110,33 +110,59 @@ export class DesktopToolRuntime implements ToolRuntime {
       return { matched };
     }
     if (condition.networkIdle) {
+      const session = wc.session;
+      const filter = { urls: ['<all_urls>'] };
+      let inFlight = 0;
+      let idleTimer: NodeJS.Timeout | null = null;
+      let timeoutTimer: NodeJS.Timeout | null = null;
+      let resolved = false;
+
+      const cleanup = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        // Detach listeners — Electron's webRequest API takes null to remove.
+        try { session.webRequest.onBeforeRequest(filter, null); } catch { /* ignore */ }
+        try { session.webRequest.onCompleted(filter, null); } catch { /* ignore */ }
+        try { session.webRequest.onErrorOccurred(filter, null); } catch { /* ignore */ }
+      };
+
       await new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, timeout);
-        const onIdle = () => {
-          clearTimeout(t);
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          cleanup();
           resolve();
         };
-        // Approximate "network idle": no in-flight requests for 500ms.
-        let inFlight = 0;
-        let idleTimer: NodeJS.Timeout | null = null;
+
+        timeoutTimer = setTimeout(finish, timeout);
+
         const armIdle = () => {
           if (idleTimer) clearTimeout(idleTimer);
-          idleTimer = setTimeout(onIdle, 500);
+          // Approximate "network idle": no in-flight requests for 500ms.
+          idleTimer = setTimeout(finish, 500);
         };
+
         const onStart = () => {
           inFlight += 1;
-          if (idleTimer) clearTimeout(idleTimer);
+          if (idleTimer) {
+            clearTimeout(idleTimer);
+            idleTimer = null;
+          }
         };
         const onEnd = () => {
           inFlight = Math.max(0, inFlight - 1);
           if (inFlight === 0) armIdle();
         };
-        wc.session.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (_d, cb) => {
+
+        session.webRequest.onBeforeRequest(filter, (_d, cb) => {
           onStart();
           cb({});
         });
-        wc.session.webRequest.onCompleted({ urls: ['<all_urls>'] }, () => onEnd());
-        wc.session.webRequest.onErrorOccurred({ urls: ['<all_urls>'] }, () => onEnd());
+        session.webRequest.onCompleted(filter, () => onEnd());
+        session.webRequest.onErrorOccurred(filter, () => onEnd());
+
+        // If there's nothing in flight when we start, arm the idle clock so
+        // we don't sit until timeout on a page that's already quiet.
         armIdle();
       });
       return { matched: true };
