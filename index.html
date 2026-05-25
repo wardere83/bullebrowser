@@ -220,6 +220,18 @@ footer p { color: rgba(255,255,255,0.6); font-size: 0.93rem; line-height: 1.6; }
 .nav-drawer a { color: var(--color-primary-slate); font-weight: 500; font-size: 1.05rem; }
 .nav-drawer .btn { width: 100%; justify-content: center; margin-top: 18px; }
 
+
+.downloads-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 880px; margin: 0 auto 32px; }
+.dl-card { display: flex; gap: 14px; align-items: center; background: var(--color-bg-white); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px; transition: all var(--t) var(--ease); text-align: left; }
+.dl-card:hover { border-color: var(--color-accent-teal); transform: translateY(-2px); box-shadow: var(--shadow-md); color: var(--color-primary-slate); }
+.dl-icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 9px; background: var(--color-primary-slate); color: var(--color-accent-teal); display: flex; align-items: center; justify-content: center; }
+.dl-icon svg { width: 18px; height: 18px; }
+.dl-meta { display: flex; flex-direction: column; gap: 2px; }
+.dl-os { font-size: 0.95rem; font-weight: 600; color: var(--color-primary-slate); line-height: 1.1; }
+.dl-detail { font-size: 0.78rem; color: var(--text-muted); }
+.dl-version { font-size: 0.82rem; color: var(--text-muted); margin: 22px 0 0; }
+@media (max-width: 1023px) { .downloads-grid { grid-template-columns: 1fr 1fr; max-width: 480px; } }
+@media (max-width: 480px) { .downloads-grid { grid-template-columns: 1fr; max-width: 360px; } }
 /* Skip link */
 .skip-link { position: absolute; left: -9999px; background: var(--color-primary-slate); color: #fff; padding: 10px 16px; z-index: 200; }
 .skip-link:focus { left: 12px; top: 12px; }
@@ -414,15 +426,61 @@ footer p { color: rgba(255,255,255,0.6); font-size: 0.93rem; line-height: 1.6; }
   </div>
 </section>
 
+<section id="architecture" class="alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">What is inside</div>
+      <h2>Built on Electron, wired with CDP.</h2>
+      <p class="lead">A real Chromium browser with an agent loop wired to the active tab via the Chrome DevTools Protocol &mdash; deterministic, auditable, open source.</p>
+    </div>
+    <div class="grid-3">
+      <article class="skill-card">
+        <div class="skill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h20v14H2z"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div>
+        <h3>WebContentsView tabs</h3>
+        <p>Each tab is an Electron WebContentsView attached to a single BaseWindow. The renderer is itself a separate WebContentsView that hosts the React chrome around the active tab.</p>
+      </article>
+      <article class="skill-card">
+        <div class="skill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <h3>CDP-driven agent loop</h3>
+        <p>The agent calls the Anthropic Messages API with a tool registry. Tool-use blocks are executed against the active tab via Chrome DevTools Protocol &mdash; navigate, click, type, read, extract &mdash; then results are appended and the loop continues.</p>
+      </article>
+      <article class="skill-card">
+        <div class="skill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <h3>Hardened renderer</h3>
+        <p>contextIsolation on, nodeIntegration off, sandboxed renderer. The UI talks to the main process only through a narrow, typed IPC bridge. Your Anthropic key lives encrypted in the OS keychain.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
 <section id="download" class="cta">
   <div class="container">
     <div class="eyebrow">Put the agent to work</div>
     <h2>Free download. Mac, Windows, Linux.</h2>
-    <p class="lead">Bring your own Anthropic API key. Your prompts stay yours.</p>
+    <p class="lead">Bring your own Anthropic API key. Your prompts stay yours. Open source on GitHub.</p>
+    <div class="downloads-grid">
+      <a class="dl-card" href="https://github.com/wardere83/bullebrowser/releases/download/v0.1.3/BulleBrowser-0.1.2-arm64.dmg" target="_blank" rel="noopener">
+        <div class="dl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.86-3.08.4-1.09-.47-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg></div>
+        <div class="dl-meta"><div class="dl-os">macOS</div><div class="dl-detail">Apple Silicon &middot; .dmg</div></div>
+      </a>
+      <a class="dl-card" href="https://github.com/wardere83/bullebrowser/releases/download/v0.1.3/BulleBrowser-0.1.2-x64.dmg" target="_blank" rel="noopener">
+        <div class="dl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.86-3.08.4-1.09-.47-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg></div>
+        <div class="dl-meta"><div class="dl-os">macOS</div><div class="dl-detail">Intel x64 &middot; .dmg</div></div>
+      </a>
+      <a class="dl-card" href="https://github.com/wardere83/bullebrowser/releases/download/v0.1.3/BulleBrowser-Setup-0.1.2-x64.exe" target="_blank" rel="noopener">
+        <div class="dl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0V3.449zm0 17.151L9.75 21.9v-9.301H0V20.6zm10.949-8.747h13.05V24L10.949 22.099v-9.946zm0-9.946L24 0v11.553H10.949V1.907z"/></svg></div>
+        <div class="dl-meta"><div class="dl-os">Windows</div><div class="dl-detail">x64 installer &middot; .exe</div></div>
+      </a>
+      <a class="dl-card" href="https://github.com/wardere83/bullebrowser/releases/download/v0.1.3/BulleBrowser-0.1.2-x86_64.AppImage" target="_blank" rel="noopener">
+        <div class="dl-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0v.04C5.595.222.06 5.866.04 12.78v.439c.02 6.917 5.558 12.562 12.464 12.741v.04l.49-.01v-.03c6.911-.18 12.46-5.83 12.477-12.741v-.44C25.45 5.846 19.875.18 12.93.01l-.426-.01zm0 1.526a11.227 11.227 0 0 1 4.402.882c-.318.054-.65.122-1.07.27-.726.286-1.302.703-1.85 1.222-1.062 1.005-2.062 2.336-3.13 3.585-1.066 1.249-2.219 2.43-3.595 3.225-1.379.795-2.929 1.176-4.83 1.156a11.16 11.16 0 0 1 1.014-4.205 11.27 11.27 0 0 1 9.06-6.135zm6.4 2.045a11.214 11.214 0 0 1 4.36 7.834 4.844 4.844 0 0 1-1.244-.18 5.96 5.96 0 0 1-2.073-1.077c-.642-.494-1.243-1.144-1.846-1.952-.6-.81-1.157-1.79-1.84-2.886.7-.534 1.43-1.014 2.213-1.385.232-.108.36-.214.43-.354zm-15.43 7.96c1.954-.04 3.55-.42 4.97-1.23 1.42-.81 2.61-2.018 3.71-3.296 1.1-1.278 2.107-2.638 3.183-3.654.66-.624 1.31-1.083 2.063-1.36.755-.275 1.622-.387 2.74-.243a11.235 11.235 0 0 1 2.85 7.51v.43c-.005.32-.017.638-.043.95-1.094.15-2.013-.024-2.787-.38-1.034-.473-1.918-1.235-2.737-2.078-.82-.844-1.587-1.79-2.435-2.586-.847-.797-1.85-1.46-3.043-1.555-.6-.048-1.16.06-1.694.292-.534.232-1.04.585-1.532 1.025-.984.882-1.879 2.077-2.834 3.244-.956 1.167-1.985 2.286-3.108 3.05-1.123.764-2.36 1.193-3.694 1.16zm21.434 1.51c-.07 1.115-.318 2.176-.687 3.173-2.108-.176-3.79-1.043-4.876-2.21a4.51 4.51 0 0 1-.876-1.345c.74-.058 1.467-.27 2.165-.487a8.3 8.3 0 0 1 2.207-.342c.696-.025 1.39.043 2.067.21zM2.27 16.034c.41 0 .806.043 1.186.13.755.176 1.452.51 2.107.92.655.41 1.272.896 1.882 1.394 1.22.997 2.39 2.029 3.612 2.836a8.85 8.85 0 0 0 2.025 1.034c.703.244 1.43.387 2.184.385a11.262 11.262 0 0 1-2.748.34 11.244 11.244 0 0 1-9.59-5.39c-.012-.022-.03-.058-.043-.082-.214-.354-.413-.715-.6-1.087.06-.245.296-.502.624-.583z"/></svg></div>
+        <div class="dl-meta"><div class="dl-os">Linux</div><div class="dl-detail">x86_64 &middot; .AppImage</div></div>
+      </a>
+    </div>
     <div class="cta-actions">
-      <a class="btn btn-gold" href="https://github.com/wardere83/bullebrowser/releases/latest" target="_blank" rel="noopener">Download for desktop <span class="ar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></a>
+      <a class="btn btn-ghost" href="https://github.com/wardere83/bullebrowser/releases/latest" target="_blank" rel="noopener">All downloads &amp; checksums</a>
       <a class="btn btn-ghost" href="https://github.com/wardere83/bullebrowser" target="_blank" rel="noopener">View on GitHub</a>
     </div>
+    <p class="dl-version">Version 0.1.3 Linux Preview &middot; built &amp; signed via GitHub Actions.</p>
   </div>
 </section>
 
