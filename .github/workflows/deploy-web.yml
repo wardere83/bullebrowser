@@ -43,16 +43,15 @@ jobs:
       - name: Type-check
         run: pnpm --filter @bullebrowser/web typecheck
 
-      # Served at the GitHub Pages PROJECT URL
-      # (https://wardere83.github.io/bullebrowser/) so it's viewable without
-      # any custom-domain redirect or DNS. The base path makes asset/link URLs
-      # resolve under /bullebrowser. To move to bullebrowser.com later: restore
-      # apps/web/public/CNAME, set this to '', and point the domain's DNS at
-      # GitHub Pages.
+      # Served at the bullebrowser.com custom domain (pinned by
+      # apps/web/public/CNAME). Root base path; GitHub Pages will
+      # auto-provision an HTTPS certificate via Let's Encrypt once the
+      # domain is verified. Enable "Enforce HTTPS" in Settings → Pages
+      # after the cert is issued.
       - name: Build static export
         run: pnpm --filter @bullebrowser/web build
         env:
-          NEXT_PUBLIC_BASE_PATH: /bullebrowser
+          NEXT_PUBLIC_BASE_PATH: ''
 
       # enablement: true turns GitHub Pages ON automatically (build type =
       # GitHub Actions) if it isn't already — no manual Settings toggle.
