@@ -13,9 +13,9 @@ export default function DownloadPage() {
       <h1 className="text-3xl font-bold">Download {product.name}</h1>
       <DownloadTable />
       <p className="mt-6 text-xs text-ink-secondary">
-        Verify the SHA-256 of your download against checksums.txt before
-        installing. Releases are signed by Bulle Consulting on macOS and
-        Windows.
+        Releases are currently unsigned — see the{' '}
+        <a href="/install" className="underline">install guide</a> for
+        first-launch steps on macOS and Windows.
       </p>
     </div>
   );

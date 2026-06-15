@@ -93,9 +93,9 @@ export default function HomePage() {
             Your data stays yours.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-ink-secondary">
-            Bring your own key. Prompts go straight to Anthropic on your own
-            account — never to {product.vendor}. History and conversations stay
-            on your device. No telemetry.
+            Bring your own key. Prompts go straight to the AI provider on
+            your own account — never to {product.vendor}. History and
+            conversations stay on your device. No telemetry.
           </p>
           <div className="mt-10 flex justify-center">
             <DownloadButton />

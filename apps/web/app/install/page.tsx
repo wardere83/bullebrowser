@@ -55,13 +55,13 @@ export default function InstallPage() {
           </p>
         </Step>
 
-        <Step n={2} title="Add your Anthropic API key">
+        <Step n={2} title="Add your AI API key">
           <p>
-            BulleBrowser is bring-your-own-key — your prompts go straight to
-            Anthropic, never to {product.vendor}. Get a key at{' '}
+            BulleBrowser is bring-your-own-key — your prompts go directly to
+            the AI provider, never to {product.vendor}. Get a key at{‘ ‘}
             <a className="text-primary underline" href="https://console.anthropic.com">
               console.anthropic.com
-            </a>{' '}
+            </a>{‘ ‘}
             (starts with <code>sk-ant-</code>), then in BulleBrowser open the
             profile menu → <strong>Settings</strong> → paste it → Save. It’s
             stored encrypted in your OS keychain.
