@@ -14,6 +14,12 @@ export type ToolName =
   | 'new_tab'
   | 'switch_tab'
   | 'list_tabs'
+  | 'close_tab'
+  | 'go_back'
+  | 'go_forward'
+  | 'reload'
+  | 'scroll'
+  | 'press_key'
   | 'wait_for';
 
 export interface ToolDefinition<TInput, TOutput> {
@@ -51,6 +57,18 @@ export interface ToolRuntime {
   newTab(url?: string): Promise<TabSummary>;
   switchTab(tabId: string): Promise<TabSummary>;
   listTabs(): Promise<TabSummary[]>;
+  closeTab(tabId: string): Promise<{ closed: boolean }>;
+  goBack(tabId: string): Promise<{ url: string }>;
+  goForward(tabId: string): Promise<{ url: string }>;
+  reload(tabId: string): Promise<{ url: string }>;
+  scroll(
+    tabId: string,
+    options: { direction: 'up' | 'down' | 'top' | 'bottom'; amount?: number },
+  ): Promise<{ scrolledTo: number }>;
+  pressKey(
+    tabId: string,
+    key: 'Enter' | 'Tab' | 'Escape' | 'ArrowDown' | 'ArrowUp' | 'PageDown' | 'PageUp',
+  ): Promise<{ pressed: string }>;
   waitFor(
     tabId: string,
     condition: { selector?: string; networkIdle?: boolean; timeoutMs?: number },

@@ -67,6 +67,9 @@ const bridge: BrowserBridge = {
     info: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
     quit: () => ipcRenderer.invoke(IPC.APP_QUIT),
   },
+  ui: {
+    onAskAgent: (cb) => subscribe(IPC.UI_ASK_AGENT, cb),
+  },
 };
 
 contextBridge.exposeInMainWorld('bullebrowser', bridge);

@@ -10,7 +10,15 @@ const NavigateInput = z.object({
 });
 const NavigateOutput = z.object({ url: z.string(), title: z.string() });
 
-const ReadPageInput = z.object({}).strict();
+const ReadPageInput = z.object({
+  tabId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional tab id from list_tabs. When omitted, reads the active tab. ' +
+        'Use this to silently read background tabs without switching focus.',
+    ),
+});
 const ReadPageOutput = z.object({
   title: z.string(),
   url: z.string(),
@@ -73,6 +81,43 @@ const WaitForInput = z
   });
 const WaitForOutput = z.object({ matched: z.boolean() });
 
+const CloseTabInput = z.object({
+  tabId: z.string().describe('Id of the tab to close (from list_tabs).'),
+});
+const CloseTabOutput = z.object({ closed: z.boolean() });
+
+const GoBackInput = z.object({}).strict();
+const GoBackOutput = z.object({ url: z.string() });
+
+const GoForwardInput = z.object({}).strict();
+const GoForwardOutput = z.object({ url: z.string() });
+
+const ReloadInput = z.object({}).strict();
+const ReloadOutput = z.object({ url: z.string() });
+
+const ScrollInput = z.object({
+  direction: z
+    .enum(['up', 'down', 'top', 'bottom'])
+    .describe('Scroll direction: up/down by amount, or jump to top/bottom of page.'),
+  amount: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Pixels to scroll for up/down (default 600). Ignored for top/bottom.'),
+});
+const ScrollOutput = z.object({ scrolledTo: z.number() });
+
+const PressKeyInput = z.object({
+  key: z
+    .enum(['Enter', 'Tab', 'Escape', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'])
+    .describe(
+      'Key to dispatch to the focused element. Use Enter to submit a form ' +
+        'after typing into a field; Tab to advance to the next field.',
+    ),
+});
+const PressKeyOutput = z.object({ pressed: z.string() });
+
 export interface ToolImpl<I, O> extends ToolDefinition<I, O> {
   execute: (input: I, ctx: ToolContext) => Promise<O>;
 }
@@ -89,10 +134,11 @@ export const tools = {
   read_page: {
     name: 'read_page',
     description:
-      'Return the cleaned, readable text content of the current page (no navigation, no scripts).',
+      'Return the cleaned, readable text content of a page (no navigation, no scripts). ' +
+      'Defaults to the active tab; pass tabId to read a background tab silently.',
     inputSchema: ReadPageInput,
     outputSchema: ReadPageOutput,
-    execute: (_input, ctx) => ctx.runtime.readPage(ctx.activeTabId),
+    execute: (input, ctx) => ctx.runtime.readPage(input.tabId ?? ctx.activeTabId),
   } satisfies ToolImpl<z.infer<typeof ReadPageInput>, z.infer<typeof ReadPageOutput>>,
 
   click: {
@@ -161,6 +207,59 @@ export const tools = {
     outputSchema: WaitForOutput,
     execute: (input, ctx) => ctx.runtime.waitFor(ctx.activeTabId, input),
   } satisfies ToolImpl<z.infer<typeof WaitForInput>, z.infer<typeof WaitForOutput>>,
+
+  close_tab: {
+    name: 'close_tab',
+    description: 'Close a tab by id. The user can reopen via history if needed.',
+    inputSchema: CloseTabInput,
+    outputSchema: CloseTabOutput,
+    destructive: true,
+    execute: (input, ctx) => ctx.runtime.closeTab(input.tabId),
+  } satisfies ToolImpl<z.infer<typeof CloseTabInput>, z.infer<typeof CloseTabOutput>>,
+
+  go_back: {
+    name: 'go_back',
+    description: 'Navigate the active tab back one entry in its history.',
+    inputSchema: GoBackInput,
+    outputSchema: GoBackOutput,
+    execute: (_input, ctx) => ctx.runtime.goBack(ctx.activeTabId),
+  } satisfies ToolImpl<z.infer<typeof GoBackInput>, z.infer<typeof GoBackOutput>>,
+
+  go_forward: {
+    name: 'go_forward',
+    description: 'Navigate the active tab forward one entry in its history.',
+    inputSchema: GoForwardInput,
+    outputSchema: GoForwardOutput,
+    execute: (_input, ctx) => ctx.runtime.goForward(ctx.activeTabId),
+  } satisfies ToolImpl<z.infer<typeof GoForwardInput>, z.infer<typeof GoForwardOutput>>,
+
+  reload: {
+    name: 'reload',
+    description: 'Reload the active tab.',
+    inputSchema: ReloadInput,
+    outputSchema: ReloadOutput,
+    execute: (_input, ctx) => ctx.runtime.reload(ctx.activeTabId),
+  } satisfies ToolImpl<z.infer<typeof ReloadInput>, z.infer<typeof ReloadOutput>>,
+
+  scroll: {
+    name: 'scroll',
+    description:
+      'Scroll the active page up/down by an amount, or jump to top/bottom. ' +
+      'Use after read_page if more content is below the fold.',
+    inputSchema: ScrollInput,
+    outputSchema: ScrollOutput,
+    execute: (input, ctx) => ctx.runtime.scroll(ctx.activeTabId, input),
+  } satisfies ToolImpl<z.infer<typeof ScrollInput>, z.infer<typeof ScrollOutput>>,
+
+  press_key: {
+    name: 'press_key',
+    description:
+      'Dispatch a key (Enter, Tab, Escape, ArrowUp/Down, PageUp/Down) to the ' +
+      'focused element. Use Enter after type to submit a search or form.',
+    inputSchema: PressKeyInput,
+    outputSchema: PressKeyOutput,
+    execute: (input, ctx) => ctx.runtime.pressKey(ctx.activeTabId, input.key),
+  } satisfies ToolImpl<z.infer<typeof PressKeyInput>, z.infer<typeof PressKeyOutput>>,
 } as const;
 
 export type ToolRegistry = typeof tools;
@@ -203,6 +302,9 @@ function zodFieldToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
   if (schema instanceof z.ZodString) return wrap({ type: 'string' });
   if (schema instanceof z.ZodNumber) return wrap({ type: 'number' });
   if (schema instanceof z.ZodBoolean) return wrap({ type: 'boolean' });
+  if (schema instanceof z.ZodEnum) {
+    return wrap({ type: 'string', enum: schema.options as string[] });
+  }
   if (schema instanceof z.ZodArray) {
     return wrap({ type: 'array', items: zodFieldToJsonSchema(schema.element) });
   }

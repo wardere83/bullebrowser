@@ -10,6 +10,7 @@ import { Splash } from './components/Splash.js';
 import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
+import { AGENT_PROMPT_EVENT } from './lib/url.js';
 
 export function App() {
   const tabs = useBrowserStore((s) => s.tabs);
@@ -79,6 +80,19 @@ export function App() {
       setPendingConfirm({ id, runId, message });
     });
   }, [setPendingConfirm]);
+
+  // Right-click → "Ask BulleBrowser" comes in over IPC. Open the AI
+  // panel (so AiPanel mounts) and re-emit the prompt as the in-window
+  // AGENT_PROMPT_EVENT — AiPanel already handles that channel with a
+  // queued-prompt fallback for the first-render race.
+  useEffect(() => {
+    return window.bullebrowser.ui.onAskAgent((prompt) => {
+      setAiPanelOpen(true);
+      window.dispatchEvent(
+        new CustomEvent<string>(AGENT_PROMPT_EVENT, { detail: prompt }),
+      );
+    });
+  }, [setAiPanelOpen]);
 
   // Push layout bounds to main so the WebContentsView fits.
   useEffect(() => {

@@ -28,11 +28,21 @@ const runs = new Map<string, ActiveRun>();
 
 const BASE_SYSTEM = [
   'You are the BulleBrowser agent. You have control of the user\'s desktop browser.',
-  'You can navigate, read pages, click, type, extract structured data, and manage tabs.',
-  'Operate carefully: prefer reading before clicking, prefer extract over guessing,',
-  'and never submit forms or download files without explicit user confirmation.',
-  'Cite URLs in your final answer. If you reach the 25 tool-call limit, summarize',
-  'what you have so far and ask the user how to proceed.',
+  'You can navigate, read pages (including background tabs via read_page tabId),',
+  'click, type, press_key (Enter/Tab/Arrows), scroll, screenshot, extract',
+  'structured data, and manage tabs (new_tab, switch_tab, close_tab, go_back,',
+  'go_forward, reload, list_tabs, wait_for).',
+  '',
+  'Operating principles:',
+  '- Prefer read_page before click; prefer extract over guessing.',
+  '- To summarize or compare multiple open tabs, call list_tabs then read_page',
+  '  with each tabId — no need to switch focus.',
+  '- After typing into a search box, call press_key with Enter to submit.',
+  '- Never submit forms that send the user\'s data, complete purchases, or',
+  '  download files without explicit user confirmation.',
+  '- Cite URLs in your final answer.',
+  '- If you reach the 25 tool-call limit, summarize what you have and ask',
+  '  the user how to proceed.',
 ].join('\n');
 
 export async function startAgentRun(

@@ -22,6 +22,12 @@ function makeRuntime(): ToolContext['runtime'] {
     newTab: vi.fn(async (url) => ({ id: 't-new', title: 'New', url: url ?? 'about:blank', active: true })),
     switchTab: vi.fn(async (id) => ({ id, title: 'X', url: 'https://x', active: true })),
     listTabs: vi.fn(async () => [{ id: 't1', title: 'A', url: 'https://a', active: true }]),
+    closeTab: vi.fn(async () => ({ closed: true })),
+    goBack: vi.fn(async () => ({ url: 'https://prev' })),
+    goForward: vi.fn(async () => ({ url: 'https://next' })),
+    reload: vi.fn(async () => ({ url: 'https://r' })),
+    scroll: vi.fn(async () => ({ scrolledTo: 600 })),
+    pressKey: vi.fn(async (_id, key) => ({ pressed: key })),
     waitFor: vi.fn(async () => ({ matched: true })),
     confirmDestructive: vi.fn(async () => true),
   };

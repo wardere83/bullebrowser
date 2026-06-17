@@ -6,8 +6,11 @@ import type { ClaudeModelId } from '@bullebrowser/agent-core';
 import { useAgentStore } from '../state/agent-store.js';
 import { useBrowserStore } from '../state/browser-store.js';
 import { AGENT_PROMPT_EVENT } from '../lib/url.js';
+import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import type { AppSettings } from '../../shared/ipc.js';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
+
+export const FOCUS_AI_PANEL_EVENT = 'bullebrowser:focus-ai-panel';
 
 const MODELS: { id: ClaudeModelId; label: string }[] = [
   { id: 'claude-opus-4-7', label: 'Opus 4.7 (most capable)' },
@@ -30,6 +33,7 @@ export function AiPanel() {
   const [skillId, setSkillId] = useState<string>('');
   const [model, setModel] = useState<ClaudeModelId>('claude-opus-4-7');
   const [hasKey, setHasKey] = useState(true);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     void (async () => {
@@ -58,13 +62,32 @@ export function AiPanel() {
   }, [showSettings]);
 
   const sendMessage = async (text: string) => {
-    const message = text.trim();
-    if (!message || !current || !hasKey) return;
+    const raw = text.trim();
+    if (!raw || !current || !hasKey) return;
+    // Slash commands expand client-side into a fully formed agent prompt so
+    // the model sees a plain task and the user sees what they typed.
+    const expanded = expandSlashCommand(raw);
+    if (expanded?.echo === 'help') {
+      setCurrent({
+        ...current,
+        messages: [
+          ...current.messages,
+          { role: 'user', content: raw, timestamp: Date.now() },
+          {
+            role: 'assistant',
+            content: slashHelpText(),
+            timestamp: Date.now(),
+          },
+        ],
+      });
+      return;
+    }
+    const message = expanded?.prompt ?? raw;
     setCurrent({
       ...current,
       messages: [
         ...current.messages,
-        { role: 'user', content: message, timestamp: Date.now() },
+        { role: 'user', content: raw, timestamp: Date.now() },
       ],
     });
     const skill = skillId || undefined;
@@ -108,6 +131,13 @@ export function AiPanel() {
     return () => window.removeEventListener(AGENT_PROMPT_EVENT, handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, hasKey]);
+
+  // Cmd+/ focuses the AI panel input — Comet-style "summon the agent".
+  useEffect(() => {
+    const handler = () => textareaRef.current?.focus();
+    window.addEventListener(FOCUS_AI_PANEL_EVENT, handler);
+    return () => window.removeEventListener(FOCUS_AI_PANEL_EVENT, handler);
+  }, []);
 
   // Flush any queued address-bar prompt once we're ready.
   useEffect(() => {
@@ -191,6 +221,26 @@ export function AiPanel() {
       </div>
 
       <footer className="border-t border-line/60 p-2">
+        {draft.startsWith('/') && !draft.includes(' ') && (
+          <div className="mb-1 max-h-32 overflow-y-auto rounded border border-line bg-white text-[11px]">
+            {SLASH_COMMANDS.filter((c) => c.name.startsWith(draft.toLowerCase())).map(
+              (c) => (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => {
+                    setDraft(c.fillTemplate ?? `${c.name} `);
+                    textareaRef.current?.focus();
+                  }}
+                  className="block w-full px-2 py-1 text-left hover:bg-surface-muted"
+                >
+                  <span className="font-mono text-ink-primary">{c.name}</span>
+                  <span className="ml-2 text-ink-secondary">{c.description}</span>
+                </button>
+              ),
+            )}
+          </div>
+        )}
         {skillId && (
           <div className="mb-1 px-1 text-[11px] text-ink-secondary">
             {skills.find((s) => s.id === skillId)?.inputPlaceholder}
@@ -198,13 +248,14 @@ export function AiPanel() {
         )}
         <div className="flex items-end gap-2">
           <textarea
+            ref={textareaRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
             disabled={!hasKey || status === 'running'}
             placeholder={
               hasKey
-                ? 'Ask the agent anything. Enter to send, Shift+Enter for newline.'
+                ? 'Ask the agent anything. Try /summarize, /compare-tabs, /find — or just describe a task.'
                 : 'Add an API key in Settings to start chatting.'
             }
             rows={3}
@@ -292,6 +343,21 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
       </div>
     </div>
   );
+}
+
+function slashHelpText(): string {
+  const rows = SLASH_COMMANDS.filter((c) => c.name !== '/help')
+    .map((c) => `| \`${c.name}\` | ${c.description} |`)
+    .join('\n');
+  return [
+    '**Slash commands**',
+    '',
+    '| Command | What it does |',
+    '|---|---|',
+    rows,
+    '',
+    'You can always type a task in plain English instead.',
+  ].join('\n');
 }
 
 function stepLabel(step: AgentStepEvent): string {

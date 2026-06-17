@@ -1,7 +1,7 @@
 // Tab manager. Owns one WebContentsView per tab, attaches them to the
 // main BaseWindow, and broadcasts state changes to the renderer.
 
-import { type BrowserWindow, WebContentsView } from 'electron';
+import { type BrowserWindow, Menu, MenuItem, WebContentsView, clipboard } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { IPC, type TabState, type LayoutBounds } from '../../shared/ipc.js';
 import { historyStore } from '../storage/history.js';
@@ -196,6 +196,107 @@ class TabManager {
       void this.create(url);
       return { action: 'deny' };
     });
+
+    // Right-click context menu. We build it dynamically so the items track
+    // what the user actually clicked: a text selection, a link, or just
+    // the page background. The "Ask BulleBrowser" items are the agentic-
+    // browser hook — they send a prompt to the renderer which opens the
+    // AI panel and fires the run.
+    wc.on('context-menu', (_e, params) => {
+      const menu = new Menu();
+      const selection = (params.selectionText || '').trim();
+      const linkURL = params.linkURL;
+
+      if (selection) {
+        menu.append(
+          new MenuItem({
+            label: `Ask BulleBrowser about "${truncate(selection, 40)}"`,
+            click: () => this.askAgent(`${selection}\n\nExplain or answer based on this selection.`),
+          }),
+        );
+        menu.append(
+          new MenuItem({
+            label: 'Copy',
+            role: 'copy',
+          }),
+        );
+        menu.append(
+          new MenuItem({
+            label: 'Search the web',
+            click: () =>
+              void this.create(
+                `https://www.google.com/search?q=${encodeURIComponent(selection)}`,
+              ),
+          }),
+        );
+        menu.append(new MenuItem({ type: 'separator' }));
+      }
+
+      if (linkURL) {
+        menu.append(
+          new MenuItem({
+            label: 'Open link in new tab',
+            click: () => void this.create(linkURL),
+          }),
+        );
+        menu.append(
+          new MenuItem({
+            label: 'Copy link',
+            click: () => clipboard.writeText(linkURL),
+          }),
+        );
+        menu.append(
+          new MenuItem({
+            label: 'Ask BulleBrowser about this link',
+            click: () =>
+              this.askAgent(
+                `Open ${linkURL} in a new tab, then summarize what it says and tell me whether it answers what I'm looking at now.`,
+              ),
+          }),
+        );
+        menu.append(new MenuItem({ type: 'separator' }));
+      }
+
+      menu.append(
+        new MenuItem({
+          label: 'Summarize this page with BulleBrowser',
+          click: () =>
+            this.askAgent(
+              'Read the current tab and give me a concise summary with the key points, named entities, and any action items.',
+            ),
+        }),
+      );
+
+      if (params.isEditable) {
+        menu.append(new MenuItem({ type: 'separator' }));
+        menu.append(new MenuItem({ label: 'Cut', role: 'cut' }));
+        menu.append(new MenuItem({ label: 'Paste', role: 'paste' }));
+      }
+
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(
+        new MenuItem({
+          label: 'Back',
+          enabled: wc.navigationHistory.canGoBack(),
+          click: () => wc.navigationHistory.goBack(),
+        }),
+      );
+      menu.append(
+        new MenuItem({
+          label: 'Forward',
+          enabled: wc.navigationHistory.canGoForward(),
+          click: () => wc.navigationHistory.goForward(),
+        }),
+      );
+      menu.append(new MenuItem({ label: 'Reload', click: () => wc.reload() }));
+
+      if (this.win) menu.popup({ window: this.win });
+    });
+  }
+
+  private askAgent(prompt: string) {
+    if (!this.win) return;
+    this.win.webContents.send(IPC.UI_ASK_AGENT, prompt);
   }
 
   private relayout() {
@@ -223,6 +324,10 @@ class TabManager {
     if (!this.win) return;
     this.win.webContents.send(IPC.TAB_UPDATED, this.list());
   }
+}
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
 
 export const tabManager = new TabManager();

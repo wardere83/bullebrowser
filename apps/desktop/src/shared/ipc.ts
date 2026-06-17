@@ -45,6 +45,8 @@ export const IPC = {
   // App
   APP_GET_INFO: 'app:get-info',
   APP_QUIT: 'app:quit',
+  // UI events from main → renderer
+  UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -181,6 +183,9 @@ export interface BrowserBridge {
   app: {
     info(): Promise<AppInfo>;
     quit(): Promise<void>;
+  };
+  ui: {
+    onAskAgent(cb: (prompt: string) => void): () => void;
   };
 }
 

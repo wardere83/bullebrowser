@@ -97,6 +97,63 @@ export class DesktopToolRuntime implements ToolRuntime {
     }));
   }
 
+  async closeTab(tabId: string): Promise<{ closed: boolean }> {
+    if (!tabManager.getView(tabId)) return { closed: false };
+    await tabManager.close(tabId);
+    return { closed: true };
+  }
+
+  async goBack(tabId: string): Promise<{ url: string }> {
+    const wc = this.wcFor(tabId);
+    await tabManager.back(tabId);
+    return { url: wc.getURL() };
+  }
+
+  async goForward(tabId: string): Promise<{ url: string }> {
+    const wc = this.wcFor(tabId);
+    await tabManager.forward(tabId);
+    return { url: wc.getURL() };
+  }
+
+  async reload(tabId: string): Promise<{ url: string }> {
+    const wc = this.wcFor(tabId);
+    await tabManager.reload(tabId);
+    return { url: wc.getURL() };
+  }
+
+  async scroll(
+    tabId: string,
+    options: { direction: 'up' | 'down' | 'top' | 'bottom'; amount?: number },
+  ): Promise<{ scrolledTo: number }> {
+    const wc = this.wcFor(tabId);
+    const amount = options.amount ?? 600;
+    const y = (await wc.executeJavaScript(
+      `(${SCROLL_FN.toString()})(${JSON.stringify(options.direction)}, ${amount})`,
+    )) as number;
+    return { scrolledTo: y };
+  }
+
+  async pressKey(
+    tabId: string,
+    key:
+      | 'Enter'
+      | 'Tab'
+      | 'Escape'
+      | 'ArrowDown'
+      | 'ArrowUp'
+      | 'PageDown'
+      | 'PageUp',
+  ): Promise<{ pressed: string }> {
+    const wc = this.wcFor(tabId);
+    // sendInputEvent with both keyDown and keyUp; "char" event covers Enter
+    // submitting forms in inputs that listen for keypress.
+    wc.focus();
+    wc.sendInputEvent({ type: 'keyDown', keyCode: key });
+    if (key === 'Enter') wc.sendInputEvent({ type: 'char', keyCode: '\r' });
+    wc.sendInputEvent({ type: 'keyUp', keyCode: key });
+    return { pressed: key };
+  }
+
   async waitFor(
     tabId: string,
     condition: { selector?: string; networkIdle?: boolean; timeoutMs?: number },
@@ -283,6 +340,28 @@ function TYPE_FN(target: string, text: string): string {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
   return html.outerHTML.slice(0, 200);
+}
+
+function SCROLL_FN(
+  direction: 'up' | 'down' | 'top' | 'bottom',
+  amount: number,
+): number {
+  const doc = document.scrollingElement || document.documentElement;
+  switch (direction) {
+    case 'down':
+      window.scrollBy({ top: amount });
+      break;
+    case 'up':
+      window.scrollBy({ top: -amount });
+      break;
+    case 'top':
+      window.scrollTo({ top: 0 });
+      break;
+    case 'bottom':
+      window.scrollTo({ top: doc.scrollHeight });
+      break;
+  }
+  return doc.scrollTop;
 }
 
 function WAIT_FOR_SELECTOR(selector: string, timeoutMs: number): Promise<boolean> {

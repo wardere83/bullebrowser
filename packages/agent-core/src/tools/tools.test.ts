@@ -30,6 +30,12 @@ function makeRuntime(): ToolRuntime {
     listTabs: vi.fn(async () => [
       { id: 't1', title: 'A', url: 'https://a', active: true },
     ]),
+    closeTab: vi.fn(async () => ({ closed: true })),
+    goBack: vi.fn(async () => ({ url: 'https://prev' })),
+    goForward: vi.fn(async () => ({ url: 'https://next' })),
+    reload: vi.fn(async () => ({ url: 'https://r' })),
+    scroll: vi.fn(async () => ({ scrolledTo: 600 })),
+    pressKey: vi.fn(async (_id, key) => ({ pressed: key })),
     waitFor: vi.fn(async () => ({ matched: true })),
     confirmDestructive: vi.fn(async () => true),
   };
@@ -44,7 +50,7 @@ function makeCtx(): ToolContext {
 }
 
 describe('tool registry', () => {
-  it('exposes all 10 tools by name', () => {
+  it('exposes every tool by name', () => {
     expect(ALL_TOOL_NAMES.sort()).toEqual(
       [
         'navigate',
@@ -57,18 +63,32 @@ describe('tool registry', () => {
         'switch_tab',
         'list_tabs',
         'wait_for',
+        'close_tab',
+        'go_back',
+        'go_forward',
+        'reload',
+        'scroll',
+        'press_key',
       ].sort(),
     );
   });
 
   it('produces Anthropic tool definitions for every tool', () => {
     const defs = toAnthropicTools();
-    expect(defs).toHaveLength(10);
+    expect(defs).toHaveLength(ALL_TOOL_NAMES.length);
     for (const def of defs) {
       expect(def).toHaveProperty('name');
       expect(def).toHaveProperty('description');
       expect(def.input_schema).toMatchObject({ type: 'object' });
     }
+  });
+
+  it('emits enum schemas for tools whose inputs are constrained sets', () => {
+    const press = toAnthropicTools().find((t) => t.name === 'press_key');
+    const props = (press?.input_schema as { properties: Record<string, { enum?: string[] }> })
+      .properties;
+    expect(props.key?.enum).toContain('Enter');
+    expect(props.key?.enum).toContain('Escape');
   });
 
   it('returns undefined for unknown tool names', () => {
@@ -93,6 +113,59 @@ describe('read_page', () => {
     const ctx = makeCtx();
     const out = await tools.read_page.execute({}, ctx);
     expect(out.text).toBe('hello');
+  });
+
+  it('targets a specific tab when tabId is provided', async () => {
+    const ctx = makeCtx();
+    await tools.read_page.execute({ tabId: 't-bg' }, ctx);
+    expect(ctx.runtime.readPage).toHaveBeenCalledWith('t-bg');
+  });
+});
+
+describe('close_tab', () => {
+  it('is marked destructive and delegates', async () => {
+    expect(tools.close_tab.destructive).toBe(true);
+    const ctx = makeCtx();
+    const out = await tools.close_tab.execute({ tabId: 't1' }, ctx);
+    expect(out.closed).toBe(true);
+    expect(ctx.runtime.closeTab).toHaveBeenCalledWith('t1');
+  });
+});
+
+describe('go_back / go_forward / reload', () => {
+  it('delegate to runtime with the active tab id', async () => {
+    const ctx = makeCtx();
+    await tools.go_back.execute({}, ctx);
+    expect(ctx.runtime.goBack).toHaveBeenCalledWith('t1');
+    await tools.go_forward.execute({}, ctx);
+    expect(ctx.runtime.goForward).toHaveBeenCalledWith('t1');
+    await tools.reload.execute({}, ctx);
+    expect(ctx.runtime.reload).toHaveBeenCalledWith('t1');
+  });
+});
+
+describe('scroll', () => {
+  it('passes direction and amount through', async () => {
+    const ctx = makeCtx();
+    await tools.scroll.execute({ direction: 'down', amount: 400 }, ctx);
+    expect(ctx.runtime.scroll).toHaveBeenCalledWith('t1', {
+      direction: 'down',
+      amount: 400,
+    });
+  });
+
+  it('rejects non-enum directions', () => {
+    expect(() =>
+      tools.scroll.inputSchema.parse({ direction: 'sideways' }),
+    ).toThrow();
+  });
+});
+
+describe('press_key', () => {
+  it('delegates to runtime.pressKey', async () => {
+    const ctx = makeCtx();
+    const out = await tools.press_key.execute({ key: 'Enter' }, ctx);
+    expect(out.pressed).toBe('Enter');
   });
 });
 
