@@ -71,9 +71,26 @@ jobs:
       - name: Build desktop renderer + main
         run: pnpm --filter @bullebrowser/desktop build
 
+      # GitHub Actions rejects `secrets.X` in step-level `if:` expressions
+      # (the secrets context is only usable inside `${{ }}` env values).
+      # Probe the cert into an env var first and gate later steps on its
+      # presence — this is what was blocking every build since v0.1.3,
+      # producing failed runs with 0 jobs spawned.
+      - name: Probe macOS signing secrets
+        if: matrix.target == 'mac'
+        id: mac_secrets
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+        run: |
+          if [ -n "$MACOS_CERTIFICATE" ]; then
+            echo "have_cert=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_cert=0" >> "$GITHUB_OUTPUT"
+          fi
+
       # macOS code signing + notarization
       - name: Import Apple certificate (macOS)
-        if: matrix.target == 'mac' && secrets.MACOS_CERTIFICATE != ''
+        if: matrix.target == 'mac' && steps.mac_secrets.outputs.have_cert == '1'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
