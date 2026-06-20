@@ -19,8 +19,14 @@ async function launch() {
   });
   const win = await app.firstWindow({ timeout: 20_000 });
   await win.waitForLoadState('domcontentloaded');
-  // Open the AI panel — it's collapsed by default on a fresh profile.
-  await win.getByRole('button', { name: 'AI' }).click();
+  // Default settings now ship with aiPanelOpen: true (the BulleBrowser
+  // rebrand made the agent the front-and-center surface). Open the
+  // panel idempotently so this works whether the boot lands open or
+  // closed.
+  const aside = win.locator('aside');
+  if (!(await aside.isVisible().catch(() => false))) {
+    await win.getByRole('button', { name: 'AI' }).click();
+  }
   await win.waitForSelector('aside', { timeout: 10_000 });
   return { app, win };
 }
