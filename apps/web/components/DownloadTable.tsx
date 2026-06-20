@@ -58,8 +58,8 @@ export function DownloadTable() {
         )}
       </p>
 
-      <div className="mt-8 overflow-hidden rounded-lg border border-line">
-        <table className="w-full text-sm">
+      <div className="mt-8 overflow-x-auto rounded-lg border border-line">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-secondary">
             <tr>
               <th className="px-4 py-3">Platform</th>

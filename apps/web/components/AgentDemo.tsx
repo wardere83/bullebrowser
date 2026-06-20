@@ -59,9 +59,9 @@ export function AgentDemo() {
         <div className="rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-white">AI</div>
       </div>
 
-      <div className="grid grid-cols-[1fr_170px] text-[11px]">
+      <div className="grid grid-cols-1 text-[11px] sm:grid-cols-[1fr_170px]">
         {/* page: results build in */}
-        <div className="border-r border-line p-3">
+        <div className="border-b border-line p-3 sm:border-b-0 sm:border-r">
           <div className="mb-2 font-semibold text-ink-primary">SAM.gov · Opportunities</div>
           <ul className="space-y-1.5">
             {ROWS.map((r, i) => (
@@ -83,12 +83,12 @@ export function AgentDemo() {
         </div>
 
         {/* AI panel: prompt + ticking steps */}
-        <div className="bg-surface-muted p-2">
-          <div className="text-[10px] font-semibold text-ink-primary">AI agent</div>
-          <div className="mt-1 rounded bg-primary px-2 py-1 text-[10px] leading-snug text-white">
+        <div className="bg-surface-muted p-3 sm:p-2">
+          <div className="text-[11px] font-semibold text-ink-primary sm:text-[10px]">AI agent</div>
+          <div className="mt-1 rounded bg-primary px-2 py-1 text-[11px] leading-snug text-white sm:text-[10px]">
             Find youth-workforce grants
           </div>
-          <div className="mt-2 space-y-1 font-mono text-[9.5px] leading-relaxed text-ink-secondary">
+          <div className="mt-2 space-y-1 font-mono text-[10px] leading-relaxed text-ink-secondary sm:text-[9.5px]">
             {STEPS.map((s, i) => (
               <div
                 key={s}
@@ -104,7 +104,7 @@ export function AgentDemo() {
             ))}
           </div>
           <div
-            className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-medium ${
+            className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium sm:text-[9.5px] ${
               working ? 'bg-accent/15 text-accent' : 'bg-emerald-50 text-emerald-700'
             }`}
           >
