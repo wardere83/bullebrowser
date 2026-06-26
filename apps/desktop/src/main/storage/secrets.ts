@@ -40,7 +40,16 @@ export function getApiKey(): string | null {
   if (!cipher) return null;
   try {
     return safeStorage.decryptString(Buffer.from(cipher, 'base64'));
-  } catch {
+  } catch (err) {
+    // The OS keychain entry that wrapped this cipher is gone or no
+    // longer matches (account migrated, keychain reset, OS reinstall).
+    // We deliberately do NOT fall back to any plaintext source — the
+    // user re-enters the key through Settings. Log so a "key vanished"
+    // report is debuggable instead of silent.
+    console.warn(
+      '[secrets] Failed to decrypt stored API key; user must re-enter.',
+      err instanceof Error ? err.message : err,
+    );
     return null;
   }
 }

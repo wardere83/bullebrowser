@@ -5,6 +5,7 @@
 import type { TabSummary, ToolRuntime } from '@bullebrowser/agent-core';
 import type { WebContents } from 'electron';
 import { tabManager } from '../tabs/manager.js';
+import { assertSafeTabUrl } from '../lib/safe-url.js';
 
 export interface ConfirmDelegate {
   request(message: string): Promise<boolean>;
@@ -21,7 +22,8 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async navigate(tabId: string, url: string) {
     const wc = this.wcFor(tabId);
-    await wc.loadURL(url);
+    const safe = assertSafeTabUrl(url);
+    await wc.loadURL(safe);
     return { url: wc.getURL(), title: wc.getTitle() };
   }
 
@@ -111,32 +113,56 @@ export class DesktopToolRuntime implements ToolRuntime {
     }
     if (condition.networkIdle) {
       await new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, timeout);
-        const onIdle = () => {
-          clearTimeout(t);
-          resolve();
-        };
         // Approximate "network idle": no in-flight requests for 500ms.
+        // webRequest listeners are session-wide, so we must detach them on
+        // resolve — otherwise they leak past this waitFor and intercept
+        // every subsequent request on the session through stale closures.
+        const filter = { urls: ['<all_urls>'] };
+        let settled = false;
         let inFlight = 0;
         let idleTimer: NodeJS.Timeout | null = null;
+        let outerTimer: NodeJS.Timeout | null = null;
+
+        const cleanup = () => {
+          if (idleTimer) clearTimeout(idleTimer);
+          if (outerTimer) clearTimeout(outerTimer);
+          idleTimer = null;
+          outerTimer = null;
+          // Passing null unsubscribes (Electron webRequest API).
+          wc.session.webRequest.onBeforeRequest(null);
+          wc.session.webRequest.onCompleted(null);
+          wc.session.webRequest.onErrorOccurred(null);
+        };
+
+        const settle = () => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve();
+        };
+
         const armIdle = () => {
           if (idleTimer) clearTimeout(idleTimer);
-          idleTimer = setTimeout(onIdle, 500);
+          idleTimer = setTimeout(settle, 500);
         };
-        const onStart = () => {
+
+        wc.session.webRequest.onBeforeRequest(filter, (_d, cb) => {
           inFlight += 1;
-          if (idleTimer) clearTimeout(idleTimer);
-        };
+          if (idleTimer) {
+            clearTimeout(idleTimer);
+            idleTimer = null;
+          }
+          cb({});
+        });
         const onEnd = () => {
           inFlight = Math.max(0, inFlight - 1);
           if (inFlight === 0) armIdle();
         };
-        wc.session.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (_d, cb) => {
-          onStart();
-          cb({});
-        });
-        wc.session.webRequest.onCompleted({ urls: ['<all_urls>'] }, () => onEnd());
-        wc.session.webRequest.onErrorOccurred({ urls: ['<all_urls>'] }, () => onEnd());
+        wc.session.webRequest.onCompleted(filter, onEnd);
+        wc.session.webRequest.onErrorOccurred(filter, onEnd);
+
+        outerTimer = setTimeout(settle, timeout);
+        // Arm immediately so an already-quiet page resolves promptly.
         armIdle();
       });
       return { matched: true };

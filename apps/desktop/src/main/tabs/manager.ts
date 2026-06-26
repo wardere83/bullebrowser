@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { IPC, type TabState, type LayoutBounds } from '../../shared/ipc.js';
 import { historyStore } from '../storage/history.js';
 import { getSettings } from '../storage/settings.js';
+import { assertSafeTabUrl } from '../lib/safe-url.js';
 
 function getDefaultHome(): string {
   return getSettings().homepageUrl;
@@ -46,6 +47,9 @@ class TabManager {
 
   async create(url?: string): Promise<TabState> {
     if (!this.win) throw new Error('No window attached');
+    // Validate before we materialise a tab; this also rejects file://,
+    // javascript:, and any custom scheme via the central allowlist.
+    const initialUrl = assertSafeTabUrl(url ?? getDefaultHome());
     const id = randomUUID();
     const view = new WebContentsView({
       webPreferences: {
@@ -58,7 +62,7 @@ class TabManager {
       id,
       view,
       title: 'New Tab',
-      url: url ?? getDefaultHome(),
+      url: initialUrl,
       loading: true,
     };
     this.tabs.push(tab);
@@ -111,8 +115,12 @@ class TabManager {
   async navigate(id: string, url: string): Promise<void> {
     const tab = this.find(id);
     if (!tab) return;
+    // assertSafeTabUrl throws for file:// / javascript:// / unknown
+    // schemes; let it propagate so the address-bar caller (or agent
+    // tool) sees a clear error rather than a silently swallowed load.
+    const safe = assertSafeTabUrl(url);
     // Failed navigations show an error page in the view; don't reject.
-    await tab.view.webContents.loadURL(url).catch(() => {});
+    await tab.view.webContents.loadURL(safe).catch(() => {});
   }
 
   async reload(id: string): Promise<void> {
@@ -193,7 +201,15 @@ class TabManager {
       this.broadcast();
     });
     wc.setWindowOpenHandler(({ url }) => {
-      void this.create(url);
+      // A page calling window.open() could pass file:// or javascript:.
+      // Validate before spawning a tab; on failure, just deny silently —
+      // there's no caller to surface an error to.
+      try {
+        const safe = assertSafeTabUrl(url);
+        void this.create(safe);
+      } catch {
+        /* refused — see assertSafeTabUrl */
+      }
       return { action: 'deny' };
     });
   }

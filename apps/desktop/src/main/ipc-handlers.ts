@@ -1,9 +1,10 @@
-import { app, type BrowserWindow, ipcMain, shell } from 'electron';
+import { app, type BrowserWindow, ipcMain, session, shell } from 'electron';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { product } from '@bullebrowser/brand-tokens';
+import { assertSafeExternalUrl } from './lib/safe-url.js';
 import {
   IPC,
   type AgentRunRequest,
@@ -98,9 +99,27 @@ export function registerIpc(win: BrowserWindow) {
   });
   ipcMain.handle(IPC.APP_QUIT, () => app.quit());
 
-  // open external links from chrome
+  // open external links from chrome. Defense-in-depth: the chrome
+  // renderer only renders our own React UI, but markdown links from the
+  // agent (or any future embedded content) could carry exotic schemes
+  // — the allowlist keeps shell.openExternal honest.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    try {
+      const safe = assertSafeExternalUrl(url);
+      void shell.openExternal(safe);
+    } catch {
+      /* refused — see assertSafeExternalUrl */
+    }
     return { action: 'deny' };
   });
+
+  // Deny-by-default permissions on every tab session. Electron's default
+  // policy varies across versions; we never want a navigated page to
+  // silently get camera, mic, geolocation, notifications, MIDI, etc.
+  // The user's homepage and explicit installs are not affected — none of
+  // them request permissions today.
+  session.defaultSession.setPermissionRequestHandler(
+    (_wc, _permission, callback) => callback(false),
+  );
+  session.defaultSession.setPermissionCheckHandler(() => false);
 }
