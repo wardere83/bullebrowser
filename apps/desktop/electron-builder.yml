@@ -26,6 +26,8 @@ mac:
   category: public.app-category.productivity
   hardenedRuntime: true
   gatekeeperAssess: true
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
   artifactName: "${productName}-${version}-${arch}.${ext}"
   target:
     - target: dmg
