@@ -5,7 +5,6 @@ const EmptyObject = z.object({}).strict();
 const NavigateInput = z.object({ url: z.string().url() });
 const NavigateOutput = z.object({ url: z.string(), title: z.string() });
 const TabIdInput = z.object({ tabId: z.string().optional() });
-const SelectorInput = z.object({ selector: z.string().min(1) });
 const ClickInput = z.object({ target: z.string().min(1) });
 const TypeInput = z.object({ target: z.string().min(1), text: z.string() });
 const ExtractInput = z.object({ schema: z.record(z.unknown()) });

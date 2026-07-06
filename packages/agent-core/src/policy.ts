@@ -1,6 +1,6 @@
 import type { PlanStep, PolicyDecision } from './types.js';
 
-const SENSITIVE_FIELD_RE = /(password|passcode|token|secret|ssn|social|credit|card|cvv)/i;
+const SENSITIVE_FIELD_RE = /(apiKey|api_key|password|passcode|token|secret|ssn|social|credit|card|cvv)/i;
 const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
 
 export interface PolicyEngine {

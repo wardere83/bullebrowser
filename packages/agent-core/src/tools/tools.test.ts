@@ -76,8 +76,7 @@ describe('tool behavior', () => {
       {
         text: 'Sentence one about grants. Sentence two with deadlines. Sentence three.',
         sourceUrl: 'https://example.com',
-      },
-      makeCtx(),
+      }
     );
     expect(out.summary.length).toBeGreaterThan(10);
     expect(out.citations).toContain('https://example.com');

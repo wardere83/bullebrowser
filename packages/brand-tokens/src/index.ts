@@ -3,14 +3,14 @@ export const product = {
   vendor: 'BulleBrowser',
   tagline: 'The agentic browser for grants, RFPs, and compliance work',
   domain: 'bullebrowser.com',
-  bundleId: 'com.bulleconsulting.bullebrowser',
+  bundleId: 'com.bullebrowser.app',
   // Must match electron-builder.yml's `appId` exactly (case-sensitive) so the
   // runtime AppUserModelID lines up with the installer's — otherwise Windows
   // treats the running app as a second, ungrouped taskbar entry.
-  appId: 'com.bulleconsulting.bullebrowser',
+  appId: 'com.bullebrowser.app',
   windowTitle: 'BulleBrowser',
   splashText: 'BulleBrowser Agentic AI',
-  contactEmail: 'hello@bulleconsulting.com',
+  contactEmail: 'hello@bullebrowser.com',
 } as const;
 
 export const colors = {

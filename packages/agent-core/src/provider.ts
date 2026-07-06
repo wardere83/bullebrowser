@@ -65,8 +65,8 @@ export class AnthropicSynthesisProvider implements SynthesisProvider {
     });
 
     const text = response.content
-      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-      .map((b) => b.text)
+      .filter((b) => b.type === 'text')
+      .map((b) => ('text' in b ? b.text : ''))
       .join('\n\n')
       .trim();
 

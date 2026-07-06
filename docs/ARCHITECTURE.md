@@ -20,7 +20,7 @@ person operating the browser, but in a deterministic, auditable loop.
 │        ▲                          ▲                        │
 │        │                          │                        │
 │        ▼                          ▼                        │
-│   electron-store           Anthropic Messages API          │
+│   electron-store           Provider API                    │
 │   (history, prefs)         (BYOK, streaming, tool use)     │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -50,14 +50,13 @@ just swap `setBounds` on the visible view.
 
 ## Agent loop
 
-The legacy description below outlines the original Claude tool-use flow.
 The current production-safe foundational architecture is documented in
 `docs/AGENT_ARCHITECTURE.md`, which describes the modular
 perceive -> plan -> act -> verify -> report stack implemented in
 `packages/agent-core`.
 
 ```
-user message ──► Anthropic.messages.stream({ tools, messages })
+user message ──► Provider.stream({ tools, messages })
                        │
             tool_use blocks?
                 ├── no  ──► render to chat, end turn
@@ -74,7 +73,7 @@ Hard limits:
 The tool registry lives in `packages/agent-core/src/tools/`. Each tool
 exports a Zod input schema, a Zod output schema, and an `execute` function
 that receives a typed `ToolContext` (active tab id, CDP session helper,
-abort signal). The Anthropic tool-use definitions are derived from the
+abort signal). The provider tool-use definitions are derived from the
 Zod schemas at startup.
 
 ## Storage
@@ -87,7 +86,7 @@ Zod schemas at startup.
 | Bookmarks      | `electron-store` (`bookmarks.json`)     |
 | Conversations  | `electron-store` (`conversations.json`) |
 
-Nothing is sent to Bulle Consulting servers. There is no telemetry in v1.
+Nothing is sent to BulleBrowser servers. There is no telemetry in v1.
 
 ## Branding
 

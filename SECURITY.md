@@ -7,8 +7,8 @@ We take the security of **BulleBrowser** and **bullebrowser.com** seriously.
 Please report suspected vulnerabilities **privately** — do **not** open a
 public GitHub issue.
 
-- Email: **security@bulleconsulting.com** (also reachable at
-  `hello@bulleconsulting.com`)
+- Email: **security@bullebrowser.com** (also reachable at
+  `hello@bullebrowser.com`)
 - Or use **GitHub's private vulnerability reporting** at
   <https://github.com/wardere83/bullebrowser/security/advisories/new>
 
@@ -44,14 +44,14 @@ You can expect:
 Out of scope (please don't report):
 
 - Vulnerabilities in third-party services the user opts into (e.g., the
-  Anthropic API, websites the agent navigates).
-- Social-engineering attacks against Bulle Consulting staff.
+  configured AI provider API, websites the agent navigates).
+- Social-engineering attacks against BulleBrowser staff.
 - Findings that require physical access to a user's device.
 
 ## Privacy & data handling
 
 BulleBrowser is **bring-your-own-key**. The desktop app stores the
-Anthropic API key encrypted in the operating system's keychain
+configured AI provider API key encrypted in the operating system's keychain
 (Keychain on macOS, libsecret on Linux, DPAPI on Windows). Browsing
 history, bookmarks, and agent conversations are stored on the user's
 device only. There is **no telemetry** in v1, and the website does not
