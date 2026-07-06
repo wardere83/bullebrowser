@@ -1,7 +1,7 @@
 # BulleBrowser security contact (RFC 9116)
 # Please report vulnerabilities privately. Do not file public issues.
 
-Contact: mailto:security@bulleconsulting.com
+Contact: mailto:security@bullebrowser.com
 Contact: https://github.com/wardere83/bullebrowser/security/advisories/new
 Expires: 2027-05-26T00:00:00.000Z
 Preferred-Languages: en

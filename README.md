@@ -2,7 +2,7 @@
 
 > The agentic browser for grants, RFPs, and compliance work.
 
-BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) with a built-in Claude-powered AI agent purpose-built for grants research, RFP comparison, and compliance review workflows. Bring your own Anthropic API key — your prompts go directly to your provider, never to Bulle Consulting.
+BulleBrowser is a desktop browser by [BulleBrowser](https://bullebrowser.com) with a built-in BulleBrowser-powered AI agent purpose-built for grants research, RFP comparison, and compliance review workflows. Bring your own AI provider API key — your prompts go directly to your provider, never to BulleBrowser.
 
 **Website:** [bullebrowser.com](https://bullebrowser.com)
 
@@ -25,11 +25,11 @@ The agent operates the active browser tab — same pages, same logins, same data
 - A live “Agent is working” indicator shows each step; a **Stop** button cancels instantly.
 - Every task is hard-capped at 25 actions.
 - Form submissions and downloads require explicit confirmation.
-- Choose Claude Opus, Sonnet, or Haiku per task.
+- Choose BulleBrowser Pro, Balanced, or Fastest per task.
 
 ### Privacy
 
-- Your prompts go straight to Anthropic — never to Bulle Consulting.
+- Your prompts go straight through your configured provider from your device.
 - Your API key is encrypted in your OS keychain.
 - History, bookmarks, and conversations stay on your device.
 - No analytics. No telemetry.
@@ -99,7 +99,7 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md). All changes use Conventional Commit 
 
 ## Contact
 
-Press, partnerships, or product feedback: [hello@bulleconsulting.com](mailto:hello@bulleconsulting.com)
+Press, partnerships, or product feedback: [hello@bullebrowser.com](mailto:hello@bullebrowser.com)
 
 ## License
 

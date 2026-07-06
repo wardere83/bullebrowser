@@ -1,7 +1,7 @@
-appId: com.bulleconsulting.bullebrowser
+appId: com.bullebrowser.app
 productName: BulleBrowser
 executableName: BulleBrowser
-copyright: Copyright © 2026 Bulle Consulting
+copyright: Copyright © 2026 BulleBrowser
 
 directories:
   output: release
@@ -46,7 +46,7 @@ win:
         - x64
         - arm64
   icon: resources/icon.ico
-  publisherName: Bulle Consulting
+  publisherName: BulleBrowser
 
 nsis:
   oneClick: false
@@ -57,7 +57,7 @@ nsis:
 linux:
   category: Network
   artifactName: "${productName}-${version}-${arch}.${ext}"
-  maintainer: Bulle Consulting <hello@bulleconsulting.com>
+  maintainer: BulleBrowser <hello@bullebrowser.com>
   target:
     - target: AppImage
       arch:

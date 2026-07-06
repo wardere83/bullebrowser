@@ -1,6 +1,6 @@
 # Contributing to BulleBrowser
 
-Thanks for your interest. BulleBrowser is a Bulle Consulting product;
+Thanks for your interest. BulleBrowser is a proprietary product;
 external contributions are accepted on a case-by-case basis.
 
 ## Development setup

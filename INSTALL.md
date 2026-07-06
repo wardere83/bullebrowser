@@ -76,13 +76,13 @@ Get-FileHash .\BulleBrowser-Setup-*.exe -Algorithm SHA256
 
 ## 4. Turn on the AI agent (bring your own key)
 
-BulleBrowser uses **your own Anthropic API key** — your prompts go straight
-to Anthropic, never to Bulle Consulting.
+BulleBrowser uses **your own AI provider API key** — your prompts go straight
+through your provider from your device.
 
-1. Get a key at <https://console.anthropic.com> → **API Keys** (it starts
+1. Get a supported API key (it currently starts
    with `sk-ant-`).
 2. In BulleBrowser, open the **profile menu** (top-right) → **Settings**.
-3. Paste your key into **Anthropic API key** → **Save**. It's stored
+3. Paste your key into **BulleBrowser AI key** → **Save**. It's stored
    encrypted in your operating system's keychain.
 4. Open the **AI panel** (the **AI** button, or `Ctrl/Cmd + Shift + A`).
 
@@ -117,4 +117,4 @@ You're ready. Try a preset **Skill** from the dropdown:
 | Agent can't read a page | Some PDFs/non-HTML pages aren't readable; paste the text or use an HTML version. |
 | Updates | BulleBrowser checks GitHub Releases and updates itself on the next launch. |
 
-Questions? <hello@bulleconsulting.com>
+Questions? <hello@bullebrowser.com>
