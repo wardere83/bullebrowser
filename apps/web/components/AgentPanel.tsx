@@ -25,7 +25,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
-type Page = 'blank' | 'fundResults' | 'grant' | 'careers';
+type Page = 'blank' | 'fundResults' | 'grant' | 'eligibility';
 type Voice = 'idle' | 'once' | 'continuous';
 
 interface Cursor {
@@ -38,7 +38,7 @@ interface Cursor {
 type Feed =
   | { kind: 'user'; text: string }
   | { kind: 'activity'; steps: string[]; done: boolean }
-  | { kind: 'answer'; html: 'funding' | 'compliance' };
+  | { kind: 'answer'; html: 'funding' | 'eligibility' };
 
 interface State {
   address: string;
@@ -107,7 +107,7 @@ export function AgentPanel() {
         composer: '',
         typing: false,
         feed: [
-          { kind: 'user', text: 'Find grant funding we could apply for this quarter' },
+          { kind: 'user', text: 'Find grants for our community empowerment project in New Jersey and Los Angeles' },
           { kind: 'activity', steps: ['Opening google.com', 'Reading the results', 'Reading grants.gov'], done: true },
           { kind: 'answer', html: 'funding' },
         ],
@@ -145,7 +145,7 @@ export function AgentPanel() {
         const feed = p.feed.map((f) => (f.kind === 'activity' ? { ...f, done: true } : f));
         return { ...p, feed };
       });
-    const pushAnswer = (html: 'funding' | 'compliance') =>
+    const pushAnswer = (html: 'funding' | 'eligibility') =>
       setS((p) => ({ ...p, feed: [...p.feed, { kind: 'answer', html }] }));
 
     const typeComposer = (text: string, startAt: number, totalMs: number) => {
@@ -172,15 +172,15 @@ export function AgentPanel() {
 
       // ---- Turn 1: find funding ---------------------------------------------
       at(t, () => setS((p) => ({ ...p, typing: true })));
-      t = typeComposer('Find grant funding we could apply for this quarter', t, 1800) + 250;
+      t = typeComposer('Find grants for our community empowerment project in New Jersey and Los Angeles', t, 1800) + 250;
       at(t, () => {
-        pushUser('Find grant funding we could apply for this quarter');
+        pushUser('Find grants for our community empowerment project in New Jersey and Los Angeles');
         setS((p) => ({ ...p, composer: '', typing: false, cursor: { x: 44, y: 8 } }));
       });
       t += 450;
 
       at(t, () => startActivity('Opening google.com'));
-      typeAddress('google.com/search?q=open grant funding for nonprofits', t, 950);
+      typeAddress('google.com/search?q=community empowerment grants NJ and LA', t, 950);
       t += 1250;
       at(t, () => {
         setS((p) => ({ ...p, page: 'fundResults' }));
@@ -207,28 +207,28 @@ export function AgentPanel() {
       });
       t += 2600;
 
-      // ---- Turn 2: compliance review ----------------------------------------
+      // ---- Turn 2: eligibility check ----------------------------------------
       at(t, () => setS((p) => ({ ...p, typing: true })));
-      t = typeComposer('Review our careers page against our EEO checklist', t, 1500) + 200;
+      t = typeComposer("Check if we meet this grant's eligibility requirements", t, 1500) + 200;
       at(t, () => {
-        pushUser('Review our careers page against our EEO checklist');
+        pushUser("Check if we meet this grant's eligibility requirements");
         setS((p) => ({ ...p, composer: '', typing: false, cursor: { x: 40, y: 10 } }));
       });
       t += 450;
       at(t, () => {
-        setS((p) => ({ ...p, page: 'careers', address: 'example.org/careers' }));
-        startActivity('Opening the careers page');
+        setS((p) => ({ ...p, page: 'eligibility', address: 'grants.gov/eligibility' }));
+        startActivity('Opening the eligibility rules');
       });
       t += 1000;
-      at(t, () => addStep('Reading the page'));
+      at(t, () => addStep('Reading the requirements'));
       t += 850;
       at(t, () => addStep('Checking each requirement'));
       t += 850;
-      at(t, () => addStep('Writing the report'));
+      at(t, () => addStep('Writing the summary'));
       t += 700;
       at(t, () => {
         finishActivity();
-        pushAnswer('compliance');
+        pushAnswer('eligibility');
       });
       t += 2900;
 
@@ -447,19 +447,20 @@ function FeedRow({ item }: { item: Feed }) {
     <div className="mb-5 text-[13px] leading-relaxed text-ink-primary">
       {item.html === 'funding' ? (
         <>
-          Found <strong>3 open grants</strong> that fit your programs. Best match:{' '}
-          <strong>Community Workforce Grant</strong> — up to <strong>$250,000</strong>,
-          deadline <strong>Aug&nbsp;15</strong>.
+          Found <strong>3 open grants</strong> for your community empowerment project. Best
+          match: <strong>Neighborhood Empowerment Grant</strong> — up to{' '}
+          <strong>$150,000</strong> for programs in New Jersey and Los Angeles, deadline{' '}
+          <strong>Nov&nbsp;14</strong>.
           <span className="mt-1 block text-[11px] text-ink-secondary">Source: grants.gov</span>
         </>
       ) : (
         <>
-          Reviewed your careers page against the EEO checklist — <strong>3 of 4 pass</strong>:
+          Checked the grant&apos;s eligibility rules — you meet <strong>3 of 4</strong>:
           <span className="mt-1.5 block space-y-1">
-            <CheckLine ok>Equal-opportunity statement</CheckLine>
-            <CheckLine ok>Reasonable-accommodation notice</CheckLine>
-            <CheckLine ok>Non-discriminatory language</CheckLine>
-            <CheckLine>Pay-range disclosure — add a salary range</CheckLine>
+            <CheckLine ok>Registered nonprofit organization</CheckLine>
+            <CheckLine ok>Serves residents of New Jersey or Los Angeles</CheckLine>
+            <CheckLine ok>Project budget within $150,000</CheckLine>
+            <CheckLine>Letter of support from a local partner — request one</CheckLine>
           </span>
         </>
       )}
@@ -467,7 +468,7 @@ function FeedRow({ item }: { item: Feed }) {
   );
 }
 
-// A pass/fail line for the compliance report, echoing the app's check marks.
+// A pass/fail line for the eligibility check, echoing the app's check marks.
 function CheckLine({ ok, children }: { ok?: boolean; children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-1.5">
@@ -672,12 +673,12 @@ function PageContent({ page }: { page: Page }) {
             <circle cx="11" cy="11" r="7" />
             <path d="m21 21-4.3-4.3" />
           </svg>
-          open grant funding for nonprofits
+          community empowerment grants NJ and LA
         </div>
         {[
           ['Grants.gov — Find grant opportunities', 'grants.gov · federal funding across agencies'],
           ['SAM.gov — Assistance Listings', 'sam.gov · programs and eligibility'],
-          ['Foundation grants directory', 'candid.org · private & corporate funders'],
+          ['Community foundation grants', 'Local funders in New Jersey and Los Angeles'],
         ].map(([title, sub], i) => (
           <div key={title} className={`rounded px-1 py-0.5 ${i === 0 ? 'bg-primary/5' : ''}`}>
             <div className="text-[10px] font-medium text-primary">{title}</div>
@@ -688,31 +689,39 @@ function PageContent({ page }: { page: Page }) {
     );
   }
   if (page === 'grant') {
+    // A Grants.gov opportunity synopsis, in the site's own layout.
     return (
       <div className="space-y-1.5">
-        <div className="text-[12px] font-bold text-ink-primary">Community Workforce Grant</div>
-        <div className="h-2 w-3/4 rounded bg-surface-muted" />
-        <div className="rounded border border-primary/30 bg-primary/5 px-2 py-1 text-[9.5px] text-ink-primary">
-          <span className="text-ink-secondary">Award:</span>{' '}
-          <span className="font-semibold">up to $250,000</span>
-          <span className="text-ink-secondary"> · Deadline:</span>{' '}
-          <span className="font-semibold">Aug 15</span>
+        <div className="-mx-3 -mt-3 mb-1 bg-[#162e51] px-3 py-1 text-[9px] font-bold tracking-wide text-white">
+          GRANTS.GOV <span className="ml-2 font-normal opacity-80">View Grant Opportunity</span>
         </div>
-        <div className="h-2 w-2/3 rounded bg-surface-muted" />
-        <div className="h-2 w-10/12 rounded bg-surface-muted" />
+        <div className="text-[11.5px] font-bold text-ink-primary">
+          OCP-27-0187 &ndash; Neighborhood Empowerment Grant
+        </div>
+        {[
+          ['Funding Instrument Type', 'Grant'],
+          ['Category', 'Community Development'],
+          ['Award Ceiling', 'up to $150,000'],
+          ['Closing Date', 'Nov 14, 2026'],
+        ].map(([k, v], i) => (
+          <div key={k} className={`flex gap-2 border-b border-line/60 pb-0.5 text-[9px] ${i >= 2 ? 'font-semibold' : ''}`}>
+            <span className="w-28 shrink-0 font-semibold text-ink-primary">{k}:</span>
+            <span className={i >= 2 ? 'rounded bg-primary/10 px-1 text-ink-primary' : 'text-ink-secondary'}>{v}</span>
+          </div>
+        ))}
       </div>
     );
   }
-  // careers page under compliance review
+  // the grant's eligibility rules, being checked
   return (
     <div className="space-y-1.5">
-      <div className="text-[12px] font-bold text-ink-primary">Careers — open roles</div>
+      <div className="text-[12px] font-bold text-ink-primary">Eligibility requirements</div>
       <div className="rounded border border-line bg-surface-muted/40 px-2 py-1 text-[9.5px]">
-        <div className="font-semibold text-ink-primary">Program Coordinator</div>
-        <div className="text-ink-secondary">Full-time · Remote</div>
+        <div className="font-semibold text-ink-primary">Neighborhood Empowerment Grant</div>
+        <div className="text-ink-secondary">New Jersey · Los Angeles</div>
       </div>
       <div className="h-2 w-11/12 rounded bg-surface-muted" />
-      <div className="text-[9px] text-ink-secondary">Equal Opportunity Employer</div>
+      <div className="text-[9px] text-ink-secondary">Applicants must be registered nonprofits</div>
       <div className="h-2 w-2/3 rounded bg-surface-muted" />
     </div>
   );

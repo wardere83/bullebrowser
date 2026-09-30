@@ -68,7 +68,8 @@ export function BrandFilm() {
           onPause={() => setPlaying(false)}
           onError={() => setFailed(true)}
         >
-          <source src={asset('/media/bullebrowser-film.mp4')} type="video/mp4" />
+          {/* A failed <source> fires error on itself, not on the <video>. */}
+          <source src={asset('/media/bullebrowser-film.mp4')} type="video/mp4" onError={() => setFailed(true)} />
         </video>
         {failed ? (
           <div className="absolute inset-0 grid place-items-center bg-black/40 text-sm text-white">

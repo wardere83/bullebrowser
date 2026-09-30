@@ -43,7 +43,7 @@ const en: Dict = {
   'film.pause': 'Pause the film',
   'film.fallback': 'The film could not load. Try refreshing the page.',
   'film.demo': 'Try the assistant',
-  'film.description': 'A person asks BulleBrowser to find education grants due this quarter. The assistant opens a grant directory, searches, reads the results, opens the top three in new tabs, and returns a cited comparison, while the person stays in control and their data stays on their device.',
+  'film.description': 'A person asks BulleBrowser to find grants for a community empowerment project in New Jersey and Los Angeles. The assistant opens Grants.gov, searches, reads the results, opens the top three opportunities in new tabs, and returns a cited comparison, while the person stays in control and their data stays on their device.',
   'home.skills.eyebrow': 'Agentic skills',
   'home.skills.h2': 'Native intelligence, built into the browser.',
   'home.skills.body':
@@ -129,7 +129,7 @@ const fr: Dict = {
   'film.pause': 'Mettre le film en pause',
   'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
   'film.demo': 'Essayez l’assistant',
-  'film.description': 'Une personne demande à BulleBrowser de trouver les subventions pour l’éducation qui arrivent à échéance ce trimestre. L’assistant ouvre un répertoire de subventions, lance la recherche, lit les résultats, ouvre les trois meilleurs dans de nouveaux onglets et rend une comparaison sourcée, tandis que la personne garde le contrôle et que ses données restent sur son appareil.',
+  'film.description': 'Une personne demande à BulleBrowser de trouver des subventions pour un projet d’autonomisation communautaire dans le New Jersey et à Los Angeles. L’assistant ouvre Grants.gov, lance la recherche, lit les résultats, ouvre les trois meilleures opportunités dans de nouveaux onglets et rend une comparaison sourcée, tandis que la personne garde le contrôle et que ses données restent sur son appareil.',
   'home.skills.eyebrow': 'Compétences agentiques',
   'home.skills.h2': "Une intelligence native, intégrée au navigateur.",
   'home.skills.body':
@@ -214,7 +214,7 @@ const ar: Dict = {
   'film.pause': 'إيقاف الفيلم مؤقتًا',
   'film.fallback': 'تعذّر تحميل الفيلم. حاول تحديث الصفحة.',
   'film.demo': 'جرّب المساعد',
-  'film.description': 'يطلب شخص من BulleBrowser العثور على منح التعليم المستحقة هذا الربع. يفتح المساعد دليل منح، ويبحث، ويقرأ النتائج، ويفتح أفضل ثلاث منها في علامات تبويب جديدة، ثم يقدّم مقارنة موثّقة بالمصادر، بينما يبقى الشخص متحكمًا وتبقى بياناته على جهازه.',
+  'film.description': 'يطلب شخص من BulleBrowser العثور على منح لمشروع تمكين مجتمعي في نيوجيرسي ولوس أنجلوس. يفتح المساعد موقع Grants.gov، ويبحث، ويقرأ النتائج، ويفتح أفضل ثلاث فرص في علامات تبويب جديدة، ثم يقدّم مقارنة موثّقة بالمصادر، بينما يبقى الشخص متحكمًا وتبقى بياناته على جهازه.',
   'home.skills.eyebrow': 'المهارات الوكيلة',
   'home.skills.h2': 'ذكاء أصيل مدمج داخل المتصفح.',
   'home.skills.body':
@@ -299,7 +299,7 @@ const es419: Dict = {
   'film.pause': 'Pausar el video',
   'film.fallback': 'No se pudo cargar el video. Intenta actualizar la página.',
   'film.demo': 'Prueba el asistente',
-  'film.description': 'Una persona le pide a BulleBrowser que encuentre subvenciones de educación que vencen este trimestre. El asistente abre un directorio de subvenciones, busca, lee los resultados, abre las tres mejores en pestañas nuevas y entrega una comparación con fuentes, mientras la persona mantiene el control y sus datos se quedan en su dispositivo.',
+  'film.description': 'Una persona le pide a BulleBrowser que encuentre subvenciones para un proyecto de empoderamiento comunitario en Nueva Jersey y Los Ángeles. El asistente abre Grants.gov, busca, lee los resultados, abre las tres mejores oportunidades en pestañas nuevas y entrega una comparación con fuentes, mientras la persona mantiene el control y sus datos se quedan en su dispositivo.',
   'home.skills.eyebrow': 'Habilidades del agente',
   'home.skills.h2': 'Inteligencia nativa, integrada en el navegador.',
   'home.skills.body':
@@ -384,7 +384,7 @@ const ptPT: Dict = {
   'film.pause': 'Pausar o filme',
   'film.fallback': 'Não foi possível carregar o filme. Tente atualizar a página.',
   'film.demo': 'Experimente o assistente',
-  'film.description': 'Uma pessoa pede ao BulleBrowser que encontre apoios para a educação com prazo neste trimestre. O assistente abre um diretório de apoios, pesquisa, lê os resultados, abre os três melhores em novos separadores e devolve uma comparação com fontes, enquanto a pessoa mantém o controlo e os seus dados ficam no seu dispositivo.',
+  'film.description': 'Uma pessoa pede ao BulleBrowser que encontre apoios para um projeto de capacitação comunitária em Nova Jérsia e Los Angeles. O assistente abre o Grants.gov, pesquisa, lê os resultados, abre as três melhores oportunidades em novos separadores e devolve uma comparação com fontes, enquanto a pessoa mantém o controlo e os seus dados ficam no seu dispositivo.',
   'home.skills.eyebrow': 'Competências do agente',
   'home.skills.h2': 'Inteligência nativa, integrada no navegador.',
   'home.skills.body':

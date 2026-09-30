@@ -1,6 +1,6 @@
 /*
  * BulleBrowser embed widget — a LiveChat-style launcher bubble + chat panel you
- * drop into a page (e.g. Bulle Cloud / the EEO Dashboard) to replace a chatbot.
+ * drop into a page (for example a CRM or client portal) to replace a chatbot.
  * The BulleBrowser agent then operates the CRM in the user's own logged-in
  * session, right on the page the widget lives in.
  *

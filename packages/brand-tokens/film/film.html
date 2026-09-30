@@ -8,7 +8,7 @@
      to MP4, so every frame is deterministic and the film can be re-cut by
      editing this file. Open it in a browser to preview it playing live. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@400;600;700;800&display=block" rel="stylesheet" />
 <style>
   :root {
     --navy: #071422; --navy-2: #0c2233; --teal: #20BAD1; --teal-2: #1A9BAE;
@@ -56,31 +56,67 @@
   #start img { height: 70px; }
   #start div { color: rgba(255,255,255,.6); font-size: 14px; }
 
-  /* Demo grants site (a made-up directory, not a real one). */
-  #site-head { position: absolute; left: 0; right: 0; top: 0; height: 52px; border-bottom: 1px solid #e7ecef;
-    display: flex; align-items: center; padding: 0 24px; gap: 10px; font-weight: 700; font-size: 15px; color: #1d3b4f; }
-  #site-head i { width: 22px; height: 22px; border-radius: 6px; background: #2f6f4f; display: block; }
-  #site-h { position: absolute; left: 24px; top: 72px; font-size: 22px; font-weight: 700; color: #1b2a33; letter-spacing: -.02em; }
-  #q { position: absolute; left: 24px; top: 112px; width: 390px; height: 40px; border-radius: 8px; border: 1.5px solid #cfd9de;
-    font-size: 14.5px; color: #1b2a33; display: flex; align-items: center; padding: 0 12px; }
-  #q.focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(32,186,209,.18); }
-  #go { position: absolute; left: 424px; top: 112px; width: 112px; height: 40px; border-radius: 8px; background: #2f6f4f;
-    color: #fff; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-  #rows { position: absolute; left: 24px; right: 24px; top: 172px; }
-  .row { height: 64px; border-bottom: 1px solid #edf1f3; display: flex; align-items: center; justify-content: space-between; opacity: 0; }
-  .row b { display: block; font-size: 14.5px; color: #1b2a33; font-weight: 600; }
-  .row small { font-size: 12px; color: #7d8a92; }
-  .row .amt { text-align: right; font-size: 14px; font-weight: 600; color: #1b2a33; }
-  .row .due { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #fff4d6; color: #8a6a00; }
-  #scan { position: absolute; left: 0; right: 0; height: 64px; background: linear-gradient(180deg, rgba(32,186,209,0), rgba(32,186,209,.14), rgba(32,186,209,0));
+  /* Grants.gov, in its own layout (USWDS type and colours): the gov banner,
+     header and navy nav, Search Grants with a filter sidebar and the results
+     table, and a View Grant Opportunity synopsis. The opportunities and the
+     agencies offering them are fictional. */
+  #site, #opp { font-family: 'Source Sans 3', 'Source Sans Pro', Inter, sans-serif; color: #1b1b1b; background: #fff; }
+  .gov { position: absolute; left: 0; right: 0; top: 0; height: 20px; background: #f0f0f0; font-size: 9.5px; color: #1b1b1b;
+    display: flex; align-items: center; gap: 6px; padding: 0 14px; }
+  .gov i { width: 14px; height: 9px; display: block; background:
+    linear-gradient(#b22234 0 14%, #fff 14% 28%, #b22234 28% 42%, #fff 42% 56%, #b22234 56% 70%, #fff 70% 84%, #b22234 84%); position: relative; }
+  .gov i::after { content: ''; position: absolute; left: 0; top: 0; width: 6px; height: 5px; background: #3c3b6e; }
+  .gov u { color: #005ea2; text-decoration: underline; }
+  .gg-head { position: absolute; left: 0; right: 0; top: 20px; height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .gg-logo { font-weight: 800; font-size: 17px; letter-spacing: .02em; color: #162e51; display: flex; align-items: center; gap: 6px; }
+  .gg-logo b { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #73b3e7, #005ea2 70%); display: block; }
+  .gg-login { font-size: 10px; color: #005ea2; }
+  .gg-nav { position: absolute; left: 0; right: 0; top: 58px; height: 26px; background: #162e51; display: flex; align-items: center; gap: 14px; padding: 0 14px;
+    font-size: 10.5px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; }
+  .gg-nav .on { border-bottom: 3px solid #73b3e7; padding: 5px 0 2px; }
+  #site-h { position: absolute; left: 16px; top: 94px; font-size: 19px; font-weight: 700; color: #1b1b1b; }
+  .kw-l { position: absolute; left: 16px; top: 119px; font-size: 9.5px; font-weight: 700; color: #1b1b1b; }
+  #q { position: absolute; left: 16px; top: 132px; width: 396px; height: 30px; border: 1px solid #565c65;
+    font-size: 12.5px; color: #1b1b1b; display: flex; align-items: center; padding: 0 8px; background: #fff; }
+  #q.focus { outline: 3px solid #2491ff; outline-offset: 0; }
+  #go { position: absolute; left: 418px; top: 132px; width: 78px; height: 30px; border-radius: 4px; background: #005ea2;
+    color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .side { position: absolute; left: 16px; top: 176px; width: 112px; font-size: 9.5px; }
+  .side h5 { font-size: 10px; font-weight: 700; margin: 0 0 4px; padding-bottom: 3px; border-bottom: 1px solid #dfe1e2; }
+  .side p { margin: 0 0 3px; display: flex; align-items: center; gap: 4px; color: #1b1b1b; }
+  .side p i { width: 9px; height: 9px; border: 1px solid #565c65; display: block; flex: none; }
+  .side p i.x { background: #005ea2; border-color: #005ea2; }
+  .side div { margin-bottom: 9px; }
+  #count { position: absolute; left: 140px; top: 176px; font-size: 10px; color: #1b1b1b; }
+  #rows { position: absolute; left: 140px; right: 10px; top: 192px; font-size: 9.5px; }
+  .th, .row { display: grid; grid-template-columns: 70px 1fr 78px 46px 50px 50px; gap: 5px; align-items: center; padding: 0 5px; }
+  .th { height: 22px; background: #dfe1e2; font-weight: 700; font-size: 9px; }
+  .row { height: 48px; border-bottom: 1px solid #dfe1e2; opacity: 0; line-height: 1.25; }
+  .row a { color: #005ea2; text-decoration: underline; }
+  .row .st { color: #1b1b1b; }
+  #scan { position: absolute; left: 140px; right: 10px; height: 48px; background: linear-gradient(180deg, rgba(32,186,209,0), rgba(32,186,209,.14), rgba(32,186,209,0));
     border-top: 2px solid rgba(32,186,209,.5); opacity: 0; }
+
+  /* View Grant Opportunity (synopsis tab). */
+  #opp .crumb { position: absolute; left: 16px; top: 92px; font-size: 9.5px; color: #005ea2; }
+  #opp h2 { position: absolute; left: 16px; top: 106px; right: 100px; font-size: 16px; font-weight: 700; margin: 0; line-height: 1.2; }
+  #opp .apply { position: absolute; right: 14px; top: 106px; height: 26px; padding: 0 14px; border-radius: 4px; background: #005ea2; color: #fff;
+    font-size: 11px; font-weight: 700; display: flex; align-items: center; }
+  #opp .tabs { position: absolute; left: 16px; right: 14px; top: 150px; display: flex; gap: 2px; border-bottom: 2px solid #162e51; font-size: 10px; font-weight: 600; }
+  #opp .tabs span { padding: 5px 10px; background: #f0f0f0; color: #1b1b1b; }
+  #opp .tabs .on { background: #162e51; color: #fff; }
+  #opp .kv { position: absolute; left: 16px; right: 14px; top: 180px; font-size: 10px; }
+  #opp .kv h6 { font-size: 11px; margin: 0 0 5px; }
+  #opp .kv div { display: grid; grid-template-columns: 190px 1fr; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+  #opp .kv div span:first-child { font-weight: 700; }
+  #opp .kv mark { background: rgba(32,186,209,.18); color: inherit; padding: 0 2px; }
 
   /* The assistant panel. */
   #panel { position: absolute; top: 0; bottom: 0; width: 370px; background: #fbfdfd; border-left: 1px solid var(--line); }
   #p-head { height: 50px; display: flex; align-items: center; gap: 9px; padding: 0 16px; border-bottom: 1px solid var(--line);
     font-weight: 600; font-size: 14px; color: var(--ink); }
   #p-head img { width: 22px; height: 22px; }
-  #bubble { position: absolute; right: 16px; top: 66px; max-width: 290px; background: var(--ink); color: #fff; font-size: 13.5px;
+  #bubble { position: absolute; right: 16px; top: 62px; max-width: 336px; background: var(--ink); color: #fff; font-size: 13.5px;
     line-height: 1.45; padding: 10px 14px; border-radius: 14px 14px 4px 14px; opacity: 0; }
   #steps { position: absolute; left: 16px; right: 16px; top: 150px; }
   .step { display: flex; align-items: center; gap: 10px; height: 30px; font-size: 13px; color: #33434d; opacity: 0; }
@@ -88,11 +124,11 @@
   .ic .spin { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(32,186,209,.25); border-top-color: var(--teal); }
   .ic .ok { position: absolute; inset: 0; border-radius: 50%; background: var(--teal); opacity: 0; }
   .ic .ok::after { content: ''; position: absolute; left: 6px; top: 3px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  #done { position: absolute; left: 16px; top: 150px; font-size: 12.5px; color: var(--slate); opacity: 0; display: flex; gap: 8px; align-items: center; }
-  #answer { position: absolute; left: 16px; right: 16px; top: 178px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; opacity: 0;
+  #done { position: absolute; left: 16px; top: 148px; font-size: 12.5px; color: var(--slate); opacity: 0; display: flex; gap: 8px; align-items: center; }
+  #answer { position: absolute; left: 16px; right: 16px; top: 172px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; opacity: 0;
     box-shadow: 0 10px 30px -18px rgba(7,20,34,.35); }
   #answer h4 { font-size: 13.5px; color: var(--ink); margin-bottom: 10px; }
-  .ar { display: grid; grid-template-columns: 1fr 58px 52px; gap: 6px; align-items: center; padding: 8px 0; border-top: 1px solid #eef3f5; font-size: 12px; color: #3b4a53; opacity: 0; }
+  .ar { display: grid; grid-template-columns: 1fr 46px 40px; gap: 6px; align-items: center; padding: 7px 0; border-top: 1px solid #eef3f5; font-size: 11.5px; color: #3b4a53; opacity: 0; }
   .ar.h { border-top: 0; padding-top: 0; color: var(--slate); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; opacity: 1; }
   .ar b { font-weight: 600; color: var(--ink); }
   .ar sup { color: var(--teal); font-weight: 700; margin-left: 2px; }
@@ -161,38 +197,71 @@
       <div id="page">
         <div class="layer" id="start"><img src="../assets/wordmark-light.png" alt="" /><div>The browser that navigates for you</div></div>
         <div class="layer" id="site" style="opacity:0">
-          <div id="site-head"><i></i>Grant Directory</div>
-          <div id="site-h">Find funding opportunities</div>
-          <div id="q"><span id="qtext"></span><span id="qph" style="color:#a2adb4">Search by keyword</span></div>
+          <div class="gov"><i></i>An official website of the United States government <u>Here's how you know</u></div>
+          <div class="gg-head"><div class="gg-logo"><b></b>GRANTS.GOV</div><div class="gg-login">Login &nbsp;|&nbsp; Register</div></div>
+          <div class="gg-nav"><span>Learn Grants</span><span class="on">Search Grants</span><span>Applicants</span><span>Grantors</span><span>System-to-System</span><span>Forms</span><span>Support</span></div>
+          <div id="site-h">Search Grants</div>
+          <div class="kw-l">Keyword(s)</div>
+          <div id="q"><span id="qtext"></span><span id="qph" style="color:#71767a"></span></div>
           <div id="go">Search</div>
+          <div class="side">
+            <div><h5>Opportunity Status</h5><p><i class="x"></i>Forecasted</p><p><i class="x"></i>Posted</p><p><i></i>Closed</p></div>
+            <div><h5>Funding Instrument Type</h5><p><i class="x"></i>Grant</p><p><i></i>Cooperative Agreement</p></div>
+            <div><h5>Eligibility</h5><p><i class="x"></i>Nonprofits having a 501(c)(3) status</p></div>
+            <div><h5>Category</h5><p><i class="x"></i>Community Development</p></div>
+          </div>
+          <div id="count">1 - 5 of 23 Results</div>
           <div id="rows">
-            <div class="row"><div><b>STEM Classroom Innovation</b><small>Dept. of Education · Discretionary</small></div><div class="amt">$250,000<br><span class="due">Due Nov 14</span></div></div>
-            <div class="row"><div><b>Rural Literacy Partnership</b><small>Community Learning Fund</small></div><div class="amt">$120,000<br><span class="due">Due Dec 2</span></div></div>
-            <div class="row"><div><b>Teacher Pathways Fund</b><small>Workforce Development</small></div><div class="amt">$500,000<br><span class="due">Due Dec 19</span></div></div>
-            <div class="row"><div><b>Adult Learning Access</b><small>Humanities Council</small></div><div class="amt">$80,000<br><span class="due">Due Jan 30</span></div></div>
-            <div class="row"><div><b>Digital Skills for Youth</b><small>Foundation Program</small></div><div class="amt">$60,000<br><span class="due">Due Feb 11</span></div></div>
+            <div class="th"><span>Opportunity Number</span><span>Opportunity Title</span><span>Agency</span><span>Status</span><span>Posted Date</span><span>Close Date</span></div>
+            <div class="row"><a>OCP-27-0142</a><a>Community Empowerment Partnerships</a><span>Office of Community Programs</span><span class="st">Posted</span><span>09/15/2026</span><span>11/14/2026</span></div>
+            <div class="row"><a>NRF-27-0310</a><a>Neighborhood Revitalization &ndash; New Jersey</a><span>Neighborhood Resilience Fund</span><span class="st">Posted</span><span>09/22/2026</span><span>12/02/2026</span></div>
+            <div class="row"><a>UCI-27-0077</a><a>Urban Civic Leadership &ndash; Los Angeles</a><span>Urban Communities Initiative</span><span class="st">Posted</span><span>10/01/2026</span><span>12/19/2026</span></div>
+            <div class="row"><a>RLA-27-0019</a><a>Resident Leadership Academies</a><span>Civic Learning Council</span><span class="st">Posted</span><span>10/06/2026</span><span>01/30/2027</span></div>
+            <div class="row"><a>YVL-27-0051</a><a>Youth Voices in Local Government</a><span>Office of Community Programs</span><span class="st">Forecasted</span><span>10/10/2026</span><span>&mdash;</span></div>
           </div>
           <div id="scan"></div>
+        </div>
+        <div class="layer" id="opp" style="opacity:0">
+          <div class="gov"><i></i>An official website of the United States government <u>Here's how you know</u></div>
+          <div class="gg-head"><div class="gg-logo"><b></b>GRANTS.GOV</div><div class="gg-login">Login &nbsp;|&nbsp; Register</div></div>
+          <div class="gg-nav"><span>Learn Grants</span><span class="on">Search Grants</span><span>Applicants</span><span>Grantors</span><span>System-to-System</span><span>Forms</span><span>Support</span></div>
+          <div class="crumb">Search Grants &rsaquo; View Grant Opportunity</div>
+          <h2>UCI-27-0077 &ndash; Urban Civic Leadership &ndash; Los Angeles</h2>
+          <div class="apply">Apply</div>
+          <div class="tabs"><span class="on">Synopsis 1</span><span>Version History</span><span>Related Documents</span><span>Package</span></div>
+          <div class="kv">
+            <h6>General Information</h6>
+            <div><span>Document Type:</span><span>Grants Notice</span></div>
+            <div><span>Funding Opportunity Number:</span><span>UCI-27-0077</span></div>
+            <div><span>Opportunity Category:</span><span>Discretionary</span></div>
+            <div><span>Funding Instrument Type:</span><span>Grant</span></div>
+            <div><span>Category of Funding Activity:</span><span>Community Development</span></div>
+            <div><span>Expected Number of Awards:</span><span>12</span></div>
+            <div><span>Award Ceiling:</span><span><mark>$250,000</mark></span></div>
+            <div><span>Award Floor:</span><span>$50,000</span></div>
+            <div><span>Current Closing Date for Applications:</span><span><mark>Dec 19, 2026</mark></span></div>
+            <div><span>Eligible Applicants:</span><span>Nonprofits having a 501(c)(3) status</span></div>
+          </div>
         </div>
       </div>
       <div id="panel">
         <div id="p-head"><img src="../assets/logo.svg" alt="" />Assistant</div>
-        <div id="bubble">Find education grants due this quarter and compare the top three.</div>
+        <div id="bubble">Find grants for our community empowerment project in New Jersey and Los Angeles, and compare the top three.</div>
         <div id="steps">
-          <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Opening grant listings</span></div>
-          <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Searching “education”</span></div>
-          <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Reading 24 results</span></div>
+          <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Opening Grants.gov</span></div>
+          <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Searching “community empowerment”</span></div>
+          <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Reading 23 results</span></div>
           <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Opening the top 3 in new tabs</span></div>
           <div class="step"><span class="ic"><span class="spin"></span><span class="ok"></span></span><span>Comparing eligibility and deadlines</span></div>
         </div>
         <div id="done"><span class="ic"><span class="ok" style="opacity:1"></span></span>Done in 5 steps · 9s</div>
         <div id="answer">
-          <h4>Top 3 education grants due this quarter</h4>
+          <h4>Top 3 matches &middot; New Jersey and Los Angeles</h4>
           <div class="ar h"><span>Grant</span><span>Award</span><span>Fit</span></div>
-          <div class="ar"><span><b>STEM Classroom Innovation</b><sup>1</sup><br>Due Nov 14</span><span>$250K</span><span class="fit">High</span></div>
-          <div class="ar"><span><b>Rural Literacy Partnership</b><sup>2</sup><br>Due Dec 2</span><span>$120K</span><span class="fit">High</span></div>
-          <div class="ar"><span><b>Teacher Pathways Fund</b><sup>3</sup><br>Due Dec 19</span><span>$500K</span><span class="fit m">Med</span></div>
-          <div id="src"><span>Source 1</span><span>Source 2</span><span>Source 3</span></div>
+          <div class="ar"><span><b>Community Empowerment Partnerships</b><sup>1</sup><br>NJ + LA &middot; Closes Nov 14</span><span>$150K</span><span class="fit">High</span></div>
+          <div class="ar"><span><b>Urban Civic Leadership</b><sup>2</sup><br>Los Angeles &middot; Closes Dec 19</span><span>$250K</span><span class="fit">High</span></div>
+          <div class="ar"><span><b>Neighborhood Revitalization</b><sup>3</sup><br>New Jersey &middot; Closes Dec 2</span><span>$120K</span><span class="fit m">Med</span></div>
+          <div id="src"><span>Grants.gov 1</span><span>Grants.gov 2</span><span>Grants.gov 3</span></div>
         </div>
         <div id="composer"><span id="ctext"></span><span id="caret"></span><span id="ph">Ask anything, or tell it what to do…</span>
           <div id="send"></div><div id="stop"><i></i>Stop</div></div>
@@ -264,17 +333,17 @@ function sceneText(el, t, a, b) {
 
 const TABS = [
   { title: 'New tab', at: 0 },
-  { title: 'STEM Classroom Innovation', at: 10.6 },
-  { title: 'Rural Literacy Partnership', at: 10.95 },
-  { title: 'Teacher Pathways Fund', at: 11.3 },
+  { title: 'Community Empowerment Partnerships', at: 10.6 },
+  { title: 'Neighborhood Revitalization – NJ', at: 10.95 },
+  { title: 'Urban Civic Leadership – LA', at: 11.3 },
 ];
 const tabsEl = $('#tabs');
 TABS.forEach(() => { const d = document.createElement('div'); d.className = 'tab'; d.innerHTML = '<span class="fav"></span><span></span>'; tabsEl.appendChild(d); });
 
 // Cursor keyframes, in window coordinates.
 const CUR = [
-  [0, 700, 560], [5.9, 700, 560], [6.9, 250, 222], [7.35, 238, 220], [8.5, 238, 220], [8.95, 486, 222],
-  [9.3, 486, 222], [10.2, 470, 380], [13.8, 470, 380], [15.2, 690, 490], [18.4, 690, 490],
+  [0, 700, 560], [5.9, 700, 560], [6.9, 230, 238], [7.35, 214, 237], [8.6, 214, 237], [9.0, 452, 238],
+  [9.3, 452, 238], [10.2, 380, 390], [13.8, 470, 380], [15.2, 690, 490], [18.4, 690, 490],
 ];
 function cursorAt(t) {
   for (let i = 0; i < CUR.length - 1; i++) {
@@ -283,7 +352,7 @@ function cursorAt(t) {
   }
   const l = CUR[CUR.length - 1]; return [l[1], l[2]];
 }
-const CLICKS = [7.35, 8.95];
+const CLICKS = [7.35, 9.0];
 
 window.render = function render(t) {
   drawGlobe(t);
@@ -311,11 +380,11 @@ window.render = function render(t) {
     d.style.opacity = i === 0 ? 1 : on;
     d.style.width = i === 0 ? '176px' : `${eo(on) * 150}px`;
     d.classList.toggle('on', i === active);
-    d.children[1].textContent = i === 0 ? (t < 6.1 ? 'New tab' : 'Grant Directory') : TABS[i].title;
+    d.children[1].textContent = i === 0 ? (t < 6.1 ? 'New tab' : 'Search Grants | Grants.gov') : TABS[i].title;
   });
 
   // Address bar.
-  const url = t < 6.1 ? 'bullebrowser://start' : t < 9.0 ? 'grants.example.org' : t < 11.3 || t >= 12.6 ? 'grants.example.org/search?q=education' : 'grants.example.org/opportunity/teacher-pathways';
+  const url = t < 6.1 ? 'bullebrowser://start' : t < 9.0 ? 'www.grants.gov/search-grants' : t < 11.3 || t >= 12.6 ? 'www.grants.gov/search-grants?keywords=community empowerment' : 'www.grants.gov/search-results-detail/355077';
   $('#url').textContent = url;
 
   // Panel slides in; the page narrows to make room.
@@ -330,7 +399,7 @@ window.render = function render(t) {
   $('#site').style.opacity = siteIn;
 
   // Composer: type the prompt, send it.
-  const PROMPT = 'Find education grants due this quarter and compare the top three.';
+  const PROMPT = 'Find grants for our community empowerment project in New Jersey and Los Angeles, and compare the top three.';
   const typing = t >= 1.8 && t < 5.0;
   const sent = t >= 5.0;
   $('#ctext').textContent = sent ? '' : typed(PROMPT, t, 1.9, 4.7);
@@ -374,7 +443,7 @@ window.render = function render(t) {
 
   // The grants site: focus the search box, type, click Search, results arrive.
   $('#q').classList.toggle('focus', t >= 7.35 && t < 9.0);
-  $('#qtext').textContent = typed('education', t, 7.6, 8.4);
+  $('#qtext').textContent = typed('community empowerment', t, 7.6, 8.5);
   $('#qph').style.display = t < 7.6 ? 'inline' : 'none';
   $$('.row').forEach((el, i) => {
     const r = eo(seg(t, 9.15 + i * 0.12, 9.45 + i * 0.12));
@@ -384,7 +453,11 @@ window.render = function render(t) {
   });
   const sc = seg(t, 9.4, 10.3);
   $('#scan').style.opacity = sc > 0 && sc < 1 ? 1 : 0;
-  $('#scan').style.top = `${172 + sc * 5 * 64 - 64}px`;
+  $('#scan').style.top = `${214 + sc * 5 * 48 - 48}px`;
+
+  // The opportunity tab the agent switches to shows its synopsis page.
+  const onOpp = t >= 11.3 && t < 12.6 ? eo(seg(t, 11.3, 11.55)) * (1 - seg(t, 12.45, 12.6)) : 0;
+  $('#opp').style.opacity = onOpp;
 
   // Cursor + click ripples.
   const [cx, cy] = cursorAt(t);
