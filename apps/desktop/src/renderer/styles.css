@@ -35,6 +35,17 @@ textarea {
   user-select: text;
 }
 
+/* The chrome is unselectable so a drag across the toolbar doesn't paint a
+   selection — but the assistant's conversation is content people copy from.
+   Buttons and labels inside it stay unselectable. */
+.selectable {
+  user-select: text;
+  cursor: auto;
+}
+.selectable button {
+  user-select: none;
+}
+
 .drag-region {
   -webkit-app-region: drag;
 }
@@ -384,6 +395,11 @@ textarea {
 
 .splash-tagline {
   animation: splash-breathe 9s ease-in-out infinite;
+}
+
+/* Above the start-page film the mark holds steady; only the shine moves. */
+.splash-logo--steady {
+  animation: none;
 }
 
 @keyframes splash-breathe {

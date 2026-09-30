@@ -959,18 +959,55 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   if (role === 'user') {
     return (
       <div className="mb-6 flex justify-end">
-        <div className="max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
+        <div className="selectable max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
           {content}
         </div>
       </div>
     );
   }
   // Assistant replies read as plain prose — no card, no border — for a calm,
-  // document-like feel.
+  // document-like feel. Selectable, with a one-click copy of the whole reply.
   return (
-    <div className="mb-6 md-prose">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <div className="group mb-6">
+      <div className="md-prose selectable">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      </div>
+      <CopyButton text={content} />
     </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // The async clipboard can be unavailable (window not focused); fall
+      // back to the selection-based copy, which works everywhere.
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      aria-label="Copy reply"
+      className="mt-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-ink-secondary opacity-70 transition-opacity hover:bg-surface-muted hover:opacity-100 group-hover:opacity-100"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+      </svg>
+      {copied ? 'Copied' : 'Copy'}
+    </button>
   );
 }
 

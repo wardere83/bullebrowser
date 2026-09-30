@@ -15,6 +15,10 @@ export function createBrowserWindow(opts: WindowOptions): BrowserWindow {
     title: product.windowTitle,
     backgroundColor: '#071422',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    // Centre the macOS close / minimise / zoom buttons in the 44px top bar.
+    // The top bar leaves a matching gutter for them (MAC_TRAFFIC_LIGHT_GUTTER
+    // in TopBar.tsx) so they never sit on the back and forward buttons.
+    ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 15 } } : {}),
     autoHideMenuBar: true,
     show: false,
     icon: tryIcon(),

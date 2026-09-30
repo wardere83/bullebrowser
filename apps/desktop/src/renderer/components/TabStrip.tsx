@@ -73,6 +73,11 @@ function Tab({
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       onClick={() => window.bullebrowser.tabs.switch(tab.id)}
+      // Middle-click closes, as in every other browser.
+      onAuxClick={(e) => {
+        if (e.button === 1) close(e);
+      }}
+      title={tab.title || tab.url}
       className={`group relative flex h-7 w-[180px] items-center gap-2 rounded-t-md px-2 text-left text-xs transition-colors ${
         tab.active
           ? 'z-10 bg-surface-light font-medium text-ink-primary shadow-[inset_0_-3px_0_0_#20BAD1,0_0_10px_rgba(32,186,209,0.45)]'
@@ -87,13 +92,20 @@ function Tab({
       <span className="flex-1 truncate">
         {tab.loading ? 'Loading…' : tab.title || 'New Tab'}
       </span>
+      {/* Always shown on the active tab — the one a site just opened on top
+          of your page — and on hover for the rest. It used to be invisible
+          until hovered, and a 16px target, so a tab that covered the page was
+          hard to get rid of. */}
       <span
         role="button"
         aria-label="Close tab"
+        title="Close tab (⌘W)"
         onClick={close}
-        className="grid h-4 w-4 place-items-center rounded-sm opacity-0 hover:bg-black/10 group-hover:opacity-100"
+        className={`grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-black/15 ${
+          tab.active ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M6 6l12 12M6 18L18 6" />
         </svg>
       </span>

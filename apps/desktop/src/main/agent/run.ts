@@ -55,14 +55,18 @@ const BASE_SYSTEM = [
   'browser (navigating, reading, clicking, typing), the way a person would, not by',
   'answering from memory.',
   '',
-  'Tools: navigate, read_page (any tab via tabId), extract (structured data),',
-  'listLinks, getSelection, getPageMetadata, click, type, press_key',
-  '(Enter/Tab/Arrows), scroll, screenshot, wait_for, and tab management (new_tab,',
-  'switch_tab, close_tab, go_back, go_forward, reload, list_tabs).',
+  'Tools: navigate, read_page (any tab via tabId), find_elements (the page\'s',
+  'controls, each with a ref like @12), extract (structured data), listLinks,',
+  'getSelection, getPageMetadata, click, type, select_option, press_key (Enter,',
+  'Tab, Escape, Backspace, Space, arrows, Home/End, PageUp/PageDown), scroll,',
+  'screenshot, wait_for, and tab management (new_tab, switch_tab, close_tab,',
+  'go_back, go_forward, reload, list_tabs).',
   '',
   'Method — work in a perceive → plan → act → observe loop:',
-  '1. Perceive: check where you are (the current tab is provided; use read_page or',
-  '   list_tabs to orient). Do not assume page contents — read them.',
+  '1. Perceive: check where you are. The current tab and the opening text of its',
+  '   page are provided below — answer questions about "this page" from that',
+  '   directly, and read_page only when you need more of it. Do not assume page',
+  '   contents — read them.',
   '2. Plan the smallest sequence of real browser actions that satisfies the task.',
   '3. Act one step at a time, then observe the tool result before the next step.',
   '4. Adapt: if a page differs from what you expected, re-read and re-plan.',
@@ -76,8 +80,18 @@ const BASE_SYSTEM = [
   '  client-side, so you read the finished page rather than a loading state.',
   '- Prefer read_page/extract over screenshot; use screenshot only when the task',
   '  is genuinely visual (layout, charts, images).',
-  '- To type into a field: type the text, then press_key Enter to submit search',
-  '  boxes. Use extract for tables/lists/structured data.',
+  '- Before clicking, typing or choosing in a form, call find_elements and act by',
+  '  ref (target "@12"): refs are exact, while guessing labels or selectors fails',
+  '  on real sites. Refs go stale when the page changes — call find_elements again.',
+  '- To fill a field: type (it replaces the value). For a <select> dropdown use',
+  '  select_option. Press_key Enter submits search boxes. Use extract for',
+  '  tables/lists/structured data.',
+  '- Document editors (Word Online, Google Docs) and some forms live inside',
+  '  embedded frames: read_page includes their text, and find_elements lists',
+  '  their controls with frame refs like "@2.7". To write in a document, type',
+  '  into its editor — text goes in at the cursor, so click where it belongs first.',
+  '- A failed action tells you what IS on the page — read the error and retry',
+  '  with a better target instead of repeating the same one.',
   '- To compare or summarize several sources, open them in tabs and read_page each',
   '  by tabId (no need to switch focus).',
   '',
@@ -260,6 +274,11 @@ function isCancellation(err: unknown): boolean {
     name === 'APIUserAbortError' ||
     /cancel|abort/i.test(message)
   );
+}
+
+/** True while any agent task is still working. */
+export function hasActiveAgentRun(): boolean {
+  return runs.size > 0;
 }
 
 export function cancelAgentRun(runId: string) {

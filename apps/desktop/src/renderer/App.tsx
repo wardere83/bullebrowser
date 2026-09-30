@@ -61,14 +61,19 @@ export function App() {
   useEffect(() => {
     return window.bullebrowser.agent.onStep(({ step }) => {
       appendStep(step);
+      // Only a run-level error (no toolName) ends the run. A tool error — a
+      // click that matched nothing, a declined confirmation — is reported back
+      // to the model, which carries on and usually recovers; treating it as
+      // fatal hid the Stop button while the agent was still driving the page.
+      const runFailed = step.kind === 'error' && !step.toolName;
       if (step.kind === 'done') finishRun();
-      if (step.kind === 'error') setError(step.message);
+      if (runFailed) setError(step.message);
       // When a run finishes, the main process has saved the assistant's
       // reply to the conversation store. Refetch so the response appears
       // in the AI panel — without this, only the user's optimistic message
       // shows and the assistant's text never makes it into the visible
       // conversation history.
-      if (step.kind === 'done' || step.kind === 'error') {
+      if (step.kind === 'done' || runFailed) {
         const cur = useAgentStore.getState().current;
         if (cur?.id) {
           void window.bullebrowser.conversations.get(cur.id).then((updated) => {

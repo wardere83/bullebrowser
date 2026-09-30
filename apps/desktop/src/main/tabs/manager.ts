@@ -25,6 +25,10 @@ interface ManagedTab {
   url: string;
   loading: boolean;
   faviconUrl?: string;
+  // The tab whose page opened this one (a target=_blank link, window.open).
+  // Closing it goes back there, as in Chrome, instead of to whatever tab
+  // happens to sit next to it.
+  openerId?: string;
 }
 
 class TabManager {
@@ -51,7 +55,7 @@ class TabManager {
     return this.tabs.map((t) => this.toState(t));
   }
 
-  async create(url?: string): Promise<TabState> {
+  async create(url?: string, openerId?: string): Promise<TabState> {
     if (!this.win) throw new Error('No window attached');
     const id = randomUUID();
     const view = new WebContentsView({
@@ -70,8 +74,18 @@ class TabManager {
       title: 'New Tab',
       url: url ?? getDefaultHome(),
       loading: true,
+      ...(openerId ? { openerId } : {}),
     };
-    this.tabs.push(tab);
+    // A page-opened tab goes right after its opener (and after any siblings it
+    // already opened), not at the far end of the strip.
+    const openerIdx = openerId ? this.tabs.findIndex((t) => t.id === openerId) : -1;
+    if (openerIdx >= 0) {
+      let at = openerIdx + 1;
+      while (at < this.tabs.length && this.tabs[at]?.openerId === openerId) at += 1;
+      this.tabs.splice(at, 0, tab);
+    } else {
+      this.tabs.push(tab);
+    }
     this.win.contentView.addChildView(view);
     this.wireEvents(tab);
     this.activate(id);
@@ -89,9 +103,12 @@ class TabManager {
     const [tab] = this.tabs.splice(idx, 1);
     if (!tab) return;
     this.win?.contentView.removeChildView(tab.view);
-    tab.view.webContents.close();
+    if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
+    // Tabs this one opened forget it, so they don't try to return to it.
+    for (const t of this.tabs) if (t.openerId === id) delete t.openerId;
     if (this.activeId === id) {
-      const next = this.tabs[Math.min(idx, this.tabs.length - 1)];
+      const opener = tab.openerId ? this.tabs.find((t) => t.id === tab.openerId) : undefined;
+      const next = opener ?? this.tabs[Math.min(idx, this.tabs.length - 1)];
       this.activeId = next?.id ?? null;
       this.relayout();
     }
@@ -207,8 +224,13 @@ class TabManager {
       this.broadcast();
     });
     wc.setWindowOpenHandler(({ url }) => {
-      void this.create(url);
+      void this.create(url, tab.id);
       return { action: 'deny' };
+    });
+    // A page can end itself (window.close() after a sign-in or a download
+    // hand-off). Drop the tab rather than leaving a dead view in the strip.
+    wc.once('destroyed', () => {
+      if (this.tabs.some((t) => t.id === tab.id)) void this.close(tab.id);
     });
 
     // Right-click context menu. We build it dynamically so the items track

@@ -7,7 +7,12 @@ import { FOCUS_AI_PANEL_EVENT } from './AiPanel.js';
 import logo from '@bullebrowser/brand-tokens/logo.svg';
 import { UpdateBanner } from './UpdateBanner.js';
 
+const IS_MAC = navigator.userAgent.includes('Macintosh');
+// Three 12px buttons from x=16 (window.ts trafficLightPosition) plus a gap.
+const MAC_TRAFFIC_LIGHT_GUTTER = 84;
+
 export function TopBar() {
+  const fullScreen = useFullScreen();
   const active = useBrowserStore(activeTabSelector);
   const aiPanelOpen = useBrowserStore((s) => s.aiPanelOpen);
   const setAiPanelOpen = useBrowserStore((s) => s.setAiPanelOpen);
@@ -56,7 +61,13 @@ export function TopBar() {
   };
 
   return (
-    <header className="drag-region flex h-11 items-center gap-2 border-b border-line/30 bg-surface-dark px-3 text-ink-inverse">
+    <header
+      className="drag-region flex h-11 items-center gap-2 border-b border-line/30 bg-surface-dark px-3 text-ink-inverse"
+      // macOS draws the window buttons inside this bar (hiddenInset); keep
+      // them clear of the logo and the back / forward buttons, except in full
+      // screen, where macOS hides them.
+      style={IS_MAC && !fullScreen ? { paddingLeft: MAC_TRAFFIC_LIGHT_GUTTER } : undefined}
+    >
       <img src={logo} alt="" width={20} height={20} className="no-drag opacity-95" />
       <div className="no-drag flex items-center gap-1">
         <NavBtn
@@ -216,4 +227,17 @@ function MenuItem({ children, onClick }: { children: React.ReactNode; onClick: (
       {children}
     </button>
   );
+}
+
+// Full screen hides the macOS window buttons, so the gutter can go too. The
+// window is full-screen exactly when it fills the whole display.
+function useFullScreen(): boolean {
+  const check = () => window.innerWidth === screen.width && window.innerHeight === screen.height;
+  const [full, setFull] = useState(check);
+  useEffect(() => {
+    const onResize = () => setFull(check());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return full;
 }

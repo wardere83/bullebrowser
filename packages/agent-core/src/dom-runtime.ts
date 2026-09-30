@@ -259,7 +259,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     async pressKey(_id, key) {
       const el = (document.activeElement as HTMLElement) ?? document.body;
       for (const type of ['keydown', 'keyup'] as const) {
-        el.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent(type, { key: key === 'Space' ? ' ' : key, bubbles: true }));
       }
       return { pressed: key };
     },

@@ -60,7 +60,9 @@ export type ToolName =
   | 'reload'
   | 'scroll'
   | 'press_key'
-  | 'wait_for';
+  | 'wait_for'
+  | 'select_option'
+  | 'find_elements';
 
 export interface ToolDefinition<TInput, TOutput> {
   name: ToolName;
@@ -86,7 +88,8 @@ export interface ToolContext {
 export interface ToolRuntime {
   navigate(tabId: string, url: string): Promise<{ url: string; title: string }>;
   readPage(tabId: string): Promise<{ title: string; url: string; text: string }>;
-  click(tabId: string, target: string): Promise<{ matched: string }>;
+  // `url` is where the page ended up once whatever the click triggered settled.
+  click(tabId: string, target: string): Promise<{ matched: string; url?: string }>;
   type(tabId: string, target: string, text: string): Promise<{ matched: string }>;
   extract(
     tabId: string,
@@ -104,10 +107,7 @@ export interface ToolRuntime {
     tabId: string,
     options: { direction: 'up' | 'down' | 'top' | 'bottom'; amount?: number },
   ): Promise<{ scrolledTo: number }>;
-  pressKey(
-    tabId: string,
-    key: 'Enter' | 'Tab' | 'Escape' | 'ArrowDown' | 'ArrowUp' | 'PageDown' | 'PageUp',
-  ): Promise<{ pressed: string }>;
+  pressKey(tabId: string, key: KeyName): Promise<{ pressed: string }>;
   waitFor(
     tabId: string,
     condition: { selector?: string; networkIdle?: boolean; timeoutMs?: number },
@@ -118,7 +118,43 @@ export interface ToolRuntime {
   getSelection?(tabId: string): Promise<{ text: string }>;
   listLinks?(tabId: string): Promise<{ text: string; href: string }[]>;
   queryDom?(tabId: string, selector: string): Promise<{ matches: number }>;
+
+  // Choose an option in a <select> (by its visible label or value).
+  selectOption?(tabId: string, target: string, option: string): Promise<{ matched: string }>;
+  // Visible interactive elements, each tagged with a stable ref ("@12") that
+  // click / type / select_option accept as their target.
+  findElements?(tabId: string, query?: string): Promise<{ elements: string[] }>;
+  // What a click (target) or a key press on the focused element (target null)
+  // would actually act on, so the consent policy judges the real element —
+  // not just the words the model happened to use to name it.
+  inspectTarget?(tabId: string, target: string | null): Promise<TargetFacts>;
 }
+
+export interface TargetFacts {
+  /** Visible label of the element (text, aria-label, value). */
+  label: string;
+  /** True when acting on it submits a form that carries the user's data
+   *  (anything beyond a lone search box). */
+  submitsForm: boolean;
+}
+
+export const KEY_NAMES = [
+  'Enter',
+  'Tab',
+  'Escape',
+  'Backspace',
+  'Delete',
+  'Space',
+  'ArrowDown',
+  'ArrowUp',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'PageDown',
+  'PageUp',
+] as const;
+export type KeyName = (typeof KEY_NAMES)[number];
 
 export interface AgentMessage {
   role: 'user' | 'assistant';

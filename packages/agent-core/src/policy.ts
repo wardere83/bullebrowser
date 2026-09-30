@@ -1,4 +1,4 @@
-import type { PlanStep, PolicyDecision } from './types.js';
+import type { PlanStep, PolicyDecision, TargetFacts } from './types.js';
 
 // Blocking a typing action outright is a hard stop with no user override, so
 // this has to be precise. The old pattern was bare substrings: `card` blocked
@@ -40,12 +40,26 @@ export class PrivacyPolicyEngine implements PolicyEngine {
       return { allowed: true, requiresConfirmation: false };
     }
 
+    // _facts is what the runtime found on the page for this action (see
+    // inspectTarget): the element's real label and whether it submits a form
+    // carrying the user's data. Judge that, not only the model's wording.
+    const facts = step.input._facts as TargetFacts | undefined;
+
     if (step.toolName === 'clickElement' || step.toolName === 'click') {
       const target = String(step.input.target ?? '');
       return {
         allowed: true,
-        requiresConfirmation: HIGH_RISK_TARGET_RE.test(target),
+        requiresConfirmation:
+          HIGH_RISK_TARGET_RE.test(target) ||
+          HIGH_RISK_TARGET_RE.test(facts?.label ?? '') ||
+          facts?.submitsForm === true,
       };
+    }
+
+    // Enter in a sign-up, checkout or message form submits it just as the
+    // button would. A lone search box does not count (submitsForm is false).
+    if (step.toolName === 'press_key' && step.input.key === 'Enter') {
+      return { allowed: true, requiresConfirmation: facts?.submitsForm === true };
     }
 
     if (step.toolName === 'close_tab') {
