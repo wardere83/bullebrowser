@@ -125,6 +125,47 @@ async function inFrames<T>(
   }
 }
 
+// Where a frame's content starts in the tab's viewport: the sum of each
+// enclosing <iframe>'s content-box position up to the top page. Each parent
+// finds its child frame's element by name, then by address. null when a
+// frame's element can't be found — the caller then clicks without the mouse.
+async function frameOffset(wc: WebContents, frame: WebFrameMain): Promise<{ x: number; y: number } | null> {
+  let x = 0;
+  let y = 0;
+  let f: WebFrameMain | null = frame;
+  while (f && f !== wc.mainFrame) {
+    const parent: WebFrameMain | null = f.parent;
+    if (!parent) return null;
+    let at: { x: number; y: number } | null = null;
+    try {
+      at = await evalPage<{ x: number; y: number } | null>(
+        parent,
+        PAGE_HELPERS,
+        `(function (name, url) {
+          var frames = __bb.DeepAll('iframe, frame');
+          var pick = frames.filter(function (el) { return name && el.name === name; })[0];
+          if (!pick) pick = frames.filter(function (el) { return el.src && url.indexOf(el.src.split('#')[0]) === 0; })[0];
+          if (!pick) {
+            var origin = url.split('/').slice(0, 3).join('/');
+            var same = frames.filter(function (el) { return el.src && el.src.indexOf(origin) === 0 && __bb.Visible(el); });
+            if (same.length === 1) pick = same[0];
+          }
+          if (!pick) return null;
+          var r = pick.getBoundingClientRect(), cs = getComputedStyle(pick);
+          return { x: r.left + pick.clientLeft + parseFloat(cs.paddingLeft), y: r.top + pick.clientTop + parseFloat(cs.paddingTop) };
+        })(${JSON.stringify(f.name)}, ${JSON.stringify(f.url)})`,
+      );
+    } catch {
+      return null;
+    }
+    if (!at) return null;
+    x += at.x;
+    y += at.y;
+    f = parent;
+  }
+  return { x, y };
+}
+
 // Wait for whatever an action set off to finish: a full navigation, an
 // in-page route change, or nothing. Without this a click on a link returned
 // straight away and the next read_page saw the page being left.
@@ -224,6 +265,15 @@ const KEY_DEFS: Record<KeyName, { key: string; code: string; keyCode: number; te
   PageUp: { key: 'PageUp', code: 'PageUp', keyCode: 33 },
 };
 
+// Text as a typist enters it: line breaks are pressed as Enter.
+async function insertLines(send: (method: string, params: object) => Promise<unknown>, text: string): Promise<void> {
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (i > 0) await pressWith(send, KEY_DEFS.Enter);
+    if (lines[i]) await send('Input.insertText', { text: lines[i] });
+  }
+}
+
 async function pressWith(
   send: (method: string, params: object) => Promise<unknown>,
   def: { key: string; code: string; keyCode: number; text?: string },
@@ -303,11 +353,31 @@ export class DesktopToolRuntime implements ToolRuntime {
     const wc = this.wcFor(tabId);
     let matched = '';
     await settleAfter(wc, async () => {
-      matched = (
-        await inFrames<string>(wc, target, `${PAGE_HELPERS}; ${AGENT_CURSOR}`, (t) =>
-          `(${CLICK_FN.toString()})(${JSON.stringify(t)})`,
-        )
-      ).value;
+      // Find it, bring it into view and show the cursor on it...
+      const { value: spot, frame } = await inFrames<ClickSpot>(
+        wc,
+        target,
+        `${PAGE_HELPERS}; ${AGENT_CURSOR}`,
+        (t) => `(${CLICK_SPOT_FN.toString()})(${JSON.stringify(t)})`,
+      );
+      matched = spot.matched;
+      // ...then press it with the real mouse, like a person: editors such as
+      // Word Online place their cursor only on a real click, and many menus
+      // ignore synthetic events. That needs the element's place on screen,
+      // including the offset of any frame it sits in; if that can't be worked
+      // out, or something covers the element, click it directly instead.
+      const offset = spot.onTop ? await frameOffset(wc, frame) : null;
+      if (offset) {
+        const x = offset.x + spot.x;
+        const y = offset.y + spot.y;
+        await withInput(wc, async (send) => {
+          await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+        });
+      } else {
+        await evalPage<void>(frame, `${PAGE_HELPERS}; ${AGENT_CURSOR}`, `(${CLICK_FN.toString()})(${JSON.stringify(spot.ref)})`);
+      }
     });
     return { matched, url: wc.getURL() };
   }
@@ -317,6 +387,12 @@ export class DesktopToolRuntime implements ToolRuntime {
     // Focus the tab first, so the element focused below becomes the page's
     // focused element and native text input lands in it.
     wc.focus();
+    // "focused": type where the cursor already is — typically right after
+    // clicking into a document — in whatever frame holds it.
+    if (/^\s*(focused|cursor|caret)\s*$/i.test(target)) {
+      if (text) await withInput(wc, (send) => insertLines(send, text));
+      return { matched: 'the focused element' };
+    }
     const { value } = await inFrames<{ matched: string; native: boolean }>(
       wc,
       target,
@@ -328,15 +404,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     // This is real text input to the focused element, in whatever frame it
     // lives — it goes through the editor's own input handling, at the cursor
     // TYPE_FN placed. Line breaks are pressed as Enter, as a typist would.
-    if (value.native && text) {
-      await withInput(wc, async (send) => {
-        const lines = text.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-          if (i > 0) await pressWith(send, KEY_DEFS.Enter);
-          if (lines[i]) await send('Input.insertText', { text: lines[i] });
-        }
-      });
-    }
+    if (value.native && text) await withInput(wc, (send) => insertLines(send, text));
     return { matched: value.matched };
   }
 
@@ -859,8 +927,21 @@ var __bb = (function () {
     }
     return el;
   };
+  // The page's main writing surface: the largest visible editor. Word and
+  // PowerPoint Online, Google Docs, email bodies — asked for as "the
+  // document", "the editor", "the body", these have no label that says so.
+  var EDITOR_SEL = '[contenteditable=""], [contenteditable="true"], [role=textbox], textarea';
+  api.MainEditor = function () {
+    var best = null, area = 0;
+    api.DeepAll(EDITOR_SEL).filter(visible).forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.width * r.height > area) { area = r.width * r.height; best = el; }
+    });
+    return area > 20000 ? best : null;
+  };
   api.FindField = function (target) {
     var el = resolve(target, FIELD_SEL);
+    if (!el && /\b(document|doc|editor|body|page|canvas|writing|text area|content)\b/i.test(target)) el = api.MainEditor();
     if (!el) {
       // A <label> naming the field ("Email") stands in for its control.
       var label = byText(target, 'label');
@@ -995,7 +1076,11 @@ var __bb = (function () {
       var r = el.getBoundingClientRect();
       return r.bottom > 0 && r.top < innerHeight ? 0 : 1;
     };
-    list.sort(function (a, b) { return inView(a) - inView(b); });
+    // Document editors first — on a page like Word Online hundreds of toolbar
+    // buttons came before the one control that mattered and cut it off —
+    // then whatever is in view.
+    var isEditor = function (el) { return el.isContentEditable || el.tagName === 'TEXTAREA' || el.getAttribute('role') === 'textbox' ? 0 : 1; };
+    list.sort(function (a, b) { return isEditor(a) - isEditor(b) || inView(a) - inView(b); });
     var seq = api.RefSeq || 0;
     var lines = [];
     for (var i = 0; i < list.length && i < 400; i++) {
@@ -1022,10 +1107,12 @@ var __bb = (function () {
       }).filter(function (x) { return x.n > 0; });
       if (scored.length) {
         scored.sort(function (a, b) { return b.n - a.n || a.idx - b.idx; });
-        return scored.slice(0, 150).map(function (x) { return x.line; });
+        return scored.slice(0, 80).map(function (x) { return x.line; });
       }
     }
-    return lines.slice(0, 150);
+    var shown = lines.slice(0, 80);
+    if (lines.length > 80) shown.push('… ' + (lines.length - 80) + ' more here — call find_elements with a query to narrow');
+    return shown;
   };
   return api;
 })();
@@ -1141,6 +1228,44 @@ declare const __bb: {
 type PageWindow = Window & {
   __bbCursor(el: Element | null, opts?: Record<string, unknown>): void;
 };
+
+interface ClickSpot {
+  matched: string;
+  /** Viewport point to press, within the element's own frame. */
+  x: number;
+  y: number;
+  /** Nothing covers the element at that point (a banner, an overlay). */
+  onTop: boolean;
+  /** A selector for this exact element, so a fallback click hits it. */
+  ref: string;
+}
+
+function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
+  const w = window as unknown as PageWindow;
+  const node = __bb.FindClickable(target);
+  node.scrollIntoView({ block: 'center', inline: 'nearest' });
+  w.__bbCursor(node, { click: true });
+  const token = String(Date.now());
+  node.setAttribute('data-bb-click', token);
+  const label = __bb.Label(node).slice(0, 80);
+  const tag = node.tagName.toLowerCase();
+  // Dwell so the user sees where it's going before the page changes.
+  return new Promise<ClickSpot>((resolve) => {
+    setTimeout(() => {
+      const r = node.getBoundingClientRect();
+      const x = Math.round(r.left + r.width / 2);
+      const y = Math.round(r.top + Math.min(r.height / 2, 20));
+      let top = document.elementFromPoint(x, y);
+      while (top && top.shadowRoot) {
+        const inner = top.shadowRoot.elementFromPoint(x, y);
+        if (!inner || inner === top) break;
+        top = inner;
+      }
+      const onTop = !!top && (top === node || node.contains(top) || top.contains(node) || !!(top.getRootNode() as ShadowRoot).host && node.contains((top.getRootNode() as ShadowRoot).host));
+      resolve({ matched: label ? `${tag} "${label}"` : tag, x, y, onTop, ref: `[data-bb-click="${token}"]` });
+    }, 450);
+  });
+}
 
 function CLICK_FN(target: string): Promise<string> {
   const w = window as unknown as PageWindow;

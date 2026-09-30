@@ -285,7 +285,9 @@ export const tools = {
     description:
       'Type into a text field, textarea, or a document editor such as Word Online or Google ' +
       'Docs (including editors inside embedded frames — use the frame ref from find_elements, ' +
-      'like "@2.7"). For a <select> dropdown use select_option.',
+      'like "@2.7"). Target "document" picks the page\'s main editor; target "focused" types ' +
+      'wherever the cursor already is (e.g. right after clicking into a document). For a ' +
+      '<select> dropdown use select_option.',
     inputSchema: TypeInput,
     outputSchema: TypeOut,
     destructive: true,

@@ -450,7 +450,10 @@ export function AiPanel() {
       <div
         ref={messagesRef}
         onScroll={onMessagesScroll}
-        className="flex-1 overflow-y-auto px-5 py-5"
+        // The whole conversation is selectable, margins included: a drag that
+        // starts beside a reply (how most people select) began on an
+        // unselectable container and selected nothing.
+        className="selectable flex-1 overflow-y-auto px-5 py-5"
       >
         {current && current.messages.length === 0 && (
           <EmptyState
@@ -956,6 +959,7 @@ function EmptyState({
 }
 
 function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string }) {
+  const prose = useRef<HTMLDivElement>(null);
   if (role === 'user') {
     return (
       <div className="mb-6 flex justify-end">
@@ -969,28 +973,42 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   // document-like feel. Selectable, with a one-click copy of the whole reply.
   return (
     <div className="group mb-6">
-      <div className="md-prose selectable">
+      <div ref={prose} className="md-prose selectable">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
-      <CopyButton text={content} />
+      <CopyButton source={prose} />
     </div>
   );
 }
 
-function CopyButton({ text }: { text: string }) {
+// Copies the reply as it reads, not as Markdown source: formatted (headings,
+// bold, lists, tables) for Word, Docs and email, with clean plain text for
+// anywhere else. Copying the raw Markdown pasted as **asterisks** and
+// |table|pipes|, which reads as broken.
+function CopyButton({ source }: { source: React.RefObject<HTMLDivElement | null> }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
+    const el = source.current;
+    if (!el) return;
+    const html = el.innerHTML;
+    const text = el.innerText.trim();
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
     } catch {
-      // The async clipboard can be unavailable (window not focused); fall
-      // back to the selection-based copy, which works everywhere.
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
+      // The async clipboard can be unavailable (window not focused); copy a
+      // selection of the reply instead, which carries the formatting too.
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
       document.execCommand('copy');
-      ta.remove();
+      sel?.removeAllRanges();
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);

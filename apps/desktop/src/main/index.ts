@@ -21,6 +21,14 @@ if (!gotLock) {
 }
 
 app.setName(product.name);
+
+// Present as the Chrome this is built on. Electron's default user agent adds
+// "Electron/x" and the app name, and sites that gate features on the browser —
+// Microsoft 365 (Word for the web can drop to view-only), Google sign-in —
+// treat that unknown token as an unsupported browser. Set before any page loads.
+app.userAgentFallback = app.userAgentFallback
+  .replace(/\s?Electron\/\S+/, '')
+  .replace(new RegExp(`\\s?${product.name}\\/\\S+`), '');
 app.setAppUserModelId(product.appId);
 
 // Disable Chromium's "from <product>" affordance in window titles by force.
