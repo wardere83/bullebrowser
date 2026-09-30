@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { product } from '@bullebrowser/brand-tokens';
 import { AgentPanel } from '@/components/AgentPanel';
+import { BrandFilm } from '@/components/BrandFilm';
 import { Reveal } from '@/components/Reveal';
 import { Marquee } from '@/components/Marquee';
 import { useT } from '@/lib/i18n';
@@ -22,7 +23,8 @@ const MARQUEE = [
 ];
 
 // The home page in the Bulle Consulting brand layout, with its motion: a dark
-// hero with drifting teal blobs and a staggered fade-in, a scrolling capability
+// hero with drifting teal blobs and a staggered fade-in, then the BulleBrowser
+// film in a cinema frame, a scrolling capability
 // marquee, and reveal-on-scroll panels. All copy is the existing BulleBrowser
 // content (via i18n) and the live agent demo — only the styling and animation
 // changed.
@@ -34,7 +36,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-surface-dark text-ink-inverse">
         <div aria-hidden className="animate-blob pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
         <div aria-hidden className="animate-blob pointer-events-none absolute -right-16 top-40 h-72 w-72 rounded-full bg-primary/10 blur-3xl" style={{ animationDelay: '-7s' }} />
-        <div className="relative mx-auto max-w-7xl px-6 py-20 text-center md:py-28">
+        <div className="relative mx-auto max-w-7xl px-6 pb-12 pt-20 text-center md:pb-16 md:pt-28">
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs tracking-wide text-ink-inverse/80">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: 'soft-pulse 1.8s ease-in-out infinite' }} />
@@ -67,8 +69,24 @@ export default function HomePage() {
               </Link>
             </div>
           </Reveal>
-          <Reveal delay={320} className="mx-auto mt-14 max-w-3xl text-left">
-            <AgentPanel />
+          <Reveal delay={300}>
+            <a
+              href="#film"
+              className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-ink-inverse/80 underline-offset-4 transition-colors hover:text-white hover:underline"
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-white/10">
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-3 w-3" fill="currentColor" aria-hidden>
+                  <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" />
+                </svg>
+              </span>
+              {t('film.watch')}
+            </a>
+          </Reveal>
+        </div>
+        {/* The film — the hero's product shot, in a wide cinema frame. */}
+        <div className="relative mx-auto max-w-[1680px] px-4 pb-20 text-left sm:px-6 md:pb-28">
+          <Reveal delay={360}>
+            <BrandFilm />
           </Reveal>
         </div>
       </section>
@@ -78,8 +96,22 @@ export default function HomePage() {
         <Marquee items={MARQUEE} />
       </section>
 
-      {/* Skills — a dark rounded panel with slate cards, on a light band. */}
+      {/* The live assistant demo — try what the film shows. */}
       <section className="bg-surface-light py-20 md:py-24">
+        <div className="mx-auto max-w-3xl px-6">
+          <Reveal>
+            <h2 className="mb-8 text-center text-3xl font-bold tracking-tight text-ink-primary sm:text-4xl">
+              {t('film.demo')}
+            </h2>
+          </Reveal>
+          <Reveal delay={80}>
+            <AgentPanel />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Skills — a dark rounded panel with slate cards, on a light band. */}
+      <section className="bg-surface-light pb-20 md:pb-24">
         <div className="mx-auto max-w-7xl px-6">
           <Reveal>
             <div className="rounded-3xl bg-surface-dark p-8 text-ink-inverse md:p-12">

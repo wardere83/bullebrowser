@@ -10,7 +10,8 @@ import { TranslationMenu } from './TranslationMenu';
 // Dark navigation in the Bulle Consulting brand style: a deep charcoal bar
 // (dark-gray #142127) with the light wordmark, white text links that shade on
 // hover, and a solid teal Download button as the primary call to action. The
-// item for the page you're on carries a persistent white tint.
+// item for the page you're on carries a persistent white tint. On phones the
+// text links fold away (the footer carries them) so the bar never overflows.
 const LINKS = [
   { href: '/', label: 'Home' },
   { href: '/features', label: 'Workflows' },
@@ -22,12 +23,12 @@ export function Header() {
   const onDownload = pathname.startsWith('/download');
   return (
     <header className="sticky top-0 z-30 bg-surface-dark text-ink-inverse">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-6 px-6">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-6 sm:px-6">
         <Link href="/" aria-label={product.name} className="flex shrink-0 items-center">
           <img
             src={asset('/wordmark-light.png')}
             alt={product.name}
-            className="h-11 w-auto select-none"
+            className="h-9 w-auto select-none sm:h-11"
             draggable={false}
           />
         </Link>
@@ -40,7 +41,7 @@ export function Header() {
                 key={l.href}
                 href={l.href}
                 aria-current={active ? 'page' : undefined}
-                className={`rounded-md px-4 py-2 font-medium transition-colors ${
+                className={`hidden rounded-md px-4 py-2 font-medium transition-colors md:inline-flex ${
                   active ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -51,7 +52,7 @@ export function Header() {
           <Link
             href="/download"
             aria-current={onDownload ? 'page' : undefined}
-            className="ml-1 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-primary-hover"
+            className="ml-1 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 sm:px-5 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-primary-hover"
           >
             Download
           </Link>

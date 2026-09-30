@@ -36,6 +36,14 @@ const en: Dict = {
   'home.sub':
     'An AI agent that reads pages, completes browser tasks, and works whatever else you ask, right inside your browser.',
   // home skills
+  'film.watch': 'Watch the film',
+  'film.title': 'See it work.',
+  'film.label': 'The BulleBrowser film',
+  'film.play': 'Play the BulleBrowser film',
+  'film.pause': 'Pause the film',
+  'film.fallback': 'The film could not load. Try refreshing the page.',
+  'film.demo': 'Try the assistant',
+  'film.description': 'A person asks BulleBrowser to find education grants due this quarter. The assistant opens a grant directory, searches, reads the results, opens the top three in new tabs, and returns a cited comparison, while the person stays in control and their data stays on their device.',
   'home.skills.eyebrow': 'Agentic skills',
   'home.skills.h2': 'Native intelligence, built into the browser.',
   'home.skills.body':
@@ -114,6 +122,14 @@ const fr: Dict = {
   'home.h1': 'Le navigateur qui navigue pour vous.',
   'home.sub':
     "Un agent IA qui lit les pages, accomplit les tâches du navigateur et fait tout ce que vous lui demandez, directement dans votre navigateur.",
+  'film.watch': 'Voir le film',
+  'film.title': 'Voyez-le à l’œuvre.',
+  'film.label': 'Le film BulleBrowser',
+  'film.play': 'Lire le film BulleBrowser',
+  'film.pause': 'Mettre le film en pause',
+  'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
+  'film.demo': 'Essayez l’assistant',
+  'film.description': 'Une personne demande à BulleBrowser de trouver les subventions pour l’éducation qui arrivent à échéance ce trimestre. L’assistant ouvre un répertoire de subventions, lance la recherche, lit les résultats, ouvre les trois meilleurs dans de nouveaux onglets et rend une comparaison sourcée, tandis que la personne garde le contrôle et que ses données restent sur son appareil.',
   'home.skills.eyebrow': 'Compétences agentiques',
   'home.skills.h2': "Une intelligence native, intégrée au navigateur.",
   'home.skills.body':
@@ -191,6 +207,14 @@ const ar: Dict = {
   'home.h1': 'المتصفح الذي يتصفح نيابة عنك.',
   'home.sub':
     'وكيل ذكاء اصطناعي يقرأ الصفحات، وينجز مهام المتصفح، وينفذ كل ما تطلبه، داخل متصفحك مباشرة.',
+  'film.watch': 'شاهد الفيلم',
+  'film.title': 'شاهده وهو يعمل.',
+  'film.label': 'فيلم BulleBrowser',
+  'film.play': 'تشغيل فيلم BulleBrowser',
+  'film.pause': 'إيقاف الفيلم مؤقتًا',
+  'film.fallback': 'تعذّر تحميل الفيلم. حاول تحديث الصفحة.',
+  'film.demo': 'جرّب المساعد',
+  'film.description': 'يطلب شخص من BulleBrowser العثور على منح التعليم المستحقة هذا الربع. يفتح المساعد دليل منح، ويبحث، ويقرأ النتائج، ويفتح أفضل ثلاث منها في علامات تبويب جديدة، ثم يقدّم مقارنة موثّقة بالمصادر، بينما يبقى الشخص متحكمًا وتبقى بياناته على جهازه.',
   'home.skills.eyebrow': 'المهارات الوكيلة',
   'home.skills.h2': 'ذكاء أصيل مدمج داخل المتصفح.',
   'home.skills.body':
@@ -268,6 +292,14 @@ const es419: Dict = {
   'home.h1': 'El navegador que navega por ti.',
   'home.sub':
     'Un agente de IA que lee páginas, completa tareas del navegador y hace todo lo demás que le pidas, directamente en tu navegador.',
+  'film.watch': 'Ver el video',
+  'film.title': 'Míralo en acción.',
+  'film.label': 'El video de BulleBrowser',
+  'film.play': 'Reproducir el video de BulleBrowser',
+  'film.pause': 'Pausar el video',
+  'film.fallback': 'No se pudo cargar el video. Intenta actualizar la página.',
+  'film.demo': 'Prueba el asistente',
+  'film.description': 'Una persona le pide a BulleBrowser que encuentre subvenciones de educación que vencen este trimestre. El asistente abre un directorio de subvenciones, busca, lee los resultados, abre las tres mejores en pestañas nuevas y entrega una comparación con fuentes, mientras la persona mantiene el control y sus datos se quedan en su dispositivo.',
   'home.skills.eyebrow': 'Habilidades del agente',
   'home.skills.h2': 'Inteligencia nativa, integrada en el navegador.',
   'home.skills.body':
@@ -345,6 +377,14 @@ const ptPT: Dict = {
   'home.h1': 'O navegador que navega por si.',
   'home.sub':
     'Um agente de IA que lê páginas, executa tarefas no navegador e faz tudo o que lhe pedir, diretamente no seu navegador.',
+  'film.watch': 'Ver o filme',
+  'film.title': 'Veja-o a trabalhar.',
+  'film.label': 'O filme BulleBrowser',
+  'film.play': 'Reproduzir o filme BulleBrowser',
+  'film.pause': 'Pausar o filme',
+  'film.fallback': 'Não foi possível carregar o filme. Tente atualizar a página.',
+  'film.demo': 'Experimente o assistente',
+  'film.description': 'Uma pessoa pede ao BulleBrowser que encontre apoios para a educação com prazo neste trimestre. O assistente abre um diretório de apoios, pesquisa, lê os resultados, abre os três melhores em novos separadores e devolve uma comparação com fontes, enquanto a pessoa mantém o controlo e os seus dados ficam no seu dispositivo.',
   'home.skills.eyebrow': 'Competências do agente',
   'home.skills.h2': 'Inteligência nativa, integrada no navegador.',
   'home.skills.body':
