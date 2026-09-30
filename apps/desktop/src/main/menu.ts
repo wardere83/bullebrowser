@@ -82,7 +82,11 @@ export function setupAppMenu(win: BrowserWindow) {
         ...(app.isPackaged ? [] : ([{ role: 'toggleDevTools' }] as MenuItemConstructorOptions[])),
       ],
     },
-    { role: 'windowMenu' },
+    // On Windows/Linux the stock Window menu carries Close on Ctrl+W, which
+    // would close the whole browser instead of the tab.
+    isMac
+      ? { role: 'windowMenu' }
+      : { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'zoom' }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 

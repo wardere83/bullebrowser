@@ -276,11 +276,6 @@ function isCancellation(err: unknown): boolean {
   );
 }
 
-/** True while any agent task is still working. */
-export function hasActiveAgentRun(): boolean {
-  return runs.size > 0;
-}
-
 export function cancelAgentRun(runId: string) {
   const run = runs.get(runId);
   if (!run) return;

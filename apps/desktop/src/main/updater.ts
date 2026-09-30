@@ -2,7 +2,7 @@
 //
 // The update is downloaded quietly in the background; the user is never
 // interrupted mid-task. When it's on disk we tell the renderer, which offers a
-// "Relaunch to update" button. Nothing installs until they click it — the one
+// top-right "Update App" button. Nothing installs until they click it — the one
 // exception being a normal quit, where installing costs them nothing.
 //
 // This replaces checkForUpdatesAndNotify(), which fired a native OS
@@ -14,7 +14,6 @@ import { app, type BrowserWindow } from 'electron';
 // to avoid `Named export 'autoUpdater' not found` at runtime.
 import electronUpdater from 'electron-updater';
 import { IPC, type UpdateStatus } from '../shared/ipc.js';
-import { hasActiveAgentRun } from './agent/run.js';
 
 const { autoUpdater } = electronUpdater;
 
@@ -25,13 +24,6 @@ const { autoUpdater } = electronUpdater;
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 let latest: UpdateStatus = { state: 'idle' };
-
-// An update that finishes downloading this soon after launch is installed
-// straight away. That is the case of someone reopening the app (often after a
-// force quit, which skips the install-on-quit below): they expect to land on
-// the new version, and a restart this early interrupts nothing.
-const INSTALL_ON_LAUNCH_WINDOW_MS = 3 * 60 * 1000;
-const launchedAt = Date.now();
 
 export function getUpdateStatus(): UpdateStatus {
   return latest;
@@ -55,15 +47,9 @@ export function setupAutoUpdate(win: BrowserWindow) {
     send({ state: 'downloading', version: info.version });
   });
   autoUpdater.on('update-downloaded', (info) => {
+    // Surfaces the "Update App" button. Installing is the user's call: the
+    // app never restarts on its own.
     send({ state: 'ready', version: info.version });
-    if (Date.now() - launchedAt < INSTALL_ON_LAUNCH_WINDOW_MS && !hasActiveAgentRun()) {
-      console.log(`[updater] ${info.version} ready just after launch — installing now`);
-      // A beat for the "Relaunch to update" state to paint, so the restart
-      // doesn't look like a crash.
-      setTimeout(() => {
-        if (!hasActiveAgentRun()) quitAndInstallUpdate();
-      }, 1500);
-    }
   });
   autoUpdater.on('update-not-available', () => {
     send({ state: 'idle' });

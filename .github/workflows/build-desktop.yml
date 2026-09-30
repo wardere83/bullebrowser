@@ -110,14 +110,19 @@ jobs:
           # Sanity-check: electron-builder reads this one for installer filenames + latest*.yml
           node -p "require('./apps/desktop/package.json').version"
 
+      # Automatic releases (auto-release.yml dispatches this against the new
+      # tag) go straight to every installed app, which installs them on launch
+      # — so there a failing check or build must stop the release. Only a
+      # hand-pushed tag keeps the old leniency.
       - name: Type-check, lint, and test
-        continue-on-error: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        continue-on-error: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push' }}
         run: |
           pnpm -r typecheck
           pnpm --filter @bullebrowser/agent-core test
+          pnpm --filter @bullebrowser/desktop test
 
       - name: Build desktop renderer + main
-        continue-on-error: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        continue-on-error: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push' }}
         run: pnpm --filter @bullebrowser/desktop build
 
       # GitHub Actions rejects `secrets.X` in step-level `if:` expressions

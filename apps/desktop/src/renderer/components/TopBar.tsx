@@ -122,8 +122,6 @@ export function TopBar() {
         </div>
       </form>
 
-      <UpdateBanner />
-
       {status === 'running' && (
         <div className="no-drag flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs text-accent">
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
@@ -189,6 +187,9 @@ export function TopBar() {
           </div>
         )}
       </div>
+
+      {/* Top-right corner: appears only once an update is downloaded and ready. */}
+      <UpdateBanner />
     </header>
   );
 }

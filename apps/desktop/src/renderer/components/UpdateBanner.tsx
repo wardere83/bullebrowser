@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { UpdateStatus } from '../../shared/ipc.js';
 
-// Offers an update that is already downloaded and waiting. It appears only once
-// the bytes are on disk, so clicking it is a relaunch and nothing more — no
-// download bar, no progress to watch, no chance of being stranded half-updated
-// on a bad connection.
+// "Update App", in the top-right corner. It appears only when a newer version
+// has been downloaded and is waiting — never otherwise — so clicking it is a
+// relaunch onto that version and nothing more: no download bar, no progress
+// to watch, no chance of being stranded half-updated on a bad connection. The
+// app never restarts itself; this click is how people move to a new version
+// (an unclicked update still installs on a normal quit).
 //
 // Lives in the top bar, not floating over the page: the active tab is a native
 // view painted on top of this window, so anything positioned over the page area
@@ -33,15 +35,15 @@ export function UpdateBanner() {
       type="button"
       onClick={install}
       disabled={installing}
-      title={`Restart BulleBrowser to finish updating to ${status.version}`}
+      title={`BulleBrowser ${status.version} is ready. Restarts the app on the new version.`}
       // no-drag: the top bar is a window drag region, which would otherwise
       // swallow the click.
-      className="no-drag flex shrink-0 flex-col items-start rounded-md border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 leading-tight transition-colors hover:bg-emerald-400/20 disabled:opacity-60"
+      className="no-drag flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-emerald-500 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-400 disabled:opacity-70"
     >
-      <span className="text-[11px] font-medium text-emerald-300">
-        {installing ? 'Relaunching…' : 'Relaunch to update'}
-      </span>
-      <span className="text-[10px] text-emerald-300/70">Version {status.version}</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+        <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+      </svg>
+      {installing ? 'Updating…' : 'Update App'}
     </button>
   );
 }

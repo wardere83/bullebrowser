@@ -127,7 +127,7 @@ export interface ToolRuntime {
   // What a click (target) or a key press on the focused element (target null)
   // would actually act on, so the consent policy judges the real element —
   // not just the words the model happened to use to name it.
-  inspectTarget?(tabId: string, target: string | null): Promise<TargetFacts>;
+  inspectTarget?(tabId: string, target: string | null, key?: 'Enter' | 'Space'): Promise<TargetFacts>;
 }
 
 export interface TargetFacts {
@@ -136,6 +136,9 @@ export interface TargetFacts {
   /** True when acting on it submits a form that carries the user's data
    *  (anything beyond a lone search box). */
   submitsForm: boolean;
+  /** True when the gesture presses a control (a click, or Enter/Space on a
+   *  focused button or link), so its label is judged like a click's. */
+  activates?: boolean;
 }
 
 export const KEY_NAMES = [

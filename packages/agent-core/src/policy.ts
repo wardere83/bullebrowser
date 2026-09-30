@@ -57,9 +57,15 @@ export class PrivacyPolicyEngine implements PolicyEngine {
     }
 
     // Enter in a sign-up, checkout or message form submits it just as the
-    // button would. A lone search box does not count (submitsForm is false).
-    if (step.toolName === 'press_key' && step.input.key === 'Enter') {
-      return { allowed: true, requiresConfirmation: facts?.submitsForm === true };
+    // button would, and Enter or Space on a focused button presses it. A lone
+    // search box does not count (submitsForm is false).
+    if (step.toolName === 'press_key' && (step.input.key === 'Enter' || step.input.key === 'Space')) {
+      return {
+        allowed: true,
+        requiresConfirmation:
+          facts?.submitsForm === true ||
+          (facts?.activates === true && HIGH_RISK_TARGET_RE.test(facts.label)),
+      };
     }
 
     if (step.toolName === 'close_tab') {

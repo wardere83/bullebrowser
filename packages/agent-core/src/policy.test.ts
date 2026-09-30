@@ -50,6 +50,20 @@ describe('policy decisions and redaction', () => {
     expect(enter(true)).toBe(true);
   });
 
+  it('asks before Space or Enter presses a risky focused button', () => {
+    const press = (key: string, label: string, activates: boolean) =>
+      policy.evaluateToolStep({
+        id: '1',
+        toolName: 'press_key',
+        input: { key, _facts: { label, submitsForm: false, activates } },
+        expected: '',
+      }).requiresConfirmation;
+    expect(press('Space', 'Delete account', true)).toBe(true);
+    expect(press('Enter', 'Delete account', true)).toBe(true);
+    expect(press('Enter', 'Send to', false)).toBe(false);
+    expect(press('Space', 'Next', true)).toBe(false);
+  });
+
   it('redacts API key and sensitive keys from logs', () => {
     const redacted = policy.redact({
       apiKey: 'sk-test-1234567890abcdef',

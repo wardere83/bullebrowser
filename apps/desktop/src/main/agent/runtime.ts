@@ -128,48 +128,56 @@ async function inFrames<T>(
 // Wait for whatever an action set off to finish: a full navigation, an
 // in-page route change, or nothing. Without this a click on a link returned
 // straight away and the next read_page saw the page being left.
-function settleAfter(wc: WebContents, act: () => Promise<unknown>): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    let navigating = false;
-    let quiet: NodeJS.Timeout;
-    const cap = setTimeout(() => done(), 10_000);
-    const done = () => {
-      clearTimeout(cap);
-      clearTimeout(quiet);
+async function settleAfter(wc: WebContents, act: () => Promise<unknown>): Promise<void> {
+  let started = false;
+  let finished = false;
+  let inPage = false;
+  const onStart = (d: { isMainFrame: boolean; isSameDocument: boolean }) => {
+    if (d.isMainFrame && !d.isSameDocument) started = true;
+  };
+  const onFinish = () => {
+    finished = true;
+  };
+  // Only the page itself counts: an ad or widget iframe failing to load, or
+  // routing internally, must not end the wait for the real navigation.
+  const onFail = (_e: unknown, _code: number, _desc: string, _url: string, isMainFrame: boolean) => {
+    if (isMainFrame) finished = true;
+  };
+  const onInPage = (_e: unknown, _url: string, isMainFrame: boolean) => {
+    if (isMainFrame) inPage = true;
+  };
+  wc.on('did-start-navigation', onStart);
+  wc.on('did-finish-load', onFinish);
+  wc.on('did-fail-load', onFail);
+  wc.on('did-navigate-in-page', onInPage);
+  try {
+    // The action's own result (and any error — "No element matched", a
+    // timeout) comes first and propagates unchanged: the model must see a
+    // failed click as failed, not as a click that "matched" nothing.
+    await act();
+    // Give whatever it set off a beat to start, then wait for a full
+    // navigation to land (capped), or briefly for an in-page route change.
+    await waitFor(() => started || inPage || wc.isDestroyed(), 700);
+    if (started) await waitFor(() => finished || wc.isDestroyed(), 10_000);
+    else if (inPage) await new Promise((r) => setTimeout(r, 400));
+  } finally {
+    if (!wc.isDestroyed()) {
       wc.off('did-start-navigation', onStart);
-      wc.off('did-finish-load', done);
-      wc.off('did-fail-load', done);
+      wc.off('did-finish-load', onFinish);
+      wc.off('did-fail-load', onFail);
       wc.off('did-navigate-in-page', onInPage);
-      resolve();
+    }
+  }
+}
+
+function waitFor(condition: () => boolean, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const tick = () => {
+      if (condition() || Date.now() - start >= timeoutMs) resolve();
+      else setTimeout(tick, 50);
     };
-    const onStart = (details: { isMainFrame: boolean; isSameDocument: boolean }) => {
-      if (details.isMainFrame && !details.isSameDocument) {
-        navigating = true;
-        clearTimeout(quiet);
-      }
-    };
-    const onInPage = () => {
-      if (!navigating) {
-        clearTimeout(quiet);
-        quiet = setTimeout(done, 400);
-      }
-    };
-    wc.on('did-start-navigation', onStart);
-    wc.on('did-finish-load', done);
-    wc.on('did-fail-load', done);
-    wc.on('did-navigate-in-page', onInPage);
-    act().then(
-      () => {
-        // Nothing started within a beat: the action changed the page in place.
-        quiet = setTimeout(() => {
-          if (!navigating) done();
-        }, 700);
-      },
-      (err) => {
-        done();
-        reject(err);
-      },
-    );
+    tick();
   });
 }
 
@@ -336,10 +344,10 @@ export class DesktopToolRuntime implements ToolRuntime {
     const wc = this.wcFor(tabId);
     const { value } = await inFrames<string>(wc, target, `${PAGE_HELPERS}; ${AGENT_CURSOR}`, (t) =>
       `(function (t, o) {
-        var el = window.__bbFindField(t);
+        var el = __bb.FindField(t);
         el.scrollIntoView({ block: 'center' });
         window.__bbCursor(el, { click: true });
-        return window.__bbSelect(el, o);
+        return __bb.Select(el, o);
       })(${JSON.stringify(t)}, ${JSON.stringify(option)})`,
     );
     return { matched: value };
@@ -348,12 +356,12 @@ export class DesktopToolRuntime implements ToolRuntime {
   async findElements(tabId: string, query?: string) {
     const wc = this.wcFor(tabId);
     const q = JSON.stringify(query ?? '');
-    const elements = await evalPage<string[]>(wc, PAGE_HELPERS, `window.__bbFindElements(${q})`);
+    const elements = await evalPage<string[]>(wc, PAGE_HELPERS, `__bb.FindElements(${q})`);
     // Controls inside embedded frames get frame-qualified refs ("@2.7" is ref
     // 7 in frame 2), which click / type / select_option resolve back.
     for (const { frame, index } of subFrames(wc)) {
       try {
-        const inner = await evalPage<string[]>(frame, PAGE_HELPERS, `window.__bbFindElements(${q})`);
+        const inner = await evalPage<string[]>(frame, PAGE_HELPERS, `__bb.FindElements(${q})`);
         if (!inner.length) continue;
         elements.push(`— inside embedded frame ${index} (${hostOf(frame.url)}) —`);
         for (const line of inner) elements.push(line.replace(/^@(\d+)/, `@${index}.$1`));
@@ -364,23 +372,43 @@ export class DesktopToolRuntime implements ToolRuntime {
     return { elements: elements.slice(0, 200) };
   }
 
-  async inspectTarget(tabId: string, target: string | null): Promise<TargetFacts> {
+  async inspectTarget(
+    tabId: string,
+    target: string | null,
+    key: 'Enter' | 'Space' = 'Enter',
+  ): Promise<TargetFacts> {
     const wc = this.wcFor(tabId);
     if (target === null) {
-      // Enter goes to whichever frame holds focus.
-      for (const frame of [wc.mainFrame, ...subFrames(wc).map((f) => f.frame)]) {
-        const facts = await evalPage<TargetFacts | null>(
-          frame,
-          PAGE_HELPERS,
-          `document.hasFocus() ? window.__bbFacts(window.__bbFocused(), true) : null`,
-        ).catch(() => null);
-        if (facts) return facts;
+      // A key goes to whichever frame holds focus. Embedded frames are asked
+      // first, and a document whose focused element is itself a frame is
+      // skipped: the top page "has focus" whenever a child frame does, so
+      // asking it first reported the <iframe>, not the sign-up form inside.
+      const frames = [...subFrames(wc).map((f) => f.frame).reverse(), wc.mainFrame];
+      let unreadable = false;
+      for (const frame of frames) {
+        try {
+          const facts = await evalPage<TargetFacts | null>(
+            frame,
+            PAGE_HELPERS,
+            `(function () {
+              if (!document.hasFocus()) return null;
+              var el = __bb.Focused();
+              if (/^(IFRAME|FRAME)$/.test(el.tagName)) return null;
+              return __bb.Facts(el, ${JSON.stringify(key)});
+            })()`,
+          );
+          if (facts) return facts;
+        } catch {
+          unreadable = true;
+        }
       }
-      return { label: '', submitsForm: false };
+      // Could not tell where the key would land: ask rather than guess.
+      if (unreadable) throw new Error('Could not inspect the focused element.');
+      return { label: '', submitsForm: false, activates: false };
     }
     return (
       await inFrames<TargetFacts>(wc, target, PAGE_HELPERS, (t) =>
-        `window.__bbFacts(window.__bbFindClickable(${JSON.stringify(t)}), false)`,
+        `__bb.Facts(__bb.FindClickable(${JSON.stringify(t)}), 'click')`,
       )
     ).value;
   }
@@ -445,12 +473,16 @@ export class DesktopToolRuntime implements ToolRuntime {
           const done = () => {
             clearTimeout(cap);
             wc.off('did-finish-load', done);
-            wc.off('did-fail-load', done);
+            wc.off('did-fail-load', onFail);
             resolve();
+          };
+          // A failing ad or widget iframe is not the page failing.
+          const onFail = (_e: unknown, _c: number, _d: string, _u: string, isMainFrame: boolean) => {
+            if (isMainFrame) done();
           };
           const cap = setTimeout(done, 15_000);
           wc.on('did-finish-load', done);
-          wc.on('did-fail-load', done);
+          wc.on('did-fail-load', onFail);
         });
       }
       const now = tabManager.list().find((t) => t.id === tab.id);
@@ -552,9 +584,11 @@ export class DesktopToolRuntime implements ToolRuntime {
     const wc = this.wcFor(tabId);
     const timeout = Math.min(condition.timeoutMs ?? 10_000, 10_000);
     if (condition.selector) {
-      const matched = (await wc.executeJavaScript(
-        `${PAGE_HELPERS}; (${WAIT_FOR_SELECTOR.toString()})(${JSON.stringify(condition.selector)}, ${timeout})`,
-      )) as boolean;
+      const matched = await evalPage<boolean>(
+        wc,
+        PAGE_HELPERS,
+        `(${WAIT_FOR_SELECTOR.toString()})(${JSON.stringify(condition.selector)}, ${timeout})`,
+      );
       return { matched };
     }
     if (condition.networkIdle) {
@@ -716,16 +750,17 @@ function QUERY_DOM_FN(selector: string): number {
 // Lightning, most modern design systems) a plain query failed with "No
 // element matched" even though the control was right there.
 //
-// Plain JS in a raw string (no `${}`), assigned onto window so the injected
-// action functions can reach it however the evaluated string is scoped.
+// Plain JS in a raw string (no `${}`). It defines a local `__bb` inside each
+// evaluated script, never anything on window: helpers kept on the page's
+// window could be replaced by the page itself — a hostile page defining its
+// own "facts" to dodge the consent check, or a no-op field guard.
 const PAGE_HELPERS = String.raw`
-(function () {
-  if (window.__bbHelpersV === 2) return;
-  window.__bbHelpersV = 2;
+var __bb = (function () {
+  var api = {};
   var FIELD_SEL = 'input:not([type=hidden]), textarea, select, [contenteditable=""], [contenteditable="true"], [role=textbox], [role=combobox], [role=searchbox]';
   var ACTION_SEL = 'a[href], button, summary, label, input[type=submit], input[type=button], input[type=reset], input[type=image], input[type=checkbox], input[type=radio], [role=button], [role=link], [role=tab], [role=menuitem], [role=menuitemcheckbox], [role=menuitemradio], [role=option], [role=checkbox], [role=radio], [role=switch], [onclick]';
 
-  window.__bbDeepAll = function (selector) {
+  api.DeepAll = function (selector) {
     var out = [];
     var walk = function (node) {
       if (!node) return;
@@ -739,19 +774,19 @@ const PAGE_HELPERS = String.raw`
     walk(document);
     return out;
   };
-  window.__bbDeepQuery = function (selector) {
-    var all = window.__bbDeepAll(selector);
+  api.DeepQuery = function (selector) {
+    var all = api.DeepAll(selector);
     return all.length ? all[0] : null;
   };
 
   var clean = function (s) { return String(s || '').replace(/\s+/g, ' ').trim(); };
-  var visible = window.__bbVisible = function (el) {
+  var visible = api.Visible = function (el) {
     var r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) return false;
     var cs = getComputedStyle(el);
     return cs.visibility !== 'hidden' && cs.display !== 'none';
   };
-  var labelOf = window.__bbLabel = function (el) {
+  var labelOf = api.Label = function (el) {
     var aria = el.getAttribute('aria-label');
     if (aria && clean(aria)) return clean(aria);
     var by = el.getAttribute('aria-labelledby');
@@ -779,16 +814,16 @@ const PAGE_HELPERS = String.raw`
   var byRef = function (target) {
     var sel = refSelector(target);
     if (!sel) return null;
-    var el = window.__bbDeepQuery(sel);
+    var el = api.DeepQuery(sel);
     if (!el) throw new Error('Element ' + target.trim() + ' is no longer on the page (it changed). Call find_elements again for fresh refs.');
     return el;
   };
   var bySelector = function (target) {
-    try { return window.__bbDeepQuery(target); } catch (e) { return null; }
+    try { return api.DeepQuery(target); } catch (e) { return null; }
   };
-  var byText = function (target, selector) {
+  var byText = function (target, selector, exactOnly) {
     var tl = clean(target).toLowerCase();
-    var pool = window.__bbDeepAll(selector);
+    var pool = api.DeepAll(selector);
     var vis = pool.filter(visible);
     if (vis.length) pool = vis;
     var part = null;
@@ -798,27 +833,34 @@ const PAGE_HELPERS = String.raw`
       if (l === tl) return pool[i];
       if (!part && l.indexOf(tl) !== -1) part = pool[i];
     }
-    return part;
+    return exactOnly ? null : part;
+  };
+  // Order matters: a ref, then an element whose label IS the target, then a
+  // CSS selector, then a label that contains it. Trying the selector first
+  // turned "Details" or "Menu" into the <details> / <menu> element instead
+  // of the button with that label.
+  var resolve = function (target, selector) {
+    return byRef(target) || byText(target, selector, true) || bySelector(target) || byText(target, selector, false);
   };
   var nearby = function (selector) {
     var seen = {};
-    return window.__bbDeepAll(selector).filter(visible).map(labelOf).filter(function (l) {
+    return api.DeepAll(selector).filter(visible).map(labelOf).filter(function (l) {
       if (!l || seen[l]) return false;
       seen[l] = true;
       return true;
     }).slice(0, 8).map(function (l) { return '"' + l.slice(0, 50) + '"'; }).join(', ');
   };
 
-  window.__bbFindClickable = function (target) {
-    var el = byRef(target) || bySelector(target) || byText(target, ACTION_SEL) || byText(target, FIELD_SEL);
+  api.FindClickable = function (target) {
+    var el = resolve(target, ACTION_SEL) || byText(target, FIELD_SEL, false);
     if (!el) {
       var near = nearby(ACTION_SEL);
       throw new Error('No element matched: ' + target + (near ? '. Clickable things on the page include ' + near + '. Call find_elements for exact refs.' : '.'));
     }
     return el;
   };
-  window.__bbFindField = function (target) {
-    var el = byRef(target) || bySelector(target) || byText(target, FIELD_SEL);
+  api.FindField = function (target) {
+    var el = resolve(target, FIELD_SEL);
     if (!el) {
       // A <label> naming the field ("Email") stands in for its control.
       var label = byText(target, 'label');
@@ -834,7 +876,7 @@ const PAGE_HELPERS = String.raw`
 
   // A hard stop, independent of how the model named the field: a ref or a
   // selector carries none of the words the policy's name check looks for.
-  window.__bbGuardField = function (el) {
+  api.GuardField = function (el) {
     var type = (el.getAttribute('type') || '').toLowerCase();
     var ac = (el.getAttribute('autocomplete') || '').toLowerCase();
     if (type === 'password' || /cc-(number|csc|exp)|current-password|new-password|one-time-code/.test(ac)) {
@@ -842,7 +884,7 @@ const PAGE_HELPERS = String.raw`
     }
   };
 
-  window.__bbSelect = function (el, option) {
+  api.Select = function (el, option) {
     if (el.tagName !== 'SELECT') {
       throw new Error('That element is not a <select> dropdown. Click it to open the menu, then click the option.');
     }
@@ -873,19 +915,31 @@ const PAGE_HELPERS = String.raw`
     if (fields.length === 1 && /^(search|text)$/i.test(fields[0].type || 'text')) return false;
     return fields.length >= 2;
   };
-  window.__bbFacts = function (el, viaEnter) {
+  // How = 'click', 'Enter' or 'Space'. Enter and Space on a focused button
+  // press it exactly like a click; Enter in a text field also submits its
+  // form. 'activates' says the gesture presses a control, so the policy can
+  // judge that control's label ("Delete account") as it would a click.
+  api.Facts = function (el, how) {
     var form = el.form || (el.closest && el.closest('form'));
     var tag = el.tagName;
     var type = (el.getAttribute('type') || '').toLowerCase();
+    var role = el.getAttribute('role');
+    var isSubmitControl = (tag === 'BUTTON' && (type === '' || type === 'submit')) ||
+      (tag === 'INPUT' && (type === 'submit' || type === 'image'));
+    var isPressable = tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY' || role === 'button' || role === 'link' ||
+      (tag === 'INPUT' && /^(submit|image|button|reset)$/.test(type));
     var submits = false;
     if (form) {
-      if (viaEnter) submits = tag === 'INPUT' && !/^(checkbox|radio|button|reset|file|range|color)$/.test(type);
-      else if (tag === 'BUTTON') submits = type === '' || type === 'submit';
-      else if (tag === 'INPUT') submits = type === 'submit' || type === 'image';
+      submits = isSubmitControl;
+      if (how === 'Enter' && tag === 'INPUT' && !/^(checkbox|radio|button|reset|file|range|color|submit|image)$/.test(type)) submits = true;
     }
-    return { label: labelOf(el).slice(0, 120), submitsForm: submits && dataForm(form) };
+    return {
+      label: labelOf(el).slice(0, 120),
+      submitsForm: submits && dataForm(form),
+      activates: how === 'click' || isPressable,
+    };
   };
-  window.__bbFocused = function () {
+  api.Focused = function () {
     var el = document.activeElement;
     while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
     return el || document.body;
@@ -926,8 +980,8 @@ const PAGE_HELPERS = String.raw`
   // Tag every visible control with a stable ref and describe it, controls in
   // view first. Refs stick to their element, so a ref stays valid across calls
   // until the page replaces that element.
-  window.__bbFindElements = function (query) {
-    var all = window.__bbDeepAll(ACTION_SEL + ', ' + FIELD_SEL).filter(visible);
+  api.FindElements = function (query) {
+    var all = api.DeepAll(ACTION_SEL + ', ' + FIELD_SEL).filter(visible);
     var seen = new Set();
     var list = [];
     all.forEach(function (el) {
@@ -942,7 +996,7 @@ const PAGE_HELPERS = String.raw`
       return r.bottom > 0 && r.top < innerHeight ? 0 : 1;
     };
     list.sort(function (a, b) { return inView(a) - inView(b); });
-    var seq = window.__bbRefSeq || 0;
+    var seq = api.RefSeq || 0;
     var lines = [];
     for (var i = 0; i < list.length && i < 400; i++) {
       var el = list[i];
@@ -954,7 +1008,7 @@ const PAGE_HELPERS = String.raw`
       }
       lines.push(describe(el, ref));
     }
-    window.__bbRefSeq = seq;
+    api.RefSeq = seq;
     // The query is loose words ("contact form fields", "email input"), not a
     // phrase: rank by how many of its words each element mentions. If none
     // mention any, return everything rather than an empty list the model
@@ -973,6 +1027,7 @@ const PAGE_HELPERS = String.raw`
     }
     return lines.slice(0, 150);
   };
+  return api;
 })();
 `;
 
@@ -1073,25 +1128,30 @@ const AGENT_CURSOR = `
   };
 `;
 
+// The local the injected PAGE_HELPERS define; CLICK_FN / TYPE_FN are inlined
+// into the same script, so they close over it.
+declare const __bb: {
+  FindClickable(target: string): HTMLElement;
+  FindField(target: string): HTMLElement;
+  GuardField(el: Element): void;
+  Select(el: Element, option: string): string;
+  Label(el: Element): string;
+  DeepQuery(selector: string): Element | null;
+};
 type PageWindow = Window & {
-  __bbFindClickable(target: string): HTMLElement;
-  __bbFindField(target: string): HTMLElement;
-  __bbGuardField(el: Element): void;
-  __bbSelect(el: Element, option: string): string;
-  __bbLabel(el: Element): string;
   __bbCursor(el: Element | null, opts?: Record<string, unknown>): void;
 };
 
 function CLICK_FN(target: string): Promise<string> {
   const w = window as unknown as PageWindow;
-  const node = w.__bbFindClickable(target);
+  const node = __bb.FindClickable(target);
   node.scrollIntoView({ block: 'center', inline: 'nearest' });
   // Paint the cursor first, then dwell briefly before actually clicking.
   // Without the pause the click fires in the same frame the cursor appears, so
   // the page changes before the user's eye has anywhere to land — the whole
   // point is to show them where it went.
   w.__bbCursor(node, { click: true });
-  const label = w.__bbLabel(node).slice(0, 80);
+  const label = __bb.Label(node).slice(0, 80);
   const tag = node.tagName.toLowerCase();
   return new Promise<string>((resolve) => {
     setTimeout(() => {
@@ -1126,15 +1186,15 @@ function CLICK_FN(target: string): Promise<string> {
 
 function TYPE_FN(target: string, text: string): Promise<{ matched: string; native: boolean }> {
   const w = window as unknown as PageWindow;
-  const html = w.__bbFindField(target);
-  w.__bbGuardField(html);
-  const label = w.__bbLabel(html).slice(0, 80);
+  const html = __bb.FindField(target);
+  __bb.GuardField(html);
+  const label = __bb.Label(html).slice(0, 80);
   const described = label ? `${html.tagName.toLowerCase()} "${label}"` : html.tagName.toLowerCase();
 
   // A dropdown takes a choice, not keystrokes. Writing .value through the
   // input setter threw "Illegal invocation" on a <select>.
   if (html instanceof HTMLSelectElement) {
-    const chose = w.__bbSelect(html, text);
+    const chose = __bb.Select(html, text);
     return Promise.resolve({ matched: `${described} = "${chose}"`, native: false });
   }
 
@@ -1142,13 +1202,14 @@ function TYPE_FN(target: string, text: string): Promise<{ matched: string; nativ
   w.__bbCursor(html, { click: true, hold: 4000 });
   html.focus();
 
-  // Rich editors (Word Online, Google Docs, Gmail, Notion) keep their own
-  // document model and ignore text written into the DOM, so the text itself
+  // Rich editors (Word Online, Google Docs, Gmail, Notion) — and any other
+  // non-<input> field, like a role=combobox div — keep their own model and
+  // ignore text written into the DOM, so the text itself
   // is sent afterwards as native keyboard input (see type() in the runtime).
   // Here: put the cursor in the editor — where it already is if the user or
   // the agent clicked into it, otherwise at the very end. Never select all:
   // in a document that would replace the whole thing with the new text.
-  if (html.isContentEditable || html.getAttribute('role') === 'textbox') {
+  if (!(html instanceof HTMLInputElement) && !(html instanceof HTMLTextAreaElement)) {
     const sel = window.getSelection();
     if (sel && !(sel.rangeCount && html.contains(sel.anchorNode))) {
       const end = document.createRange();
@@ -1173,7 +1234,14 @@ function TYPE_FN(target: string, text: string): Promise<{ matched: string; nativ
   // controlled inputs (React et al) and live search suggestions behave exactly
   // as they would for a human typist. Pace is capped so a long string doesn't
   // turn into a wait.
-  const perChar = Math.max(8, Math.min(28, Math.round(1400 / Math.max(1, text.length))));
+  //
+  // At most ~60 visible steps (~1.5s) however long the text: typing a long
+  // email body a character at a time outran the page-call timeout, and the
+  // model's retry then typed into the field a second time. A hidden tab's
+  // timers are throttled to ~1s, so there it is written in one go.
+  const steps = document.hidden ? 1 : Math.min(text.length, 60);
+  const chunk = Math.max(1, Math.ceil(text.length / Math.max(1, steps)));
+  const perChar = 24;
   const write = (value: string) => {
     if (nativeSetter) nativeSetter.call(input, value);
     else input.value = value;
@@ -1190,7 +1258,7 @@ function TYPE_FN(target: string, text: string): Promise<{ matched: string; nativ
     if (text.length === 0) return finish();
     let i = 0;
     const tick = () => {
-      i += 1;
+      i = Math.min(text.length, i + chunk);
       write(text.slice(0, i));
       if (i < text.length) setTimeout(tick, perChar);
       else finish();
@@ -1234,7 +1302,7 @@ function SCROLL_FN(
 
 function WAIT_FOR_SELECTOR(selector: string, timeoutMs: number): Promise<boolean> {
   // Deep query, like the actions: an element inside a shadow root counts.
-  const find = (window as unknown as { __bbDeepQuery(s: string): Element | null }).__bbDeepQuery;
+  const find = (sel: string) => __bb.DeepQuery(sel);
   return new Promise((resolve) => {
     const start = Date.now();
     const tick = () => {

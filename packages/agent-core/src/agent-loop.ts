@@ -256,14 +256,20 @@ async function inspectForPolicy(
   const inspect = context.runtime.inspectTarget?.bind(context.runtime);
   if (!inspect) return null;
   let target: string | null;
+  let key: 'Enter' | 'Space' | undefined;
   if (name === 'click' || name === 'clickElement') target = String(input.target ?? '');
-  else if (name === 'press_key' && input.key === 'Enter') target = null;
-  else return null;
+  else if (name === 'press_key' && (input.key === 'Enter' || input.key === 'Space')) {
+    target = null;
+    key = input.key;
+  } else return null;
   try {
-    return await inspect(context.activeTabId, target);
-  } catch {
+    return await inspect(context.activeTabId, target, key);
+  } catch (error) {
     // Nothing matched: the action itself will fail and say so.
-    return null;
+    if (error instanceof Error && /^No (element|input) matched/.test(error.message)) return null;
+    // Anything else (a frame that didn't answer, a page mid-reload) means we
+    // don't know what this will press — fail closed and ask the user.
+    return { label: 'an element that could not be inspected', submitsForm: true };
   }
 }
 
