@@ -14,14 +14,24 @@ import { app, type BrowserWindow } from 'electron';
 // to avoid `Named export 'autoUpdater' not found` at runtime.
 import electronUpdater from 'electron-updater';
 import { IPC, type UpdateStatus } from '../shared/ipc.js';
+import { hasActiveAgentRun } from './agent/run.js';
 
 const { autoUpdater } = electronUpdater;
 
 // A browser stays open for days, so a launch-only check misses everything
-// shipped in between.
-const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+// shipped in between. Releases now go out on every merge (auto-release.yml),
+// so check often enough that a fix reaches people the same day. The check is
+// one small manifest request; the download only happens when there is news.
+const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 let latest: UpdateStatus = { state: 'idle' };
+
+// An update that finishes downloading this soon after launch is installed
+// straight away. That is the case of someone reopening the app (often after a
+// force quit, which skips the install-on-quit below): they expect to land on
+// the new version, and a restart this early interrupts nothing.
+const INSTALL_ON_LAUNCH_WINDOW_MS = 3 * 60 * 1000;
+const launchedAt = Date.now();
 
 export function getUpdateStatus(): UpdateStatus {
   return latest;
@@ -46,6 +56,14 @@ export function setupAutoUpdate(win: BrowserWindow) {
   });
   autoUpdater.on('update-downloaded', (info) => {
     send({ state: 'ready', version: info.version });
+    if (Date.now() - launchedAt < INSTALL_ON_LAUNCH_WINDOW_MS && !hasActiveAgentRun()) {
+      console.log(`[updater] ${info.version} ready just after launch — installing now`);
+      // A beat for the "Relaunch to update" state to paint, so the restart
+      // doesn't look like a crash.
+      setTimeout(() => {
+        if (!hasActiveAgentRun()) quitAndInstallUpdate();
+      }, 1500);
+    }
   });
   autoUpdater.on('update-not-available', () => {
     send({ state: 'idle' });
