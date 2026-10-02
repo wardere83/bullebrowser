@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { ToolCallRecord } from './agent-loop.js';
 
 export type ProviderId = 'anthropic' | 'openai';
 
@@ -62,7 +63,15 @@ export type ToolName =
   | 'press_key'
   | 'wait_for'
   | 'select_option'
-  | 'find_elements';
+  | 'find_elements'
+  | 'preview_action'
+  | 'write_file'
+  | 'read_file'
+  | 'list_files'
+  | 'upload_file'
+  | 'clipboard_copy'
+  | 'clipboard_read'
+  | 'clipboard_paste';
 
 export interface ToolDefinition<TInput, TOutput> {
   name: ToolName;
@@ -86,10 +95,10 @@ export interface ToolContext {
 }
 
 export interface ToolRuntime {
-  navigate(tabId: string, url: string): Promise<{ url: string; title: string }>;
+  navigate(tabId: string, url: string, opts?: { wait?: WaitMode }): Promise<{ url: string; title: string }>;
   readPage(tabId: string): Promise<{ title: string; url: string; text: string }>;
   // `url` is where the page ended up once whatever the click triggered settled.
-  click(tabId: string, target: string): Promise<{ matched: string; url?: string }>;
+  click(tabId: string, target: string, opts?: { wait?: WaitMode }): Promise<{ matched: string; url?: string }>;
   type(tabId: string, target: string, text: string): Promise<{ matched: string }>;
   extract(
     tabId: string,
@@ -110,9 +119,21 @@ export interface ToolRuntime {
   pressKey(tabId: string, key: KeyName): Promise<{ pressed: string }>;
   waitFor(
     tabId: string,
-    condition: { selector?: string; networkIdle?: boolean; timeoutMs?: number },
+    condition: { selector?: string; text?: string; networkIdle?: boolean; timeoutMs?: number },
   ): Promise<{ matched: boolean }>;
-  confirmDestructive(message: string): Promise<boolean>;
+  /** Ask the user to approve a consequential action, showing what it does. */
+  confirmDestructive(message: string, preview?: ActionPreview): Promise<boolean>;
+
+  /**
+   * Per-site permission check. Each site has a level (read, click, type,
+   * full); when an action needs more than the site has, the runtime asks the
+   * user to upgrade it. 'confirmed' means the user approved this exact action
+   * in that prompt (so no second confirmation is needed).
+   */
+  checkPermission?(tabId: string, level: PermissionLevel, ask: PermissionAsk): Promise<'granted' | 'confirmed' | 'denied'>;
+
+  /** Describe what a consequential action would send (dry run / preview). */
+  previewAction?(tabId: string, target: string | null): Promise<ActionPreview>;
 
   // Optional richer browser adapters for future native wiring.
   getSelection?(tabId: string): Promise<{ text: string }>;
@@ -128,6 +149,34 @@ export interface ToolRuntime {
   // would actually act on, so the consent policy judges the real element —
   // not just the words the model happened to use to name it.
   inspectTarget?(tabId: string, target: string | null, key?: 'Enter' | 'Space'): Promise<TargetFacts>;
+}
+
+export type PermissionLevel = 'read' | 'click' | 'type' | 'full';
+
+/**
+ * How long an action waits for the page afterwards. 'idle' (default): the
+ * load, then network quiet and a moment of DOM quiet. 'load': the load event
+ * only. 'none': return straight away (pages that never go idle).
+ */
+export type WaitMode = 'idle' | 'load' | 'none';
+
+export interface PermissionAsk {
+  /** Plain description of what the agent wants to do. */
+  action: string;
+  preview?: ActionPreview;
+}
+
+/** Exactly what a consequential action will send, shown before it runs. */
+export interface ActionPreview {
+  /** What will happen, e.g. 'Submit the "Create account" form'. */
+  summary: string;
+  pageUrl?: string;
+  /** Where the data goes (form action) and how. */
+  url?: string;
+  method?: string;
+  fields?: { label: string; value: string }[];
+  files?: { name: string; size?: number }[];
+  note?: string;
 }
 
 export interface TargetFacts {
@@ -166,7 +215,7 @@ export interface AgentMessage {
 }
 
 export interface AgentStep {
-  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done';
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget';
   toolName?: ToolName;
   detail?: string;
   data?: unknown;
@@ -206,6 +255,10 @@ export interface AgentInput {
   // from its own knowledge instead of browsing. Omit to allow browsing
   // without asking (headless / test callers).
   requestBrowseAccess?: () => Promise<boolean>;
+  /** Step budget for this task (weighted; see budget.ts). Default 40. */
+  budget?: number;
+  /** Every executed tool call, for the run log. */
+  onToolRecord?: (record: ToolCallRecord) => void;
 }
 
 export interface PlanStep {
@@ -232,4 +285,5 @@ export interface PolicyDecision {
   requiresConfirmation: boolean;
 }
 
+/** @deprecated The flat cap is replaced by the weighted step budget (budget.ts). */
 export const MAX_TOOL_CALLS_PER_TASK = 25;

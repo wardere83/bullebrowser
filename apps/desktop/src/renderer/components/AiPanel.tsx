@@ -137,7 +137,7 @@ export function AiPanel() {
     })();
   }, [setConversations, setCurrent]);
 
-  const sendMessage = async (text: string, atts: UiAttachment[] = []) => {
+  const sendMessage = async (text: string, atts: UiAttachment[] = [], budget?: number) => {
     const raw = text.trim();
     if (!raw || !current) return;
     // Slash commands expand client-side into a fully formed agent prompt so
@@ -175,6 +175,7 @@ export function AiPanel() {
       model,
       ...(skill ? { skillId: skill } : {}),
       ...(runAttachments ? { attachments: runAttachments } : {}),
+      ...(budget ? { budget } : {}),
     });
     startRun(runId);
   };
@@ -471,6 +472,7 @@ export function AiPanel() {
         {(status === 'running' || status === 'error') && (
           <ActivityFeed steps={steps} status={status} currentStep={currentStep} />
         )}
+        {status !== 'running' && <BudgetSpent steps={steps} onContinue={(b) => void sendMessage('Continue the task from where you stopped.', [], b)} />}
       </div>
 
         {/* Pointer arrow → jump to the latest message. Shown only when the
@@ -1067,6 +1069,8 @@ const ACTION_VERB: Record<string, string> = {
   go_back: 'Going back',
   go_forward: 'Going forward',
   reload: 'Reloading',
+  find_elements: 'Finding the controls',
+  select_option: 'Choosing an option',
 };
 
 // Pull the interesting argument out of the raw call so the summary can name
@@ -1103,7 +1107,29 @@ function humanStep(step: AgentStepEvent | undefined): string | null {
       return null;
     case 'error':
       return step.message;
+    case 'budget':
+      return step.detail;
     case 'done':
       return 'Done';
   }
+}
+
+// A task that used its whole step budget stops with a partial answer. Offer to
+// carry on with a bigger budget, rather than making the user rephrase it.
+function BudgetSpent({ steps, onContinue }: { steps: AgentStepEvent[]; onContinue: (budget: number) => void }) {
+  const spent = steps.find((s): s is Extract<AgentStepEvent, { kind: 'budget' }> => s.kind === 'budget' && s.exhausted);
+  if (!spent) return null;
+  const next = Math.min(200, spent.total + Math.max(20, Math.round(spent.total / 2)));
+  return (
+    <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-[12px] text-ink-primary">
+      <span>This task used its whole step budget ({spent.total} steps).</span>
+      <button
+        type="button"
+        onClick={() => onContinue(next)}
+        className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-primary-hover"
+      >
+        Continue with {next} steps
+      </button>
+    </div>
+  );
 }

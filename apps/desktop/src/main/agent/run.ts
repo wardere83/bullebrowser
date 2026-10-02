@@ -110,8 +110,11 @@ const BASE_SYSTEM = [
   '- When you have enough to answer, stop browsing and give a clear, well-',
   '  structured reply in Markdown, citing the source URLs you used. Do not keep',
   '  browsing past what the task needs.',
-  '- If you reach the 25 tool-call limit, summarize what you found so far and ask',
-  '  the user how to proceed.',
+  '- Each task has a step budget (cheap look-ups cost less than navigating or',
+  '  screenshots). At the 75% warning, wrap up; if it runs out, summarize what',
+  '  you found and say the user can continue with a bigger budget.',
+  '- Tool errors are JSON with a code (e.g. ELEMENT_NOT_FOUND, PERMISSION_DENIED)',
+  '  and a "next" hint; transient ones are already retried for you.',
 ].join('\n');
 
 export async function startAgentRun(
@@ -220,6 +223,7 @@ export async function startAgentRun(
         userMessage: composedMessage,
         context: ctx,
         requestBrowseAccess: () => ask(req.userMessage, 'browse_access'),
+        budget: req.budget ?? getSettings().stepBudget,
         onStep: (step) => {
           // Keep the model's own prose as it streams. If the run later dies
           // (context limit, network drop), the finally block can still persist
@@ -325,7 +329,24 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
     case 'text':
       return { kind: 'text', text: step.detail ?? '', ts };
     case 'error':
-      return { kind: 'error', toolName: step.toolName, message: step.detail ?? '', ts };
+      return {
+        kind: 'error',
+        toolName: step.toolName,
+        message: step.detail ?? '',
+        ...((step.data as { code?: string } | undefined)?.code ? { code: (step.data as { code: string }).code } : {}),
+        ts,
+      };
+    case 'budget': {
+      const d = (step.data ?? {}) as { used?: number; total?: number; exhausted?: boolean };
+      return {
+        kind: 'budget',
+        detail: step.detail ?? '',
+        used: d.used ?? 0,
+        total: d.total ?? 0,
+        exhausted: !!d.exhausted,
+        ts,
+      };
+    }
     case 'done':
       return { kind: 'done', ts };
   }

@@ -46,14 +46,22 @@ const NavigateInput = z.object({
       }
       return normalized;
     }),
+  wait: z.enum(['idle', 'load', 'none']).optional().describe('How long to wait after loading: "idle" (default), "load", or "none".'),
 });
 const NavigateOutput = z.object({ url: z.string(), title: z.string() });
+const WaitInput = z
+  .enum(['idle', 'load', 'none'])
+  .optional()
+  .describe(
+    'How long to wait afterwards. "idle" (default): until loaded, the network is quiet and the page stops ' +
+      'changing. "load": the load event only. "none": do not wait — for pages that never go idle (chat, live dashboards).',
+  );
 const TabIdInput = z.object({ tabId: z.string().optional() });
 // The model names an element by an element ref from find_elements ("@12"),
 // a CSS selector, or its visible text / label. Refs are the reliable choice.
 const TARGET_DESCRIPTION =
   'The element: a ref from find_elements like "@12" (most reliable), a CSS selector, or its visible text or label.';
-const ClickInput = z.object({ target: z.string().min(1).describe(TARGET_DESCRIPTION) });
+const ClickInput = z.object({ target: z.string().min(1).describe(TARGET_DESCRIPTION), wait: WaitInput });
 const TypeInput = z.object({
   target: z.string().min(1).describe(TARGET_DESCRIPTION),
   text: z
@@ -233,7 +241,8 @@ export const tools = {
     description: 'Navigate the active tab to a URL.',
     inputSchema: NavigateInput,
     outputSchema: NavigateOutput,
-    execute: (input, ctx) => ctx.runtime.navigate(ctx.activeTabId, input.url),
+    execute: (input, ctx) =>
+      ctx.runtime.navigate(ctx.activeTabId, input.url, ...(input.wait ? [{ wait: input.wait }] : [])),
   } satisfies ToolImpl<z.infer<typeof NavigateInput>, z.infer<typeof NavigateOutput>>,
 
   clickElement: {
@@ -242,7 +251,8 @@ export const tools = {
     inputSchema: ClickInput,
     outputSchema: ClickOut,
     destructive: true,
-    execute: (input, ctx) => ctx.runtime.click(ctx.activeTabId, input.target),
+    execute: (input, ctx) =>
+      ctx.runtime.click(ctx.activeTabId, input.target, ...(input.wait ? [{ wait: input.wait }] : [])),
   } satisfies ToolImpl<z.infer<typeof ClickInput>, z.infer<typeof ClickOut>>,
 
   typeIntoField: {
@@ -277,7 +287,8 @@ export const tools = {
     inputSchema: ClickInput,
     outputSchema: ClickOut,
     destructive: true,
-    execute: (input, ctx) => ctx.runtime.click(ctx.activeTabId, input.target),
+    execute: (input, ctx) =>
+      ctx.runtime.click(ctx.activeTabId, input.target, ...(input.wait ? [{ wait: input.wait }] : [])),
   } satisfies ToolImpl<z.infer<typeof ClickInput>, z.infer<typeof ClickOut>>,
 
   type: {
@@ -418,20 +429,21 @@ export const tools = {
 
   wait_for: {
     name: 'wait_for',
-    description: 'Wait for selector or network idle.',
+    description: 'Wait until a selector or a piece of text appears, or the network goes idle.',
     inputSchema: z
       .object({
-        selector: z.string().optional(),
+        selector: z.string().optional().describe('A CSS selector to wait for.'),
+        text: z.string().optional().describe('Text to wait for (anywhere on the page, including frames).'),
         networkIdle: z.boolean().optional(),
-        timeoutMs: z.number().int().positive().max(10_000).optional(),
+        timeoutMs: z.number().int().positive().max(15_000).optional(),
       })
-      .refine((v) => v.selector || v.networkIdle, {
-        message: 'Provide either selector or networkIdle: true',
+      .refine((v) => v.selector || v.text || v.networkIdle, {
+        message: 'Provide selector, text, or networkIdle: true',
       }),
     outputSchema: z.object({ matched: z.boolean() }),
     execute: (input, ctx) => ctx.runtime.waitFor(ctx.activeTabId, input),
   } satisfies ToolImpl<
-    { selector?: string; networkIdle?: boolean; timeoutMs?: number },
+    { selector?: string; text?: string; networkIdle?: boolean; timeoutMs?: number },
     { matched: boolean }
   >,
 } as const;

@@ -14,7 +14,7 @@ const SENSITIVE_FIELD_RE =
 // decision above needed to become precise.
 const REDACT_KEY_RE = /(password|passcode|token|secret|ssn|social|credit|card|cvv)/i;
 
-const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
+export const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
 
 export interface PolicyEngine {
   evaluateToolStep(step: PlanStep): PolicyDecision;

@@ -23,7 +23,7 @@ The agent operates the active browser tab — same pages, same logins, same data
 ### Control & Trust
 
 - A live “Agent is working” indicator shows each step; a **Stop** button cancels instantly.
-- Every task is hard-capped at 25 actions.
+- Every task runs on a weighted step budget (default 40): it warns at 75%, stops at the limit, and can be raised per task.
 - Form submissions and downloads require explicit confirmation.
 - Choose Claude Opus, Sonnet, or Haiku per task.
 

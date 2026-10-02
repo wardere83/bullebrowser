@@ -7,5 +7,6 @@ export type AgentStepEvent =
   | { kind: 'tool_call'; toolName: string; detail: string; input: unknown; ts: number }
   | { kind: 'tool_result'; toolName: string; output: unknown; ts: number }
   | { kind: 'text'; text: string; ts: number }
-  | { kind: 'error'; toolName?: string; message: string; ts: number }
+  | { kind: 'error'; toolName?: string; message: string; code?: string; ts: number }
+  | { kind: 'budget'; detail: string; used: number; total: number; exhausted: boolean; ts: number }
   | { kind: 'done'; ts: number };

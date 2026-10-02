@@ -43,6 +43,8 @@ export function getSettings(): AppSettings {
     searchProvider: resolvedSearchProvider,
     homepageUrl: normalizedHomepageUrl ?? DEFAULT_SETTINGS.homepageUrl,
     complianceChecklist: store.get('complianceChecklist'),
+    autoDismissConsent: (store.get('autoDismissConsent') as boolean | undefined) ?? DEFAULT_SETTINGS.autoDismissConsent,
+    stepBudget: clampBudget(store.get('stepBudget') as number | undefined),
   };
 }
 
@@ -53,4 +55,9 @@ export function setSettings(patch: Partial<AppSettings>): AppSettings {
     }
   }
   return getSettings();
+}
+
+function clampBudget(v: number | undefined): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_SETTINGS.stepBudget;
+  return Math.max(5, Math.min(200, Math.round(v)));
 }

@@ -11,3 +11,7 @@ export * from './memory.js';
 export * from './retrieval.js';
 export * from './openai-loop.js';
 export * from './dom-runtime.js';
+export * from './errors.js';
+export * from './untrusted.js';
+export * from './budget.js';
+export * from './permissions.js';

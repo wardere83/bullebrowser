@@ -108,6 +108,10 @@ export interface AppSettings {
   searchProvider: 'bullebrowser' | 'google' | 'bing';
   homepageUrl: string;
   complianceChecklist: string[];
+  /** Press the least-permissive option on common cookie banners. */
+  autoDismissConsent: boolean;
+  /** Default step budget per agent task (weighted; raise per task). */
+  stepBudget: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -115,6 +119,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiPanelOpen: true,
   searchProvider: 'bullebrowser',
   homepageUrl: 'about:blank',
+  autoDismissConsent: true,
+  stepBudget: 40,
   complianceChecklist: [
     'EEO: Equal Employment Opportunity references and required language',
     'FERPA: Family Educational Rights and Privacy Act references',
@@ -194,6 +200,8 @@ export interface AgentRunRequest {
   // Optional context the user attached via the "+" menu. Additive: an empty or
   // absent list runs exactly as before.
   attachments?: RunAttachment[];
+  /** Step budget for this task; defaults to the Settings value. */
+  budget?: number;
 }
 
 export interface AppInfo {

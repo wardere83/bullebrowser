@@ -66,7 +66,7 @@ user message ──► Anthropic.messages.stream({ tools, messages })
 
 Hard limits:
 
-- Max 25 tool calls per task
+- Weighted step budget per task (default 40; cheap look-ups 0.5, navigate/screenshot/extract 2); warns at 75%
 - Per-tool timeout: 30s (or `wait_for`'s explicit cap of 10s)
 - Cancel button drops the in-flight request and clears pending tool
   invocations before the next round

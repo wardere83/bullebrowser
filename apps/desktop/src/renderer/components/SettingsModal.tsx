@@ -279,6 +279,43 @@ export function SettingsModal() {
 
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
+            Agent
+          </h3>
+          <label className="mt-2 flex items-center justify-between gap-3 text-sm">
+            <span>
+              Step budget per task
+              <span className="block text-xs text-ink-secondary">
+                Navigating and screenshots cost more than quick look-ups. A task that runs out can continue with more.
+              </span>
+            </span>
+            <input
+              type="number"
+              min={5}
+              max={200}
+              value={settings.stepBudget}
+              onChange={(e) => void update({ stepBudget: Number(e.target.value) || 40 })}
+              className="w-20 rounded border border-line px-2 py-1 text-right text-sm"
+              aria-label="Step budget per task"
+            />
+          </label>
+          <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+            <span>
+              Dismiss cookie banners
+              <span className="block text-xs text-ink-secondary">
+                Chooses the most private option (reject or necessary-only) on common consent banners.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.autoDismissConsent}
+              onChange={(e) => void update({ autoDismissConsent: e.target.checked })}
+              aria-label="Dismiss cookie banners"
+            />
+          </label>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
             Compliance checklist
           </h3>
           <p className="mt-1 text-xs text-ink-secondary">

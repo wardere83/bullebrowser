@@ -125,7 +125,9 @@ describe('runAgent Claude tool-use loop', () => {
 
     expect(confirmDestructive).toHaveBeenCalledOnce();
     expect(
-      steps.some((s) => s.type === 'error' && (s.detail ?? '').includes('User declined confirmation')),
+      steps.some(
+        (s) => s.type === 'error' && (s.data as { code?: string } | undefined)?.code === 'USER_DECLINED',
+      ),
     ).toBe(true);
     // The decline is reported back to the model as an error tool_result.
     const secondCall = createMock.mock.calls[1]?.[0] as {
@@ -136,6 +138,9 @@ describe('runAgent Claude tool-use loop', () => {
     );
     const block = (toolResultTurn?.content as Array<{ is_error?: boolean; content: unknown }>)?.[0];
     expect(block?.is_error).toBe(true);
+    // A typed, sealed error the model can act on without parsing English.
+    expect(String(block?.content)).toContain('"code":"USER_DECLINED"');
+    expect(String(block?.content)).toContain('<untrusted_page_data');
     expect(out).toContain('did not submit');
   });
 

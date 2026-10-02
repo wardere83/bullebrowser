@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { product } from '@bullebrowser/brand-tokens';
@@ -8,6 +8,7 @@ import { tabManager } from './tabs/manager.js';
 import { setupAutoUpdate } from './updater.js';
 import { setupPermissions } from './permissions.js';
 import { setupAppMenu } from './menu.js';
+import { trackNetwork } from './agent/browser/net-activity.js';
 import { loadDotEnv } from './env.js';
 
 // In development, pick up ANTHROPIC_API_KEY (and any other vars) from a local
@@ -57,7 +58,20 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Count each tab's requests from the start, so "has the page gone quiet?"
+  // knows about everything already in flight when an action begins.
+  trackNetwork(session.defaultSession);
   await createWindow();
+  // Test hook: lets the end-to-end suite drive the agent's browser runtime
+  // directly (no model), to check refs, waits and consent handling exactly.
+  // Only ever set by the test harness; never in a normal launch.
+  if (process.env.BULLEBROWSER_TEST_HOOKS === '1') {
+    const { DesktopToolRuntime } = await import('./agent/runtime.js');
+    (globalThis as Record<string, unknown>).__bbTest = {
+      tabManager,
+      runtime: new DesktopToolRuntime({ request: async () => true }),
+    };
+  }
   // The updater pushes status to this window, so it needs the handle.
   if (mainWindow) setupAutoUpdate(mainWindow);
 
