@@ -37,7 +37,6 @@ const en: Dict = {
     'An AI agent that reads pages, completes browser tasks, and works whatever else you ask, right inside your browser.',
   // home skills
   'film.title': 'See it work.',
-  'film.label': 'The BulleBrowser film',
   'film.play': 'Play the BulleBrowser film',
   'film.pause': 'Pause the film',
   'film.fallback': 'The film could not load. Try refreshing the page.',
@@ -122,7 +121,6 @@ const fr: Dict = {
   'home.sub':
     "Un agent IA qui lit les pages, accomplit les tâches du navigateur et fait tout ce que vous lui demandez, directement dans votre navigateur.",
   'film.title': 'Voyez-le à l’œuvre.',
-  'film.label': 'Le film BulleBrowser',
   'film.play': 'Lire le film BulleBrowser',
   'film.pause': 'Mettre le film en pause',
   'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
@@ -206,7 +204,6 @@ const ar: Dict = {
   'home.sub':
     'وكيل ذكاء اصطناعي يقرأ الصفحات، وينجز مهام المتصفح، وينفذ كل ما تطلبه، داخل متصفحك مباشرة.',
   'film.title': 'شاهده وهو يعمل.',
-  'film.label': 'فيلم BulleBrowser',
   'film.play': 'تشغيل فيلم BulleBrowser',
   'film.pause': 'إيقاف الفيلم مؤقتًا',
   'film.fallback': 'تعذّر تحميل الفيلم. حاول تحديث الصفحة.',
@@ -290,7 +287,6 @@ const es419: Dict = {
   'home.sub':
     'Un agente de IA que lee páginas, completa tareas del navegador y hace todo lo demás que le pidas, directamente en tu navegador.',
   'film.title': 'Míralo en acción.',
-  'film.label': 'El video de BulleBrowser',
   'film.play': 'Reproducir el video de BulleBrowser',
   'film.pause': 'Pausar el video',
   'film.fallback': 'No se pudo cargar el video. Intenta actualizar la página.',
@@ -374,7 +370,6 @@ const ptPT: Dict = {
   'home.sub':
     'Um agente de IA que lê páginas, executa tarefas no navegador e faz tudo o que lhe pedir, diretamente no seu navegador.',
   'film.title': 'Veja-o a trabalhar.',
-  'film.label': 'O filme BulleBrowser',
   'film.play': 'Reproduzir o filme BulleBrowser',
   'film.pause': 'Pausar o filme',
   'film.fallback': 'Não foi possível carregar o filme. Tente atualizar a página.',

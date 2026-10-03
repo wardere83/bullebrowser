@@ -48,9 +48,6 @@ export function BrandFilm() {
         <h2 id="film-title" className="text-3xl font-bold tracking-tight sm:text-4xl">
           {t('film.title')}
         </h2>
-        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-          {t('film.label')}
-        </span>
       </div>
       <div className="relative isolate overflow-hidden rounded-2xl bg-[#071422] shadow-[0_35px_85px_-40px_rgba(0,0,0,0.6)] ring-1 ring-white/10 md:rounded-3xl">
         <video
