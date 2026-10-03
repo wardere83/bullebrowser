@@ -36,7 +36,6 @@ const en: Dict = {
   'home.sub':
     'An AI agent that reads pages, completes browser tasks, and works whatever else you ask, right inside your browser.',
   // home skills
-  'film.watch': 'Watch the film',
   'film.title': 'See it work.',
   'film.label': 'The BulleBrowser film',
   'film.play': 'Play the BulleBrowser film',
@@ -122,7 +121,6 @@ const fr: Dict = {
   'home.h1': 'Le navigateur qui navigue pour vous.',
   'home.sub':
     "Un agent IA qui lit les pages, accomplit les tâches du navigateur et fait tout ce que vous lui demandez, directement dans votre navigateur.",
-  'film.watch': 'Voir le film',
   'film.title': 'Voyez-le à l’œuvre.',
   'film.label': 'Le film BulleBrowser',
   'film.play': 'Lire le film BulleBrowser',
@@ -207,7 +205,6 @@ const ar: Dict = {
   'home.h1': 'المتصفح الذي يتصفح نيابة عنك.',
   'home.sub':
     'وكيل ذكاء اصطناعي يقرأ الصفحات، وينجز مهام المتصفح، وينفذ كل ما تطلبه، داخل متصفحك مباشرة.',
-  'film.watch': 'شاهد الفيلم',
   'film.title': 'شاهده وهو يعمل.',
   'film.label': 'فيلم BulleBrowser',
   'film.play': 'تشغيل فيلم BulleBrowser',
@@ -292,7 +289,6 @@ const es419: Dict = {
   'home.h1': 'El navegador que navega por ti.',
   'home.sub':
     'Un agente de IA que lee páginas, completa tareas del navegador y hace todo lo demás que le pidas, directamente en tu navegador.',
-  'film.watch': 'Ver el video',
   'film.title': 'Míralo en acción.',
   'film.label': 'El video de BulleBrowser',
   'film.play': 'Reproducir el video de BulleBrowser',
@@ -377,7 +373,6 @@ const ptPT: Dict = {
   'home.h1': 'O navegador que navega por si.',
   'home.sub':
     'Um agente de IA que lê páginas, executa tarefas no navegador e faz tudo o que lhe pedir, diretamente no seu navegador.',
-  'film.watch': 'Ver o filme',
   'film.title': 'Veja-o a trabalhar.',
   'film.label': 'O filme BulleBrowser',
   'film.play': 'Reproduzir o filme BulleBrowser',

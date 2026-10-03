@@ -69,19 +69,6 @@ export default function HomePage() {
               </Link>
             </div>
           </Reveal>
-          <Reveal delay={300}>
-            <a
-              href="#film"
-              className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-ink-inverse/80 underline-offset-4 transition-colors hover:text-white hover:underline"
-            >
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-white/10">
-                <svg viewBox="0 0 24 24" className="ml-0.5 h-3 w-3" fill="currentColor" aria-hidden>
-                  <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" />
-                </svg>
-              </span>
-              {t('film.watch')}
-            </a>
-          </Reveal>
         </div>
         {/* The film — the hero's product shot, in a wide cinema frame. */}
         <div className="relative mx-auto max-w-[1680px] px-4 pb-20 text-left sm:px-6 md:pb-28">
