@@ -76,6 +76,13 @@ test('the composer exposes the attachment menu and voice controls', async () => 
   await expect(win.locator('[aria-label="Voice input"]')).toBeVisible();
   await expect(win.locator('[aria-label="Voice Mode"]')).toBeVisible();
   await expect(win.locator('[aria-label="Open bullebrowser.com"]')).toBeVisible();
+  const footer = await win.locator('aside footer').boundingBox();
+  const attachment = await win.getByRole('button', { name: 'Add attachment', exact: true }).boundingBox();
+  const mic = await win.getByRole('button', { name: 'Voice input', exact: true }).boundingBox();
+  const voice = await win.getByRole('button', { name: 'Voice Mode', exact: true }).boundingBox();
+  expect(mic!.x).toBeGreaterThan(attachment!.x + attachment!.width + 100);
+  expect(Math.abs(voice!.x + voice!.width - (footer!.x + footer!.width - 12))).toBeLessThan(4);
+  expect(Math.abs(voice!.y - mic!.y)).toBeLessThan(1);
   await app.close();
 });
 
@@ -157,4 +164,147 @@ test('microphone startup always resolves and never hangs', async () => {
   await expect(win.getByText(/Starting microphone/i)).toBeVisible({ timeout: 5_000 });
   await expect(win.getByText(/Starting microphone/i)).toBeHidden({ timeout: 20_000 });
   await app.close();
+});
+
+// Synthetic audio uses real browser MediaStream tracks. Only the provider's
+// transport and browser-task IPC are replaced, so no key or microphone is used.
+const VOICE_MEDIA_FIXTURE = String.raw`(function installMediaMock(){
+  const probe=window.__voiceProbe={sent:[],mic:null,remote:null,audio:null,peer:null,contexts:[]};
+  navigator.mediaDevices.getUserMedia=async()=>{
+    const context=new AudioContext();probe.contexts.push(context);
+    const destination=context.createMediaStreamDestination();
+    const oscillator=context.createOscillator();oscillator.frequency.value=440;oscillator.connect(destination);oscillator.start();
+    await context.resume();probe.mic=destination.stream;return destination.stream;
+  };
+  const RealAudio=window.Audio;
+  window.Audio=function(...args){const audio=new RealAudio(...args);probe.audio=audio;return audio;};
+  window.Audio.prototype=RealAudio.prototype;
+  window.RTCPeerConnection=class{
+    constructor(){this.connectionState='new';this.iceConnectionState='new';probe.peer=this;}
+    addTrack(){}
+    createDataChannel(){return this.channel={readyState:'connecting',send(data){probe.sent.push(JSON.parse(data));},close(){this.readyState='closed';}};}
+    async createOffer(){return {type:'offer',sdp:'v=0\r\nmock-offer'};}
+    async setLocalDescription(value){this.localDescription=value;}
+    async setRemoteDescription(){
+      this.connectionState='connected';this.iceConnectionState='connected';this.channel.readyState='open';
+      this.channel.onopen?.();
+      probe.remote=probe.mic.clone();
+      this.ontrack?.({track:probe.remote.getAudioTracks()[0],streams:[probe.remote]});
+      this.onconnectionstatechange?.();
+    }
+    close(){this.connectionState='closed';this.iceConnectionState='closed';this.closed=true;}
+  };
+  window.__voiceEmit=event=>probe.peer.channel.onmessage?.({data:JSON.stringify(event)});
+}
+)();`;
+const VOICE_MAIN_FIXTURE = String.raw`
+const { ipcMain, BrowserWindow } = electron;
+
+    const probe=globalThis.__voiceMainProbe={runs:[],cancels:[],connects:0,disconnects:[],pending:null};
+    const contents=BrowserWindow.getAllWindows()[0].webContents;
+    const replace=(channel,handler)=>{ipcMain.removeHandler(channel);ipcMain.handle(channel,handler);};
+    const finish=(status,text)=>{
+      const pending=probe.pending;if(!pending)return;
+      if(text)conversation.messages.push({role:'assistant',content:text,timestamp:Date.now()});
+      contents.send('agent:step',{runId:pending.runId,step:{kind:'text',text,ts:Date.now()}});
+      contents.send('agent:step',{runId:pending.runId,step:{kind:'done',ts:Date.now()}});
+      contents.send('agent:result',{runId:pending.runId,conversationId:conversation.id,status,text});
+      probe.pending=null;
+    };
+    replace('conversation:get',()=>structuredClone(conversation));
+    replace('voice:connect-realtime',()=>{probe.connects++;return {answerSdp:'mock-answer',callId:'rtc_runtime_call'};});
+    replace('voice:disconnect-realtime',(_event,id)=>{probe.disconnects.push(id);});
+    replace('agent:run',(_event,request)=>{
+      probe.runs.push(request);conversation.messages.push({role:'user',content:request.userMessage,timestamp:Date.now()});
+      const runId='runtime-run-'+probe.runs.length;probe.pending={runId,request};
+      contents.send('agent:step',{runId,step:{kind:'thinking',ts:Date.now()}});
+      contents.send('agent:confirm-request',{runId,id:'runtime-confirm',kind:'browse_access',message:request.userMessage});
+      return {runId};
+    });
+    replace('agent:confirm-reply',(_event,_run,_id,approved)=>finish(approved?'completed':'cancelled',approved?'The browser task finished with a verified answer.':'The task was declined.'));
+    replace('agent:cancel',(_event,runId)=>{probe.cancels.push(runId);finish('cancelled','The browser task was stopped.');});
+`;
+
+test('live voice streams captions, handles browser results, and releases audio on stop', async () => {
+  const { app, win } = await launch();
+  try {
+    const seed = await win.evaluate(async () => {
+      const list = await window.bullebrowser.conversations.list();
+      return list.length
+        ? window.bullebrowser.conversations.get(list[0]!.id)
+        : window.bullebrowser.conversations.create();
+    });
+    await app.evaluate((electronModule, fixture) => {
+      // This fixture is checked-in test code, never provider or page content.
+      const install = new Function('electron', 'conversation', fixture.source);
+      install(electronModule, fixture.conversation);
+    }, { source: VOICE_MAIN_FIXTURE, conversation: seed });
+    await win.evaluate(VOICE_MEDIA_FIXTURE);
+    const emit = (event: Record<string, unknown>) =>
+      win.evaluate(`window.__voiceEmit(${JSON.stringify(event)})`);
+    const mainProbe = () => app.evaluate(() =>
+      JSON.parse(JSON.stringify((globalThis as Record<string, unknown>).__voiceMainProbe)),
+    );
+
+    await win.getByRole('button', { name: 'Voice Mode', exact: true }).click();
+    await expect(win.getByRole('button', { name: 'Mute microphone', exact: true })).toBeVisible();
+    await win.waitForFunction('window.__voiceProbe.audio?.srcObject && window.__voiceProbe.audio.paused === false');
+    await emit({ type: 'conversation.item.input_audio_transcription.completed', item_id: 'user-1', transcript: 'Can you help with this page?' });
+    await emit({ type: 'response.created', response: { id: 'reply-1' } });
+    await emit({ type: 'response.output_audio_transcript.delta', item_id: 'assistant-1', delta: 'Yes, I can ' });
+    await emit({ type: 'response.output_audio_transcript.done', item_id: 'assistant-1', transcript: 'Yes, I can help with this page.' });
+    await emit({ type: 'output_audio_buffer.started' });
+    await expect(win.getByText('Yes, I can help with this page.', { exact: false })).toBeVisible();
+    expect((await mainProbe()).runs).toHaveLength(0);
+
+    await win.getByRole('button', { name: 'Mute microphone', exact: true }).click();
+    expect(await win.evaluate('window.__voiceProbe.mic.getAudioTracks()[0].enabled')).toBe(false);
+    await win.getByRole('button', { name: 'Unmute microphone', exact: true }).click();
+    expect(await win.evaluate('window.__voiceProbe.mic.getAudioTracks()[0].enabled')).toBe(true);
+    await win.getByRole('button', { name: 'Interrupt reply', exact: true }).click();
+    expect(await win.evaluate('window.__voiceProbe.sent.some(event => event.type === "response.cancel")')).toBe(true);
+    expect(await win.evaluate('window.__voiceProbe.sent.some(event => event.type === "output_audio_buffer.clear")')).toBe(true);
+    await emit({ type: 'output_audio_buffer.stopped' });
+    await emit({ type: 'response.done', response: { id: 'reply-1', status: 'completed' } });
+
+    const task = {
+      type: 'response.function_call_arguments.done', name: 'perform_browser_task', call_id: 'tool-1',
+      arguments: JSON.stringify({ prompt: 'Read this page and tell me its requirements.' }),
+    };
+    await emit(task);
+    const approval = win.getByRole('button', { name: 'Allow Access', exact: true });
+    await expect(approval).toBeVisible();
+    await expect(approval).toBeEnabled();
+    await approval.click();
+    await win.waitForFunction('window.__voiceProbe.sent.some(event => event.item?.call_id === "tool-1")');
+    const result = await win.evaluate('JSON.parse(window.__voiceProbe.sent.find(event => event.item?.call_id === "tool-1").item.output)');
+    expect(result).toEqual({ status: 'completed', text: 'The browser task finished with a verified answer.' });
+    await expect(win.getByText('The browser task finished with a verified answer.', { exact: true })).toBeVisible();
+    await emit(task);
+    expect((await mainProbe()).runs).toHaveLength(1);
+    await emit({ type: 'response.created', response: { id: 'reply-2' } });
+    await emit({ type: 'response.done', response: { id: 'reply-2', status: 'completed' } });
+    await emit({ ...task, call_id: 'tool-2', arguments: JSON.stringify({ prompt: 'Open another page.' }) });
+    await expect(approval).toBeVisible();
+
+    await win.getByRole('button', { name: 'Stop Voice Mode', exact: true }).click();
+    await expect(win.getByRole('region', { name: 'Live Voice Mode', exact: true })).toBeHidden();
+    await expect(approval).toBeHidden();
+    await win.waitForFunction('window.__voiceProbe.mic.getAudioTracks().every(track => track.readyState === "ended")');
+    const stopped = await win.evaluate(`({
+      microphone: window.__voiceProbe.mic.getAudioTracks().map(track => track.readyState),
+      remote: window.__voiceProbe.remote.getAudioTracks().map(track => track.readyState),
+      peerClosed: window.__voiceProbe.peer.closed,
+      channel: window.__voiceProbe.peer.channel.readyState,
+      audioPaused: window.__voiceProbe.audio.paused,
+      audioDetached: window.__voiceProbe.audio.srcObject === null
+    })`);
+    expect(stopped).toEqual({ microphone: ['ended'], remote: ['ended'], peerClosed: true, channel: 'closed', audioPaused: true, audioDetached: true });
+    const main = await mainProbe();
+    expect(main.cancels).toEqual(['runtime-run-2']);
+    expect(main.disconnects).toEqual(['rtc_runtime_call']);
+  } finally {
+    await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
+    await app.close();
+  }
 });
