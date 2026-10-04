@@ -9,6 +9,8 @@ import { AGENT_PROMPT_EVENT } from '../lib/url.js';
 import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { VoiceOverlay } from './VoiceOverlay.js';
+import { RealtimeVoice } from './RealtimeVoice.js';
+import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
 import type {
   AppSettings,
@@ -82,6 +84,14 @@ export function AiPanel() {
   // Held while a queued task is being dispatched, so the drain effect starts
   // exactly one run at a time (see the drain effect below).
   const drainingRef = useRef(false);
+  // A run's handle arrives asynchronously. Reserve this interval as well as
+  // the running state so voice and typed prompts cannot start two tasks.
+  const dispatchingRef = useRef(false);
+  const [dispatchRevision, setDispatchRevision] = useState(0);
+  const queuedRef = useRef(queued);
+  queuedRef.current = queued;
+  const voiceContextRef = useRef({ model, skillId, attachments });
+  voiceContextRef.current = { model, skillId, attachments };
   const onMessagesScroll = () => {
     const el = messagesRef.current;
     if (!el) return;
@@ -140,44 +150,50 @@ export function AiPanel() {
   const sendMessage = async (text: string, atts: UiAttachment[] = [], budget?: number) => {
     const raw = text.trim();
     if (!raw || !current) return;
-    // Slash commands expand client-side into a fully formed agent prompt so
-    // the model sees a plain task and the user sees what they typed.
-    const expanded = expandSlashCommand(raw);
-    if (expanded?.echo === 'help') {
+    dispatchingRef.current = true;
+    try {
+      // Slash commands expand client-side into a fully formed agent prompt so
+      // the model sees a plain task and the user sees what they typed.
+      const expanded = expandSlashCommand(raw);
+      if (expanded?.echo === 'help') {
+        setCurrent({
+          ...current,
+          messages: [
+            ...current.messages,
+            { role: 'user', content: raw, timestamp: Date.now() },
+            {
+              role: 'assistant',
+              content: slashHelpText(),
+              timestamp: Date.now(),
+            },
+          ],
+        });
+        return;
+      }
+      const message = expanded?.prompt ?? raw;
       setCurrent({
         ...current,
         messages: [
           ...current.messages,
           { role: 'user', content: raw, timestamp: Date.now() },
-          {
-            role: 'assistant',
-            content: slashHelpText(),
-            timestamp: Date.now(),
-          },
         ],
       });
-      return;
+      const bridge = browserBridge();
+      const skill = skillId || undefined;
+      const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
+      const { runId } = await bridge.agent.run({
+        conversationId: current.id,
+        userMessage: message,
+        model,
+        ...(skill ? { skillId: skill } : {}),
+        ...(runAttachments ? { attachments: runAttachments } : {}),
+        ...(budget ? { budget } : {}),
+      });
+      startRun(runId);
+    } finally {
+      dispatchingRef.current = false;
+      setDispatchRevision((revision) => revision + 1);
     }
-    const message = expanded?.prompt ?? raw;
-    setCurrent({
-      ...current,
-      messages: [
-        ...current.messages,
-        { role: 'user', content: raw, timestamp: Date.now() },
-      ],
-    });
-    const bridge = browserBridge();
-    const skill = skillId || undefined;
-    const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
-    const { runId } = await bridge.agent.run({
-      conversationId: current.id,
-      userMessage: message,
-      model,
-      ...(skill ? { skillId: skill } : {}),
-      ...(runAttachments ? { attachments: runAttachments } : {}),
-      ...(budget ? { budget } : {}),
-    });
-    startRun(runId);
   };
 
   // Queue a task if one is already running (or waiting), else dispatch it now.
@@ -190,8 +206,10 @@ export function AiPanel() {
     const t = text.trim();
     if (!t) return;
     const running = useAgentStore.getState().status === 'running';
-    if (running || queued.length > 0) {
-      setQueued((q) => [...q, { text: t, attachments: atts }]);
+    if (running || dispatchingRef.current || drainingRef.current || queuedRef.current.length > 0) {
+      const next = [...queuedRef.current, { text: t, attachments: atts }];
+      queuedRef.current = next;
+      setQueued(next);
       return;
     }
     await sendMessage(t, atts);
@@ -221,26 +239,76 @@ export function AiPanel() {
     // synchronous guard this effect re-fires the moment setQueued changes the
     // list — status is still 'idle' — and dispatches the whole queue at once
     // instead of one task after another.
-    if (status !== 'idle' || queued.length === 0 || !current || drainingRef.current) return;
-    const [next, ...rest] = queued;
+    if (status !== 'idle' || queued.length === 0 || !current || drainingRef.current || dispatchingRef.current) return;
+    const [next, ...rest] = queuedRef.current;
     if (!next) return;
     drainingRef.current = true;
+    queuedRef.current = rest;
     setQueued(rest);
     void sendMessage(next.text, next.attachments).finally(() => {
       drainingRef.current = false;
+      setDispatchRevision((revision) => revision + 1);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, queued, current]);
+  }, [status, queued, current, dispatchRevision]);
 
-  // A transcript from the voice overlay arrives as a finished prompt: fill the
-  // composer and send it straight away (one-shot closes the overlay; continuous
-  // stays listening for the next command).
+  // Dictation submits the recorded prompt. Live voice delegates browser tasks
+  // through its tool callback instead, so transcripts never run a task twice.
   const onVoiceTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
     void submit(t, attachments);
     setAttachments([]);
     setDraft('');
+  };
+
+  const onVoiceBrowserTask = async (
+    prompt: string,
+    signal: AbortSignal,
+  ): Promise<VoiceBrowserTaskResult> => {
+    if (signal.aborted) return { status: 'cancelled', text: 'The browser task was stopped.' };
+    if (
+      useAgentStore.getState().status === 'running' || dispatchingRef.current ||
+      drainingRef.current || queuedRef.current.length > 0
+    ) {
+      return {
+        status: 'failed',
+        text: 'A browser task is already running. Wait or stop it before starting another.',
+      };
+    }
+    const conversation = useAgentStore.getState().current;
+    const message = prompt.trim();
+    if (!conversation || !message) {
+      return { status: 'failed', text: 'The assistant is still connecting. Try again shortly.' };
+    }
+    const context = voiceContextRef.current;
+    dispatchingRef.current = true;
+    setCurrent({
+      ...conversation,
+      messages: [...conversation.messages, { role: 'user', content: message, timestamp: Date.now() }],
+    });
+    setDraft('');
+    setAttachments([]);
+    try {
+      const result = await runVoiceBrowserTask(window.bullebrowser, {
+        conversationId: conversation.id,
+        userMessage: message,
+        model: context.model,
+        ...(context.skillId ? { skillId: context.skillId } : {}),
+        ...(context.attachments.length > 0 ? { attachments: toRunAttachments(context.attachments) } : {}),
+      }, signal, (id) => {
+        startRun(id);
+        dispatchingRef.current = false;
+      });
+      await refreshVoiceConversation(window.bullebrowser, conversation.id, {
+        current: () => useAgentStore.getState().current,
+        refresh: (saved) => useAgentStore.getState().refreshCurrent(saved),
+      });
+      return result;
+    } finally {
+      dispatchingRef.current = false;
+      setDispatchRevision((revision) => revision + 1);
+    }
   };
 
   // "Control Browser": give the agent a live tab to drive if there isn't one,
@@ -252,8 +320,8 @@ export function AiPanel() {
     textareaRef.current?.focus();
   };
 
-  // Whisper always uses the OpenAI credential, independently of the
-  // assistant selected for chat. Check it before the browser requests the
+  // Dictation and live voice use the OpenAI credential, independently of the
+  // assistant selected for browser tasks. Check it before requesting the
   // microphone so a missing key sends the user straight to the right setting
   // instead of recording speech that cannot be transcribed.
   const startVoice = async (nextMode: 'once' | 'continuous') => {
@@ -403,9 +471,9 @@ export function AiPanel() {
 
   return (
     <aside className="relative flex w-[440px] flex-col border-l border-line/25 bg-surface-light">
-      {voiceMode && (
+      {voiceMode === 'once' && (
         <VoiceOverlay
-          mode={voiceMode}
+          mode="once"
           onTranscript={onVoiceTranscript}
           onClose={() => setVoiceMode(null)}
         />
@@ -436,6 +504,13 @@ export function AiPanel() {
           </button>
         </div>
       </header>
+
+      {voiceMode === 'continuous' && (
+        <RealtimeVoice
+          onBrowserTask={onVoiceBrowserTask}
+          onClose={() => setVoiceMode(null)}
+        />
+      )}
 
       {showHistory && (
         <HistoryList
@@ -549,7 +624,11 @@ export function AiPanel() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setQueued((list) => list.filter((_, j) => j !== i))}
+                  onClick={() => {
+                    const next = queuedRef.current.filter((_, j) => j !== i);
+                    queuedRef.current = next;
+                    setQueued(next);
+                  }}
                   className="shrink-0 text-ink-secondary hover:text-danger"
                   title="Remove from queue"
                 >
@@ -651,7 +730,7 @@ export function AiPanel() {
         </div>
 
         {/* Control row: "+" attachment menu, brand-mark home, one-shot mic,
-            and the continuous Voice Mode toggle. */}
+            and the live Voice Mode toggle. */}
         <div className="mt-2 flex items-center gap-1">
           <AttachMenu
             onAttach={(a) => setAttachments((list) => [...list, a])}
@@ -672,38 +751,40 @@ export function AiPanel() {
             </svg>
           </button>
 
-          <button
-            type="button"
-            onClick={() => void startVoice('once')}
-            aria-label="Voice input"
-            title="Speak a prompt"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-              voiceMode === 'once' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="3" width="6" height="11" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-            </svg>
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => void startVoice('once')}
+              aria-label="Voice input"
+              title="Speak a prompt"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                voiceMode === 'once' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+              </svg>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (voiceMode === 'continuous') setVoiceMode(null);
-              else void startVoice('continuous');
-            }}
-            aria-label="Voice Mode"
-            aria-pressed={voiceMode === 'continuous'}
-            title="Continuous Voice Mode"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-              voiceMode === 'continuous' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
-              <path d="M4 11v2M8 8v8M12 5v14M16 8v8M20 11v2" />
-            </svg>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (voiceMode === 'continuous') setVoiceMode(null);
+                else void startVoice('continuous');
+              }}
+              aria-label="Voice Mode"
+              aria-pressed={voiceMode === 'continuous'}
+              title="Live voice conversation"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                voiceMode === 'continuous' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+                <path d="M4 11v2M8 8v8M12 5v14M16 8v8M20 11v2" />
+              </svg>
+            </button>
+          </div>
         </div>
       </footer>
     </aside>

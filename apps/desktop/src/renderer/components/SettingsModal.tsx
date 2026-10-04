@@ -16,7 +16,7 @@ export function SettingsModal() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
-  // Voice transcription (OpenAI Whisper) needs its own key, independent of the
+  // Dictation and live voice need an OpenAI key, independent of the
   // assistant selected for chat, so it remains available across providers.
   const [hasVoiceKey, setHasVoiceKey] = useState(false);
   const [voiceDraft, setVoiceDraft] = useState('');
@@ -126,7 +126,7 @@ export function SettingsModal() {
           <p className="mt-1 text-xs text-ink-secondary">
             Encrypted and stored on this device only — no keychain prompt. Used
             only to call {assistantLabel} directly from your machine.
-            {provider === 'openai' && ' This same key also powers voice transcription.'}
+            {provider === 'openai' && ' This same key also powers dictation and live voice conversations.'}
           </p>
           {hasKey ? (
             <div className="mt-2 flex items-center gap-2">
@@ -183,12 +183,13 @@ export function SettingsModal() {
         {provider !== 'openai' && (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Voice (OpenAI Whisper) key
+            Voice (OpenAI) key
           </h3>
           <p className="mt-1 text-xs text-ink-secondary">
-            Powers the mic and Voice Mode. Uses your OpenAI key (starts with{' '}
-            <code className="rounded bg-surface-muted px-1">sk-</code>) for Whisper
-            transcription — separate from the assistant key above. Encrypted and
+            Powers microphone dictation and live conversations with spoken replies.
+            Uses your OpenAI key (starts with{' '}
+            <code className="rounded bg-surface-muted px-1">sk-</code>) — separate
+            from the assistant key above. Encrypted and
             stored on this device only.
           </p>
           {hasVoiceKey ? (

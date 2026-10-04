@@ -11,6 +11,7 @@ import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { AGENT_PROMPT_EVENT } from './lib/url.js';
+import { refreshVoiceConversation } from './lib/voice-agent.js';
 
 export function App() {
   const tabs = useBrowserStore((s) => s.tabs);
@@ -59,7 +60,9 @@ export function App() {
 
   // Subscribe to agent steps.
   useEffect(() => {
-    return window.bullebrowser.agent.onStep(({ step }) => {
+    return window.bullebrowser.agent.onStep(({ runId, step }) => {
+      const activeRunId = useAgentStore.getState().runId;
+      if (activeRunId && activeRunId !== runId) return;
       appendStep(step);
       // Only a run-level error (no toolName) ends the run. A tool error — a
       // click that matched nothing, a declined confirmation — is reported back
@@ -74,17 +77,21 @@ export function App() {
       // shows and the assistant's text never makes it into the visible
       // conversation history.
       if (step.kind === 'done' || runFailed) {
+        if (useAgentStore.getState().pendingConfirm?.runId === runId) {
+          setPendingConfirm(null);
+        }
         const cur = useAgentStore.getState().current;
         if (cur?.id) {
-          void window.bullebrowser.conversations.get(cur.id).then((updated) => {
-            // refreshCurrent updates messages without resetting steps/
-            // status — so the visible error/feed survives the refresh.
-            if (updated) useAgentStore.getState().refreshCurrent(updated);
+          void refreshVoiceConversation(window.bullebrowser, cur.id, {
+            current: () => useAgentStore.getState().current,
+            // Retain progress and errors, and preserve a newer prompt or chat
+            // selected while this saved answer is being read.
+            refresh: (updated) => useAgentStore.getState().refreshCurrent(updated),
           });
         }
       }
     });
-  }, [appendStep, finishRun, setError]);
+  }, [appendStep, finishRun, setError, setPendingConfirm]);
 
   // Consent requests from a run. Browsing access is answered inline in the
   // chat (AiPanel); destructive actions get the modal. Both go through

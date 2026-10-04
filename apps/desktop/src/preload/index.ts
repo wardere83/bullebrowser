@@ -59,6 +59,7 @@ const bridge: BrowserBridge = {
     run: (req: AgentRunRequest) => ipcRenderer.invoke(IPC.AGENT_RUN, req),
     cancel: (runId) => ipcRenderer.invoke(IPC.AGENT_CANCEL, runId),
     onStep: (cb) => subscribe(IPC.AGENT_STEP, cb),
+    onResult: (cb) => subscribe(IPC.AGENT_RESULT, cb),
     onConfirmRequest: (cb) => subscribe(IPC.AGENT_CONFIRM_REQUEST, cb),
     replyConfirm: (runId, id, approved) =>
       ipcRenderer.invoke(IPC.AGENT_CONFIRM_REPLY, runId, id, approved),
@@ -79,6 +80,8 @@ const bridge: BrowserBridge = {
   },
   voice: {
     transcribe: (audio, mime) => ipcRenderer.invoke(IPC.VOICE_TRANSCRIBE, audio, mime),
+    connectRealtime: (offerSdp) => ipcRenderer.invoke(IPC.VOICE_CONNECT_REALTIME, offerSdp),
+    disconnectRealtime: (callId) => ipcRenderer.invoke(IPC.VOICE_DISCONNECT_REALTIME, callId),
   },
   updates: {
     status: () => ipcRenderer.invoke(IPC.UPDATE_GET_STATUS),

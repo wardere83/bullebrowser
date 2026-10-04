@@ -100,7 +100,7 @@ test('a saved OpenAI key enables the assistant and voice controls', async () => 
 test('voice controls open Settings when the OpenAI key is absent', async () => {
   const { app, win } = await launch({ withoutOpenAiKey: true });
   await win.locator('[aria-label="Voice input"]').click();
-  await expect(win.getByText('Voice (OpenAI Whisper) key', { exact: true })).toBeVisible();
+  await expect(win.getByText('Voice (OpenAI) key', { exact: true })).toBeVisible();
   await expect(win.getByRole('button', { name: 'Cancel' })).toBeHidden();
   await app.close();
 });
@@ -137,7 +137,7 @@ test('voice input opens an overlay that can be dismissed', async () => {
   await app.close();
 });
 
-test('Voice Mode opens a continuous-listening overlay and stops again', async () => {
+test('Voice Mode opens live voice controls and stops again', async () => {
   const { app, win } = await launch();
   await win.locator('[aria-label="Voice Mode"]').click();
   const stop = win.getByRole('button', { name: 'Stop Voice Mode' });

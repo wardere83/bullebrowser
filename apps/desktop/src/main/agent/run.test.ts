@@ -1,0 +1,116 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BrowserWindow } from 'electron';
+import type { AgentInput } from '@bullebrowser/agent-core';
+import { IPC, type AgentResultEvent, type AgentRunRequest } from '../../shared/ipc.js';
+
+const mocks = vi.hoisted(() => ({
+  runAgent: vi.fn<(input: AgentInput) => Promise<string>>(),
+  appendMessage: vi.fn(),
+  conversation: { id: 'conversation-1', messages: [] },
+}));
+
+vi.mock('@bullebrowser/agent-core', () => ({
+  DEFAULT_MODEL: 'gpt-4o',
+  findSkill: () => undefined,
+  providerFor: () => 'openai',
+  runAgent: mocks.runAgent,
+}));
+vi.mock('../storage/conversations.js', () => ({
+  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage },
+}));
+vi.mock('../storage/session-files.js', () => ({ sessionFileStore: {} }));
+vi.mock('../storage/projects.js', () => ({ projectStore: {} }));
+vi.mock('../storage/secrets.js', () => ({ getApiKey: () => 'test-api-key' }));
+vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ defaultModel: 'gpt-4o', stepBudget: 40 }) }));
+vi.mock('../tabs/manager.js', () => ({ tabManager: { getActiveId: () => 'tab-1' } }));
+vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {} }));
+vi.mock('./attachments.js', () => ({ buildAttachmentAppendix: () => '' }));
+
+const { startAgentRun } = await import('./run.js');
+
+const request: AgentRunRequest = {
+  conversationId: 'conversation-1',
+  userMessage: 'Summarize the page.',
+  model: 'gpt-4o',
+};
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  mocks.conversation.messages = [];
+});
+
+async function runTask() {
+  const send = vi.fn();
+  const win = { webContents: { send } } as unknown as BrowserWindow;
+  const handle = await startAgentRun(win, request);
+  await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
+  const result = send.mock.calls.find(([channel]) => channel === IPC.AGENT_RESULT)![1] as AgentResultEvent;
+  return { send, result, handle };
+}
+
+describe('agent task results for live voice', () => {
+  it('publishes the complete saved answer before signaling terminal completion', async () => {
+    mocks.runAgent.mockImplementation(async (input) => {
+      input.onStep({ type: 'text', detail: 'An interim finding.' });
+      input.onStep({ type: 'text', detail: 'The concluding answer.' });
+      input.onStep({ type: 'done' });
+      return 'An interim finding. The concluding answer.';
+    });
+    const { send, result, handle } = await runTask();
+    expect(result).toEqual({
+      runId: handle.runId,
+      conversationId: request.conversationId,
+      status: 'completed',
+      text: 'An interim finding. The concluding answer.',
+    });
+    expect(mocks.appendMessage).toHaveBeenLastCalledWith(request.conversationId, expect.objectContaining({
+      role: 'assistant', content: result.text,
+    }));
+    const terminalIndex = send.mock.calls.findIndex(([channel, event]) => channel === IPC.AGENT_STEP && event.step.kind === 'done');
+    expect(send.mock.calls.filter(([channel, event]) => channel === IPC.AGENT_STEP && event.step.kind === 'done')).toHaveLength(1);
+    const savedOrder = mocks.appendMessage.mock.invocationCallOrder.at(-1)!;
+    expect(savedOrder).toBeLessThan(send.mock.invocationCallOrder[terminalIndex]!);
+    expect(send.mock.invocationCallOrder[terminalIndex]!).toBeLessThan(send.mock.invocationCallOrder.at(-1)!);
+  });
+
+  it('returns a run failure and preserves partial work without treating it as success', async () => {
+    mocks.runAgent.mockImplementation(async (input) => {
+      input.onStep({ type: 'text', detail: 'One source was read.' });
+      throw new Error('Network connection failed.');
+    });
+    const { send, result } = await runTask();
+    expect(result.status).toBe('failed');
+    expect(result.text).toContain('One source was read.');
+    expect(result.error).toBeTruthy();
+    expect(send.mock.calls.some(([channel, event]) => channel === IPC.AGENT_STEP && event.step.kind === 'error' && !event.step.toolName)).toBe(true);
+    expect(mocks.appendMessage).toHaveBeenLastCalledWith(request.conversationId, expect.objectContaining({ role: 'assistant', content: result.text }));
+  });
+
+  it('reports a stopped task as cancelled, including the partial answer', async () => {
+    mocks.runAgent.mockImplementation(async (input) => {
+      input.onStep({ type: 'text', detail: 'The first page was checked.' });
+      const error = new Error('The operation was aborted.');
+      error.name = 'AbortError';
+      throw error;
+    });
+    const { result } = await runTask();
+    expect(result).toMatchObject({ status: 'cancelled', text: 'The first page was checked.\n\n_(Stopped.)_' });
+    expect(result.error).toBeUndefined();
+  });
+
+  it('still settles the voice tool when saving the answer fails', async () => {
+    mocks.runAgent.mockResolvedValue('The final answer.');
+    mocks.appendMessage.mockImplementation((_id, message) => {
+      if (message.role === 'assistant') throw new Error('Storage is unavailable.');
+    });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { result } = await runTask();
+      expect(result).toMatchObject({
+        status: 'failed', text: 'The final answer.', error: 'The task finished, but its answer could not be saved.',
+      });
+    } finally {
+      log.mockRestore();
+    }
+  });
+});

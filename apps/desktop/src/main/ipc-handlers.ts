@@ -21,6 +21,7 @@ import { conversationStore } from './storage/conversations.js';
 import { sessionFileStore } from './storage/session-files.js';
 import { projectStore } from './storage/projects.js';
 import { transcribeAudio } from './voice.js';
+import { connectRealtimeVoice, disconnectRealtimeVoice, disposeRealtimeVoice } from './realtime-voice.js';
 import {
   clearApiKey,
   hasApiKey,
@@ -124,6 +125,25 @@ export function registerIpc(win: BrowserWindow) {
   ipcMain.handle(IPC.VOICE_TRANSCRIBE, (_e, audio: ArrayBuffer, mime: string) =>
     transcribeAudio(audio, mime),
   );
+  // Only the app's top-level chrome may connect live voice; website frames
+  // cannot use the user's saved key or terminate a session owned by the app.
+  ipcMain.handle(IPC.VOICE_CONNECT_REALTIME, (event, offerSdp: string) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Live voice is only available in the app.');
+    }
+    return connectRealtimeVoice(event.sender.id, offerSdp);
+  });
+  ipcMain.handle(IPC.VOICE_DISCONNECT_REALTIME, (event, callId: string) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Live voice is only available in the app.');
+    }
+    return disconnectRealtimeVoice(event.sender.id, callId);
+  });
+  const voiceOwnerId = win.webContents.id;
+  win.webContents.once('destroyed', () => disposeRealtimeVoice(voiceOwnerId));
+  win.webContents.on('did-start-navigation', (_event, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) disposeRealtimeVoice(voiceOwnerId);
+  });
 
   // app info
   ipcMain.handle(IPC.APP_GET_INFO, (): AppInfo => {

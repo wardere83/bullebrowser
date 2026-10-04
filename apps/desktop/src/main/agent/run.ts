@@ -15,6 +15,7 @@ import {
 import {
   IPC,
   type AgentConfirmRequest,
+  type AgentResultEvent,
   type AgentRunRequest,
 } from '../../shared/ipc.js';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
@@ -212,6 +213,8 @@ export async function startAgentRun(
   void (async () => {
     let assistantText = '';
     let lastText = '';
+    let status: AgentResultEvent['status'] = 'completed';
+    let error: string | undefined;
     try {
       assistantText = await runAgent({
         apiKey: apiKey ?? undefined,
@@ -230,6 +233,9 @@ export async function startAgentRun(
           // what it had actually worked out instead of throwing the whole
           // research away and leaving the conversation with only the question.
           if (step.type === 'text' && step.detail) lastText = step.detail;
+          // Publish completion after the final answer has been saved, so both
+          // the chat refresh and a waiting voice tool receive the same result.
+          if (step.type === 'done') return;
           win.webContents.send(IPC.AGENT_STEP, {
             runId,
             step: stepToEvent(step),
@@ -241,29 +247,43 @@ export async function startAgentRun(
       // an abort error. That's not a failure — don't alarm the user with a red
       // error, just keep whatever the agent had already written and end.
       if (isCancellation(err)) {
+        status = 'cancelled';
         if (lastText) assistantText = `${lastText}\n\n_(Stopped.)_`;
-        win.webContents.send(IPC.AGENT_STEP, {
-          runId,
-          step: { kind: 'done', ts: Date.now() } satisfies AgentStepEvent,
-        });
       } else {
+        status = 'failed';
+        error = describeAgentError(err);
         if (lastText) {
-          assistantText = `${lastText}\n\n_(This task stopped early: ${describeAgentError(err)})_`;
+          assistantText = `${lastText}\n\n_(This task stopped early: ${error})_`;
         }
-        win.webContents.send(IPC.AGENT_STEP, {
-          runId,
-          step: { kind: 'error', message: describeAgentError(err), ts: Date.now() } satisfies AgentStepEvent,
-        });
       }
     } finally {
-      if (assistantText) {
-        conversationStore.appendMessage(req.conversationId, {
-          role: 'assistant',
-          content: assistantText,
-          timestamp: Date.now(),
-        });
+      try {
+        if (assistantText) {
+          conversationStore.appendMessage(req.conversationId, {
+            role: 'assistant',
+            content: assistantText,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (err) {
+        console.error('[agent] could not save the final answer', err);
+        status = 'failed';
+        error = 'The task finished, but its answer could not be saved.';
       }
       runs.delete(runId);
+      win.webContents.send(IPC.AGENT_STEP, {
+        runId,
+        step: status === 'failed'
+          ? { kind: 'error', message: error ?? 'The task could not finish.', ts: Date.now() }
+          : { kind: 'done', ts: Date.now() },
+      });
+      win.webContents.send(IPC.AGENT_RESULT, {
+        runId,
+        conversationId: req.conversationId,
+        status,
+        text: assistantText,
+        ...(error ? { error } : {}),
+      } satisfies AgentResultEvent);
     }
   })();
 

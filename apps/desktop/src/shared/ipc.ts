@@ -35,6 +35,7 @@ export const IPC = {
   AGENT_RUN: 'agent:run',
   AGENT_CANCEL: 'agent:cancel',
   AGENT_STEP: 'agent:step', // main → renderer stream
+  AGENT_RESULT: 'agent:result', // main → renderer final task result
   AGENT_CONFIRM_REQUEST: 'agent:confirm-request', // main → renderer
   AGENT_CONFIRM_REPLY: 'agent:confirm-reply',
   AGENT_CAPTURE: 'agent:capture', // screenshot the active tab for an attachment
@@ -49,6 +50,8 @@ export const IPC = {
   PROJECT_ATTACH_FILES: 'project:attach-files',
   PROJECT_DELETE: 'project:delete',
   VOICE_TRANSCRIBE: 'voice:transcribe',
+  VOICE_CONNECT_REALTIME: 'voice:connect-realtime',
+  VOICE_DISCONNECT_REALTIME: 'voice:disconnect-realtime',
   // Conversations
   CONVERSATION_LIST: 'conversation:list',
   CONVERSATION_GET: 'conversation:get',
@@ -76,6 +79,14 @@ export interface AgentConfirmRequest {
   id: string;
   message: string;
   kind: 'browse_access' | 'destructive';
+}
+
+export interface AgentResultEvent {
+  runId: string;
+  conversationId: string;
+  status: 'completed' | 'failed' | 'cancelled';
+  text: string;
+  error?: string;
 }
 
 // Where an update has got to. `version` is the version being offered, which is
@@ -260,6 +271,7 @@ export interface BrowserBridge {
     onStep(
       cb: (event: { runId: string; step: AgentStepEvent }) => void,
     ): () => void;
+    onResult(cb: (event: AgentResultEvent) => void): () => void;
     onConfirmRequest(cb: (event: AgentConfirmRequest) => void): () => void;
     replyConfirm(runId: string, id: string, approved: boolean): Promise<void>;
     // Capture the active tab as a PNG so the composer can show a thumbnail and
@@ -284,6 +296,9 @@ export interface BrowserBridge {
     // Transcribe one recorded clip via the user's OpenAI key (Whisper). The
     // audio rides as raw bytes; mime is the recorder's container type.
     transcribe(audio: ArrayBuffer, mime: string): Promise<{ text: string }>;
+    // Main exchanges WebRTC SDP using the saved key; credentials stay in main.
+    connectRealtime(offerSdp: string): Promise<{ answerSdp: string; callId: string }>;
+    disconnectRealtime(callId: string): Promise<void>;
   };
   app: {
     info(): Promise<AppInfo>;

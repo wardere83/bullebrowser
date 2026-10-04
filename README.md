@@ -27,6 +27,18 @@ The agent operates the active browser tab — same pages, same logins, same data
 - Form submissions and downloads require explicit confirmation.
 - Choose Claude Opus, Sonnet, or Haiku per task.
 
+### Voice
+
+The microphone button dictates a single message. **Voice Mode** starts a live
+spoken conversation: hear replies, interrupt by speaking, and ask the assistant
+to work in your browser. Both buttons sit on the right of the message composer.
+Browser tasks retain their normal progress feed and confirmation controls.
+
+Add an OpenAI API key in Settings to use voice, including when your browser
+assistant uses Anthropic. Voice audio goes directly to OpenAI and API usage is
+billed to that account. Mute pauses microphone transmission; **Stop Voice Mode**
+ends the call, releases the microphone, and stops any voice-started browser task.
+
 ### Privacy
 
 - Your prompts go straight to Anthropic — never to Bulle Consulting.
