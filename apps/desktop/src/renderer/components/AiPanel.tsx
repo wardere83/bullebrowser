@@ -567,20 +567,6 @@ export function AiPanel() {
       <AllowAccess task={lastUserMessage} />
 
       <footer className="border-t border-line/25 p-3">
-        {hasKey === false && (
-          <button
-            type="button"
-            onClick={openSettings}
-            className="mb-2 flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2 text-left text-[12px] text-ink-primary transition-colors hover:bg-primary/10"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="15" r="4" />
-              <path d="m10.9 12.1 8.1-8.1M17 5l2 2M14 8l2 2" />
-            </svg>
-            <span className="flex-1">Add your key to start — it stays on this device.</span>
-            <span className="font-medium text-primary">Open Settings →</span>
-          </button>
-        )}
         {draft.startsWith('/') && !draft.includes(' ') && (
           <div className="mb-1 max-h-32 overflow-y-auto rounded border border-line bg-white text-[11px]">
             {SLASH_COMMANDS.filter((c) => c.name.startsWith(draft.toLowerCase())).map(
