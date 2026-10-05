@@ -173,15 +173,25 @@ export function AiPanel() {
       const bridge = browserBridge();
       const skill = skillId || undefined;
       const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
-      const { runId } = await bridge.agent.run({
-        conversationId: current.id,
-        userMessage: message,
-        model,
-        ...(skill ? { skillId: skill } : {}),
-        ...(runAttachments ? { attachments: runAttachments } : {}),
-        ...(budget ? { budget } : {}),
+      // Product answers can finish before IPC returns their handle. Track
+      // terminal events first so a completed reply cannot leave Stop stuck on.
+      const finished = new Set<string>();
+      const detach = bridge.agent.onStep(({ runId, step }: { runId: string; step: AgentStepEvent }) => {
+        if (step.kind === 'done' || (step.kind === 'error' && !step.toolName)) finished.add(runId);
       });
-      startRun(runId);
+      try {
+        const { runId } = await bridge.agent.run({
+          conversationId: current.id,
+          userMessage: message,
+          model,
+          ...(skill ? { skillId: skill } : {}),
+          ...(runAttachments ? { attachments: runAttachments } : {}),
+          ...(budget ? { budget } : {}),
+        });
+        if (!finished.has(runId)) startRun(runId);
+      } finally {
+        detach();
+      }
     } finally {
       dispatchingRef.current = false;
       setDispatchRevision((revision) => revision + 1);
@@ -427,7 +437,7 @@ export function AiPanel() {
       )}
       <header className="flex items-center justify-between gap-2 px-4 py-3">
         <div className="text-[13px] font-semibold tracking-tight text-ink-primary">
-          BulleBrowser Agent
+          BulleBrowser Agentic AI
         </div>
         <div className="flex items-center gap-1">
           <button

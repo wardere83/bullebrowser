@@ -51,7 +51,7 @@ interface ActiveRun {
 const runs = new Map<string, ActiveRun>();
 
 const BASE_SYSTEM = [
-  "You are the BulleBrowser agent — an autonomous web agent with direct control",
+  "You are the BulleBrowser Agentic AI — an autonomous web agent with direct control",
   "of the user's real desktop browser. You complete tasks by actually driving the",
   'browser (navigating, reading, clicking, typing), the way a person would, not by',
   'answering from memory.',
@@ -228,6 +228,7 @@ export async function startAgentRun(
           .filter((m) => m !== userMsg)
           .map((m) => ({ role: m.role, content: m.content })),
         userMessage: composedMessage,
+        userRequest: req.userMessage,
         context: ctx,
         requestBrowseAccess: () => ask(req.userMessage, 'browse_access'),
         budget: req.budget ?? getSettings().stepBudget,

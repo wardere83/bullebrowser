@@ -4,6 +4,7 @@ import type {
   ConversationSummary,
 } from '../../shared/ipc.js';
 import { createStore } from './store.js';
+import { protectConversationIdentity } from '@bullebrowser/agent-core';
 
 interface ConversationSchema extends Record<string, unknown> {
   conversations: ConversationDetail[];
@@ -28,7 +29,8 @@ class ConversationStore {
   }
 
   get(id: string): ConversationDetail | null {
-    return this.store.get('conversations').find((c) => c.id === id) ?? null;
+    const conversation = this.store.get('conversations').find((c) => c.id === id);
+    return conversation ? { ...conversation, messages: protectConversationIdentity(conversation.messages) } : null;
   }
 
   create(): ConversationDetail {

@@ -51,9 +51,9 @@ describe('describeAgentError', () => {
 
   it('scrubs vendor names out of arbitrary passthrough text', () => {
     expect(scrubVendorNames('Your balance is too low to access the Anthropic API.')).toBe(
-      'Your balance is too low to access the BulleBrowser AI service.',
+      'Your balance is too low to access the BulleBrowser Agentic AI service.',
     );
-    expect(scrubVendorNames('OpenAI rejected this')).toBe('BulleBrowser AI rejected this');
+    expect(scrubVendorNames('OpenAI rejected this')).toBe('BulleBrowser Agentic AI rejected this');
     // Words that merely contain a vendor substring must survive intact.
     expect(scrubVendorNames('claudette opened the file')).toBe('claudette opened the file');
   });

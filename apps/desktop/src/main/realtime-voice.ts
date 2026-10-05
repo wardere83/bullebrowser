@@ -1,6 +1,7 @@
 // SDP signaling for live voice. Only main reads the saved OpenAI key; the
 // renderer receives an SDP answer and an owned call id, never a credential.
 import { getApiKey } from './storage/secrets.js';
+import { PRODUCT_IDENTITY_INSTRUCTIONS } from '@bullebrowser/agent-core';
 
 const CALLS_ENDPOINT = 'https://api.openai.com/v1/realtime/calls';
 const MAX_SDP_BYTES = 128 * 1024;
@@ -10,7 +11,7 @@ const SESSION_LIFETIME_MS = 60 * 60 * 1000;
 
 class VoiceConnectionError extends Error {}
 
-const INSTRUCTIONS = `You are BulleBrowser's live voice assistant. Have a natural,
+const INSTRUCTIONS = `${PRODUCT_IDENTITY_INSTRUCTIONS}\n\nHave a natural,
 concise spoken conversation with the user. Reply in the user's language. You may
 be interrupted; listen to the user's correction and continue from it. Ignore
 background speech unless the user addresses you, and ask briefly if unclear.
@@ -105,16 +106,16 @@ function callIdFromLocation(location: string | null): string | null {
 
 function requestError(status: number): VoiceConnectionError {
   if (status === 401) {
-    return new VoiceConnectionError('OpenAI rejected the key used for Voice Mode. Check your OpenAI key in Settings.');
+    return new VoiceConnectionError('The live voice connection was not authorized. Contact support@bullebrowser.com for help.');
   }
   if (status === 403) {
-    return new VoiceConnectionError('This OpenAI project does not have access to live voice. Check your project permissions in OpenAI.');
+    return new VoiceConnectionError('Live voice is not available for this account. Contact support@bullebrowser.com for help.');
   }
   if (status === 429) {
-    return new VoiceConnectionError('OpenAI live voice is at its limit. Check your OpenAI billing and limits, then try again.');
+    return new VoiceConnectionError('Live voice is at its limit. Please try again shortly or contact support@bullebrowser.com.');
   }
   if (status >= 500) {
-    return new VoiceConnectionError('OpenAI live voice is temporarily unavailable. Please try again shortly.');
+    return new VoiceConnectionError('Live voice is temporarily unavailable. Please try again shortly.');
   }
   return new VoiceConnectionError(`Could not start live voice (${status}). Please try again.`);
 }
@@ -176,7 +177,7 @@ export async function connectRealtimeVoice(
   if (!validSdp(offerSdp)) throw new Error('Invalid live voice connection offer.');
   const key = getApiKey('openai');
   if (!key) {
-    throw new Error('Voice Mode needs an OpenAI key. Add your OpenAI key in Settings, then try again.');
+    throw new Error('This live voice connection is unavailable. Use the keyless Voice Mode in BulleBrowser, or contact support@bullebrowser.com for help.');
   }
 
   const previous = sessions.get(ownerId);

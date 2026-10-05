@@ -38,7 +38,10 @@ function clearNativeRestartListeners() {
 
 export function getUpdateStatus(): UpdateStatus {
   if (latest.state !== 'idle' && !isNewerVersion(latest.version)) latest = { state: 'idle' };
-  return latest;
+  // Keep the downloaded update internally for a failed-install retry, but
+  // remove its prompt as soon as installation starts, including after the
+  // renderer reloads while macOS is still staging the update.
+  return installRequested ? { state: 'idle' } : latest;
 }
 
 // Use the updater's SemVer parser, including prerelease ordering. Cached or
@@ -70,7 +73,7 @@ export function setupAutoUpdate(win: BrowserWindow) {
   autoUpdater.autoRunAppAfterInstall = true;
 
   const available = (info: { version: string }) => {
-    if (!isNewerVersion(info.version) || getUpdateStatus().state === 'ready') return;
+    if (installRequested || !isNewerVersion(info.version) || getUpdateStatus().state === 'ready') return;
     send({ state: 'downloading', version: info.version });
   };
   const downloaded = (info: { version: string }) => {
@@ -78,12 +81,12 @@ export function setupAutoUpdate(win: BrowserWindow) {
     send({ state: 'ready', version: info.version });
   };
   const unavailable = () => {
-    if (getUpdateStatus().state !== 'ready') send({ state: 'idle' });
+    if (!installRequested && getUpdateStatus().state !== 'ready') send({ state: 'idle' });
   };
   const nativeFailed = () => {
     // Squirrel can fail after ready is shown but before the first click. Keep
     // retry intent separate from feed/network errors while staging is healthy.
-    if (getUpdateStatus().state === 'ready') retryNativeStaging = true;
+    if (latest.state === 'ready' && isNewerVersion(latest.version)) retryNativeStaging = true;
   };
   const failed = (err: Error) => {
     console.warn('[updater] error:', err?.message ?? err);
@@ -109,7 +112,7 @@ export function setupAutoUpdate(win: BrowserWindow) {
 
   const check = () => {
     // Keep the ready update visible until installation; don't download it again.
-    if (getUpdateStatus().state === 'ready') return;
+    if (installRequested || getUpdateStatus().state === 'ready') return;
     void autoUpdater.checkForUpdates().catch(failed);
   };
 

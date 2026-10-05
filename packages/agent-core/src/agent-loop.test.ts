@@ -58,6 +58,57 @@ function toolUseBlock(id: string, name: string, input: Record<string, unknown>) 
 describe('runAgent Claude tool-use loop', () => {
   beforeEach(() => createMock.mockReset());
 
+  it.each([
+    [undefined, DEFAULT_MODEL], ['configured-key', DEFAULT_MODEL], ['configured-key', 'gpt-4o'],
+  ] as const)('answers product updates without a provider or page read (%s, %s)', async (apiKey, model) => {
+    const context = makeContext();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const requestBrowseAccess = vi.fn();
+    const steps: AgentStep[] = [];
+    try {
+      const result = await runAgent({ apiKey, model, systemPrompt: '', history: [],
+        userMessage: 'Can you tell me what new updates have been done on this app',
+        context, requestBrowseAccess, onStep: (step) => steps.push(step) });
+      expect(result).toContain('BulleBrowser Agentic AI');
+      expect(result).toContain('support@bullebrowser.com');
+      expect(steps).toEqual([{ type: 'text', detail: result }, { type: 'done' }]);
+      expect(createMock).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(context.runtime.readPage).not.toHaveBeenCalled();
+      expect(requestBrowseAccess).not.toHaveBeenCalled();
+    } finally { fetchSpy.mockRestore(); }
+  });
+
+  it('uses the original request rather than app details in attached reference text', async () => {
+    const context = makeContext();
+    const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [],
+      userRequest: 'summarize this page',
+      userMessage: 'summarize this page\n\nAttached reference: BulleBrowser technology stack and Claude updates.',
+      context, onStep: () => {} });
+    expect(result).toContain('grants and deadlines');
+    expect(context.runtime.readPage).toHaveBeenCalled();
+  });
+
+  it('protects model self-disclosure before streaming, returning or executing proposed tools', async () => {
+    createMock.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [
+      textBlock("I'm Claude, built by Anthropic."), toolUseBlock('private', 'click', { target: 'submit' }),
+    ] });
+    const context = makeContext();
+    const steps: AgentStep[] = [];
+    const result = await runAgent({ apiKey: 'configured-key', model: DEFAULT_MODEL,
+      systemPrompt: 'Complete the requested task.', history: [
+        { role: 'user', content: 'How was BulleBrowser built?' },
+        { role: 'assistant', content: 'BulleBrowser uses Claude and Electron.' },
+      ], userMessage: 'greet me', context, onStep: (step) => steps.push(step) });
+    expect(result).toContain('support@bullebrowser.com');
+    expect(steps.filter((step) => step.type === 'text')).toEqual([{ type: 'text', detail: result }]);
+    expect(context.runtime.click).not.toHaveBeenCalled();
+    const sent = createMock.mock.calls[0]![0];
+    expect(sent.system).toContain('BulleBrowser Agentic AI');
+    expect(sent.system).toContain('support@bullebrowser.com');
+    expect(sent.messages.find((message: { role: string }) => message.role === 'assistant').content).not.toMatch(/Claude|Electron/);
+  });
+
   it('drives tools then returns the model\'s grounded final answer', async () => {
     createMock
       .mockResolvedValueOnce({
@@ -420,7 +471,7 @@ describe('runAgent Claude tool-use loop', () => {
   it('offers truthful local capabilities for unsupported prompts', async () => {
     const context = makeContext();
     const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'write a novel', context, onStep: () => {} });
-    expect(result).toContain('Local assistant is ready');
+    expect(result).toContain('BulleBrowser Agentic AI is ready');
     expect(context.runtime.readPage).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -432,7 +483,7 @@ describe('runAgent Claude tool-use loop', () => {
 
   it.each(['list tabs', 'page details', 'extract page data'])('restores the local command %s', async (userMessage) => {
     const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage, context: makeContext(), onStep: () => {} });
-    expect(result).not.toContain('Local assistant is ready');
+    expect(result).not.toContain('BulleBrowser Agentic AI is ready');
     expect(createMock).not.toHaveBeenCalled();
   });
 

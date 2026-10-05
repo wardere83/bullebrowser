@@ -35,7 +35,7 @@ export function UpdateBanner() {
     };
   }, []);
 
-  if (status.state !== 'ready') return null;
+  if (status.state !== 'ready' || installing) return null;
 
   const install = () => {
     setInstalling(true);
@@ -46,16 +46,15 @@ export function UpdateBanner() {
     <button
       type="button"
       onClick={install}
-      disabled={installing}
       title={`BulleBrowser ${status.version} is ready. Restarts the app on the new version.`}
       // no-drag: the top bar is a window drag region, which would otherwise
       // swallow the click.
-      className="no-drag flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-emerald-500 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-400 disabled:opacity-70"
+      className="no-drag flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-emerald-500 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-400"
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
         <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
       </svg>
-      {installing ? 'Updating…' : 'Update App'}
+      Update App
     </button>
   );
 }

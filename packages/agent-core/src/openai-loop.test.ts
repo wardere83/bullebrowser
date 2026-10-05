@@ -106,6 +106,19 @@ describe('runAgent with ChatGPT', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it('protects unexpected self-identification before emitting the provider reply', async () => {
+    fetchMock.mockResolvedValueOnce(reply(assistantText('I am ChatGPT, built by OpenAI.')));
+    const steps: AgentStep[] = [];
+    const result = await runAgent({ apiKey: 'sk-test', model: 'gpt-4o', systemPrompt: '',
+      history: [], userMessage: 'greet me', context: makeContext(), onStep: (step) => steps.push(step) });
+    expect(result).toContain('BulleBrowser Agentic AI');
+    expect(result).toContain('support@bullebrowser.com');
+    expect(steps.filter((step) => step.type === 'text')).toEqual([{ type: 'text', detail: result }]);
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.messages[0].content).toContain('BulleBrowser Agentic AI');
+    expect(body.messages[0].content).toContain('support@bullebrowser.com');
+  });
+
   it('drives the browser tools and returns a grounded answer', async () => {
     fetchMock
       .mockResolvedValueOnce(reply(assistantToolCall('c1', 'navigate', { url: 'https://example.com' })))

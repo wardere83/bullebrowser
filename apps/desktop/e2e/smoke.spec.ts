@@ -319,9 +319,11 @@ test('the update button clears after installation and returns for a later releas
         ipcMain.once('test:resolve-update-status', () => resolve({ state: 'idle' }));
       }));
       let attempts = 0;
+      (globalThis as Record<string, unknown>).__updateInstallAttempts = attempts;
       ipcMain.removeHandler('update:install');
       ipcMain.handle('update:install', () => {
         attempts += 1;
+        (globalThis as Record<string, unknown>).__updateInstallAttempts = attempts;
         if (attempts === 1) throw new Error('Installer fixture failure');
         if (attempts === 2) {
           // Installation can fail asynchronously after IPC already resolved.
@@ -346,15 +348,25 @@ test('the update button clears after installation and returns for a later releas
     await update.click();
     await expect(update).toBeEnabled();
     await update.click();
-    await expect(win.getByRole('button', { name: 'Updating…', exact: true })).toBeDisabled();
-    await app.evaluate(({ ipcMain }) => { ipcMain.emit('test:fail-update-install'); });
-    await expect(update).toBeEnabled();
-    await update.click();
+    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updateInstallAttempts)).toBe(2);
+    // Installation starts on this click; there is no lingering update prompt
+    // while the native installer is replacing the app.
     await expect(update).toBeHidden();
+    await expect(win.getByRole('button', { name: 'Updating…', exact: true })).toBeHidden();
+    // A renderer reload during installation reads idle from the main process;
+    // it must not bring the same downloaded update prompt back.
     await app.evaluate(({ ipcMain }) => {
       ipcMain.removeHandler('update:get-status');
       ipcMain.handle('update:get-status', () => ({ state: 'idle' }));
     });
+    await win.reload();
+    await expect(win.locator('aside textarea')).toBeEnabled();
+    await expect(update).toBeHidden();
+    await app.evaluate(({ ipcMain }) => { ipcMain.emit('test:fail-update-install'); });
+    await expect(update).toBeEnabled();
+    await update.click();
+    await expect(update).toBeHidden();
+    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updateInstallAttempts)).toBe(3);
     await win.reload();
     await expect(win.locator('aside textarea')).toBeEnabled();
     await expect(update).toBeHidden();

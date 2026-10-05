@@ -244,6 +244,8 @@ export interface AgentInput {
   systemPrompt: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   userMessage: string;
+  /** User's own words before host-added attachments; used for product questions. */
+  userRequest?: string;
   context: ToolContext;
   onStep: AgentStepHandler;
   // Extra tools offered to the model alongside the built-in browser tools —

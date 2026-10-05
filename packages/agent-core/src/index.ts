@@ -15,3 +15,4 @@ export * from './errors.js';
 export * from './untrusted.js';
 export * from './budget.js';
 export * from './permissions.js';
+export * from './product-identity.js';
