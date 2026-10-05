@@ -88,12 +88,12 @@ export function SettingsModal() {
         <p className="text-xs leading-relaxed text-ink-secondary">
           Voice input and Voice Mode transcribe English on this device without an API key.
           The speech model downloads on first use; after that, transcription works offline.
-          Assistant responses still use the selected engine.
+          Chat uses the local assistant when no cloud key is configured.
         </p>
 
-        <details open={!hasKey} className="rounded-lg border border-line/60 bg-surface-muted/20 px-3 py-2">
+        <details className="rounded-lg border border-line/60 bg-surface-muted/20 px-3 py-2">
           <summary className="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Developer / Advanced — engine &amp; keys
+            Optional cloud engine
           </summary>
           <div className="mt-3 space-y-4">
         <div>
@@ -101,8 +101,9 @@ export function SettingsModal() {
             {assistantLabel} key
           </h3>
           <p className="mt-1 text-xs text-ink-secondary">
-            Encrypted and stored on this device only — no keychain prompt. Used
-            only to call {assistantLabel} directly from your machine.
+            Optional: connect {assistantLabel} for cloud answers. Without a key,
+            the local assistant supports page summaries and browser commands.
+            Keys are encrypted and stored on this device.
           </p>
           {hasKey ? (
             <div className="mt-2 flex items-center gap-2">

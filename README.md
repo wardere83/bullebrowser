@@ -2,7 +2,7 @@
 
 > The agentic browser for grants, RFPs, and compliance work.
 
-BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) with a built-in Claude-powered AI agent purpose-built for grants research, RFP comparison, and compliance review workflows. Bring your own Anthropic API key — your prompts go directly to your provider, never to Bulle Consulting.
+BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) with a local assistant for page summaries and explicit browser commands. No API key is required for local mode or voice. Optional cloud engines support open-ended research, RFP comparison, and compliance workflows using your own provider key.
 
 **Website:** [bullebrowser.com](https://bullebrowser.com)
 
@@ -12,7 +12,7 @@ BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.
 
 The agent operates the active browser tab — same pages, same logins, same data you’d see — through a focused set of actions: navigate, read, click & type, extract, manage tabs, and wait.
 
-### Preset Skills
+### Preset Skills (optional cloud engines)
 
 | Skill | What it does |
 |---|---|
@@ -30,19 +30,19 @@ The agent operates the active browser tab — same pages, same logins, same data
 ### Voice
 
 The microphone button dictates a single message. **Voice Mode** starts a live
-spoken conversation: hear replies, interrupt by speaking, and ask the assistant
+spoken conversation: hear replies, interrupt playback, and ask the assistant
 to work in your browser. Both buttons sit on the right of the message composer.
 Browser tasks retain their normal progress feed and confirmation controls.
 
-Add an OpenAI API key in Settings to use voice, including when your browser
-assistant uses Anthropic. Voice audio goes directly to OpenAI and API usage is
-billed to that account. Mute pauses microphone transmission; **Stop Voice Mode**
-ends the call, releases the microphone, and stops any voice-started browser task.
+Voice uses local English Whisper transcription and system speech output, with
+no speech API key. The model downloads on first use and works offline afterward.
+Mute pauses capture; **Stop Voice Mode** releases the microphone and cancels its
+browser task. Without a cloud key, spoken browser commands use the local assistant.
 
 ### Privacy
 
-- Your prompts go straight to Anthropic — never to Bulle Consulting.
-- Your API key is encrypted in your OS keychain.
+- Local mode processes page summaries on your device; optional cloud mode sends prompts directly to the selected provider.
+- Optional provider keys are encrypted and stored on your device.
 - History, bookmarks, and conversations stay on your device.
 - No analytics. No telemetry.
 

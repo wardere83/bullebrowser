@@ -4,9 +4,10 @@ The in-product agent panel (`apps/desktop`) is where the Comet-style features
 run for real — against the live agent, not a demo. This documents the
 capabilities added so they operate 100% functionally, and how they're wired.
 
-Everything here is **additive and localized to the desktop app**: `agent-core`
-and the agent loop are untouched. An ordinary run with no attachments behaves
-byte-for-byte as before.
+The desktop app uses the shared agent loop. Without cloud credentials it runs
+local summaries and explicit browser commands; configured cloud engines keep
+their existing model-driven loop. Both paths use the same tool validation,
+browser approvals, per-site permissions, cancellation, and run records.
 
 ## What was already real (unchanged)
 
@@ -46,10 +47,18 @@ the user scrolls up, a pointer button appears to jump back down (`AiPanel.tsx`).
 ### Brand-mark home
 The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 
+### Keyless local assistant
+
+No setup key is needed to summarize a page, list tabs, show page details, list
+links, extract page data, open a URL, click a quoted target, or type quoted text
+into a quoted field. Unsupported requests show the local command capabilities;
+they do not produce invented model answers. Cloud keys are optional in the
+collapsed Settings section for open-ended reasoning and cloud-specific skills.
+
 ### Voice — dictation and spoken Voice Mode
 
 - Dictation records a prompt, transcribes locally, and sends it to the selected
-  assistant. Without an assistant key, its transcript stays in the composer.
+  assistant. Without a cloud key, its transcript runs through the local assistant.
 - Voice Mode keeps the existing inline controls, captions, mute, stop, and
   browser-task approvals. Local speech recognition sends each utterance through
   the selected assistant; the system speech engine reads its actual result.
@@ -59,7 +68,7 @@ The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 - Both use **Whisper tiny.en via Transformers.js** in main. Mono 16 kHz audio
   stays on the device, and speech needs no OpenAI key. The English model
   downloads on first use into `userData/voice-models` and works offline afterward.
-  Browser tasks and assistant responses still need the selected engine's key.
+  Local summaries and explicit browser commands need no key. Cloud synthesis is optional.
 - The previous hosted realtime implementation remains available internally but
   is no longer used by the Voice Mode UI.
 - macOS microphone permissions and the existing hardened-runtime entitlements

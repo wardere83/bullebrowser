@@ -1,3 +1,4 @@
+import { createServer } from 'node:http';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -352,4 +353,54 @@ test('the update button clears after installation and returns for a later releas
     await expect(update).toBeVisible();
     await expect(update).toHaveAttribute('title', /0\.2\.39/);
   } finally { await app.close(); }
+});
+
+
+test('chat and spoken browser tasks use the real local assistant without any keys', async () => {
+  const server = createServer((_req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.end('<html><head><title>Local grants fixture</title></head><body><main><h1>Grant deadlines</h1><p>Grant applications close on December 15. Eligible schools can request funding for accessible classrooms.</p></main></body></html>');
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as { port: number };
+  const url = `http://127.0.0.1:${address.port}/`;
+  const { app, win } = await launch({ withoutKeys: true });
+  try {
+    await win.evaluate(async (target) => {
+      const tabs = await window.bullebrowser.tabs.list();
+      const active = tabs.find((tab) => tab.active)!;
+      await window.bullebrowser.tabs.navigate(active.id, target);
+    }, url);
+    await expect(win.getByText('Add your key to start — it stays on this device.', { exact: true })).toBeHidden();
+    await win.locator('aside textarea').fill('summarize this page');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    const approval = win.getByRole('button', { name: 'Allow Access', exact: true });
+    await expect(approval).toBeVisible();
+    await approval.click();
+    const replies = () => win.evaluate(async () => {
+      const conversations = await window.bullebrowser.conversations.list();
+      const conversation = await window.bullebrowser.conversations.get(conversations[0]!.id);
+      return conversation!.messages.filter((message) => message.role === 'assistant').map((message) => message.content);
+    });
+    await expect.poll(replies).toEqual([expect.stringContaining('Grant applications close on December 15.')]);
+    expect((await replies())[0]).toContain(url);
+    await expect(win.getByRole('heading', { name: 'Settings', exact: true })).toBeHidden();
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler('voice:transcribe');
+      ipcMain.handle('voice:transcribe', () => ({ text: 'summarize this page' }));
+    });
+    await win.evaluate(VOICE_MEDIA_FIXTURE);
+    await win.getByRole('button', { name: 'Voice Mode', exact: true }).click();
+    await expect(win.getByRole('button', { name: 'Mute microphone', exact: true })).toBeEnabled();
+    await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
+    await win.evaluate('window.__voiceProbe.recorder.stop()');
+    await expect(approval).toBeVisible();
+    await approval.click();
+    await expect(win.getByRole('region', { name: 'Live Voice Mode' }).getByText(/Grant applications close on December 15/)).toBeVisible();
+    await win.getByRole('button', { name: 'Stop Voice Mode', exact: true }).click();
+  } finally {
+    await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
+    await app.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });
