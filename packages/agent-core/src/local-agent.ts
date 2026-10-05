@@ -1,6 +1,7 @@
 import type { ToolCallOutcome } from './agent-loop.js';
 import { StepBudget } from './budget.js';
 import type { AgentInput } from './types.js';
+import { AGENT_IDENTITY, protectAssistantIdentity } from './product-identity.js';
 
 type Call = (name: string, input: Record<string, unknown>) => Promise<ToolCallOutcome>;
 
@@ -55,8 +56,9 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     const result = await run('summarizePage', { text: String(page.text ?? ''), sourceUrl: String(page.url ?? '') });
     report = result.summary ? `${String(result.summary)}\n\nSource: ${String(page.url ?? '')}` : 'This page has no readable text to summarize.';
   } else {
-    report = `Local assistant is ready. ${help}`;
+    report = `${AGENT_IDENTITY} is ready. ${help}`;
   }
+  report = protectAssistantIdentity(report);
   input.onStep({ type: 'text', detail: report });
   input.onStep({ type: 'done' });
   return report;

@@ -28,6 +28,7 @@ import {
 import { neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
 import { requiredLevel } from './permissions.js';
 import { StepBudget } from './budget.js';
+import { PRODUCT_IDENTITY_INSTRUCTIONS, productQuestionReply, protectAssistantIdentity, protectConversationIdentity } from './product-identity.js';
 import {
   createOpenAiCompletion,
   parseToolArguments,
@@ -492,6 +493,13 @@ export async function runAgent(input: AgentInput): Promise<string> {
     throw new Error('cancelled');
   }
 
+  const productReply = productQuestionReply(input.userRequest ?? input.userMessage, input.history);
+  if (productReply) {
+    onStep({ type: 'text', detail: productReply });
+    onStep({ type: 'done' });
+    return productReply;
+  }
+  input = { ...input, history: protectConversationIdentity(input.history) };
   const provider = providerFor(input.model);
 
   const policy = new PrivacyPolicyEngine();
@@ -499,7 +507,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   const gate = createBrowseGate(input.requestBrowseAccess);
 
   if (!input.apiKey) {
-    onStep({ type: 'thinking', detail: 'Using the local assistant…' });
+    onStep({ type: 'thinking', detail: 'BulleBrowser Agentic AI is working…' });
     return runLocalAgent(input, (name, args) => executeToolCall(
       `local-${name}`, name, args, context, policy, onStep, gate, new Map(),
       { onRecord: input.onToolRecord },
@@ -538,7 +546,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
       "user's latest message."
     : '\n\nCurrent browser context: no page is loaded yet. Use `navigate` (for ' +
       'example to a search engine) to begin.';
-  const system = `${input.systemPrompt}\n\n${UNTRUSTED_RULES}${contextNote}`;
+  const system = `${input.systemPrompt}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${UNTRUSTED_RULES}${contextNote}`;
   const budget = new StepBudget(input.budget);
   const userTurnText = pageContext ? `${pageContext}\n\n${input.userMessage}` : input.userMessage;
 
@@ -607,6 +615,12 @@ export async function runAgent(input: AgentInput): Promise<string> {
       .map((b) => b.text)
       .join('\n\n')
       .trim();
+    const safeText = protectAssistantIdentity(`${finalText} ${turnText}`.trim());
+    if (safeText !== `${finalText} ${turnText}`.trim()) {
+      onStep({ type: 'text', detail: safeText });
+      onStep({ type: 'done' });
+      return safeText;
+    }
     if (turnText) onStep({ type: 'text', detail: turnText });
 
     // The model hit the per-turn token cap mid-answer. Preserve what it wrote,
@@ -791,6 +805,12 @@ async function runOpenAiTurns(args: {
     const choice = response.choices?.[0];
     if (!choice) throw new Error('OpenAI returned no choices.');
     const turnText = (choice.message.content ?? '').trim();
+    const safeText = protectAssistantIdentity(`${finalText} ${turnText}`.trim());
+    if (safeText !== `${finalText} ${turnText}`.trim()) {
+      onStep({ type: 'text', detail: safeText });
+      onStep({ type: 'done' });
+      return safeText;
+    }
     if (turnText) onStep({ type: 'text', detail: turnText });
 
     const calls = choice.message.tool_calls ?? [];

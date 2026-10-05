@@ -79,6 +79,7 @@ describe('in-app updates', () => {
     expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
     api.quitAndInstallUpdate();
     expect(updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+    expect(api.getUpdateStatus()).toEqual({ state: 'idle' });
   });
 
   it('requests one restart while macOS finishes staging the downloaded update', async () => {
@@ -91,6 +92,30 @@ describe('in-app updates', () => {
     expect(updater.quitAndInstall).toHaveBeenCalledTimes(1);
     // A repeated ready event must not re-enable the button during installation.
     expect(win.webContents.send).not.toHaveBeenCalled();
+  });
+
+  it('starts installation synchronously and suppresses stale events and status reads until it finishes', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    updater.quitAndInstall.mockImplementation(() => {
+      expect(api.getUpdateStatus()).toEqual({ state: 'idle' });
+    });
+    win.webContents.send.mockClear();
+    api.quitAndInstallUpdate();
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(1);
+    events.emit('update-not-available');
+    events.emit('update-available', { version: '0.2.39' });
+    events.emit('update-downloaded', { version: '0.2.39' });
+    await vi.advanceTimersByTimeAsync(2 * 60 * 60 * 1000);
+    expect(api.getUpdateStatus()).toEqual({ state: 'idle' });
+    expect(win.webContents.send).not.toHaveBeenCalled();
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
+    api.quitAndInstallUpdate();
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(1);
+
+    events.emit('error', new Error('Installer could not start'));
+    expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
+    expect(win.webContents.send).toHaveBeenCalledWith('update:status', { state: 'ready', version: '0.2.38' });
   });
 
   it('restores the ready action when installation emits an error before shutdown', async () => {

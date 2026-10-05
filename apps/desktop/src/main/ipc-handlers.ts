@@ -1,4 +1,4 @@
-import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { ProviderId } from '@bullebrowser/agent-core';
 import { getUpdateStatus, quitAndInstallUpdate } from './updater.js';
 import { readFileSync } from 'node:fs';
@@ -172,8 +172,12 @@ export function registerIpc(win: BrowserWindow) {
 
   // Chrome is the app interface, never a browsing surface. Reply links and
   // window.open requests belong in the managed web pane, keeping chat intact.
-  const openWebTab = (url: string) => {
+  const openReplyLink = (url: string) => {
     try {
+      if (/^mailto:support@bullebrowser\.com$/i.test(url)) {
+        void shell.openExternal(url).catch((error) => console.warn('[support] Could not open email:', error));
+        return;
+      }
       if (!['http:', 'https:'].includes(new URL(url).protocol)) return;
       void tabManager.create(url).catch((error) => console.warn('[tabs] Could not open link:', error));
     } catch {
@@ -181,11 +185,11 @@ export function registerIpc(win: BrowserWindow) {
     }
   };
   win.webContents.setWindowOpenHandler(({ url }) => {
-    openWebTab(url);
+    openReplyLink(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event, url) => {
     event.preventDefault();
-    openWebTab(url);
+    openReplyLink(url);
   });
 }

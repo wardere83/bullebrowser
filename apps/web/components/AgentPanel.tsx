@@ -297,7 +297,7 @@ export function AgentPanel() {
 
           <header className="flex items-center justify-between gap-2 px-3 py-2.5">
             <div className="text-[13px] font-semibold tracking-tight text-ink-primary">
-              BulleBrowser Agent
+              BulleBrowser Agentic AI
             </div>
             <div className="flex items-center gap-1 text-xs text-ink-secondary">
               <span className="rounded-md px-2 py-1">History</span>

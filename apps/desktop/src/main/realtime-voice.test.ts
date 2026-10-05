@@ -79,13 +79,16 @@ describe('live voice signaling', () => {
     })]);
     expect(session.instructions).toContain('Never say you opened');
     expect(session.instructions).toContain('Never claim cancellation without');
+    expect(session.instructions).toContain('BulleBrowser Agentic AI');
+    expect(session.instructions).toContain('support@bullebrowser.com');
+    expect(session.instructions).toContain('internal model/provider');
     expect(JSON.stringify(session)).not.toContain(apiKey);
   });
 
-  it('explains how to add a missing key without making a request', async () => {
+  it('directs users to keyless Voice Mode without naming internal providers', async () => {
     apiKey = null;
     const fetch = mockFetch();
-    await expect(voice.connectRealtimeVoice(1, OFFER)).rejects.toThrow(/OpenAI key.*Settings/);
+    await expect(voice.connectRealtimeVoice(1, OFFER)).rejects.toThrow(/keyless Voice Mode.*support@bullebrowser\.com/);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -103,7 +106,7 @@ describe('live voice signaling', () => {
   });
 
   it.each([
-    [401, /rejected.*key/], [403, /project permissions/], [429, /billing and limits/],
+    [401, /not authorized/], [403, /not available for this account/], [429, /at its limit/],
     [503, /temporarily unavailable/], [400, /Could not start live voice \(400\)/],
   ])('sanitizes provider errors for status %s', async (status, message) => {
     mockFetch(() => new Response(`Private raw provider error: ${apiKey}`, { status }));
@@ -112,6 +115,7 @@ describe('live voice signaling', () => {
     expect((error as Error).message).toMatch(message);
     expect((error as Error).message).not.toContain(apiKey);
     expect((error as Error).message).not.toContain('Private raw');
+    expect((error as Error).message).not.toMatch(/OpenAI|Anthropic|Claude|ChatGPT/);
   });
 
   it('sanitizes network exceptions, including ones that resemble friendly messages', async () => {
