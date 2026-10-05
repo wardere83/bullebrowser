@@ -1,3 +1,4 @@
+import { runLocalAgent } from './local-agent.js';
 // The BulleBrowser agent loop.
 //
 // This is a real Claude tool-use loop: the model is given the browser tool
@@ -34,7 +35,6 @@ import {
   type OpenAiMessage,
 } from './openai-loop.js';
 import {
-  assistantLabelFor,
   providerFor,
   type AgentInput,
   type AgentStepHandler,
@@ -494,22 +494,17 @@ export async function runAgent(input: AgentInput): Promise<string> {
 
   const provider = providerFor(input.model);
 
-  if (!input.apiKey) {
-    // Throw rather than return a canned string — otherwise the "answer" renders
-    // as a normal assistant message and the failure is invisible. Throwing routes
-    // it through the run's error channel so the chat shows a real error.
-    // White-labelled on purpose: no vendor name reaches the user. The key
-    // prefix is the only hint needed, and it's the thing they're pasting.
-    throw new Error(
-      `${assistantLabelFor(input.model)} needs its key before it can browse or ` +
-        `answer. Open Settings and paste a key starting with ` +
-        `"${provider === 'openai' ? 'sk-' : 'sk-ant-'}".`,
-    );
-  }
-
   const policy = new PrivacyPolicyEngine();
   const memory = new SessionMemoryStore();
   const gate = createBrowseGate(input.requestBrowseAccess);
+
+  if (!input.apiKey) {
+    onStep({ type: 'thinking', detail: 'Using the local assistant…' });
+    return runLocalAgent(input, (name, args) => executeToolCall(
+      `local-${name}`, name, args, context, policy, onStep, gate, new Map(),
+      { onRecord: input.onToolRecord },
+    ));
+  }
 
   // Context from the page the user is already looking at is not gated: it's
   // the tab in front of them, and the panel is expected to know it. The

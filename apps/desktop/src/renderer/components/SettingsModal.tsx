@@ -16,12 +16,6 @@ export function SettingsModal() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
-  // Dictation and live voice need an OpenAI key, independent of the
-  // assistant selected for chat, so it remains available across providers.
-  const [hasVoiceKey, setHasVoiceKey] = useState(false);
-  const [voiceDraft, setVoiceDraft] = useState('');
-  const [voiceSaving, setVoiceSaving] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
   const apiKeyActivity = useInputActivity({ disabled: hasKey || saving });
   const checklistActivity = useInputActivity();
 
@@ -30,7 +24,6 @@ export function SettingsModal() {
       const next = await window.bullebrowser.settings.get();
       setSettings(next);
       setHasKey(await window.bullebrowser.secrets.hasApiKey(providerFor(next.defaultModel)));
-      setHasVoiceKey(await window.bullebrowser.secrets.hasApiKey('openai'));
     })();
   }, []);
 
@@ -83,28 +76,6 @@ export function SettingsModal() {
     setSavedAt(Date.now());
   };
 
-  const saveVoiceKey = async () => {
-    if (!voiceDraft.trim()) return;
-    setVoiceSaving(true);
-    setVoiceError(null);
-    try {
-      await window.bullebrowser.secrets.setApiKey(voiceDraft.trim(), 'openai');
-      setHasVoiceKey(true);
-      setVoiceDraft('');
-      setSavedAt(Date.now());
-    } catch (err) {
-      setVoiceError(err instanceof Error ? err.message : 'Failed to save the voice key.');
-    } finally {
-      setVoiceSaving(false);
-    }
-  };
-
-  const clearVoiceKey = async () => {
-    await window.bullebrowser.secrets.clearApiKey('openai');
-    setHasVoiceKey(false);
-    setSavedAt(Date.now());
-  };
-
   return (
     <Modal title="Settings" onClose={closeSettings} width={560}>
       <section className="space-y-4">
@@ -114,9 +85,15 @@ export function SettingsModal() {
           controls below are optional.
         </p>
 
-        <details open={!hasKey || !hasVoiceKey} className="rounded-lg border border-line/60 bg-surface-muted/20 px-3 py-2">
+        <p className="text-xs leading-relaxed text-ink-secondary">
+          Voice input and Voice Mode transcribe English on this device without an API key.
+          The speech model downloads on first use; after that, transcription works offline.
+          Chat uses the local assistant when no cloud key is configured.
+        </p>
+
+        <details className="rounded-lg border border-line/60 bg-surface-muted/20 px-3 py-2">
           <summary className="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Developer / Advanced — engine &amp; keys
+            Optional cloud engine
           </summary>
           <div className="mt-3 space-y-4">
         <div>
@@ -124,9 +101,9 @@ export function SettingsModal() {
             {assistantLabel} key
           </h3>
           <p className="mt-1 text-xs text-ink-secondary">
-            Encrypted and stored on this device only — no keychain prompt. Used
-            only to call {assistantLabel} directly from your machine.
-            {provider === 'openai' && ' This same key also powers dictation and live voice conversations.'}
+            Optional: connect {assistantLabel} for cloud answers. Without a key,
+            the local assistant supports page summaries and browser commands.
+            Keys are encrypted and stored on this device.
           </p>
           {hasKey ? (
             <div className="mt-2 flex items-center gap-2">
@@ -179,65 +156,6 @@ export function SettingsModal() {
             </div>
           )}
         </div>
-
-        {provider !== 'openai' && (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Voice (OpenAI) key
-          </h3>
-          <p className="mt-1 text-xs text-ink-secondary">
-            Powers microphone dictation and live conversations with spoken replies.
-            Uses your OpenAI key (starts with{' '}
-            <code className="rounded bg-surface-muted px-1">sk-</code>) — separate
-            from the assistant key above. Encrypted and
-            stored on this device only.
-          </p>
-          {hasVoiceKey ? (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                Key saved
-              </span>
-              <button
-                type="button"
-                onClick={clearVoiceKey}
-                className="rounded border border-line px-2 py-1 text-xs hover:bg-surface-muted"
-              >
-                Remove key
-              </button>
-            </div>
-          ) : (
-            <div className="mt-2 space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={voiceDraft}
-                  onChange={(e) => {
-                    setVoiceDraft(e.target.value);
-                    if (voiceError) setVoiceError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void saveVoiceKey();
-                  }}
-                  placeholder="sk-…"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="flex-1 rounded-md border border-line px-3 py-2 font-mono text-xs focus:border-primary focus:outline-none"
-                  disabled={voiceSaving}
-                />
-                <button
-                  type="button"
-                  onClick={saveVoiceKey}
-                  disabled={voiceSaving || !voiceDraft.trim()}
-                  className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
-                >
-                  {voiceSaving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-              {voiceError && <div className="text-xs text-danger">{voiceError}</div>}
-            </div>
-          )}
-        </div>
-        )}
 
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">

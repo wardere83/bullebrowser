@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 //                    soundwave icon again closes this overlay.
 //
 // The soundwave reacts to the real mic level via a Web Audio AnalyserNode.
-// Transcription itself is done in main (OpenAI Whisper, the user's key) — this
+// Transcription itself uses local Whisper in main, without an API key — this
 // component only records and visualises. It renders INSIDE the AI panel (a
 // renderer-chrome region); a full-window overlay would be hidden behind the
 // browser view, which the OS paints on top of the page area.
@@ -24,8 +24,8 @@ const MIC_START_TIMEOUT_MS = 10_000; // getUserMedia can hang rather than reject
 
 type Status = 'connecting' | 'listening' | 'transcribing' | 'error';
 
-function bridge(): any {
-  return (window as unknown as { bullebrowser: any }).bullebrowser;
+function bridge() {
+  return window.bullebrowser;
 }
 
 export function VoiceOverlay({
@@ -51,9 +51,12 @@ export function VoiceOverlay({
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
   const rafRef = useRef<number>(0);
   const closedRef = useRef(false);
+  const transcriptRef = useRef(onTranscript);
+  transcriptRef.current = onTranscript;
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   const mimeRef = useRef('audio/webm');
 
   // Continuous-mode voice-activity state.
@@ -62,6 +65,10 @@ export function VoiceOverlay({
 
   useEffect(() => {
     let cancelled = false;
+    let micTimeout: ReturnType<typeof setTimeout> | undefined;
+    let recordingTimer: ReturnType<typeof setTimeout> | undefined;
+    let transcriptionQueue = Promise.resolve();
+    let pendingClips = 0;
     // A previous session (e.g. switching mic → Voice Mode without unmounting)
     // left this true on cleanup; reset it or this session is dead on arrival.
     closedRef.current = false;
@@ -71,6 +78,8 @@ export function VoiceOverlay({
     // Idempotent; also used by the unmount cleanup.
     const stopEverything = () => {
       closedRef.current = true;
+      clearTimeout(micTimeout);
+      clearTimeout(recordingTimer);
       cancelAnimationFrame(rafRef.current);
       try {
         if (recorderRef.current && recorderRef.current.state !== 'inactive') {
@@ -94,27 +103,49 @@ export function VoiceOverlay({
     const startRecorder = () => {
       const stream = streamRef.current;
       if (!stream || closedRef.current) return;
-      chunksRef.current = [];
       const rec = new MediaRecorder(stream, { mimeType: mimeRef.current });
+      const chunks: BlobPart[] = [];
       rec.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      rec.onerror = () => {
+        if (cancelled || closedRef.current) return;
+        stopEverything();
+        setError('Could not record audio. Please try voice input again.');
+        setStatus('error');
       };
       rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeRef.current });
-        chunksRef.current = [];
+        clearTimeout(recordingTimer);
+        if (cancelled || closedRef.current) return;
+        const blob = new Blob(chunks, { type: mimeRef.current });
+        if (mode === 'once') {
+          streamRef.current?.getTracks().forEach((track) => track.stop());
+          cancelAnimationFrame(rafRef.current);
+        }
         // Continuous: resume listening immediately so we don't miss the next
         // command while the last segment transcribes in the background.
         if (mode === 'continuous' && !closedRef.current) startRecorder();
-        void transcribe(blob);
+        if (pendingClips >= 4) {
+          stopEverything();
+          setError('Voice is catching up. Please pause, then try again.');
+          setStatus('error');
+          return;
+        }
+        pendingClips++;
+        transcriptionQueue = transcriptionQueue.then(() => transcribe(blob)).finally(() => { pendingClips--; });
       };
       rec.start();
+      // Bound clip length and memory even when speech never pauses.
+      recordingTimer = setTimeout(() => {
+        if (rec.state === 'recording') rec.stop();
+      }, mode === 'continuous' ? 30_000 : 120_000);
       recorderRef.current = rec;
       hadSpeechRef.current = false;
       silenceStartRef.current = null;
     };
 
     const transcribe = async (blob: Blob) => {
-      if (closedRef.current) return;
+      if (cancelled || closedRef.current) return;
       if (blob.size < MIN_CLIP_BYTES) {
         if (mode === 'once') finish();
         return;
@@ -124,14 +155,25 @@ export function VoiceOverlay({
       // would freeze the wave while the mic is in fact live.
       if (mode === 'once') setStatus('transcribing');
       try {
-        const buf = await blob.arrayBuffer();
-        const { text } = await bridge().voice.transcribe(buf, blob.type || 'audio/webm');
-        if (text && !closedRef.current) onTranscript(text);
+        const ctx = audioCtxRef.current;
+        if (!ctx) return;
+        const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
+        const resampler = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16_000), 16_000);
+        const source = resampler.createBufferSource();
+        source.buffer = decoded;
+        source.connect(resampler.destination);
+        source.start();
+        const pcm = (await resampler.startRendering()).getChannelData(0).slice(0, 120 * 16_000);
+        // Resampling/Opus decoding can overshoot the PCM range slightly.
+        for (let i = 0; i < pcm.length; i++) pcm[i] = Math.max(-1, Math.min(1, pcm[i]!));
+        if (cancelled || closedRef.current) return;
+        const { text } = await bridge().voice.transcribe(pcm);
+        if (text && !cancelled && !closedRef.current) transcriptRef.current(text);
       } catch (e) {
-        if (closedRef.current) return;
+        if (cancelled || closedRef.current) return;
         // Stop the whole session on failure. Continuous mode has already
-        // restarted the recorder, so without this a bad key or a dropped
-        // network would keep the mic hot and retry forever.
+        // restarted the recorder, so without this a failed model load
+        // or recording would keep the mic hot and retry forever.
         stopEverything();
         setError(e instanceof Error ? e.message : 'Could not transcribe that.');
         setStatus('error');
@@ -186,13 +228,19 @@ export function VoiceOverlay({
         // attached, or an OS permission prompt that never gets answered. Left
         // alone, the overlay sits on "Starting microphone…" forever with no
         // explanation, which is exactly what it did before this guard.
+        const microphone = navigator.mediaDevices.getUserMedia({ audio: true });
+        // A late permission grant after timeout/unmount must release its tracks.
+        void microphone.then((lateStream) => {
+          if (cancelled || closedRef.current) lateStream.getTracks().forEach((t) => t.stop());
+        }, () => {});
         const stream = await Promise.race([
-          navigator.mediaDevices.getUserMedia({ audio: true }),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), MIC_START_TIMEOUT_MS),
-          ),
+          microphone,
+          new Promise<never>((_, reject) => {
+            micTimeout = setTimeout(() => reject(new Error('timeout')), MIC_START_TIMEOUT_MS);
+          }),
         ]);
-        if (cancelled) {
+        clearTimeout(micTimeout);
+        if (cancelled || closedRef.current) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
@@ -200,7 +248,8 @@ export function VoiceOverlay({
         mimeRef.current = pickMime();
         const ctx = new AudioContext();
         audioCtxRef.current = ctx;
-        await ctx.resume().catch(() => {});
+        await ctx.resume();
+        if (cancelled || closedRef.current) return;
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.7;
@@ -211,6 +260,7 @@ export function VoiceOverlay({
         startRecorder();
       } catch (e) {
         if (!cancelled) {
+          stopEverything();
           const msg = e instanceof Error ? e.message : '';
           setError(
             /timeout/i.test(msg)
@@ -228,19 +278,21 @@ export function VoiceOverlay({
     function finish() {
       if (closedRef.current) return;
       closedRef.current = true;
-      onClose();
+      closeRef.current();
     }
     return () => {
       cancelled = true;
       stopEverything();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   // The mic button: stop recording now and transcribe what we have.
   const stopOnce = () => {
     const rec = recorderRef.current;
-    if (rec && rec.state !== 'inactive') rec.stop();
+    if (rec && rec.state !== 'inactive') {
+      setStatus('transcribing');
+      rec.stop();
+    }
     else onClose();
   };
 
@@ -256,7 +308,7 @@ export function VoiceOverlay({
             : 'Listening… speak, then Send';
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-surface-light/95 backdrop-blur-sm">
+    <div role="dialog" aria-label="Voice input" className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-surface-light/95 backdrop-blur-sm">
       <div className="flex w-[80%] max-w-xs flex-col items-center gap-6 rounded-2xl border border-line/40 bg-white p-6 shadow-xl">
         <div
           className={`bb-wave ${status === 'listening' ? '' : 'bb-wave--idle'} ${
@@ -292,6 +344,11 @@ export function VoiceOverlay({
             </span>
           )}
           {label}
+          {status !== 'error' && (
+            <span className="mt-2 block text-xs">
+              Voice stays on this device. First use downloads the speech model.
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

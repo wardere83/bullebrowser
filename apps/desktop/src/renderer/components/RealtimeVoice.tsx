@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  RealtimeVoiceSession,
   type VoiceState,
   type VoiceTaskResult,
   type VoiceTranscript,
 } from '../lib/realtime-voice.js';
+import { LocalVoiceSession } from '../lib/local-voice.js';
 
 const INITIAL_STATE: VoiceState = {
   phase: 'connecting',
@@ -35,7 +35,7 @@ export function RealtimeVoice({
   const [transcripts, setTranscripts] = useState<VoiceTranscript[]>([]);
   const [attempt, setAttempt] = useState(0);
   const [levels, setLevels] = useState<number[]>(() => Array(7).fill(0.12));
-  const sessionRef = useRef<RealtimeVoiceSession | null>(null);
+  const sessionRef = useRef<LocalVoiceSession | null>(null);
   const taskRef = useRef(onBrowserTask);
   const captionsRef = useRef<HTMLDivElement>(null);
   taskRef.current = onBrowserTask;
@@ -47,7 +47,7 @@ export function RealtimeVoice({
     setState(INITIAL_STATE);
     setTranscripts([]);
 
-    const session = new RealtimeVoiceSession({
+    const session = new LocalVoiceSession({
       bridge: window.bullebrowser.voice,
       onState: (next) => {
         if (!alive) return;
@@ -162,13 +162,14 @@ export function RealtimeVoice({
         <button
           type="button"
           onClick={() => void sessionRef.current?.enableAudio()}
+          disabled={state.phase !== 'listening'}
           className="mt-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
         >
           Enable voice audio
         </button>
       )}
       {!ended && state.phase !== 'connecting' && transcripts.length === 0 && (
-        <p className="mt-2 text-xs text-ink-secondary">Talk naturally. Speak to interrupt a reply.</p>
+        <p className="mt-2 text-xs text-ink-secondary">Speak a command. Voice uses local English transcription; first use downloads the speech model.</p>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {ended ? (
@@ -191,7 +192,16 @@ export function RealtimeVoice({
             >
               {state.muted ? 'Unmute' : 'Mute'}
             </button>
-            {(state.phase === 'speaking' || state.phase === 'thinking') && (
+            {state.phase === 'working' && (
+              <button
+                type="button"
+                onClick={() => sessionRef.current?.cancelTask()}
+                className="rounded-md border border-line px-3 py-1.5 text-xs text-ink-secondary hover:bg-surface-muted"
+              >
+                Cancel browser task
+              </button>
+            )}
+            {state.phase === 'speaking' && (
               <button
                 type="button"
                 onClick={() => sessionRef.current?.interrupt()}

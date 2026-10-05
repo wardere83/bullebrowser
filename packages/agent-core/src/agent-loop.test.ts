@@ -378,45 +378,79 @@ describe('runAgent Claude tool-use loop', () => {
     });
   });
 
-  it('surfaces a real error (does not fake an answer) when no key is set', async () => {
-    await expect(
-      runAgent({
-        model: DEFAULT_MODEL,
-        systemPrompt: 'x',
-        history: [],
-        userMessage: 'hello',
-        context: makeContext(),
-        onStep: () => {},
-      }),
-    ).rejects.toThrow(/BulleBrowser Pro needs its key/);
+  it.each([DEFAULT_MODEL, 'gpt-4o'] as const)('runs local summaries without credentials for %s', async (model) => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    try {
+      const result = await runAgent({ model, systemPrompt: '', history: [], userMessage: 'summarize this page', context: makeContext(), onStep: () => {} });
+      expect(result).toContain('grants and deadlines');
+      expect(result).toContain('https://example.com');
+      expect(createMock).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally { fetchSpy.mockRestore(); }
+  });
+
+  it('performs keyless navigation only after browser approval', async () => {
+    const context = makeContext();
+    const requestBrowseAccess = vi.fn(async () => true);
+    const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'open example.com', context, requestBrowseAccess, onStep: () => {} });
+    expect(result).toContain('https://example.com/');
+    expect(context.runtime.navigate).toHaveBeenCalledWith('t1', 'https://example.com/');
+    expect(requestBrowseAccess).toHaveBeenCalledTimes(1);
     expect(createMock).not.toHaveBeenCalled();
   });
 
-  // Client-facing copy is white-labelled: it names the assistant and the key
-  // prefix, never the vendor behind it.
-  it('names the assistant whose key is missing, not the vendor', async () => {
-    await expect(
-      runAgent({
-        model: 'gpt-4o',
-        systemPrompt: 'x',
-        history: [],
-        userMessage: 'hello',
-        context: makeContext(),
-        onStep: () => {},
-      }),
-    // The selectable OpenAI assistant has its own white-labelled name. The
-    // key error must still avoid exposing its underlying provider.
-    ).rejects.toThrow(/BulleBrowser Open needs its key/);
+  it('does not navigate when keyless browser access is declined', async () => {
+    const context = makeContext();
+    await expect(runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'open example.com', context, requestBrowseAccess: async () => false, onStep: () => {} })).rejects.toThrow(/declined/);
+    expect(context.runtime.navigate).not.toHaveBeenCalled();
+  });
 
-    await expect(
-      runAgent({
-        model: 'gpt-4o',
-        systemPrompt: 'x',
-        history: [],
-        userMessage: 'hello',
-        context: makeContext(),
-        onStep: () => {},
-      }),
-    ).rejects.not.toThrow(/OpenAI|ChatGPT|Anthropic|Claude/);
+  it('keeps destructive action confirmation in local mode', async () => {
+    const context = makeContext({ confirmDestructive: vi.fn(async () => false) });
+    await expect(runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'click "submit"', context, onStep: () => {} })).rejects.toThrow(/declined/);
+    expect(context.runtime.click).not.toHaveBeenCalled();
+  });
+
+  it('types only the requested text into the explicit target', async () => {
+    const context = makeContext();
+    await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'type "hello" into "search"', context, onStep: () => {} });
+    expect(context.runtime.type).toHaveBeenCalledWith('t1', 'search', 'hello');
+  });
+
+  it('offers truthful local capabilities for unsupported prompts', async () => {
+    const context = makeContext();
+    const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'write a novel', context, onStep: () => {} });
+    expect(result).toContain('Local assistant is ready');
+    expect(context.runtime.readPage).not.toHaveBeenCalled();
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('does not claim a local action completed when the runtime failed', async () => {
+    const context = makeContext({ navigate: vi.fn(async () => { throw new Error('page unavailable'); }) });
+    await expect(runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'open example.com', context, onStep: () => {} })).rejects.toThrow(/page unavailable/);
+  });
+
+  it.each(['list tabs', 'page details', 'extract page data'])('restores the local command %s', async (userMessage) => {
+    const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage, context: makeContext(), onStep: () => {} });
+    expect(result).not.toContain('Local assistant is ready');
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('stops local work after cancellation while reading a page', async () => {
+    const controller = new AbortController();
+    const context = makeContext({ readPage: vi.fn(async () => {
+      controller.abort();
+      return { title: 'Page', url: 'https://example.com', text: 'A page that was cancelled during capture.' };
+    }) });
+    context.signal = controller.signal;
+    const steps: AgentStep[] = [];
+    await expect(runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'summarize this page', context, onStep: (step) => steps.push(step) })).rejects.toThrow(/cancelled/);
+    expect(steps.map((step) => step.type)).not.toContain('done');
+  });
+
+  it('enforces the local step budget', async () => {
+    const context = makeContext();
+    await expect(runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'open example.com', budget: 1, context, onStep: () => {} })).rejects.toThrow(/budget/);
+    expect(context.runtime.navigate).not.toHaveBeenCalled();
   });
 });

@@ -19,15 +19,27 @@ export function UpdateBanner() {
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    void window.bullebrowser.updates.status().then(setStatus);
-    return window.bullebrowser.updates.onStatus(setStatus);
+    let active = true;
+    let receivedEvent = false;
+    const unsubscribe = window.bullebrowser.updates.onStatus((next) => {
+      receivedEvent = true;
+      setStatus(next);
+      setInstalling(false);
+    });
+    void window.bullebrowser.updates.status().then((initial) => {
+      if (active && !receivedEvent) setStatus(initial);
+    }).catch(() => {});
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   if (status.state !== 'ready') return null;
 
   const install = () => {
     setInstalling(true);
-    void window.bullebrowser.updates.install();
+    void window.bullebrowser.updates.install().catch(() => setInstalling(false));
   };
 
   return (

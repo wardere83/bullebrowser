@@ -121,10 +121,13 @@ export function registerIpc(win: BrowserWindow) {
   );
   ipcMain.handle(IPC.PROJECT_DELETE, (_e, id: string) => projectStore.delete(id));
 
-  // voice → transcription (OpenAI Whisper, user's key)
-  ipcMain.handle(IPC.VOICE_TRANSCRIBE, (_e, audio: ArrayBuffer, mime: string) =>
-    transcribeAudio(audio, mime),
-  );
+  // voice → local transcription (no API key)
+  ipcMain.handle(IPC.VOICE_TRANSCRIBE, (event, audio: Float32Array) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Voice transcription is only available in the app.');
+    }
+    return transcribeAudio(audio);
+  });
   // Only the app's top-level chrome may connect live voice; website frames
   // cannot use the user's saved key or terminate a session owned by the app.
   ipcMain.handle(IPC.VOICE_CONNECT_REALTIME, (event, offerSdp: string) => {

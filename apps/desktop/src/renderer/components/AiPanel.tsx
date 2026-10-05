@@ -45,7 +45,6 @@ function browserBridge(): any {
 
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
-  const openSettings = useBrowserStore((s) => s.openSettings);
   const showSettings = useBrowserStore((s) => s.showSettings);
   const setCurrent = useAgentStore((s) => s.setCurrent);
   // The history list renders from this; without the selector the identifier is
@@ -68,9 +67,6 @@ export function AiPanel() {
   const [voiceMode, setVoiceMode] = useState<'once' | 'continuous' | null>(null);
   const [skillId, setSkillId] = useState<string>('');
   const [model, setModel] = useState<ModelId>('claude-opus-4-7');
-  // null = not checked yet, so we render neither the chat nor the connect
-  // form until we know, instead of flashing the wrong one.
-  const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const runInProgress = status === 'running';
@@ -112,9 +108,8 @@ export function AiPanel() {
         bridge.secrets.hasApiKey('openai'),
       ]);
       const configuredKeyPresent = configuredProvider === 'openai' ? hasOpenAi : hasAnthropic;
-      // Auto-pick an engine whose key is actually present, in EITHER direction,
-      // so a user holding only one provider's key isn't stranded on "add your
-      // key" just because the persisted default points at the other provider.
+      // Prefer an optional cloud engine that is configured. When neither has
+      // a key, the main process selects the local assistant.
       let effectiveSettings = settings;
       if (!configuredKeyPresent) {
         if (configuredProvider !== 'openai' && hasOpenAi) {
@@ -124,9 +119,6 @@ export function AiPanel() {
         }
       }
       setModel(effectiveSettings.defaultModel);
-      setHasKey(
-        effectiveSettings.defaultModel === settings.defaultModel ? configuredKeyPresent : true,
-      );
       // Opening the app lands on a NEW session rather than resuming the last
       // one — a browser you just opened shouldn't drop you back into whatever
       // you were mid-way through, and the previous chats are a click away under
@@ -218,12 +210,6 @@ export function AiPanel() {
   const send = async () => {
     const t = draft.trim();
     if (!t) return;
-    // The assistant is always reachable; the one required setup step (a key) is
-    // surfaced here, when it's actually needed, rather than as an up-front wall.
-    if (hasKey === false) {
-      openSettings();
-      return;
-    }
     const atts = attachments;
     setDraft('');
     setAttachments([]);
@@ -320,16 +306,7 @@ export function AiPanel() {
     textareaRef.current?.focus();
   };
 
-  // Dictation and live voice use the OpenAI credential, independently of the
-  // assistant selected for browser tasks. Check it before requesting the
-  // microphone so a missing key sends the user straight to the right setting
-  // instead of recording speech that cannot be transcribed.
-  const startVoice = async (nextMode: 'once' | 'continuous') => {
-    const hasVoiceKey = await browserBridge().secrets.hasApiKey('openai');
-    if (!hasVoiceKey) {
-      openSettings();
-      return;
-    }
+  const startVoice = (nextMode: 'once' | 'continuous') => {
     setVoiceMode(nextMode);
   };
 
@@ -385,26 +362,8 @@ export function AiPanel() {
     textareaRef.current?.focus();
   }, [current, status]);
 
-  // Each assistant has its own credential, so switching engines has to
-  // re-check — otherwise picking one whose key isn't saved would show a
-  // working chat that fails auth on send.
-  useEffect(() => {
-    let cancelled = false;
-    void browserBridge()
-      .secrets.hasApiKey(providerFor(model))
-      .then((present: boolean) => {
-        if (!cancelled) setHasKey(present);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [model]);
-
-  // Both the key and the engine are chosen in the Settings modal — a separate
-  // component — so when it closes the panel re-syncs from persisted settings.
-  // Without this, a saved key never clears the "add your key" state (the panel
-  // keeps asking even though Settings said "saved"), and changing the engine
-  // has no effect until the next launch.
+  // Re-sync the optional cloud engine when Settings closes. Without its key,
+  // the same composer uses the local assistant automatically.
   const settingsWasOpen = useRef(false);
   useEffect(() => {
     if (settingsWasOpen.current && !showSettings) {
@@ -412,7 +371,6 @@ export function AiPanel() {
         const bridge = browserBridge();
         const next: AppSettings = await bridge.settings.get();
         setModel(next.defaultModel);
-        setHasKey(await bridge.secrets.hasApiKey(providerFor(next.defaultModel)));
       })();
     }
     settingsWasOpen.current = showSettings;
@@ -423,17 +381,6 @@ export function AiPanel() {
   const lastUserMessage =
     [...(current?.messages ?? [])].reverse().find((m) => m.role === 'user')
       ?.content ?? '';
-
-  // A key can be revoked or deleted while the app is open; when a run dies on
-  // an auth error, drop back to the connect form rather than leaving the user
-  // retrying a chat that cannot work.
-  useEffect(() => {
-    if (status !== 'error') return;
-    if (!/api key|401|Settings and paste/i.test(currentStep)) return;
-    void browserBridge()
-      .secrets.hasApiKey(providerFor(model))
-      .then((present: boolean) => setHasKey(present));
-  }, [status, currentStep, model]);
 
   // Follow the conversation as it grows / streams, but only when already
   // pinned to the bottom, so scrolling up to re-read isn't yanked back down.
@@ -572,20 +519,6 @@ export function AiPanel() {
       <AllowAccess task={lastUserMessage} />
 
       <footer className="border-t border-line/25 p-3">
-        {hasKey === false && (
-          <button
-            type="button"
-            onClick={openSettings}
-            className="mb-2 flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2 text-left text-[12px] text-ink-primary transition-colors hover:bg-primary/10"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="15" r="4" />
-              <path d="m10.9 12.1 8.1-8.1M17 5l2 2M14 8l2 2" />
-            </svg>
-            <span className="flex-1">Add your key to start — it stays on this device.</span>
-            <span className="font-medium text-primary">Open Settings →</span>
-          </button>
-        )}
         {draft.startsWith('/') && !draft.includes(' ') && (
           <div className="mb-1 max-h-32 overflow-y-auto rounded border border-line bg-white text-[11px]">
             {SLASH_COMMANDS.filter((c) => c.name.startsWith(draft.toLowerCase())).map(
