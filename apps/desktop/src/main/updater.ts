@@ -26,7 +26,18 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 let latest: UpdateStatus = { state: 'idle' };
 
 export function getUpdateStatus(): UpdateStatus {
+  if (latest.state !== 'idle' && !isNewerVersion(latest.version)) latest = { state: 'idle' };
   return latest;
+}
+
+// Use the updater's SemVer parser, including prerelease ordering. Cached or
+// delayed events must never offer the version already running (or a downgrade).
+function isNewerVersion(version: string): boolean {
+  try {
+    return autoUpdater.currentVersion.compare(version) < 0;
+  } catch {
+    return false;
+  }
 }
 
 export function setupAutoUpdate(win: BrowserWindow) {
@@ -39,39 +50,51 @@ export function setupAutoUpdate(win: BrowserWindow) {
   };
 
   autoUpdater.autoDownload = true;
+  autoUpdater.allowDowngrade = false;
   // Installing on quit is free for the user — they're already leaving. The
   // in-app button just lets them have the fix sooner.
   autoUpdater.autoInstallOnAppQuit = true;
 
-  autoUpdater.on('update-available', (info) => {
+  const available = (info: { version: string }) => {
+    if (!isNewerVersion(info.version) || getUpdateStatus().state === 'ready') return;
     send({ state: 'downloading', version: info.version });
-  });
-  autoUpdater.on('update-downloaded', (info) => {
-    // Surfaces the "Update App" button. Installing is the user's call: the
-    // app never restarts on its own.
+  };
+  const downloaded = (info: { version: string }) => {
+    if (!isNewerVersion(info.version)) return;
     send({ state: 'ready', version: info.version });
-  });
-  autoUpdater.on('update-not-available', () => {
-    send({ state: 'idle' });
-  });
-  // An update failure must never surface as an error the user has to act on:
-  // the app they have works fine, they simply won't get the new one yet.
-  autoUpdater.on('error', (err) => {
+  };
+  const unavailable = () => {
+    if (getUpdateStatus().state !== 'ready') send({ state: 'idle' });
+  };
+  const failed = (err: Error) => {
     console.warn('[updater] error:', err?.message ?? err);
-    send({ state: 'idle' });
-  });
+    // A failed network check must not hide an installer already on disk.
+    unavailable();
+  };
+  autoUpdater.on('update-available', available);
+  autoUpdater.on('update-downloaded', downloaded);
+  autoUpdater.on('update-not-available', unavailable);
+  autoUpdater.on('error', failed);
 
-  const check = () =>
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.warn('[updater] check failed:', err?.message ?? err);
-    });
+  const check = () => {
+    // Keep the ready update visible until installation; don't download it again.
+    if (getUpdateStatus().state === 'ready') return;
+    void autoUpdater.checkForUpdates().catch(failed);
+  };
 
   void check();
   const timer = setInterval(check, CHECK_INTERVAL_MS);
-  win.on('closed', () => clearInterval(timer));
+  win.once('closed', () => {
+    clearInterval(timer);
+    autoUpdater.removeListener('update-available', available);
+    autoUpdater.removeListener('update-downloaded', downloaded);
+    autoUpdater.removeListener('update-not-available', unavailable);
+    autoUpdater.removeListener('error', failed);
+  });
 }
 
 export function quitAndInstallUpdate() {
+  if (getUpdateStatus().state !== 'ready') return;
   // isSilent: false so the installer UI shows on Windows if it needs to;
   // isForceRunAfter: true so the user lands back in the app, which is the whole
   // point of a "relaunch" button.

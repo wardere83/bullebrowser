@@ -28,13 +28,8 @@ async function launch(
   const env = { ...process.env, NODE_ENV: 'test' };
   delete env.ELECTRON_RUN_AS_NODE;
 
-  // The panel renders the "connect your key" state instead of the composer
-  // when no key is configured, so without this every assertion below about the
-  // textarea, the "+" menu or the voice controls fails — which is exactly why
-  // this suite passed locally (a developer .env supplies ANTHROPIC_API_KEY) and
-  // failed on CI, where there is no .env. hasApiKey() falls back to the
-  // environment, so a fixture value is enough to render the composer. It is
-  // never used to reach the network: no test here starts an agent run.
+  // Keep provider configuration deterministic; fixture keys never reach the
+  // network. Keyless cases explicitly clear development environment keys.
   delete env.ANTHROPIC_API_KEY;
   delete env.OPENAI_API_KEY;
   env.ANTHROPIC_API_KEY = '';
@@ -310,5 +305,51 @@ test('dictation releases permission granted after cancellation', async () => {
     await win.getByRole('button', { name: 'Voice input', exact: true }).click();
     await win.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(win.locator('body')).toHaveAttribute('data-late-mic-stopped', 'yes');
+  } finally { await app.close(); }
+});
+
+
+test('the update button clears after installation and returns for a later release', async () => {
+  const { app, win } = await launch({ withoutKeys: true });
+  try {
+    await app.evaluate(({ ipcMain, BrowserWindow }) => {
+      ipcMain.removeHandler('update:get-status');
+      ipcMain.handle('update:get-status', () => new Promise((resolve) => {
+        ipcMain.once('test:resolve-update-status', () => resolve({ state: 'idle' }));
+      }));
+      let attempts = 0;
+      ipcMain.removeHandler('update:install');
+      ipcMain.handle('update:install', () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error('Installer fixture failure');
+        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
+      });
+    });
+    await win.reload();
+    await expect(win.locator('aside textarea')).toBeEnabled();
+    const update = win.getByRole('button', { name: 'Update App', exact: true });
+    await expect(update).toBeHidden();
+    await app.evaluate(({ BrowserWindow, ipcMain }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.38' });
+      // A delayed initial snapshot must not erase a newer update event.
+      ipcMain.emit('test:resolve-update-status');
+    });
+    await expect(update).toBeVisible();
+    await update.click();
+    await expect(update).toBeEnabled();
+    await update.click();
+    await expect(update).toBeHidden();
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler('update:get-status');
+      ipcMain.handle('update:get-status', () => ({ state: 'idle' }));
+    });
+    await win.reload();
+    await expect(win.locator('aside textarea')).toBeEnabled();
+    await expect(update).toBeHidden();
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.39' });
+    });
+    await expect(update).toBeVisible();
+    await expect(update).toHaveAttribute('title', /0\.2\.39/);
   } finally { await app.close(); }
 });

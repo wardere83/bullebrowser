@@ -65,6 +65,19 @@ The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 - macOS microphone permissions and the existing hardened-runtime entitlements
   continue to apply.
 
+### Updating the installed app
+
+Published releases download in the background. Click **Update App** in the top
+bar to install the downloaded version and relaunch. After the updated app opens,
+the button disappears; it returns only when a later release is ready. The app
+checks at launch and hourly while open. A downloaded installer stays available
+through network failures and is not repeatedly downloaded while awaiting install.
+
+These changes reach installed users only after the PR is merged and the existing
+signed release workflow successfully publishes its installers and update manifests.
+Voice input and Voice Mode then use local transcription and system speech without
+a speech API key; the first use downloads the English model.
+
 ## Files
 
 New: `main/storage/session-files.ts`, `main/storage/projects.ts`, `main/voice.ts`,
