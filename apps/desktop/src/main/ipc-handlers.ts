@@ -1,4 +1,4 @@
-import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import type { ProviderId } from '@bullebrowser/agent-core';
 import { getUpdateStatus, quitAndInstallUpdate } from './updater.js';
 import { readFileSync } from 'node:fs';
@@ -168,9 +168,22 @@ export function registerIpc(win: BrowserWindow) {
   });
   ipcMain.handle(IPC.APP_QUIT, () => app.quit());
 
-  // open external links from chrome
+  // Chrome is the app interface, never a browsing surface. Reply links and
+  // window.open requests belong in the managed web pane, keeping chat intact.
+  const openWebTab = (url: string) => {
+    try {
+      if (!['http:', 'https:'].includes(new URL(url).protocol)) return;
+      void tabManager.create(url).catch((error) => console.warn('[tabs] Could not open link:', error));
+    } catch {
+      // Invalid or non-web destinations cannot replace the app interface.
+    }
+  };
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openWebTab(url);
     return { action: 'deny' };
+  });
+  win.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault();
+    openWebTab(url);
   });
 }
