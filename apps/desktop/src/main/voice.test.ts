@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { recognize, pipeline, env } = vi.hoisted(() => ({
@@ -25,7 +26,7 @@ describe('local voice transcription', () => {
       expect(pipeline).toHaveBeenCalledWith('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
         device: 'cpu', dtype: 'q8',
       });
-      expect(env.cacheDir).toBe('/tmp/bullebrowser-test/voice-models');
+      expect(env.cacheDir).toBe(join('/tmp/bullebrowser-test', 'voice-models'));
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();

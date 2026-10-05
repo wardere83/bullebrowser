@@ -246,6 +246,8 @@ jobs:
             echo "Preflight passed — ready to sign and notarize."
           fi
 
+      # Publish only from the final release job, after every platform succeeds.
+      # electron-builder otherwise publishes per-platform as soon as it finishes.
       - name: Build, sign & notarize macOS installer
         if: matrix.target == 'mac'
         # Fail the job on a release run if signing/notarization fails; tolerate
@@ -275,7 +277,7 @@ jobs:
             echo "$APPLE_API_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
             export APPLE_API_KEY="$RUNNER_TEMP/AuthKey.p8"
           fi
-          pnpm --filter @bullebrowser/desktop package:mac
+          pnpm --filter @bullebrowser/desktop package:mac --publish never
           rm -f "$RUNNER_TEMP/AuthKey.p8"
 
       # Independent post-build check on the produced .app bundles (the afterSign
@@ -320,7 +322,7 @@ jobs:
 
       - name: Build & sign Windows installer
         if: matrix.target == 'win'
-        continue-on-error: true
+        continue-on-error: ${{ env.IS_RELEASE != '1' }}
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
@@ -333,14 +335,14 @@ jobs:
             $env:CSC_LINK = "$PWD/cert.pfx"
             $env:CSC_KEY_PASSWORD = $env:WINDOWS_CERTIFICATE_PASSWORD
           }
-          pnpm --filter @bullebrowser/desktop package:win
+          pnpm --filter @bullebrowser/desktop package:win --publish never
 
       - name: Build Linux installers
         if: matrix.target == 'linux'
-        continue-on-error: true
+        continue-on-error: ${{ env.IS_RELEASE != '1' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter @bullebrowser/desktop package:linux
+        run: pnpm --filter @bullebrowser/desktop package:linux --publish never
 
       - name: Compute SHA-256 checksums
         if: always()
@@ -367,6 +369,7 @@ jobs:
             apps/desktop/release/*.exe
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.deb
+            apps/desktop/release/*.blockmap
             apps/desktop/release/checksums-*.txt
             apps/desktop/release/latest*.yml
           if-no-files-found: warn
@@ -405,7 +408,7 @@ jobs:
           set -euo pipefail
           shopt -s globstar nullglob
           mkdir -p release-assets
-          find dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.zip' -o -name 'latest*.yml' \) -exec cp {} release-assets/ \;
+          find dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.zip' -o -name 'latest*.yml' -o -name '*.blockmap' \) -exec cp {} release-assets/ \;
           checksum_files=(dist/**/checksums-*.txt)
           if (( ${#checksum_files[@]} > 0 )); then
             cat "${checksum_files[@]}" > release-assets/checksums.txt
