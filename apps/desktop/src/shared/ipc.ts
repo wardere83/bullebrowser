@@ -293,9 +293,8 @@ export interface BrowserBridge {
     delete(id: string): Promise<void>;
   };
   voice: {
-    // Transcribe one recorded clip via the user's OpenAI key (Whisper). The
-    // audio rides as raw bytes; mime is the recorder's container type.
-    transcribe(audio: ArrayBuffer, mime: string): Promise<{ text: string }>;
+    // Local Whisper transcription of mono 16 kHz PCM. No API key needed.
+    transcribe(audio: Float32Array): Promise<{ text: string }>;
     // Main exchanges WebRTC SDP using the saved key; credentials stay in main.
     connectRealtime(offerSdp: string): Promise<{ answerSdp: string; callId: string }>;
     disconnectRealtime(callId: string): Promise<void>;

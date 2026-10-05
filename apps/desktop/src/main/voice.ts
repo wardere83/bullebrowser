@@ -1,71 +1,64 @@
-// Voice transcription. One recorded clip in, text out, via the user's own
-// OpenAI key (Whisper). Kept in main so the key never reaches the renderer and
-// the network call sits behind the same trust boundary as the agent's.
-//
-// This is the whole voice backend: the renderer records with MediaRecorder and
-// hands us the bytes; we return text the composer then sends as an ordinary
-// prompt. Continuous Voice Mode is just this called repeatedly.
+// Local Whisper inference: audio stays on this device and needs no API key.
+// Model files download on first use and persist in Electron's user-data folder.
+import { app } from 'electron';
+import { join } from 'node:path';
+import type { AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
 
-import { getApiKey } from './storage/secrets.js';
+let transcriber: Promise<AutomaticSpeechRecognitionPipeline> | null = null;
+let queue: Promise<unknown> = Promise.resolve();
+let pending = 0;
+const SAMPLE_RATE = 16_000;
+const MAX_SAMPLES = SAMPLE_RATE * 120;
 
-const ENDPOINT = 'https://api.openai.com/v1/audio/transcriptions';
-
-// Map the recorder's container mime to a filename extension OpenAI accepts.
-function extFor(mime: string): string {
-  if (mime.includes('webm')) return 'webm';
-  if (mime.includes('mp4') || mime.includes('m4a')) return 'mp4';
-  if (mime.includes('ogg')) return 'ogg';
-  if (mime.includes('wav')) return 'wav';
-  if (mime.includes('mpeg') || mime.includes('mp3')) return 'mp3';
-  return 'webm';
+function getTranscriber(): Promise<AutomaticSpeechRecognitionPipeline> {
+  if (!transcriber) {
+    transcriber = (async () => {
+      const { pipeline, env } = await import('@huggingface/transformers');
+      env.cacheDir = join(app.getPath('userData'), 'voice-models');
+      env.allowLocalModels = false;
+      return pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
+        device: 'cpu',
+        dtype: 'q8',
+      });
+    })().catch(() => {
+      transcriber = null; // Allow a failed first download to be retried.
+      throw new Error(
+        'Could not load the voice model. Connect to the internet for the first download, check available disk space, then try again.',
+      );
+    });
+  }
+  return transcriber;
 }
 
-export async function transcribeAudio(
-  audio: ArrayBuffer | Uint8Array,
-  mime: string,
-): Promise<{ text: string }> {
-  const key = getApiKey('openai');
-  if (!key) {
-    throw new Error(
-      'Voice needs an OpenAI key. Add one in Settings, or connect an OpenAI ' +
-        'model in the panel, then try again.',
-    );
+export async function transcribeAudio(audio: Float32Array): Promise<{ text: string }> {
+  if (!(audio instanceof Float32Array) || audio.length > MAX_SAMPLES) {
+    throw new Error('Voice expects mono 16 kHz audio, up to two minutes per clip.');
   }
-
-  const bytes = audio instanceof Uint8Array ? audio : new Uint8Array(audio);
-  if (bytes.byteLength === 0) return { text: '' };
-
-  const type = mime || 'audio/webm';
-  const form = new FormData();
-  // Copy into a standalone ArrayBuffer: `bytes` may be a view with a non-zero
-  // byteOffset (or be backed by a SharedArrayBuffer), neither of which is a
-  // valid BlobPart. slice() gives us an owned, zero-offset buffer.
-  const body = bytes.slice().buffer as ArrayBuffer;
-  form.append('file', new Blob([body], { type }), `speech.${extFor(type)}`);
-  form.append('model', 'whisper-1');
-  form.append('response_format', 'json');
-
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}` },
-    body: form,
+  if (audio.length === 0) return { text: '' };
+  let energy = 0;
+  for (const sample of audio) {
+    if (!Number.isFinite(sample) || Math.abs(sample) > 1) {
+      throw new Error('Invalid voice audio. Please record the clip again.');
+    }
+    energy += sample * sample;
+  }
+  // Avoid Whisper's hallucinated transcripts on silent recordings.
+  if (Math.sqrt(energy / audio.length) < 0.001) return { text: '' };
+  if (pending >= 4) throw new Error('Voice is catching up. Please pause, then try again.');
+  pending++;
+  const result = queue.then(async () => {
+    const recognize = await getTranscriber();
+    const output = await recognize(audio, {
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      return_timestamps: false,
+    });
+    return { text: (Array.isArray(output) ? output.map((o) => o.text).join(' ') : output.text).trim() };
   });
-
-  if (!res.ok) {
-    const raw = await res.text().catch(() => '');
-    let detail = raw.slice(0, 300);
-    try {
-      const parsed = JSON.parse(raw) as { error?: { message?: string } };
-      if (parsed.error?.message) detail = parsed.error.message;
-    } catch {
-      /* not JSON — use the raw slice */
-    }
-    if (res.status === 401) {
-      throw new Error('OpenAI rejected the key used for voice (401). Check it in Settings.');
-    }
-    throw new Error(`Transcription failed (${res.status}). ${detail}`);
+  queue = result.catch(() => {});
+  try {
+    return await result;
+  } finally {
+    pending--;
   }
-
-  const json = (await res.json()) as { text?: string };
-  return { text: (json.text ?? '').trim() };
 }

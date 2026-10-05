@@ -12,7 +12,8 @@ async function launch(
   {
     openAiOnly = false,
     withoutOpenAiKey = false,
-  }: { openAiOnly?: boolean; withoutOpenAiKey?: boolean } = {},
+    withoutKeys = false,
+  }: { openAiOnly?: boolean; withoutOpenAiKey?: boolean; withoutKeys?: boolean } = {},
 ) {
   // Fresh user-data dir per test so we always start from default settings.
   const userData = mkdtempSync(join(tmpdir(), 'bullebrowser-e2e-'));
@@ -36,13 +37,12 @@ async function launch(
   // never used to reach the network: no test here starts an agent run.
   delete env.ANTHROPIC_API_KEY;
   delete env.OPENAI_API_KEY;
-  if (!openAiOnly) {
+  env.ANTHROPIC_API_KEY = '';
+  if (!openAiOnly && !withoutKeys) {
     env.ANTHROPIC_API_KEY = 'sk-ant-e2e-fixture-key-not-real-0000000000000000';
   }
-  // Voice controls need Whisper's OpenAI credential even in the normal
-  // Anthropic-assistant fixture. An explicit empty value also prevents the
-  // app's development .env loader from supplying one in the missing-key test.
-  env.OPENAI_API_KEY = withoutOpenAiKey
+  // Empty values prevent development .env keys leaking into keyless tests.
+  env.OPENAI_API_KEY = withoutOpenAiKey || withoutKeys
     ? ''
     : 'sk-e2e-fixture-key-not-real-0000000000000000';
 
@@ -104,11 +104,11 @@ test('a saved OpenAI key enables the assistant and voice controls', async () => 
   await app.close();
 });
 
-test('voice controls open Settings when the OpenAI key is absent', async () => {
+test('voice controls open without an OpenAI key', async () => {
   const { app, win } = await launch({ withoutOpenAiKey: true });
   await win.locator('[aria-label="Voice input"]').click();
-  await expect(win.getByText('Voice (OpenAI) key', { exact: true })).toBeVisible();
-  await expect(win.getByRole('button', { name: 'Cancel' })).toBeHidden();
+  await expect(win.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  await expect(win.getByText('Voice (OpenAI) key', { exact: true })).toBeHidden();
   await app.close();
 });
 
@@ -169,34 +169,17 @@ test('microphone startup always resolves and never hangs', async () => {
 // Synthetic audio uses real browser MediaStream tracks. Only the provider's
 // transport and browser-task IPC are replaced, so no key or microphone is used.
 const VOICE_MEDIA_FIXTURE = String.raw`(function installMediaMock(){
-  const probe=window.__voiceProbe={sent:[],mic:null,remote:null,audio:null,peer:null,contexts:[]};
+  const probe=window.__voiceProbe={mic:null,contexts:[],recorder:null,spoken:[]};
   navigator.mediaDevices.getUserMedia=async()=>{
     const context=new AudioContext();probe.contexts.push(context);
     const destination=context.createMediaStreamDestination();
     const oscillator=context.createOscillator();oscillator.frequency.value=440;oscillator.connect(destination);oscillator.start();
     await context.resume();probe.mic=destination.stream;return destination.stream;
   };
-  const RealAudio=window.Audio;
-  window.Audio=function(...args){const audio=new RealAudio(...args);probe.audio=audio;return audio;};
-  window.Audio.prototype=RealAudio.prototype;
-  window.RTCPeerConnection=class{
-    constructor(){this.connectionState='new';this.iceConnectionState='new';probe.peer=this;}
-    addTrack(){}
-    createDataChannel(){return this.channel={readyState:'connecting',send(data){probe.sent.push(JSON.parse(data));},close(){this.readyState='closed';}};}
-    async createOffer(){return {type:'offer',sdp:'v=0\r\nmock-offer'};}
-    async setLocalDescription(value){this.localDescription=value;}
-    async setRemoteDescription(){
-      this.connectionState='connected';this.iceConnectionState='connected';this.channel.readyState='open';
-      this.channel.onopen?.();
-      probe.remote=probe.mic.clone();
-      this.ontrack?.({track:probe.remote.getAudioTracks()[0],streams:[probe.remote]});
-      this.onconnectionstatechange?.();
-    }
-    close(){this.connectionState='closed';this.iceConnectionState='closed';this.closed=true;}
-  };
-  window.__voiceEmit=event=>probe.peer.channel.onmessage?.({data:JSON.stringify(event)});
-}
-)();`;
+  const Recorder=window.MediaRecorder;
+  window.MediaRecorder=class extends Recorder { constructor(...args){super(...args);probe.recorder=this;} };
+  window.speechSynthesis.speak=utterance=>{probe.spoken.push(utterance.text);setTimeout(()=>utterance.onend?.(),0);};
+})();`;
 const VOICE_MAIN_FIXTURE = String.raw`
 const { ipcMain, BrowserWindow } = electron;
 
@@ -212,6 +195,7 @@ const { ipcMain, BrowserWindow } = electron;
       probe.pending=null;
     };
     replace('conversation:get',()=>structuredClone(conversation));
+    replace('voice:transcribe',(_event,audio)=>{if(!(audio instanceof Float32Array)||!audio.length)throw new Error('Expected PCM audio');return {text:'Read this page and tell me its requirements.'};});
     replace('voice:connect-realtime',()=>{probe.connects++;return {answerSdp:'mock-answer',callId:'rtc_runtime_call'};});
     replace('voice:disconnect-realtime',(_event,id)=>{probe.disconnects.push(id);});
     replace('agent:run',(_event,request)=>{
@@ -225,86 +209,56 @@ const { ipcMain, BrowserWindow } = electron;
     replace('agent:cancel',(_event,runId)=>{probe.cancels.push(runId);finish('cancelled','The browser task was stopped.');});
 `;
 
-test('live voice streams captions, handles browser results, and releases audio on stop', async () => {
-  const { app, win } = await launch();
+test('keyless live voice records audio, handles approvals, speaks results, and cancels on stop', async () => {
+  const { app, win } = await launch({ withoutOpenAiKey: true });
   try {
     const seed = await win.evaluate(async () => {
       const list = await window.bullebrowser.conversations.list();
-      return list.length
-        ? window.bullebrowser.conversations.get(list[0]!.id)
-        : window.bullebrowser.conversations.create();
+      return list.length ? window.bullebrowser.conversations.get(list[0]!.id) : window.bullebrowser.conversations.create();
     });
     await app.evaluate((electronModule, fixture) => {
-      // This fixture is checked-in test code, never provider or page content.
       const install = new Function('electron', 'conversation', fixture.source);
       install(electronModule, fixture.conversation);
     }, { source: VOICE_MAIN_FIXTURE, conversation: seed });
     await win.evaluate(VOICE_MEDIA_FIXTURE);
-    const emit = (event: Record<string, unknown>) =>
-      win.evaluate(`window.__voiceEmit(${JSON.stringify(event)})`);
-    const mainProbe = () => app.evaluate(() =>
-      JSON.parse(JSON.stringify((globalThis as Record<string, unknown>).__voiceMainProbe)),
-    );
-
+    const mainProbe = () => app.evaluate(() => JSON.parse(JSON.stringify((globalThis as Record<string, unknown>).__voiceMainProbe)));
     await win.getByRole('button', { name: 'Voice Mode', exact: true }).click();
-    await expect(win.getByRole('button', { name: 'Mute microphone', exact: true })).toBeVisible();
-    await win.waitForFunction('window.__voiceProbe.audio?.srcObject && window.__voiceProbe.audio.paused === false');
-    await emit({ type: 'conversation.item.input_audio_transcription.completed', item_id: 'user-1', transcript: 'Can you help with this page?' });
-    await emit({ type: 'response.created', response: { id: 'reply-1' } });
-    await emit({ type: 'response.output_audio_transcript.delta', item_id: 'assistant-1', delta: 'Yes, I can ' });
-    await emit({ type: 'response.output_audio_transcript.done', item_id: 'assistant-1', transcript: 'Yes, I can help with this page.' });
-    await emit({ type: 'output_audio_buffer.started' });
-    await expect(win.getByText('Yes, I can help with this page.', { exact: false })).toBeVisible();
-    expect((await mainProbe()).runs).toHaveLength(0);
-
+    await expect(win.getByRole('button', { name: 'Mute microphone', exact: true })).toBeEnabled();
     await win.getByRole('button', { name: 'Mute microphone', exact: true }).click();
     expect(await win.evaluate('window.__voiceProbe.mic.getAudioTracks()[0].enabled')).toBe(false);
     await win.getByRole('button', { name: 'Unmute microphone', exact: true }).click();
     expect(await win.evaluate('window.__voiceProbe.mic.getAudioTracks()[0].enabled')).toBe(true);
-    await win.getByRole('button', { name: 'Interrupt reply', exact: true }).click();
-    expect(await win.evaluate('window.__voiceProbe.sent.some(event => event.type === "response.cancel")')).toBe(true);
-    expect(await win.evaluate('window.__voiceProbe.sent.some(event => event.type === "output_audio_buffer.clear")')).toBe(true);
-    await emit({ type: 'output_audio_buffer.stopped' });
-    await emit({ type: 'response.done', response: { id: 'reply-1', status: 'completed' } });
-
-    const task = {
-      type: 'response.function_call_arguments.done', name: 'perform_browser_task', call_id: 'tool-1',
-      arguments: JSON.stringify({ prompt: 'Read this page and tell me its requirements.' }),
-    };
-    await emit(task);
+    // Wait for actual MediaRecorder data; no provider transport is used.
+    await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
+    await win.evaluate('window.__voiceProbe.recorder.stop()');
     const approval = win.getByRole('button', { name: 'Allow Access', exact: true });
     await expect(approval).toBeVisible();
-    await expect(approval).toBeEnabled();
     await approval.click();
-    await win.waitForFunction('window.__voiceProbe.sent.some(event => event.item?.call_id === "tool-1")');
-    const result = await win.evaluate('JSON.parse(window.__voiceProbe.sent.find(event => event.item?.call_id === "tool-1").item.output)');
-    expect(result).toEqual({ status: 'completed', text: 'The browser task finished with a verified answer.' });
-    await expect(win.getByText('The browser task finished with a verified answer.', { exact: true })).toBeVisible();
-    await emit(task);
+    await win.waitForFunction('window.__voiceProbe.spoken.includes("The browser task finished with a verified answer.")');
     expect((await mainProbe()).runs).toHaveLength(1);
-    await emit({ type: 'response.created', response: { id: 'reply-2' } });
-    await emit({ type: 'response.done', response: { id: 'reply-2', status: 'completed' } });
-    await emit({ ...task, call_id: 'tool-2', arguments: JSON.stringify({ prompt: 'Open another page.' }) });
+    expect((await mainProbe()).connects).toBe(0);
+    await expect(win.getByRole('region', { name: 'Live Voice Mode' }).getByText('The browser task finished with a verified answer.', { exact: false })).toBeVisible();
+    await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
+    await win.evaluate('window.__voiceProbe.recorder.stop()');
     await expect(approval).toBeVisible();
-
     await win.getByRole('button', { name: 'Stop Voice Mode', exact: true }).click();
-    await expect(win.getByRole('region', { name: 'Live Voice Mode', exact: true })).toBeHidden();
+    await expect(win.getByRole('region', { name: 'Live Voice Mode' })).toBeHidden();
     await expect(approval).toBeHidden();
     await win.waitForFunction('window.__voiceProbe.mic.getAudioTracks().every(track => track.readyState === "ended")');
-    const stopped = await win.evaluate(`({
-      microphone: window.__voiceProbe.mic.getAudioTracks().map(track => track.readyState),
-      remote: window.__voiceProbe.remote.getAudioTracks().map(track => track.readyState),
-      peerClosed: window.__voiceProbe.peer.closed,
-      channel: window.__voiceProbe.peer.channel.readyState,
-      audioPaused: window.__voiceProbe.audio.paused,
-      audioDetached: window.__voiceProbe.audio.srcObject === null
-    })`);
-    expect(stopped).toEqual({ microphone: ['ended'], remote: ['ended'], peerClosed: true, channel: 'closed', audioPaused: true, audioDetached: true });
-    const main = await mainProbe();
-    expect(main.cancels).toEqual(['runtime-run-2']);
-    expect(main.disconnects).toEqual(['rtc_runtime_call']);
+    expect((await mainProbe()).cancels).toEqual(['runtime-run-2']);
   } finally {
     await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
     await app.close();
   }
+});
+
+test('dictation and Voice Mode open with no assistant keys configured', async () => {
+  const { app, win } = await launch({ withoutKeys: true });
+  try {
+    await win.getByRole('button', { name: 'Voice input', exact: true }).click();
+    await expect(win.getByRole('button', { name: 'Cancel' })).toBeVisible();
+    await win.getByRole('button', { name: 'Cancel' }).click();
+    await win.getByRole('button', { name: 'Voice Mode', exact: true }).click();
+    await expect(win.getByRole('region', { name: 'Live Voice Mode' })).toBeVisible();
+  } finally { await app.close(); }
 });

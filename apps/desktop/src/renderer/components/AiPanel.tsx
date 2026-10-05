@@ -257,6 +257,10 @@ export function AiPanel() {
   const onVoiceTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
+    if (hasKey !== true) {
+      setDraft((previous) => previous ? `${previous} ${t}` : t);
+      return;
+    }
     void submit(t, attachments);
     setAttachments([]);
     setDraft('');
@@ -320,16 +324,7 @@ export function AiPanel() {
     textareaRef.current?.focus();
   };
 
-  // Dictation and live voice use the OpenAI credential, independently of the
-  // assistant selected for browser tasks. Check it before requesting the
-  // microphone so a missing key sends the user straight to the right setting
-  // instead of recording speech that cannot be transcribed.
-  const startVoice = async (nextMode: 'once' | 'continuous') => {
-    const hasVoiceKey = await browserBridge().secrets.hasApiKey('openai');
-    if (!hasVoiceKey) {
-      openSettings();
-      return;
-    }
+  const startVoice = (nextMode: 'once' | 'continuous') => {
     setVoiceMode(nextMode);
   };
 

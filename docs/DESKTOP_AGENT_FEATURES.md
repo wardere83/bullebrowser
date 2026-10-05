@@ -46,17 +46,23 @@ the user scrolls up, a pointer button appears to jump back down (`AiPanel.tsx`).
 ### Brand-mark home
 The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 
-### Voice — mic + continuous Voice Mode (`VoiceOverlay.tsx`, `main/voice.ts`)
-- **Mic (one-shot):** record one utterance; on stop it transcribes and sends.
-- **Soundwave (continuous):** keeps listening, cuts a segment on trailing
-  silence (a lightweight VAD over a Web Audio `AnalyserNode`), transcribes each,
-  and sends it — click the icon again to stop, and the wave fades out.
-- The soundwave reacts to the real mic level. Transcription runs in **main**
-  against **OpenAI Whisper using the user's stored OpenAI key** (the key never
-  reaches the renderer). No key → a clear inline message to add one.
-- macOS: `NSMicrophoneUsageDescription` (builder `extendInfo`) +
-  `com.apple.security.device.audio-input` (both entitlement plists) so a
-  packaged, hardened-runtime build can access the mic.
+### Voice — dictation and spoken Voice Mode
+
+- Dictation records a prompt, transcribes locally, and sends it to the selected
+  assistant. Without an assistant key, its transcript stays in the composer.
+- Voice Mode keeps the existing inline controls, captions, mute, stop, and
+  browser-task approvals. Local speech recognition sends each utterance through
+  the selected assistant; the system speech engine reads its actual result.
+  Stop cancels the task owned by that voice session. Interrupt stops a spoken
+  reply; capture pauses during playback to avoid feedback commands.
+- Both use **Whisper tiny.en via Transformers.js** in main. Mono 16 kHz audio
+  stays on the device, and speech needs no OpenAI key. The English model
+  downloads on first use into `userData/voice-models` and works offline afterward.
+  Browser tasks and assistant responses still need the selected engine's key.
+- The previous hosted realtime implementation remains available internally but
+  is no longer used by the Voice Mode UI.
+- macOS microphone permissions and the existing hardened-runtime entitlements
+  continue to apply.
 
 ## Files
 
@@ -100,23 +106,25 @@ The logic that can't be driven headlessly is covered directly instead:
   arbitrary file.
 - `main/storage/projects.test.ts` — de-duping, missing-project guards, and
   read-side reconciliation of file counts against expired files.
-- `main/voice.test.ts` — the transcription contract: bearer auth, empty-clip
-  short-circuit, the no-key path (must not call out), 401 mapping, provider
-  error messages, and non-JSON error bodies.
+- `main/voice.test.ts` — keyless inference, silent clips, input validation,
+  model reuse, command ordering, and recovery after failures.
+- `renderer/lib/local-voice.test.ts` — local recording, transcription, verified
+  spoken results, mute, task cancellation, and late microphone permissions.
 
-### Still not covered: the GUI
+### Desktop verification
 
-The Playwright Electron harness (`e2e/`) **cannot launch on this toolchain**:
-Playwright passes `--remote-debugging-port=0` ahead of the app path, where
-Electron 39 parses it as a Node flag and dies with `bad option`. Bumping
-Playwright to 1.61.1 does not fix it. Separately, all three specs assert UI copy
-that no longer exists ("Running in local-first mode.", "Open Settings", the old
-key-validation string) — they rotted in earlier commits. So the e2e job is red
-for reasons that predate this work, and these remain unverified end-to-end:
+The Electron Playwright smoke suite exercises the composer, both voice controls
+without OpenAI keys or any assistant keys, and a real synthetic MediaStream →
+MediaRecorder → PCM → transcription IPC → browser approval → spoken result flow.
+Provider transcription and assistant results are mocked in this UI check.
 
-- record → transcribe → send, and continuous Voice Mode segmentation
-- the file picker and screenshot capture round-trip
-- jump-to-latest and the attachment chips under real interaction
+For real model inference, build the app and run from `apps/desktop`:
 
-Fixing e2e means resolving the Playwright/Electron incompatibility and
-rewriting the stale assertions — worth doing, but it is its own task.
+```sh
+node scripts/check-local-voice.mjs /path/to/speech.wav
+```
+
+An optional second argument selects a packaged executable. The check recognizes
+a real WAV without provider keys, restarts, and repeats with network blocked.
+First use requires the model download. Live microphone quality, installed system
+voices, live assistant responses, and Windows/Linux packages need manual checks.

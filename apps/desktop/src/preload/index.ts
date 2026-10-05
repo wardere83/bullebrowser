@@ -79,7 +79,7 @@ const bridge: BrowserBridge = {
     delete: (id) => ipcRenderer.invoke(IPC.PROJECT_DELETE, id),
   },
   voice: {
-    transcribe: (audio, mime) => ipcRenderer.invoke(IPC.VOICE_TRANSCRIBE, audio, mime),
+    transcribe: (audio) => ipcRenderer.invoke(IPC.VOICE_TRANSCRIBE, audio),
     connectRealtime: (offerSdp) => ipcRenderer.invoke(IPC.VOICE_CONNECT_REALTIME, offerSdp),
     disconnectRealtime: (callId) => ipcRenderer.invoke(IPC.VOICE_DISCONNECT_REALTIME, callId),
   },

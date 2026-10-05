@@ -41,6 +41,8 @@ jobs:
       - run: pnpm -r lint
       - name: Tests with coverage gate
         run: pnpm --filter @bullebrowser/agent-core test
+      - name: Desktop unit tests
+        run: pnpm --filter @bullebrowser/desktop test
       - name: Web build smoke
         run: pnpm --filter @bullebrowser/web build
       - name: Desktop build smoke
