@@ -21,6 +21,7 @@ import { conversationStore } from './storage/conversations.js';
 import { sessionFileStore } from './storage/session-files.js';
 import { projectStore } from './storage/projects.js';
 import { transcribeAudio } from './voice.js';
+import { prepareSpeech, synthesizeAudio } from './speech.js';
 import { connectRealtimeVoice, disconnectRealtimeVoice, disposeRealtimeVoice } from './realtime-voice.js';
 import {
   clearApiKey,
@@ -129,6 +130,18 @@ export function registerIpc(win: BrowserWindow) {
       throw new Error('Voice transcription is only available in the app.');
     }
     return transcribeAudio(audio);
+  });
+  ipcMain.handle(IPC.VOICE_PREPARE_SPEECH, (event) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Voice is only available in the app.');
+    }
+    return prepareSpeech();
+  });
+  ipcMain.handle(IPC.VOICE_SYNTHESIZE, (event, text: string) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Voice is only available in the app.');
+    }
+    return synthesizeAudio(text);
   });
   // Only the app's top-level chrome may connect live voice; website frames
   // cannot use the user's saved key or terminate a session owned by the app.

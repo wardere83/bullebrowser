@@ -5,6 +5,8 @@ export interface VoiceState {
   phase: VoicePhase;
   muted: boolean;
   playbackBlocked: boolean;
+  /** A reply owns playback, including preparation between audio clips. */
+  outputPending?: boolean;
   error?: string;
 }
 export interface VoiceTranscript {

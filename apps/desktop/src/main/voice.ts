@@ -15,7 +15,8 @@ function getTranscriber(): Promise<AutomaticSpeechRecognitionPipeline> {
     transcriber = (async () => {
       const { pipeline, env } = await import('@huggingface/transformers');
       env.cacheDir = join(app.getPath('userData'), 'voice-models');
-      env.allowLocalModels = false;
+      // Bundled neural speech shares this runtime and loads local-only models.
+      env.allowLocalModels = true;
       return pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en', {
         device: 'cpu',
         dtype: 'q8',

@@ -27,6 +27,7 @@ describe('local voice transcription', () => {
         device: 'cpu', dtype: 'q8',
       });
       expect(env.cacheDir).toBe(join('/tmp/bullebrowser-test', 'voice-models'));
+      expect(env.allowLocalModels).toBe(true);
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();

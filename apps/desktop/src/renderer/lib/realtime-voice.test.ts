@@ -87,6 +87,8 @@ describe('RealtimeVoiceSession', () => {
     vi.stubGlobal('Audio', MockAudio);
     bridge = {
       transcribe: vi.fn(),
+      prepareSpeech: vi.fn(),
+      synthesize: vi.fn(),
       connectRealtime: vi.fn(async () => ({ answerSdp: 'answer-sdp', callId: 'rtc_test' })),
       disconnectRealtime: vi.fn(async () => undefined),
     };

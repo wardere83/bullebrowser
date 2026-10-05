@@ -99,6 +99,16 @@ test('keyless Voice Mode speaks the same general product answer', async () => {
         if (!(audio instanceof Float32Array) || !audio.length) throw new Error('Expected PCM audio');
         return { text: 'How was BulleBrowser built?' };
       });
+      // Capture what the bundled voice is asked to say; clips are short tones.
+      const spoken: string[] = [];
+      (globalThis as Record<string, unknown>).__identitySpoken = spoken;
+      ipcMain.removeHandler('voice:prepare-speech');
+      ipcMain.handle('voice:prepare-speech', () => undefined);
+      ipcMain.removeHandler('voice:synthesize');
+      ipcMain.handle('voice:synthesize', (_event, text: string) => {
+        spoken.push(text);
+        return { audio: new Float32Array(2205).fill(0.01), sampleRate: 44100 };
+      });
     });
     await win.evaluate(() => {
       const probe = { recorder: null as MediaRecorder | null, spoken: [] as string[], contexts: [] as AudioContext[] };
@@ -130,10 +140,12 @@ test('keyless Voice Mode speaks the same general product answer', async () => {
     await win.waitForFunction(() => (window as unknown as { __identityVoice: { recorder: MediaRecorder | null } }).__identityVoice.recorder?.state === 'recording');
     await win.waitForTimeout(800);
     await win.evaluate(() => (window as unknown as { __identityVoice: { recorder: MediaRecorder } }).__identityVoice.recorder.stop());
-    await expect.poll(() => win.evaluate(() => (window as unknown as { __identityVoice: { spoken: string[] } }).__identityVoice.spoken.join('\n'))).toContain('BulleBrowser Agentic AI');
-    const spoken = await win.evaluate(() => (window as unknown as { __identityVoice: { spoken: string[] } }).__identityVoice.spoken.join('\n'));
-    expect(spoken).toContain('support@bullebrowser.com');
-    expect(spoken).not.toMatch(/claude|anthropic|openai|chatgpt|electron|react|gpt-/i);
+    const heard = () => app.evaluate(() => ((globalThis as Record<string, unknown>).__identitySpoken as string[]).join(' '));
+    await expect.poll(heard).toContain('support at bullebrowser dot com');
+    const spoken = await heard();
+    expect(spoken).toContain('BulleBrowser Agentic AI');
+    expect(spoken).not.toMatch(/claude|anthropic|openai|chatgpt|electron|react|gpt-|[@*#`]|https?:/i);
+    expect(await win.evaluate(() => (window as unknown as { __identityVoice: { spoken: string[] } }).__identityVoice.spoken)).toEqual([]);
     await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeHidden();
     await expect(win.locator('.md-prose')).toContainText('support@bullebrowser.com');
   } finally { await app.close(); }

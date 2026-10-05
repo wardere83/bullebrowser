@@ -179,7 +179,7 @@ const VOICE_MEDIA_FIXTURE = String.raw`(function installMediaMock(){
 const VOICE_MAIN_FIXTURE = String.raw`
 const { ipcMain, BrowserWindow } = electron;
 
-    const probe=globalThis.__voiceMainProbe={runs:[],cancels:[],connects:0,disconnects:[],pending:null};
+    const probe=globalThis.__voiceMainProbe={runs:[],cancels:[],connects:0,disconnects:[],pending:null,spoken:[]};
     const contents=BrowserWindow.getAllWindows()[0].webContents;
     const replace=(channel,handler)=>{ipcMain.removeHandler(channel);ipcMain.handle(channel,handler);};
     const finish=(status,text)=>{
@@ -192,6 +192,10 @@ const { ipcMain, BrowserWindow } = electron;
     };
     replace('conversation:get',()=>structuredClone(conversation));
     replace('voice:transcribe',(_event,audio)=>{if(!(audio instanceof Float32Array)||!audio.length)throw new Error('Expected PCM audio');return {text:probe.nextTranscript || 'Read this page and tell me its requirements.'};});
+    // The bundled voice is exercised for real by scripts/check-neural-voice.mjs;
+    // here its clips are short tones so the suite needs no model files.
+    replace('voice:prepare-speech',()=>{});
+    replace('voice:synthesize',(_event,text)=>{probe.spoken.push(text);return {audio:new Float32Array(2205).fill(0.01),sampleRate:44100};});
     replace('voice:connect-realtime',()=>{probe.connects++;return {answerSdp:'mock-answer',callId:'rtc_runtime_call'};});
     replace('voice:disconnect-realtime',(_event,id)=>{probe.disconnects.push(id);});
     replace('agent:run',(_event,request)=>{
@@ -230,7 +234,8 @@ test('keyless live voice records audio, handles approvals, speaks results, and c
     const approval = win.getByRole('button', { name: 'Allow Access', exact: true });
     await expect(approval).toBeVisible();
     await approval.click();
-    await win.waitForFunction('window.__voiceProbe.spoken.includes("The browser task finished with a verified answer.")');
+    await expect.poll(async () => (await mainProbe()).spoken).toContain('The browser task finished with a verified answer.');
+    expect(await win.evaluate('window.__voiceProbe.spoken')).toEqual([]);
     expect((await mainProbe()).runs).toHaveLength(1);
     expect((await mainProbe()).connects).toBe(0);
     await expect(win.getByRole('region', { name: 'Live Voice Mode' }).getByText('The browser task finished with a verified answer.', { exact: false })).toBeVisible();

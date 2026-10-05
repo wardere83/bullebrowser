@@ -1,4 +1,4 @@
-// Real WAV → MediaStream → recorder/VAD → local Whisper → captions → speech.
+// Real WAV → MediaStream → recorder/VAD → local Whisper → captions → bundled voice.
 // Only the assistant result is a fixture; no browser operation is performed.
 import { _electron as electron } from 'playwright';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
@@ -41,6 +41,14 @@ try {
       // Let the session's recorder and VAD attach before playing the fixture.
       setTimeout(() => source.start(), 500);
       return destination.stream;
+    };
+    // Replies normally play as bundled-voice PCM clips; the installed system
+    // voice is only the fallback. Either one counts as the reply being spoken.
+    const startClip = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      probe.speechStarted = true;
+      this.addEventListener('ended', () => { probe.speechEnded = true; });
+      return startClip.apply(this, args);
     };
     const speak = speechSynthesis.speak.bind(speechSynthesis);
     speechSynthesis.speak = (utterance) => {

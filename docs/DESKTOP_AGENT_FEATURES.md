@@ -61,7 +61,7 @@ collapsed Settings section for open-ended reasoning and cloud-specific skills.
   assistant. Without a cloud key, its transcript runs through the local assistant.
 - Voice Mode keeps the existing inline controls, captions, mute, stop, and
   browser-task approvals. Local speech recognition sends each utterance through
-  the selected assistant; the system speech engine reads its actual result.
+  the selected assistant; the bundled neural voice reads its actual result.
   Stop, Cancel browser task, or a spoken cancellation cancels the task owned by
   that voice session. Silent timed clips are ignored. Interrupt stops a spoken
   reply; capture pauses during playback to avoid feedback commands.
@@ -69,6 +69,25 @@ collapsed Settings section for open-ended reasoning and cloud-specific skills.
   stays on the device, and speech needs no OpenAI key. The English model
   downloads on first use into `userData/voice-models` and works offline afterward.
   Local summaries and explicit browser commands need no key. Cloud synthesis is optional.
+- Replies are spoken by a **bundled Supertonic neural voice** (`main/speech.ts`),
+  a US English female preset generated on the device at 44.1 kHz with no key,
+  download, or network call. `shared/speech.ts` turns the Markdown reply into
+  plain sentences (no URLs, code, or symbols) and splits it into clips: a short
+  opening clip so speech starts quickly, then clips of up to 300 characters cut
+  at sentence or clause boundaries. The next clip is generated while the current
+  one plays, and each clip is levelled and edge-faded, so a long answer flows
+  without gaps, clicks, or volume jumps. If the bundled voice cannot load, an
+  installed US English female system voice is used instead.
+- The voice is selected by `voice` in `scripts/prepare-speech-model.mjs` and
+  `DEFAULT_VOICE` in `main/speech.ts` (presets `F1`–`F5` all ship; default `F1`).
+  The publisher documents presets by gender only, so no preset can be described
+  as a verified accent, dialect, or ethnicity; choose by listening.
+- `pnpm prepare:speech` downloads the pinned, SHA-256-verified model (about
+  263 MB) into the git-ignored `resources/speech-models`, and every `package*`
+  script runs it first. electron-builder ships it as `speech-models` beside the
+  app and the `afterPack` hook fails the build if any file is missing or the
+  wrong size. The weights are under the BigScience Open RAIL-M license; its
+  text and use restrictions ship in `speech-models/LICENSE-MODELS.txt`.
 - The previous hosted realtime implementation remains available internally but
   is no longer used by the Voice Mode UI.
 - macOS microphone permissions and the existing hardened-runtime entitlements
@@ -133,6 +152,9 @@ The logic that can't be driven headlessly is covered directly instead:
   model reuse, command ordering, and recovery after failures.
 - `renderer/lib/local-voice.test.ts` — local recording, transcription, verified
   spoken results, mute, task cancellation, and late microphone permissions.
+- `main/speech.test.ts` — local-only model loading, bundle validation, input
+  limits, clip levelling, request ordering, load shedding, and recovery.
+- `shared/speech.test.ts` — Markdown-to-speech text and sentence/clause clips.
 
 ### Desktop verification
 
@@ -149,17 +171,30 @@ node scripts/check-local-voice.mjs /path/to/speech.wav
 
 An optional second argument selects a packaged executable. The check recognizes
 a real WAV without provider keys, restarts, and repeats with network blocked.
-First use requires the model download. Live microphone quality, installed system
-voices, live assistant responses, and Windows/Linux packages need manual checks.
+First use requires the recognition model download. Live microphone quality, how the
+voice sounds to a listener, live assistant responses, and Windows/Linux packages need manual checks.
 
 Additional regression checks cover silence during long tasks, spoken cancellation
 while a task is pending, recovery from playback/provider failures, and immediate
-microphone release after dictation Send. Voice Mode waits 1.6 seconds of silence
-before ending an utterance to allow natural pauses.
+microphone release after dictation Send. Voice Mode waits 0.9 seconds of silence
+before ending an utterance, and trims leading and trailing silence from each clip.
+
+To hear and verify the bundled voice, from `apps/desktop`:
+
+```sh
+pnpm prepare:speech && pnpm build
+node scripts/check-neural-voice.mjs sample.wav
+```
+
+It generates speech through the real Electron IPC with no key, passes it back
+through local Whisper to confirm every key phrase is intelligible, checks that
+generation is faster than real time, and writes `sample.wav` to listen to. In
+development the app reads the voice from `resources/speech-models`; without
+`pnpm prepare:speech` it falls back to the installed system voice.
 
 The manual checks `scripts/check-live-voice.mjs speech.wav [expected-text]` and
 `scripts/check-voice-output.mjs` exercise real recorder/VAD/model recognition and
-real system speech output. The live check fixtures only the assistant response.
+the fallback system speech output. The live check fixtures only the assistant response.
 
 Native speech dependencies install both x64 and arm64 variants for the host OS.
 CI checks installation and host imports on macOS, Windows, and Linux; the

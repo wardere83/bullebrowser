@@ -34,8 +34,9 @@ spoken conversation: hear replies, interrupt playback, and ask the assistant
 to work in your browser. Both buttons sit on the right of the message composer.
 Browser tasks retain their normal progress feed and confirmation controls.
 
-Voice uses local English Whisper transcription and system speech output, with
-no speech API key. The model downloads on first use and works offline afterward.
+Voice uses local English Whisper transcription and a natural-sounding female
+voice that ships with the app, with no speech API key. Replies are generated on
+your device; the recognition model downloads on first use and works offline afterward.
 Mute pauses capture; **Stop Voice Mode** releases the microphone and cancels its
 browser task. Without a cloud key, spoken browser commands use the local assistant.
 

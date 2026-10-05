@@ -50,6 +50,8 @@ export const IPC = {
   PROJECT_ATTACH_FILES: 'project:attach-files',
   PROJECT_DELETE: 'project:delete',
   VOICE_TRANSCRIBE: 'voice:transcribe',
+  VOICE_PREPARE_SPEECH: 'voice:prepare-speech',
+  VOICE_SYNTHESIZE: 'voice:synthesize',
   VOICE_CONNECT_REALTIME: 'voice:connect-realtime',
   VOICE_DISCONNECT_REALTIME: 'voice:disconnect-realtime',
   // Conversations
@@ -295,6 +297,9 @@ export interface BrowserBridge {
   voice: {
     // Local Whisper transcription of mono 16 kHz PCM. No API key needed.
     transcribe(audio: Float32Array): Promise<{ text: string }>;
+    // Bundled local neural speech. Audio and text stay on the device.
+    prepareSpeech(): Promise<void>;
+    synthesize(text: string): Promise<{ audio: Float32Array; sampleRate: number }>;
     // Main exchanges WebRTC SDP using the saved key; credentials stay in main.
     connectRealtime(offerSdp: string): Promise<{ answerSdp: string; callId: string }>;
     disconnectRealtime(callId: string): Promise<void>;

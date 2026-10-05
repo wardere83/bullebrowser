@@ -8,6 +8,11 @@ directories:
   buildResources: resources
 
 afterPack: ./scripts/after-pack.cjs
+extraResources:
+  - from: resources/speech-models
+    to: speech-models
+    filter:
+      - "**/*"
 # Notarize (via Apple's notarytool), staple, and Gatekeeper-validate the signed
 # .app. No-op on non-mac and on unsigned/ad-hoc builds; hard-fails a tagged
 # release that isn't properly Developer ID–signed. See scripts/notarize.cjs.

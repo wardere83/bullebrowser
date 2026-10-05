@@ -151,7 +151,7 @@ export function RealtimeVoice({
         <div ref={captionsRef} className="mt-2 max-h-28 space-y-2 overflow-y-auto text-xs" aria-label="Voice conversation transcript">
           {transcripts.map((entry) => (
             <p key={`${entry.role}:${entry.id}`} className="break-words text-ink-secondary">
-              <span className="font-semibold text-ink-primary">{entry.role === 'user' ? 'You' : 'BulleBrowser'}: </span>
+              <span className="font-semibold text-ink-primary">{entry.role === 'user' ? 'You' : 'BulleBrowser Agentic AI'}: </span>
               {entry.text}
             </p>
           ))}
@@ -169,7 +169,7 @@ export function RealtimeVoice({
         </button>
       )}
       {!ended && state.phase !== 'connecting' && transcripts.length === 0 && (
-        <p className="mt-2 text-xs text-ink-secondary">Speak a command. Voice uses local English transcription; first use downloads the speech model.</p>
+        <p className="mt-2 text-xs text-ink-secondary">Speak naturally. You can interrupt a reply or stop Voice Mode at any time.</p>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {ended ? (
@@ -201,7 +201,7 @@ export function RealtimeVoice({
                 Cancel browser task
               </button>
             )}
-            {state.phase === 'speaking' && (
+            {(state.phase === 'speaking' || state.outputPending) && (
               <button
                 type="button"
                 onClick={() => sessionRef.current?.interrupt()}

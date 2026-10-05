@@ -80,6 +80,8 @@ const bridge: BrowserBridge = {
   },
   voice: {
     transcribe: (audio) => ipcRenderer.invoke(IPC.VOICE_TRANSCRIBE, audio),
+    prepareSpeech: () => ipcRenderer.invoke(IPC.VOICE_PREPARE_SPEECH),
+    synthesize: (text) => ipcRenderer.invoke(IPC.VOICE_SYNTHESIZE, text),
     connectRealtime: (offerSdp) => ipcRenderer.invoke(IPC.VOICE_CONNECT_REALTIME, offerSdp),
     disconnectRealtime: (callId) => ipcRenderer.invoke(IPC.VOICE_DISCONNECT_REALTIME, callId),
   },
