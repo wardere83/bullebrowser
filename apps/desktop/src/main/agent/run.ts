@@ -178,6 +178,10 @@ export async function startAgentRun(
 
   const runtime = new DesktopToolRuntime({
     request: (message: string) => ask(message, 'destructive'),
+  }, (tabId) => {
+    // Consent is handled by the tool executor before the runtime touches the
+    // page. Late operations after Stop must not restore the browsing effect.
+    if (!controller.signal.aborted) tabManager.setBrowsingActivity(runId, tabId);
   });
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
@@ -257,6 +261,7 @@ export async function startAgentRun(
         }
       }
     } finally {
+      tabManager.clearBrowsingActivity(runId);
       try {
         if (assistantText) {
           conversationStore.appendMessage(req.conversationId, {
@@ -307,6 +312,7 @@ export function cancelAgentRun(runId: string) {
   const run = runs.get(runId);
   if (!run) return;
   run.controller.abort();
+  tabManager.clearBrowsingActivity(runId);
   // Deny anything still waiting on the user. Without this, a run cancelled
   // while an "Allow Access" prompt is open leaves that promise unresolved and
   // the agent loop parked on it forever.

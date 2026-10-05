@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   runAgent: vi.fn<(input: AgentInput) => Promise<string>>(),
   appendMessage: vi.fn(),
   conversation: { id: 'conversation-1', messages: [] },
+  setBrowsingActivity: vi.fn(),
+  clearBrowsingActivity: vi.fn(),
+  pageActivity: vi.fn<(tabId: string) => void>(),
 }));
 
 vi.mock('@bullebrowser/agent-core', () => ({
@@ -22,11 +25,19 @@ vi.mock('../storage/session-files.js', () => ({ sessionFileStore: {} }));
 vi.mock('../storage/projects.js', () => ({ projectStore: {} }));
 vi.mock('../storage/secrets.js', () => ({ getApiKey: () => 'test-api-key' }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ defaultModel: 'gpt-4o', stepBudget: 40 }) }));
-vi.mock('../tabs/manager.js', () => ({ tabManager: { getActiveId: () => 'tab-1' } }));
-vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {} }));
+vi.mock('../tabs/manager.js', () => ({ tabManager: {
+  getActiveId: () => 'tab-1',
+  setBrowsingActivity: mocks.setBrowsingActivity,
+  clearBrowsingActivity: mocks.clearBrowsingActivity,
+} }));
+vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {
+  constructor(_confirm: unknown, activity: (tabId: string) => void) {
+    mocks.pageActivity.mockImplementation(activity);
+  }
+} }));
 vi.mock('./attachments.js', () => ({ buildAttachmentAppendix: () => '' }));
 
-const { startAgentRun } = await import('./run.js');
+const { startAgentRun, cancelAgentRun } = await import('./run.js');
 
 const request: AgentRunRequest = {
   conversationId: 'conversation-1',
@@ -51,12 +62,15 @@ async function runTask() {
 describe('agent task results for live voice', () => {
   it('publishes the complete saved answer before signaling terminal completion', async () => {
     mocks.runAgent.mockImplementation(async (input) => {
+      mocks.pageActivity('tab-1');
       input.onStep({ type: 'text', detail: 'An interim finding.' });
       input.onStep({ type: 'text', detail: 'The concluding answer.' });
       input.onStep({ type: 'done' });
       return 'An interim finding. The concluding answer.';
     });
     const { send, result, handle } = await runTask();
+    expect(mocks.setBrowsingActivity).toHaveBeenCalledWith(handle.runId, 'tab-1');
+    expect(mocks.clearBrowsingActivity).toHaveBeenCalledWith(handle.runId);
     expect(result).toEqual({
       runId: handle.runId,
       conversationId: request.conversationId,
@@ -75,10 +89,12 @@ describe('agent task results for live voice', () => {
 
   it('returns a run failure and preserves partial work without treating it as success', async () => {
     mocks.runAgent.mockImplementation(async (input) => {
+      mocks.pageActivity('tab-1');
       input.onStep({ type: 'text', detail: 'One source was read.' });
       throw new Error('Network connection failed.');
     });
-    const { send, result } = await runTask();
+    const { send, result, handle } = await runTask();
+    expect(mocks.clearBrowsingActivity).toHaveBeenCalledWith(handle.runId);
     expect(result.status).toBe('failed');
     expect(result.text).toContain('One source was read.');
     expect(result.error).toBeTruthy();
@@ -96,6 +112,26 @@ describe('agent task results for live voice', () => {
     const { result } = await runTask();
     expect(result).toMatchObject({ status: 'cancelled', text: 'The first page was checked.\n\n_(Stopped.)_' });
     expect(result.error).toBeUndefined();
+  });
+
+  it('clears browsing immediately on Stop and ignores page activity from a late operation', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    mocks.runAgent.mockImplementation(async () => {
+      mocks.pageActivity('tab-1');
+      await gate;
+      mocks.pageActivity('tab-2');
+      throw new Error('cancelled');
+    });
+    const send = vi.fn();
+    const handle = await startAgentRun({ webContents: { send } } as unknown as BrowserWindow, request);
+    expect(mocks.setBrowsingActivity).toHaveBeenCalledTimes(1);
+    cancelAgentRun(handle.runId);
+    expect(mocks.clearBrowsingActivity).toHaveBeenCalledWith(handle.runId);
+    release();
+    await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
+    expect(mocks.setBrowsingActivity).toHaveBeenCalledTimes(1);
+    expect(mocks.clearBrowsingActivity).toHaveBeenCalledTimes(2);
   });
 
   it('still settles the voice tool when saving the answer fails', async () => {

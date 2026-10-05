@@ -37,11 +37,15 @@ export interface ConfirmDelegate {
 const SCREENSHOT_MAX_WIDTH = 1280;
 
 export class DesktopToolRuntime implements ToolRuntime {
-  constructor(private confirmDelegate: ConfirmDelegate) {}
+  constructor(
+    private confirmDelegate: ConfirmDelegate,
+    private onPageActivity?: (tabId: string) => void,
+  ) {}
 
   private wcFor(tabId: string): WebContents {
     const view = tabManager.getView(tabId);
     if (!view || view.webContents.isDestroyed()) throw new ToolError('TARGET_CLOSED', `Tab not found: ${tabId}`);
+    this.onPageActivity?.(tabId);
     return view.webContents;
   }
 
@@ -347,9 +351,12 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async screenshot(tabId: string) {
     const wc = this.wcFor(tabId);
-    let image = await wc.capturePage();
-    if (image.getSize().width > SCREENSHOT_MAX_WIDTH) image = image.resize({ width: SCREENSHOT_MAX_WIDTH });
-    return { pngBase64: image.toPNG().toString('base64') };
+    // Decorative activity must not obscure page evidence sent to the model.
+    return tabManager.withoutBrowsingCloud(tabId, async () => {
+      let image = await wc.capturePage();
+      if (image.getSize().width > SCREENSHOT_MAX_WIDTH) image = image.resize({ width: SCREENSHOT_MAX_WIDTH });
+      return { pngBase64: image.toPNG().toString('base64') };
+    });
   }
 
   async newTab(url?: string): Promise<TabSummary> {
@@ -390,6 +397,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     const list = tabManager.list();
     const tab = list.find((t) => t.id === tabId);
     if (!tab) throw new Error(`Tab not found: ${tabId}`);
+    this.onPageActivity?.(tabId);
     return { id: tab.id, title: tab.title, url: tab.url, active: tab.active };
   }
 
@@ -511,4 +519,3 @@ export class DesktopToolRuntime implements ToolRuntime {
     return this.confirmDelegate.request(message);
   }
 }
-

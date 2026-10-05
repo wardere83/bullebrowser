@@ -90,9 +90,11 @@ export function registerIpc(win: BrowserWindow) {
   ipcMain.handle(IPC.AGENT_CAPTURE, async () => {
     const id = tabManager.getActiveId();
     const view = id ? tabManager.getView(id) : null;
-    if (!view) return null;
-    const image = await view.webContents.capturePage();
-    return { pngBase64: image.toPNG().toString('base64'), url: view.webContents.getURL() };
+    if (!id || !view) return null;
+    return tabManager.withoutBrowsingCloud(id, async () => {
+      const image = await view.webContents.capturePage();
+      return { pngBase64: image.toPNG().toString('base64'), url: view.webContents.getURL() };
+    });
   });
 
   // session files
