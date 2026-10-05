@@ -341,6 +341,165 @@ textarea {
   text-decoration: underline;
 }
 
+/* The assistant has its own dark palette. Keep these colors scoped so the
+   browser chrome, start page and Settings retain their existing appearance.
+   Shared attachment and voice controls inherit the same palette here. */
+.chat-panel {
+  --chat-background: #212225;
+  --chat-surface: #2b2d32;
+  --chat-composer: #303339;
+  --chat-hover: #373b42;
+  --chat-border: #454a53;
+  --chat-text: #f3f4f6;
+  --chat-muted: #b5bcc8;
+  --chat-subtle: #a3acba;
+  --chat-brand: #20bad1;
+  --chat-danger: #ff9d9d;
+  color-scheme: dark;
+  color: var(--chat-text);
+  background: var(--chat-background);
+  border-color: var(--chat-border);
+  scrollbar-color: #636b77 transparent;
+}
+
+.chat-panel .text-ink-primary {
+  color: var(--chat-text);
+}
+.chat-panel .text-ink-secondary {
+  color: var(--chat-muted);
+}
+.chat-panel .text-ink-secondary\/70 {
+  color: var(--chat-subtle);
+}
+.chat-panel .hover\:text-ink-primary:hover {
+  color: var(--chat-text);
+}
+.chat-panel :is(.text-danger, .hover\:text-danger:hover) {
+  color: var(--chat-danger);
+}
+
+.chat-panel :is(.bg-white, .bg-surface-muted\/30, .bg-surface-muted\/60) {
+  background-color: var(--chat-surface);
+}
+.chat-panel .bg-surface-light\/95 {
+  background-color: rgb(33 34 37 / 96%);
+}
+.chat-panel :is(.bg-surface-muted, .hover\:bg-surface-muted:hover) {
+  background-color: var(--chat-hover);
+}
+.chat-panel :is(
+  .border-line,
+  .border-line\/25,
+  .border-line\/40,
+  .border-line\/50,
+  .border-line\/60
+) {
+  border-color: var(--chat-border);
+}
+.chat-panel :is(.border-danger, .border-danger\/30) {
+  border-color: rgb(255 157 157 / 45%);
+}
+.chat-panel :is(.bg-danger\/5, .hover\:bg-danger\/10:hover) {
+  background-color: rgb(255 157 157 / 8%);
+}
+.chat-panel .bg-amber-50 {
+  background-color: rgb(232 216 51 / 8%);
+}
+.chat-panel .border-amber-300\/60 {
+  border-color: rgb(232 216 51 / 38%);
+}
+
+/* Navy on the company's teal keeps action labels legible on the dark panel. */
+.chat-panel .bg-primary.text-white {
+  color: #071422;
+}
+.chat-panel .disabled\:bg-line:disabled {
+  color: var(--chat-muted);
+  background-color: var(--chat-border);
+}
+.chat-panel button:disabled {
+  cursor: not-allowed;
+}
+.chat-panel :is(button, a, input):focus-visible {
+  outline: 2px solid var(--chat-brand);
+  outline-offset: 3px;
+}
+.chat-panel input:not([type='checkbox']) {
+  color: var(--chat-text);
+  background-color: var(--chat-composer);
+  caret-color: var(--chat-brand);
+}
+.chat-panel input::placeholder {
+  color: var(--chat-muted);
+}
+.chat-panel .prompt-input-shell--chat {
+  background-color: var(--chat-composer);
+  border-color: var(--chat-border);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+}
+.chat-panel .prompt-input-shell--chat::before {
+  border-radius: 15px;
+}
+.chat-panel .prompt-input-field {
+  color: var(--chat-text);
+  caret-color: var(--chat-brand);
+  border-radius: 14px;
+  padding: 12px;
+}
+.chat-panel .prompt-input-field::placeholder {
+  color: var(--chat-muted);
+}
+.chat-panel .chat-user-message {
+  color: var(--chat-text);
+  background-color: var(--chat-composer);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.chat-panel .md-prose {
+  color: var(--chat-text);
+  overflow-wrap: anywhere;
+}
+.chat-panel .md-prose code {
+  color: #e0edf0;
+  background-color: var(--chat-hover);
+}
+.chat-panel .md-prose pre {
+  color: #e0edf0;
+  background-color: #16191e;
+  border: 1px solid var(--chat-border);
+  overflow-wrap: normal;
+}
+.chat-panel .md-prose pre code {
+  color: inherit;
+  background-color: transparent;
+}
+.chat-panel .md-prose :is(th, td) {
+  border-color: var(--chat-border);
+}
+.chat-panel .md-prose th {
+  background-color: var(--chat-surface);
+}
+.chat-panel .md-prose a {
+  color: #68d9e8;
+  text-underline-offset: 3px;
+}
+.chat-panel .md-prose blockquote {
+  margin: 0.75em 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--chat-brand);
+  color: var(--chat-muted);
+}
+.chat-panel .md-prose hr {
+  margin: 1em 0;
+  border-color: var(--chat-border);
+}
+.chat-panel ::selection {
+  color: var(--chat-text);
+  background-color: #206174;
+}
+
 /* ---------------------------------------------------------------------------
    Start-page logo: fade in, hold, shine, fade out, loop.
 

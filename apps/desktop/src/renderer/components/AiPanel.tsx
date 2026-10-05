@@ -417,7 +417,7 @@ export function AiPanel() {
   };
 
   return (
-    <aside className="relative flex w-[440px] flex-col border-l border-line/25 bg-surface-light">
+    <aside aria-label="Assistant chat" className="chat-panel relative flex w-[440px] flex-col border-l">
       {voiceMode === 'once' && (
         <VoiceOverlay
           mode="once"
@@ -629,7 +629,7 @@ export function AiPanel() {
                     : 'Ask BulleBrowser to do something. It will browse, read, compare, and report back.'
                 }
                 rows={3}
-                className="prompt-input-field"
+                className="prompt-input-field prompt-input-field--dark"
                 autoFocus={current?.messages.length === 0}
               />
             </div>
@@ -979,7 +979,7 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   if (role === 'user') {
     return (
       <div className="mb-6 flex justify-end">
-        <div className="selectable max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
+        <div className="chat-user-message selectable max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed">
           {content}
         </div>
       </div>

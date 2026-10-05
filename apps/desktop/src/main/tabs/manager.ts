@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { IPC, type TabState, type LayoutBounds } from '../../shared/ipc.js';
 import { historyStore } from '../storage/history.js';
 import { getSettings } from '../storage/settings.js';
+import { browsingCloudScript } from '../agent/browser/browsing-cloud.js';
 
 function getDefaultHome(): string {
   return getSettings().homepageUrl;
@@ -36,12 +37,17 @@ class TabManager {
   private tabs: ManagedTab[] = [];
   private activeId: string | null = null;
   private bounds: LayoutBounds = { topInset: 80, rightInset: 0 };
+  private browsingTargets = new Map<string, string>();
+  private cloudCaptures = new Map<string, number>();
+  private cloudRevision = 0;
 
   attachWindow(win: BrowserWindow) {
     this.win = win;
     win.on('resize', () => this.relayout());
     win.on('closed', () => {
       this.tabs = [];
+      this.browsingTargets.clear();
+      this.cloudCaptures.clear();
       this.win = null;
     });
   }
@@ -102,6 +108,10 @@ class TabManager {
     if (idx < 0) return;
     const [tab] = this.tabs.splice(idx, 1);
     if (!tab) return;
+    this.cloudCaptures.delete(id);
+    for (const [runId, target] of this.browsingTargets) {
+      if (target === id) this.browsingTargets.delete(runId);
+    }
     this.win?.contentView.removeChildView(tab.view);
     if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
     // Tabs this one opened forget it, so they don't try to return to it.
@@ -111,14 +121,19 @@ class TabManager {
       const next = opener ?? this.tabs[Math.min(idx, this.tabs.length - 1)];
       this.activeId = next?.id ?? null;
       this.relayout();
+      if (next) this.refreshBrowsingCloud(next);
     }
     this.broadcast();
   }
 
   activate(id: string): void {
     if (!this.tabs.find((t) => t.id === id)) return;
+    const previous = this.activeId ? this.find(this.activeId) : undefined;
     this.activeId = id;
     this.relayout();
+    if (previous) this.refreshBrowsingCloud(previous);
+    const active = this.find(id);
+    if (active) this.refreshBrowsingCloud(active);
     this.broadcast();
   }
 
@@ -164,6 +179,57 @@ class TabManager {
     return this.find(id)?.view;
   }
 
+  // Each run owns the page it actually touched. Switching the user's tab must
+  // not suggest that the assistant is browsing a different, untouched page.
+  setBrowsingActivity(runId: string, tabId: string): void {
+    const tab = this.find(tabId);
+    if (!tab || this.browsingTargets.get(runId) === tabId) return;
+    const previousId = this.browsingTargets.get(runId);
+    this.browsingTargets.set(runId, tabId);
+    const previous = previousId ? this.find(previousId) : undefined;
+    if (previous) this.refreshBrowsingCloud(previous);
+    this.refreshBrowsingCloud(tab);
+  }
+
+  clearBrowsingActivity(runId: string): void {
+    const previousId = this.browsingTargets.get(runId);
+    this.browsingTargets.delete(runId);
+    const previous = previousId ? this.find(previousId) : undefined;
+    if (previous) this.refreshBrowsingCloud(previous);
+  }
+
+  // Capture suppression follows the tab across navigation and view switches.
+  // Overlapping captures restore the decoration only after the last finishes.
+  async withoutBrowsingCloud<T>(tabId: string, capture: () => Promise<T>): Promise<T> {
+    const tab = this.find(tabId);
+    if (!tab) return capture();
+    this.cloudCaptures.set(tabId, (this.cloudCaptures.get(tabId) ?? 0) + 1);
+    try {
+      await this.refreshBrowsingCloud(tab);
+      return await capture();
+    } finally {
+      const remaining = (this.cloudCaptures.get(tabId) ?? 1) - 1;
+      if (remaining > 0) this.cloudCaptures.set(tabId, remaining);
+      else this.cloudCaptures.delete(tabId);
+      const current = this.find(tabId);
+      if (current === tab) await this.refreshBrowsingCloud(current);
+    }
+  }
+
+  private async refreshBrowsingCloud(tab: ManagedTab): Promise<void> {
+    const wc = tab.view.webContents;
+    if (wc.isDestroyed()) return;
+    const active = !this.cloudCaptures.has(tab.id) && this.activeId === tab.id && !isStartPage(tab.url) &&
+      [...this.browsingTargets.values()].includes(tab.id);
+    // A late script from a previous document/request cannot revive activity
+    // after Stop. dom-ready also publishes an inactive revision when needed.
+    try {
+      await wc.executeJavaScript(browsingCloudScript(active, ++this.cloudRevision));
+    } catch {
+      // A closed or navigating document must not interrupt the real task.
+    }
+  }
+
   // --- internal ---
 
   private find(id: string): ManagedTab | undefined {
@@ -186,6 +252,7 @@ class TabManager {
 
   private wireEvents(tab: ManagedTab) {
     const wc = tab.view.webContents;
+    wc.on('dom-ready', () => this.refreshBrowsingCloud(tab));
     wc.on('did-start-loading', () => {
       tab.loading = true;
       this.broadcast();
