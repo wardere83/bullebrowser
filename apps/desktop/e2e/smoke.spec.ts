@@ -404,3 +404,89 @@ test('chat and spoken browser tasks use the real local assistant without any key
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });
+
+for (const interaction of ['click', 'keyboard', 'middle', 'same-window fallback'] as const) {
+  test(`chat result links open in the web pane via ${interaction}`, async () => {
+    const server = createServer((_req, res) => {
+      res.setHeader('Content-Type', 'text/html');
+      res.end('<html><head><title>Search source</title></head><body><h1>Source opened in a browser tab</h1></body></html>');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const url = `http://127.0.0.1:${(server.address() as { port: number }).port}/source`;
+    const { app, win } = await launch({ withoutKeys: true });
+    try {
+      const chromeUrl = win.url();
+      const seed = await win.evaluate(async () => {
+        const list = await window.bullebrowser.conversations.list();
+        return window.bullebrowser.conversations.get(list[0]!.id);
+      });
+      await app.evaluate(({ ipcMain, BrowserWindow }, fixture) => {
+        const conversation = fixture.conversation!;
+        ipcMain.removeHandler('conversation:get');
+        ipcMain.handle('conversation:get', () => conversation);
+        ipcMain.removeHandler('agent:run');
+        ipcMain.handle('agent:run', (_event, request) => {
+          const text = `Search result: [Open source](${fixture.url})`;
+          conversation.messages.push({ role: 'user', content: request.userMessage, timestamp: Date.now() });
+          conversation.messages.push({ role: 'assistant', content: text, timestamp: Date.now() });
+          setTimeout(() => {
+            const contents = BrowserWindow.getAllWindows()[0].webContents;
+            contents.send('agent:step', { runId: 'link-run', step: { kind: 'done', ts: Date.now() } });
+            contents.send('agent:result', { runId: 'link-run', conversationId: conversation.id, status: 'completed', text });
+          }, 50);
+          return { runId: 'link-run' };
+        });
+      }, { conversation: seed, url });
+      await win.locator('aside textarea').fill('Find a source');
+      await win.getByRole('button', { name: 'Send', exact: true }).click();
+      const link = win.getByRole('link', { name: 'Open source', exact: true });
+      await expect(link).toBeVisible();
+      if (interaction === 'keyboard') {
+        await link.focus();
+        await link.press('Enter');
+      } else if (interaction === 'middle') {
+        await link.click({ button: 'middle' });
+      } else {
+        if (interaction === 'same-window fallback') await link.evaluate((element) => element.removeAttribute('target'));
+        await link.click({ noWaitAfter: interaction === 'same-window fallback' });
+      }
+      await expect.poll(() => win.evaluate(async () => {
+        const tabs = await window.bullebrowser.tabs.list();
+        return tabs.find((tab) => tab.active)?.url;
+      })).toBe(url);
+      expect(win.url()).toBe(chromeUrl);
+      // Electron cancels the same-window navigation in will-navigate. Read
+      // the native frame directly: Playwright's navigation waiter does not
+      // receive a completed navigation for an intentionally cancelled load.
+      const readChrome = () => app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(`({
+          hasSource: !!Array.from(document.querySelectorAll('aside a')).find(a => a.textContent === 'Open source'),
+          composerEnabled: !!document.querySelector('aside textarea') && !document.querySelector('aside textarea').disabled,
+          chatX: document.querySelector('aside').getBoundingClientRect().x
+        })`),
+      );
+      const chrome = await readChrome();
+      expect(chrome.hasSource).toBe(true);
+      expect(chrome.composerEnabled).toBe(true);
+      const readBounds = () => app.evaluate(({ BrowserWindow }, target) => {
+        const view = BrowserWindow.getAllWindows()[0].contentView.children.find((child) =>
+          'webContents' in child && (child as Electron.WebContentsView).webContents.getURL() === target,
+        );
+        return view?.getBounds();
+      }, url);
+      await expect.poll(readBounds).toBeTruthy();
+      const bounds = await readBounds();
+      const chatX = (await readChrome()).chatX;
+      expect(bounds).toBeTruthy();
+      expect(bounds!.width).toBeGreaterThan(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(chatX + 1);
+      if (interaction !== 'same-window fallback') {
+        await win.locator('aside textarea').fill('Continue the same conversation');
+        await expect(win.locator('aside textarea')).toHaveValue('Continue the same conversation');
+      }
+    } finally {
+      await app.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+}

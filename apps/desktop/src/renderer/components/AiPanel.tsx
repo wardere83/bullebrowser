@@ -990,7 +990,16 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   return (
     <div className="group mb-6">
       <div ref={prose} className="md-prose selectable">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            a: ({ href, title, children }) => (
+              <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ),
+          }}
+        >{content}</ReactMarkdown>
       </div>
       <CopyButton source={prose} />
     </div>
