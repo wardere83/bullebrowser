@@ -71,6 +71,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  runAfterFinish: true
   artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
 
 linux:

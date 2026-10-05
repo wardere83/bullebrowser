@@ -9,7 +9,7 @@
 // notification (easy to miss, gone forever once dismissed) and only ran once at
 // launch — a browser left open for days would never learn about a fix.
 
-import { app, type BrowserWindow } from 'electron';
+import { app, autoUpdater as nativeAutoUpdater, type BrowserWindow } from 'electron';
 // electron-updater is CommonJS — import the default export and destructure
 // to avoid `Named export 'autoUpdater' not found` at runtime.
 import electronUpdater from 'electron-updater';
@@ -24,6 +24,17 @@ const { autoUpdater } = electronUpdater;
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 let latest: UpdateStatus = { state: 'idle' };
+// macOS may still be staging its native update after update-downloaded. Keep
+// one install request in flight so repeated clicks cannot schedule two restarts.
+let installRequested = false;
+let retryNativeStaging = false;
+const nativeDownloadListeners = () => nativeAutoUpdater.listeners('update-downloaded') as Array<(...args: unknown[]) => void>;
+let nativeRestartListeners: ReturnType<typeof nativeDownloadListeners> = [];
+
+function clearNativeRestartListeners() {
+  for (const listener of nativeRestartListeners) nativeAutoUpdater.removeListener('update-downloaded', listener);
+  nativeRestartListeners = [];
+}
 
 export function getUpdateStatus(): UpdateStatus {
   if (latest.state !== 'idle' && !isNewerVersion(latest.version)) latest = { state: 'idle' };
@@ -54,20 +65,39 @@ export function setupAutoUpdate(win: BrowserWindow) {
   // Installing on quit is free for the user — they're already leaving. The
   // in-app button just lets them have the fix sooner.
   autoUpdater.autoInstallOnAppQuit = true;
+  // MacUpdater ignores quitAndInstall's arguments and uses this setting to
+  // choose between restarting on the new version and simply quitting.
+  autoUpdater.autoRunAppAfterInstall = true;
 
   const available = (info: { version: string }) => {
     if (!isNewerVersion(info.version) || getUpdateStatus().state === 'ready') return;
     send({ state: 'downloading', version: info.version });
   };
   const downloaded = (info: { version: string }) => {
-    if (!isNewerVersion(info.version)) return;
+    if (!isNewerVersion(info.version) || installRequested) return;
     send({ state: 'ready', version: info.version });
   };
   const unavailable = () => {
     if (getUpdateStatus().state !== 'ready') send({ state: 'idle' });
   };
+  const nativeFailed = () => {
+    // Squirrel can fail after ready is shown but before the first click. Keep
+    // retry intent separate from feed/network errors while staging is healthy.
+    if (getUpdateStatus().state === 'ready') retryNativeStaging = true;
+  };
   const failed = (err: Error) => {
     console.warn('[updater] error:', err?.message ?? err);
+    if (installRequested) {
+      installRequested = false;
+      retryNativeStaging = nativeRestartListeners.length > 0;
+      // MacUpdater leaves a queued restart callback behind when staging fails.
+      // Remove only callbacks added by our request, preserving its staging
+      // listener, so a retry cannot schedule two native restarts.
+      clearNativeRestartListeners();
+      // The process is still running: let the user retry a failed install.
+      send(getUpdateStatus());
+      return;
+    }
     // A failed network check must not hide an installer already on disk.
     unavailable();
   };
@@ -75,6 +105,7 @@ export function setupAutoUpdate(win: BrowserWindow) {
   autoUpdater.on('update-downloaded', downloaded);
   autoUpdater.on('update-not-available', unavailable);
   autoUpdater.on('error', failed);
+  nativeAutoUpdater.on('error', nativeFailed);
 
   const check = () => {
     // Keep the ready update visible until installation; don't download it again.
@@ -90,13 +121,35 @@ export function setupAutoUpdate(win: BrowserWindow) {
     autoUpdater.removeListener('update-downloaded', downloaded);
     autoUpdater.removeListener('update-not-available', unavailable);
     autoUpdater.removeListener('error', failed);
+    nativeAutoUpdater.removeListener('error', nativeFailed);
   });
 }
 
 export function quitAndInstallUpdate() {
-  if (getUpdateStatus().state !== 'ready') return;
-  // isSilent: false so the installer UI shows on Windows if it needs to;
-  // isForceRunAfter: true so the user lands back in the app, which is the whole
-  // point of a "relaunch" button.
-  autoUpdater.quitAndInstall(false, true);
+  if (getUpdateStatus().state !== 'ready' || installRequested) return;
+  installRequested = true;
+  const existingListeners = new Set(nativeDownloadListeners());
+  const captureNativeRestartListeners = () => {
+    nativeRestartListeners = nativeDownloadListeners().filter((listener) => !existingListeners.has(listener));
+  };
+  try {
+    // Windows installs without another wizard and launches the updated app.
+    // macOS delegates shutdown and reopening to its native updater instead.
+    autoUpdater.quitAndInstall(true, true);
+    captureNativeRestartListeners();
+    if (!installRequested) {
+      clearNativeRestartListeners();
+    } else if (retryNativeStaging && nativeRestartListeners.length > 0) {
+      // A failed Mac staging attempt has stopped downloading. The updater's
+      // auto-install-on-quit mode does not start it again on its own.
+      retryNativeStaging = false;
+      nativeAutoUpdater.checkForUpdates();
+    }
+  } catch (err) {
+    captureNativeRestartListeners();
+    retryNativeStaging = retryNativeStaging || nativeRestartListeners.length > 0;
+    clearNativeRestartListeners();
+    installRequested = false;
+    throw err;
+  }
 }

@@ -323,6 +323,13 @@ test('the update button clears after installation and returns for a later releas
       ipcMain.handle('update:install', () => {
         attempts += 1;
         if (attempts === 1) throw new Error('Installer fixture failure');
+        if (attempts === 2) {
+          // Installation can fail asynchronously after IPC already resolved.
+          ipcMain.once('test:fail-update-install', () => {
+            BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.38' });
+          });
+          return;
+        }
         BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
       });
     });
@@ -337,6 +344,10 @@ test('the update button clears after installation and returns for a later releas
     });
     await expect(update).toBeVisible();
     await update.click();
+    await expect(update).toBeEnabled();
+    await update.click();
+    await expect(win.getByRole('button', { name: 'Updating…', exact: true })).toBeDisabled();
+    await app.evaluate(({ ipcMain }) => { ipcMain.emit('test:fail-update-install'); });
     await expect(update).toBeEnabled();
     await update.click();
     await expect(update).toBeHidden();

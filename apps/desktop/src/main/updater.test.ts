@@ -2,12 +2,14 @@ import { EventEmitter } from 'node:events';
 import type { BrowserWindow } from 'electron';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { app, updater } = vi.hoisted(() => ({
+const { app, updater, nativeUpdater } = vi.hoisted(() => ({
   app: { isPackaged: true },
+  nativeUpdater: { on: vi.fn(), listeners: vi.fn(), removeListener: vi.fn(), checkForUpdates: vi.fn() },
   updater: {
     currentVersion: { compare: vi.fn() },
     autoDownload: false,
     autoInstallOnAppQuit: false,
+    autoRunAppAfterInstall: false,
     allowDowngrade: true,
     on: vi.fn(),
     removeListener: vi.fn(),
@@ -15,10 +17,11 @@ const { app, updater } = vi.hoisted(() => ({
     quitAndInstall: vi.fn(),
   },
 }));
-vi.mock('electron', () => ({ app }));
+vi.mock('electron', () => ({ app, autoUpdater: nativeUpdater }));
 vi.mock('electron-updater', () => ({ default: { autoUpdater: updater } }));
 
 let events: EventEmitter;
+let nativeEvents: EventEmitter;
 let win: EventEmitter & { isDestroyed: () => boolean; webContents: { send: ReturnType<typeof vi.fn> } };
 
 beforeEach(() => {
@@ -27,9 +30,16 @@ beforeEach(() => {
   vi.useFakeTimers();
   app.isPackaged = true;
   events = new EventEmitter();
+  nativeEvents = new EventEmitter();
+  nativeUpdater.on.mockImplementation((event, callback) => nativeEvents.on(event, callback));
+  nativeUpdater.listeners.mockImplementation((event) => nativeEvents.listeners(event));
+  nativeUpdater.removeListener.mockImplementation((event, callback) => nativeEvents.removeListener(event, callback));
+  nativeUpdater.checkForUpdates.mockReset();
   updater.on.mockImplementation((event, callback) => events.on(event, callback));
   updater.removeListener.mockImplementation((event, callback) => events.removeListener(event, callback));
   updater.checkForUpdates.mockResolvedValue(null);
+  updater.quitAndInstall.mockReset();
+  updater.autoRunAppAfterInstall = false;
   // Installed: 0.2.37. Delegate real semver comparison to electron-updater in production.
   updater.currentVersion.compare.mockImplementation((version: string) => {
     if (version === '0.2.37') return 0;
@@ -58,6 +68,7 @@ describe('in-app updates', () => {
     const api = await start();
     expect(updater.autoDownload).toBe(true);
     expect(updater.allowDowngrade).toBe(false);
+    expect(updater.autoRunAppAfterInstall).toBe(true);
     api.quitAndInstallUpdate();
     expect(updater.quitAndInstall).not.toHaveBeenCalled();
     events.emit('update-available', { version: '0.2.38' });
@@ -67,7 +78,103 @@ describe('in-app updates', () => {
     events.emit('update-downloaded', { version: '0.2.38' });
     expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
     api.quitAndInstallUpdate();
-    expect(updater.quitAndInstall).toHaveBeenCalledWith(false, true);
+    expect(updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+  });
+
+  it('requests one restart while macOS finishes staging the downloaded update', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    api.quitAndInstallUpdate();
+    win.webContents.send.mockClear();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    api.quitAndInstallUpdate();
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(1);
+    // A repeated ready event must not re-enable the button during installation.
+    expect(win.webContents.send).not.toHaveBeenCalled();
+  });
+
+  it('restores the ready action when installation emits an error before shutdown', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    api.quitAndInstallUpdate();
+    win.webContents.send.mockClear();
+    events.emit('error', new Error('Cannot stage installer'));
+    expect(win.webContents.send).toHaveBeenCalledWith('update:status', { state: 'ready', version: '0.2.38' });
+    api.quitAndInstallUpdate();
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows retry when the native install request throws', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    updater.quitAndInstall.mockImplementationOnce(() => { throw new Error('Installer unavailable'); });
+    expect(() => api.quitAndInstallUpdate()).toThrow('Installer unavailable');
+    api.quitAndInstallUpdate();
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(2);
+  });
+
+  it('removes only a failed Mac restart callback before retrying native staging', async () => {
+    const api = await start();
+    const staged = vi.fn();
+    const restart = vi.fn();
+    // The updater's own listener must survive cleanup of its queued restart.
+    nativeEvents.on('update-downloaded', staged);
+    updater.quitAndInstall.mockImplementation(() => {
+      nativeEvents.on('update-downloaded', () => restart());
+    });
+    events.emit('update-downloaded', { version: '0.2.38' });
+    api.quitAndInstallUpdate();
+    expect(nativeUpdater.checkForUpdates).not.toHaveBeenCalled();
+    events.emit('error', new Error('Native staging failed'));
+    expect(nativeEvents.listenerCount('update-downloaded')).toBe(1);
+    nativeUpdater.checkForUpdates.mockImplementation(() => nativeEvents.emit('update-downloaded'));
+    api.quitAndInstallUpdate();
+    expect(nativeUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(staged).toHaveBeenCalledTimes(1);
+    expect(restart).toHaveBeenCalledTimes(1);
+  });
+
+  it('can retry native staging again when its check both reports an error and throws', async () => {
+    const api = await start();
+    const staged = vi.fn();
+    const restart = vi.fn();
+    nativeEvents.on('update-downloaded', staged);
+    updater.quitAndInstall.mockImplementation(() => nativeEvents.on('update-downloaded', () => restart()));
+    events.emit('update-downloaded', { version: '0.2.38' });
+    api.quitAndInstallUpdate();
+    events.emit('error', new Error('Staging interrupted'));
+    nativeUpdater.checkForUpdates.mockImplementationOnce(() => {
+      events.emit('error', new Error('Native check unavailable'));
+      throw new Error('Native check unavailable');
+    });
+    expect(() => api.quitAndInstallUpdate()).toThrow('Native check unavailable');
+    expect(nativeEvents.listenerCount('update-downloaded')).toBe(1);
+    nativeUpdater.checkForUpdates.mockImplementation(() => nativeEvents.emit('update-downloaded'));
+    api.quitAndInstallUpdate();
+    expect(nativeUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(staged).toHaveBeenCalledTimes(1);
+    expect(restart).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries Mac staging that failed before the user clicked Update App', async () => {
+    const api = await start();
+    const restart = vi.fn();
+    updater.quitAndInstall.mockImplementation(() => nativeEvents.on('update-downloaded', () => restart()));
+    events.emit('update-downloaded', { version: '0.2.38' });
+    nativeEvents.emit('error', new Error('Native staging failed before click'));
+    nativeUpdater.checkForUpdates.mockImplementation(() => nativeEvents.emit('update-downloaded'));
+    api.quitAndInstallUpdate();
+    expect(nativeUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(restart).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restart healthy Mac staging after an unrelated feed error', async () => {
+    const api = await start();
+    updater.quitAndInstall.mockImplementation(() => nativeEvents.on('update-downloaded', vi.fn()));
+    events.emit('update-downloaded', { version: '0.2.38' });
+    events.emit('error', new Error('Feed offline'));
+    api.quitAndInstallUpdate();
+    expect(nativeUpdater.checkForUpdates).not.toHaveBeenCalled();
   });
 
   it.each(['0.2.37', '0.2.36', 'invalid'])('never offers installed, older, or invalid version %s', async (version) => {
@@ -123,6 +230,7 @@ describe('in-app updates', () => {
     expect(updater.checkForUpdates).toHaveBeenCalledTimes(2);
     expect(events.listenerCount('update-downloaded')).toBe(0);
     expect(events.listenerCount('error')).toBe(0);
+    expect(nativeEvents.listenerCount('error')).toBe(0);
   });
 
   it('leaves development builds idle', async () => {
