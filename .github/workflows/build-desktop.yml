@@ -378,6 +378,9 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      actions: write
     # No always(): if the build job fails (e.g. macOS signing/notarization did
     # not pass on a release run), this job is skipped and nothing is published —
     # so a partial or un-notarized release can never go out.
@@ -449,3 +452,11 @@ jobs:
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Refresh website downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-web.yml --ref main --repo "$GITHUB_REPOSITORY"

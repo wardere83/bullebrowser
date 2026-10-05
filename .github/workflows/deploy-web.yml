@@ -11,22 +11,8 @@ on:
       - 'packages/brand-tokens/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/deploy-web.yml'
-  # The download manifest is baked into the static export at build time from the
-  # releases API, so the site keeps advertising whatever was newest the last
-  # time this ran — that is how it served an un-notarized v0.2.13 for ten days
-  # after v0.2.16 shipped.
-  #
-  # This must key off build-desktop *completing*, not `release: published`:
-  #   1. The release is created with GITHUB_TOKEN, and GitHub deliberately does
-  #      not start new workflow runs from GITHUB_TOKEN-raised events, so a
-  #      `release` trigger here never fires at all.
-  #   2. `published` fires when the release is created, while its assets are
-  #      still uploading. A 126 MB Intel DMG loses that race, and the manifest
-  #      bakes an asset list with no Intel download in it.
-  # workflow_run fires after the entire build workflow — uploads included.
-  workflow_run:
-    workflows: [build-desktop]
-    types: [completed]
+  # Desktop releases dispatch this after all release assets finish uploading,
+  # so the download manifest includes the newly published installers.
   workflow_dispatch:
 
 permissions:
@@ -42,11 +28,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    # A failed build publishes nothing, so there is no new release to advertise
-    # — redeploying on it would just be churn. Any other trigger runs normally.
-    if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      # Keep the name from this build attempt when only deployment is retried.
+      artifact_name: github-pages-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
 
@@ -84,6 +68,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: apps/web/out
 
   deploy:
@@ -95,3 +80,5 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact_name }}
