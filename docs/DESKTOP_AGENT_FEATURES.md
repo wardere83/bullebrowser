@@ -53,7 +53,8 @@ The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 - Voice Mode keeps the existing inline controls, captions, mute, stop, and
   browser-task approvals. Local speech recognition sends each utterance through
   the selected assistant; the system speech engine reads its actual result.
-  Stop cancels the task owned by that voice session. Interrupt stops a spoken
+  Stop, Cancel browser task, or a spoken cancellation cancels the task owned by
+  that voice session. Silent timed clips are ignored. Interrupt stops a spoken
   reply; capture pauses during playback to avoid feedback commands.
 - Both use **Whisper tiny.en via Transformers.js** in main. Mono 16 kHz audio
   stays on the device, and speech needs no OpenAI key. The English model
@@ -128,3 +129,16 @@ An optional second argument selects a packaged executable. The check recognizes
 a real WAV without provider keys, restarts, and repeats with network blocked.
 First use requires the model download. Live microphone quality, installed system
 voices, live assistant responses, and Windows/Linux packages need manual checks.
+
+Additional regression checks cover silence during long tasks, spoken cancellation
+while a task is pending, recovery from playback/provider failures, and immediate
+microphone release after dictation Send. Voice Mode waits 1.6 seconds of silence
+before ending an utterance to allow natural pauses.
+
+The manual checks `scripts/check-live-voice.mjs speech.wav [expected-text]` and
+`scripts/check-voice-output.mjs` exercise real recorder/VAD/model recognition and
+real system speech output. The live check fixtures only the assistant response.
+
+Native speech dependencies install both x64 and arm64 variants for the host OS.
+CI checks installation and host imports on macOS, Windows, and Linux; the
+packaging hook rejects artifacts missing a target architecture's runtime.

@@ -108,10 +108,20 @@ export function VoiceOverlay({
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
+      rec.onerror = () => {
+        if (cancelled || closedRef.current) return;
+        stopEverything();
+        setError('Could not record audio. Please try voice input again.');
+        setStatus('error');
+      };
       rec.onstop = () => {
         clearTimeout(recordingTimer);
         if (cancelled || closedRef.current) return;
         const blob = new Blob(chunks, { type: mimeRef.current });
+        if (mode === 'once') {
+          streamRef.current?.getTracks().forEach((track) => track.stop());
+          cancelAnimationFrame(rafRef.current);
+        }
         // Continuous: resume listening immediately so we don't miss the next
         // command while the last segment transcribes in the background.
         if (mode === 'continuous' && !closedRef.current) startRecorder();
@@ -279,7 +289,10 @@ export function VoiceOverlay({
   // The mic button: stop recording now and transcribe what we have.
   const stopOnce = () => {
     const rec = recorderRef.current;
-    if (rec && rec.state !== 'inactive') rec.stop();
+    if (rec && rec.state !== 'inactive') {
+      setStatus('transcribing');
+      rec.stop();
+    }
     else onClose();
   };
 
@@ -295,7 +308,7 @@ export function VoiceOverlay({
             : 'Listening… speak, then Send';
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-surface-light/95 backdrop-blur-sm">
+    <div role="dialog" aria-label="Voice input" className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-surface-light/95 backdrop-blur-sm">
       <div className="flex w-[80%] max-w-xs flex-col items-center gap-6 rounded-2xl border border-line/40 bg-white p-6 shadow-xl">
         <div
           className={`bb-wave ${status === 'listening' ? '' : 'bb-wave--idle'} ${

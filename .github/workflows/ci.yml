@@ -47,3 +47,28 @@ jobs:
         run: pnpm --filter @bullebrowser/web build
       - name: Desktop build smoke
         run: pnpm --filter @bullebrowser/desktop build
+
+  native-voice:
+    name: Native speech (${{ matrix.os }})
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, macos-15-intel, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Check host runtime and both CPU variants
+        run: pnpm --filter @bullebrowser/desktop exec node scripts/check-native-install.mjs
+      - name: Intel Mac desktop build
+        if: matrix.os == 'macos-15-intel'
+        run: pnpm --filter @bullebrowser/desktop build
+      - name: Intel Mac desktop smoke
+        if: matrix.os == 'macos-15-intel'
+        run: pnpm --filter @bullebrowser/desktop test:e2e

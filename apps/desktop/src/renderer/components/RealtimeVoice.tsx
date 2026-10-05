@@ -162,6 +162,7 @@ export function RealtimeVoice({
         <button
           type="button"
           onClick={() => void sessionRef.current?.enableAudio()}
+          disabled={state.phase !== 'listening'}
           className="mt-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
         >
           Enable voice audio
@@ -191,7 +192,16 @@ export function RealtimeVoice({
             >
               {state.muted ? 'Unmute' : 'Mute'}
             </button>
-            {(state.phase === 'speaking' || state.phase === 'thinking') && (
+            {state.phase === 'working' && (
+              <button
+                type="button"
+                onClick={() => sessionRef.current?.cancelTask()}
+                className="rounded-md border border-line px-3 py-1.5 text-xs text-ink-secondary hover:bg-surface-muted"
+              >
+                Cancel browser task
+              </button>
+            )}
+            {state.phase === 'speaking' && (
               <button
                 type="button"
                 onClick={() => sessionRef.current?.interrupt()}

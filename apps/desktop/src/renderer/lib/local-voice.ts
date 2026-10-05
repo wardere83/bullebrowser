@@ -19,6 +19,11 @@ export class LocalVoiceSession {
   private context?: AudioContext;
   private recorder?: MediaRecorder;
   private frame = 0;
+  private hadSpeech = false;
+  private silenceAt = 0;
+  private prompts: string[] = [];
+  private draining = false;
+  private playbackText = '';
   private clipTimer?: ReturnType<typeof setTimeout>;
   private micTimer?: ReturnType<typeof setTimeout>;
   private task?: AbortController;
@@ -50,6 +55,7 @@ export class LocalVoiceSession {
         track.onended = () => this.fail('Your microphone disconnected. Reconnect it and try Voice Mode again.');
       }
       this.options.onMicrophoneStream?.(stream);
+      if (this.ended) return;
       this.context = new AudioContext();
       await this.context.resume();
       if (this.ended) return;
@@ -57,8 +63,6 @@ export class LocalVoiceSession {
       analyser.fftSize = 256;
       this.context.createMediaStreamSource(stream).connect(analyser);
       const samples = new Float32Array(analyser.fftSize);
-      let hadSpeech = false;
-      let silenceAt = 0;
       this.record();
       this.update({ phase: 'listening' });
       const tick = () => {
@@ -68,13 +72,11 @@ export class LocalVoiceSession {
         // Speaker output must not be recorded as a new user command. Explicit
         // interruption is available while speaking; capture resumes afterward.
         if (!this.state.muted && this.state.phase !== 'speaking' && rms > 0.025) {
-          hadSpeech = true;
-          silenceAt = 0;
-        } else if (hadSpeech) {
-          if (!silenceAt) silenceAt = performance.now();
-          if (performance.now() - silenceAt > 1100) {
-            hadSpeech = false;
-            silenceAt = 0;
+          this.hadSpeech = true;
+          this.silenceAt = 0;
+        } else if (this.hadSpeech) {
+          if (!this.silenceAt) this.silenceAt = performance.now();
+          if (performance.now() - this.silenceAt > 1600) {
             if (this.recorder?.state === 'recording') this.recorder.stop();
           }
         }
@@ -96,23 +98,26 @@ export class LocalVoiceSession {
     recorder.onstop = () => {
       clearTimeout(this.clipTimer);
       if (this.ended) return;
+      const heardSpeech = this.hadSpeech;
       const blob = new Blob(chunks, { type: recorder.mimeType });
       this.record();
-      if (blob.size < 1400) return;
-      if (this.queued >= 4) { this.fail('Voice is catching up. Please pause and try again.'); return; }
+      if (!heardSpeech || blob.size < 1400) return;
+      if (this.queued >= 4) { this.caption('assistant', 'Voice is catching up. Please pause before the next command.'); return; }
       this.queued++;
       this.queue = this.queue.then(() => this.process(blob)).catch((error: unknown) => {
         if (!this.ended) this.fail(error instanceof Error ? error.message : 'Could not transcribe that.');
       }).finally(() => { this.queued--; });
     };
     this.recorder = recorder;
+    this.hadSpeech = false;
+    this.silenceAt = 0;
     recorder.start();
     this.clipTimer = setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 30_000);
   }
 
   private async process(blob: Blob): Promise<void> {
     if (this.ended || !this.context) return;
-    this.update({ phase: 'thinking' });
+    if (!this.draining) this.update({ phase: 'thinking' });
     const decoded = await this.context.decodeAudioData(await blob.arrayBuffer());
     const offline = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
     const source = offline.createBufferSource();
@@ -125,13 +130,42 @@ export class LocalVoiceSession {
     if (this.ended) return;
     const { text } = await this.options.bridge.transcribe(pcm);
     if (this.ended) return;
-    if (!text.trim()) { this.update({ phase: 'listening' }); return; }
+    if (!text.trim()) { if (!this.draining) this.update({ phase: 'listening' }); return; }
     this.caption('user', text);
+    if (/^(?:please )?(?:stop|cancel)(?: (?:the |this |my )?(?:browser )?(?:task|request|work))?[.!]?$/i.test(text.trim())) {
+      if (this.task || this.prompts.length) { this.cancelTask(); return; }
+    }
+    if (this.prompts.length >= 4) {
+      this.caption('assistant', 'Voice is catching up. Please pause before the next command.');
+      return;
+    }
+    this.prompts.push(text);
+    void this.drainTasks();
+  }
+
+  private async drainTasks(): Promise<void> {
+    if (this.draining || this.ended) return;
+    this.draining = true;
+    try {
+      while (!this.ended && this.prompts.length) {
+        const text = this.prompts.shift()!;
+        await this.runTask(text);
+      }
+    } catch (error) {
+      if (!this.ended) this.fail(error instanceof Error ? error.message : 'Voice could not continue. Please try again.');
+    } finally {
+      this.draining = false;
+      if (!this.ended) this.update({ phase: 'listening' });
+    }
+  }
+
+  private async runTask(text: string): Promise<void> {
     const controller = new AbortController();
     this.task = controller;
     this.update({ phase: 'working' });
     let result: VoiceTaskResult;
     try { result = await this.options.onBrowserTask(text, controller.signal); }
+    catch { result = { status: 'failed', text: 'The assistant could not complete that request. Please try again.' }; }
     finally { if (this.task === controller) this.task = undefined; }
     if (this.ended) return;
     const reply = result.text || result.error || 'The task did not return a response.';
@@ -145,8 +179,12 @@ export class LocalVoiceSession {
   }
 
   private async speak(text: string): Promise<void> {
-    if (!globalThis.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
-    this.update({ phase: 'speaking' });
+    this.playbackText = text;
+    if (!globalThis.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      this.update({ playbackBlocked: true });
+      return;
+    }
+    this.update({ phase: 'speaking', playbackBlocked: false });
     // Disable capture during speaker playback to prevent feedback commands.
     this.stream?.getAudioTracks().forEach((track) => { track.enabled = false; });
     const utterance = new SpeechSynthesisUtterance(text.slice(0, 4000));
@@ -156,8 +194,15 @@ export class LocalVoiceSession {
     const voice = voices.find((v) => v.localService && v.lang.startsWith('en'));
     if (voice) utterance.voice = voice;
     await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => { speechSynthesis.cancel(); finish(); }, 120_000);
+      const timer = setTimeout(() => {
+        if (!this.ended) this.update({ playbackBlocked: true });
+        speechSynthesis.cancel();
+        finish();
+      }, 120_000);
+      let finished = false;
       const finish = () => {
+        if (finished) return;
+        finished = true;
         clearTimeout(timer);
         this.releaseSpeech = undefined;
         this.speech = undefined;
@@ -166,8 +211,15 @@ export class LocalVoiceSession {
       };
       this.releaseSpeech = finish;
       utterance.onend = finish;
-      utterance.onerror = finish;
-      speechSynthesis.speak(utterance);
+      utterance.onerror = (event) => {
+        if (finished) return;
+        if (!this.ended && event.error !== 'canceled' && event.error !== 'interrupted') {
+          this.update({ playbackBlocked: true });
+        }
+        finish();
+      };
+      try { speechSynthesis.speak(utterance); }
+      catch { this.update({ playbackBlocked: true }); finish(); }
     });
   }
 
@@ -183,7 +235,17 @@ export class LocalVoiceSession {
     if (!this.ended && !this.task) this.update({ phase: 'listening' });
   }
 
-  async enableAudio(): Promise<void> { /* Installed speech needs no playback unlock. */ }
+  async enableAudio(): Promise<void> {
+    if (this.ended || this.state.phase !== 'listening' || !this.state.playbackBlocked || !this.playbackText) return;
+    await this.speak(this.playbackText);
+    if (!this.ended && !this.task) this.update({ phase: 'listening' });
+  }
+
+  cancelTask(): void {
+    if (this.ended) return;
+    this.prompts = [];
+    this.task?.abort();
+  }
 
   stop(): void {
     if (this.ended) return;
@@ -202,6 +264,7 @@ export class LocalVoiceSession {
     clearTimeout(this.micTimer);
     clearTimeout(this.clipTimer);
     cancelAnimationFrame(this.frame);
+    this.prompts = [];
     this.task?.abort();
     this.interrupt();
     if (this.recorder?.state === 'recording') this.recorder.stop();

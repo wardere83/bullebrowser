@@ -195,7 +195,7 @@ const { ipcMain, BrowserWindow } = electron;
       probe.pending=null;
     };
     replace('conversation:get',()=>structuredClone(conversation));
-    replace('voice:transcribe',(_event,audio)=>{if(!(audio instanceof Float32Array)||!audio.length)throw new Error('Expected PCM audio');return {text:'Read this page and tell me its requirements.'};});
+    replace('voice:transcribe',(_event,audio)=>{if(!(audio instanceof Float32Array)||!audio.length)throw new Error('Expected PCM audio');return {text:probe.nextTranscript || 'Read this page and tell me its requirements.'};});
     replace('voice:connect-realtime',()=>{probe.connects++;return {answerSdp:'mock-answer',callId:'rtc_runtime_call'};});
     replace('voice:disconnect-realtime',(_event,id)=>{probe.disconnects.push(id);});
     replace('agent:run',(_event,request)=>{
@@ -241,11 +241,22 @@ test('keyless live voice records audio, handles approvals, speaks results, and c
     await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
     await win.evaluate('window.__voiceProbe.recorder.stop()');
     await expect(approval).toBeVisible();
+    await expect(win.getByRole('button', { name: 'Cancel browser task', exact: true })).toBeVisible();
+    await app.evaluate(() => { (globalThis as any).__voiceMainProbe.nextTranscript = 'Cancel this browser task.'; });
+    await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
+    await win.evaluate('window.__voiceProbe.recorder.stop()');
+    await expect(approval).toBeHidden();
+    expect((await mainProbe()).cancels).toEqual(['runtime-run-2']);
+    await expect(win.getByRole('region', { name: 'Live Voice Mode' })).toBeVisible();
+    await app.evaluate(() => { (globalThis as any).__voiceMainProbe.nextTranscript = ''; });
+    await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
+    await win.evaluate('window.__voiceProbe.recorder.stop()');
+    await expect(approval).toBeVisible();
     await win.getByRole('button', { name: 'Stop Voice Mode', exact: true }).click();
     await expect(win.getByRole('region', { name: 'Live Voice Mode' })).toBeHidden();
     await expect(approval).toBeHidden();
     await win.waitForFunction('window.__voiceProbe.mic.getAudioTracks().every(track => track.readyState === "ended")');
-    expect((await mainProbe()).cancels).toEqual(['runtime-run-2']);
+    expect((await mainProbe()).cancels).toEqual(['runtime-run-2', 'runtime-run-3']);
   } finally {
     await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
     await app.close();
@@ -260,5 +271,44 @@ test('dictation and Voice Mode open with no assistant keys configured', async ()
     await win.getByRole('button', { name: 'Cancel' }).click();
     await win.getByRole('button', { name: 'Voice Mode', exact: true }).click();
     await expect(win.getByRole('region', { name: 'Live Voice Mode' })).toBeVisible();
+  } finally { await app.close(); }
+});
+
+
+test('dictation releases the microphone as soon as Send is pressed', async () => {
+  const { app, win } = await launch({ withoutKeys: true });
+  try {
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler('voice:transcribe');
+      ipcMain.handle('voice:transcribe', () => new Promise(() => {}));
+    });
+    await win.evaluate(VOICE_MEDIA_FIXTURE);
+    await win.getByRole('button', { name: 'Voice input', exact: true }).click();
+    const send = win.getByRole('dialog', { name: 'Voice input', exact: true }).getByRole('button', { name: 'Send', exact: true });
+    await expect(send).toBeEnabled();
+    await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
+    await send.click();
+    await expect(win.getByRole('dialog', { name: 'Voice input' }).getByText(/Transcribing/)).toBeVisible();
+    await win.waitForFunction('window.__voiceProbe.mic.getTracks().every(track => track.readyState === "ended")');
+  } finally {
+    await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
+    await app.close();
+  }
+});
+
+test('dictation releases permission granted after cancellation', async () => {
+  const { app, win } = await launch({ withoutKeys: true });
+  try {
+    await win.evaluate(() => {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        configurable: true,
+        value: () => new Promise((resolve) => setTimeout(() => resolve({
+          getTracks: () => [{ stop: () => { document.body.dataset.lateMicStopped = 'yes'; } }],
+        }), 1000)),
+      });
+    });
+    await win.getByRole('button', { name: 'Voice input', exact: true }).click();
+    await win.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(win.locator('body')).toHaveAttribute('data-late-mic-stopped', 'yes');
   } finally { await app.close(); }
 });

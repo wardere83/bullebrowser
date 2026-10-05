@@ -11,13 +11,14 @@ const userData = await mkdtemp(join(tmpdir(), 'bullebrowser-voice-check-'));
 const env = { ...process.env, OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '', NODE_ENV: 'test' };
 delete env.ELECTRON_RUN_AS_NODE;
 const launchOptions = {
+  timeout: 30_000,
   ...(process.argv[3] ? { executablePath: process.argv[3] } : {}),
   args: [...(process.argv[3] ? [] : ['.']), `--user-data-dir=${userData}`],
   env,
 };
 let app = await electron.launch(launchOptions);
 try {
-  let win = await app.firstWindow();
+  let win = await app.firstWindow({ timeout: 20_000 });
   await win.waitForLoadState('domcontentloaded');
   const text = await win.evaluate(async (bytes) => {
     const ctx = new AudioContext();
@@ -39,7 +40,7 @@ try {
   console.log('Keyless transcript:', text.text);
   await app.close();
   app = await electron.launch(launchOptions);
-  win = await app.firstWindow();
+  win = await app.firstWindow({ timeout: 20_000 });
   await win.waitForLoadState('domcontentloaded');
   await app.evaluate(() => {
     globalThis.fetch = () => { throw new Error('Network blocked for offline check'); };

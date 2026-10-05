@@ -15,7 +15,7 @@
     "package:linux": "electron-vite build && electron-builder --linux --config electron-builder.yml",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run --exclude 'e2e/**' --passWithNoTests",
+    "test": "vitest run --exclude 'e2e/**' --passWithNoTests && node --test scripts/native-voice-check.cjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
