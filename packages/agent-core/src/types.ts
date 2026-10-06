@@ -238,14 +238,35 @@ export interface ApiTool {
   destructive?: boolean;
 }
 
+/**
+ * One piece of reference material for a run: an organization's approved
+ * profile, a passage from its documents, a funding document. `label` names the
+ * source and may use letters, digits and `_ : . / @ -` (anything else becomes
+ * `_`), e.g. "profile" or "knowledge:annual-report.pdf:p12".
+ */
+export interface ReferenceContextItem {
+  label: string;
+  text: string;
+}
+
 export interface AgentInput {
   apiKey?: string;
   model: ModelId;
   systemPrompt: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   userMessage: string;
-  /** User's own words before host-added attachments; used for product questions. */
+  /**
+   * User's own words before host-added attachments; used for product questions
+   * and for the commands the keyless assistant understands.
+   */
   userRequest?: string;
+  // Reference material the host supplies for this run. It comes from uploaded
+  // documents, so each item is sealed as untrusted data and travels with the
+  // user's message, never in the system prompt; keep it out of `userMessage`
+  // and `userRequest`. Items are sent whole, so the host decides how much one
+  // run should carry. Additive: an absent or empty list runs exactly as
+  // before. The keyless assistant does not read it.
+  referenceContext?: ReferenceContextItem[];
   context: ToolContext;
   onStep: AgentStepHandler;
   // Extra tools offered to the model alongside the built-in browser tools —

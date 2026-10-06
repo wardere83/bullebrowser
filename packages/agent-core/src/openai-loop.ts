@@ -37,10 +37,20 @@ export interface OpenAiMessage {
 }
 
 export interface OpenAiResponse {
+  /** The exact model that answered: a dated snapshot of the one requested. */
+  model?: string;
   choices: Array<{
     finish_reason: string;
-    message: { content: string | null; tool_calls?: OpenAiToolCall[] };
+    // `refusal` takes the place of `content` when the model declines a request
+    // that asked for a fixed output shape.
+    message: { content: string | null; refusal?: string | null; tool_calls?: OpenAiToolCall[] };
   }>;
+  /** `prompt_tokens` includes the cached part reported in the details. */
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
 }
 
 // Mirrors the SDK's error shape closely enough that describeAgentError in the
@@ -59,8 +69,10 @@ export async function createOpenAiCompletion(
   apiKey: string,
   body: Record<string, unknown>,
   signal: AbortSignal,
+  // Another address for the same endpoint: a gateway, or a test server.
+  url: string = OPENAI_URL,
 ): Promise<OpenAiResponse> {
-  const response = await fetch(OPENAI_URL, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
