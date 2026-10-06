@@ -4,6 +4,7 @@
 
 import type { ModelId, ProviderId } from '@bullebrowser/agent-core';
 import type { AgentStepEvent } from './agent-events.js';
+import type { FundingBridge } from './funding.js';
 
 export const IPC = {
   // Tabs
@@ -66,6 +67,11 @@ export const IPC = {
   UPDATE_INSTALL: 'update:install',
   // UI events from main → renderer
   UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
+  // Funding platform. One typed call channel instead of one channel per method:
+  // the method table in shared/funding.ts is the allowlist, and main checks the
+  // sender, the active organization and the method's permission in one place.
+  FUNDING_CALL: 'funding:call',
+  FUNDING_EVENT: 'funding:event', // main → renderer
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -311,6 +317,8 @@ export interface BrowserBridge {
   ui: {
     onAskAgent(cb: (prompt: string) => void): () => void;
   };
+  // Organizations, the Knowledge Hub, opportunities, RFP analysis and the guide.
+  funding: FundingBridge;
 }
 
 declare global {
