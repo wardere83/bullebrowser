@@ -1,0 +1,17 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": "abc"
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "serverURI": "https://apply07.grants.gov/grantsws/rest/opportunity/details",
+   "message": "No response received, as the webservice at the backend server at URI 'https://apply07.grants.gov/grantsws/rest/opportunity/details' is not available."
+  }
+ }
+}

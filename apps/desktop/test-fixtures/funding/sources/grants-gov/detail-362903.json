@@ -1,0 +1,138 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 362903
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 362903,
+   "revision": 1,
+   "opportunityNumber": "OFOP0002813",
+   "opportunityTitle": "Prosperity through Partnership:  Catalyzing U.S.-Algerian Collaboration in Innovation, Commerce and English Language",
+   "owningAgencyCode": "DOS-DZA",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 362903,
+    "version": 2,
+    "agencyCode": "DOS-DZA",
+    "agencyName": "U.S. Mission to Algeria",
+    "agencyPhone": "202-890-9795",
+    "agencyAddressDesc": "Algiers_Grants@state.gov",
+    "agencyDetails": {
+     "code": "DZA",
+     "seed": "DOS-DZA",
+     "agencyName": "U.S. Mission to Algeria",
+     "agencyCode": "DOS-DZA",
+     "topAgencyCode": "DOS"
+    },
+    "topAgencyDetails": {
+     "code": "DOS",
+     "seed": "DOS",
+     "agencyName": "Department of State",
+     "agencyCode": "DOS",
+     "topAgencyCode": "DOS"
+    },
+    "agencyContactPhone": "202-890-9795",
+    "agencyContactName": "U.S. Mission to Algeria",
+    "agencyContactDesc": "Algiers_Grants@state.gov",
+    "agencyContactEmail": "Algiers_Grants@state.gov",
+    "agencyContactEmailDesc": "Algiers_Grants@state.gov",
+    "synopsisDesc": "<p>1.&nbsp;&nbsp;Executive Summary</p><p>The U.S. Department of State’s Embassy Algiers is launching a competitive program to catalyze innovation and commerce between the United States and Algeria and advance key U.S. foreign policy priorities. The initiative aims to strengthen commercial ties, expand market access for American companies, and promote American business models and technology, particularly in entrepreneurship and artificial intelligence as well as English language development. Target audiences include Algerian students and young leaders (ages 18-35), entrepreneurs, and mid-career professionals, with a focus on building partnerships between U.S. and Algerian institutions and improving knowledge relevant to U.S. business and technology standards. </p><p>The Embassy may play an active role in guiding and monitoring the program, while recipients will manage implementation and outreach. Competitive proposals should support a priority program area (see below) and should include a connection with American expert/s, organization/s, institution/s or private sector companies that will promote increased cooperation between the people of the United States and Algeria even after the program has finished. </p><p>A.&nbsp;&nbsp;ELIGIBILITY</p><p>1.&nbsp;&nbsp;Eligible Applicants</p><p>The Public Affairs Section encourages applications from U.S. and Algeria and any other</p><p>country for projects that would have any significant bonds with the priority programs</p><p>Areas and will be implemented in Algeria.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Registered not-for-profit organizations, including think tanks and civil society/nongovernmental organizations with programming experience. Public and private educational institutions</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Individuals: Specialized professional individuals</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Public International Organizations and Governmental institutions</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Non-profit or governmental educational institutions</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Governmental institutions</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Social enterprises: public or private.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Museums</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Press and media: Including public and private traditional media outlets.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entities specialized in the project fields.</p><p>For-profit entities, even those that may fall into the categories listed above, are not eligible to apply for this NOFO.&nbsp;Organizations may sub-contract with other entities, but only one, non-profit, non-governmental entity can be the prime recipient of the award. When sub-contracting with other entities, the responsibilities of each entity must be clearly defined in the proposal. For more information on the difference between sub-contract and sub-recipient, please refer to 2 CFR 200.331. </p><p>2.&nbsp;&nbsp;Cost Sharing or Matching</p><p>Cost sharing or matching is encouraged, but not required for this funding opportunity. &nbsp;&nbsp;&nbsp;</p><p>3.&nbsp;&nbsp;Other Eligibility Requirements</p><p>All organizations must have a Unique Entity Identifier (UEI) issued via SAM.gov as well as a valid registration in SAM.gov. Please see Section E.3 for more information. Individuals are not required to have a UEI or be registered in SAM.gov.&nbsp;</p><p>Optional: Applicants are only allowed to submit one proposal per organization. If more than one proposal is submitted from an organization, all proposals from that institution will be considered ineligible for funding under this funding opportunity.</p><p>4.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This opportunity will not support: </p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Projects relating to partisan political activity;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Charitable or development activities; including direct social services such as medical, psychological, and/or humanitarian support</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Construction projects;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Projects that support specific religious activities;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fund-raising campaigns;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Lobbying for specific legislation or programs</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scientific research or surveys;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Commercial projects;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Projects intended primarily for the growth or institutional development of the organization; </p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Projects that duplicate existing projects; or</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Illegal activities</p><p>B.&nbsp;&nbsp;&nbsp;PROGRAM DESCRIPTION</p><p>1.&nbsp;&nbsp;Project Background, Goals, and Objectives</p><p>The Public Diplomacy Section invites proposals for programs that support one of the following U.S. Embassy priority program areas listed below. &nbsp;</p><p>Examples of Public Diplomacy Small Grants Program programs include, but are not limited to:</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Academic and professional lectures, seminars and speaker programs;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Artistic and cultural workshops, joint performances and exhibitions;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Professional and academic exchanges and programs;</p><p>Priority Program Areas/Goals: Applicants may submit a proposal to address the program goals below. Proposals should focus on one or more of the priority outcomes, but applicants may also recommend their own objective.&nbsp;</p><p>Goal 1.&nbsp;Advance Commercial Diplomacy </p><p>The U.S. Embassy invites proposals that strengthen commercial ties between the United States and Algeria. This is a priority for the U.S. Embassy because it expands market access for American companies, supports workforce development, and fosters a business ecosystem that is conducive to American engagement. </p><p>Applicants should consider designing programs that promote American business models, create new talent pipelines, stimulate entrepreneurship. and include mechanisms for measuring commercial outcomes.</p><p>Project Audience(s): All programs should focus on audiences in Algeria. Proposals should describe both the primary and secondary audiences for the program. Primary audiences are those who will participate directly in the program, and secondary audiences include those reached indirectly – for example, via social media or traditional media. Specific audiences who are considered a priority for awards funded under this Annual Program Statement include:</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Students and young leaders between the ages of 18-35;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entrepreneurs and small business owners; </p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Rising and mid-career industry and creative professionals. </p><p>Priority Outcomes(s): Applicants may focus on one or more of the outcomes listed below. Applicants are encouraged to propose additional objectives and innovative activities that address the priority program areas.&nbsp;</p><p>Strengthened Partnerships between Algerian and American universities, research institutions, creative hubs, and business incubators. </p><p>Increased Pipelines for Algerian students and young leaders to work for, engage with, and promote American companies. </p><p>Improved Ability among target audiences in English language, American business standards, and American approaches to commercialization and entrepreneurship,</p><p>Increased Adoption of American business models and operational standards within Algeria’s emerging industries, including in Algeria’s sports and entertainment industries.</p><p>&nbsp;</p><p>Goal 2.&nbsp;Promote English Language to Strengthen Economic, Security, and Cultural Ties</p><p>&nbsp;</p><p>The U.S. Embassy invites proposals that expand access to high-quality English language learning and promote English as a tool for academic, professional, and cross-cultural advancement in Algeria. This is a priority for the U.S. Embassy because English proficiency opens doors to global education, workforce readiness and employability, and supports private sector growth and entrepreneurship.&nbsp;Strong English capability help Algerians participate more fully in international business and innovation ecosystems, and enhance collaboration between Algerian and American companies, people and institutions. </p><p>&nbsp;</p><p>Applicants should consider designing programs that enhance English language teaching and learning, develop innovative resources or curricula, and create opportunities for Algerians to use English in real-world contexts. Proposals may include teacher training, English language camps, conversation clubs, digital learning platforms, or partnerships with U.S. educational institutions.</p><p>&nbsp;</p><p>Project Audience(s): All programs should focus on audiences in Algeria. Proposals should describe both the primary and secondary audiences for the program. Primary audiences are those who will participate directly in the program, and secondary audiences include those reached indirectly – for example, via social media or traditional media. Specific audiences who are considered a priority for awards funded under this Annual Program Statement include:</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;English language teachers and educators;</p><p>Priority Outcome(s): Applicants may focus on one or more of the outcomes listed below. Applicants are encouraged to propose additional objectives and innovative activities that address the priority program areas.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Increased English language proficiency among Algerian youth, educators, and professionals.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Strengthened capacity of Algerian English language teachers through training and professional development.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Expanded access to American educational and cultural resources in English.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Enhanced opportunities for Algerians to participate in academic, professional, and cultural exchanges with the United States.</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Greater use of English in Algerian academic, business, and civic life.</p><p> Goal 3.&nbsp;Promote American Innovation in Algeria’s Technological Transformation</p><p>The U.S. Embassy invites proposals that position the United States as Algeria’s preferred partner in artificial intelligence (AI) and emerging technologies. This is a priority for the U.S. Embassy because it promotes American technology frameworks, accelerates the adoption of U.S. generative AI solutions, and cultivates ties with American nstitutions and research ecosystems that promote American models of academic excellence and innovation.</p><p>Applicants should consider designing programs that promote the adoption of American technology, train target audiences in its utilization, and strengthen technological partnerships with Algerian universities or business incubators. </p><p>Project Audience(s): Who are the primary beneficiaries?&nbsp;Include possible audience characteristics, such as demographics, professional background or geographic location. Aim to specify at least three. </p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Students and young leaders between the ages of 18-35;</p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Entrepreneurs and small business owners; </p><p>·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Rising and mid-career industry professionals and engineers. </p><p>Priority Outcomes(s): Applicants may focus on one or more of the outcomes listed below. Applicants are encouraged to propose additional objectives and innovative activities that address the priority program areas.</p><p>Increased receptivity toward collaboration with American companies and institutions in the field of AI and emerging technologies.</p><p>Improved AI Literacy among target audiences, including youth and entrepreneurs, learned on American generative AI. </p><p>Strengthened Partnerships between Algerian and U.S. universities, research institutions, and innovation hubs.</p><p>Increased Adoption of U.S. AI-enabled products and American AI standards within Algerian institutions and businesses. </p><p>2.&nbsp;&nbsp;Substantial Involvement </p><p>If this award will be a cooperative agreement or an FAA with substantial involvement, you must include a description of the substantial involvement in this section, including a summary of the expected roles and responsibilities of the U.S. Embassy and Recipient. </p><p>●&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;U.S. Embassy Roles and Responsibilities</p><p>o&nbsp;&nbsp;The U.S. Embassy will provide substantial involvement throughout the award period if the grantee is awarded a cooperative agreement. Embassy staff will approve selection of program participants, review proposed publications and materials, and offer guidance on program content to ensure alignment with U.S. policy objectives. The Embassy will also facilitate connections with American institutions, provide input on the development of training modules, and be involved in monitoring to ensure intended outcomes are achieved.</p><p>●&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Recipient Roles and Responsibilities</p><p>o&nbsp;&nbsp;The Recipient will be responsible for the day-to-day management and implementation of the program, including logistics, outreach, and coordination with local partners. The Recipient will design and deliver training activities, develop program materials, and manage participant engagement. The Recipient will also be responsible for collecting and reporting data on program outcomes, maintaining regular communication with the U.S. Embassy, and incorporating Embassy feedback into program activities and deliverables.</p>",
+    "responseDate": "Aug 08, 2026 12:00:00 AM EDT",
+    "responseDateDesc": "",
+    "fundingDescLinkUrl": "https://mygrants.servicenowservices.com/mygrants?id=mygrants_form&table=x_g_usd4_o_grant_funding_opportunity&sys_id=465d1dd447cd075067358810326d4326&view=Default",
+    "fundingDescLinkDesc": "Link to Opportunity in MyGrants",
+    "postingDate": "Jun 22, 2026 12:00:00 AM EDT",
+    "costSharing": true,
+    "numberOfAwards": "5",
+    "estimatedFunding": "0",
+    "estimatedFundingFormatted": "0",
+    "awardCeiling": "100000",
+    "awardCeilingFormatted": "100,000",
+    "awardFloor": "5000",
+    "awardFloorFormatted": "5,000",
+    "applicantEligibilityDesc": "",
+    "sendEmail": "Y",
+    "createTimeStamp": "Jun 22, 2026 08:56:52 AM EDT",
+    "modComments": "Updating APS on Grants.gov to match APS on MyGrants",
+    "createdDate": "Jun 22, 2026 08:50:10 AM EDT",
+    "lastUpdatedDate": "Jun 22, 2026 08:54:03 AM EDT",
+    "applicantTypes": [
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "O",
+      "description": "Other"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "ST",
+      "description": "Science and Technology and other Research and Development"
+     }
+    ],
+    "responseDateStr": "2026-08-08-00-00-00",
+    "postingDateStr": "2026-06-22-00-00-00",
+    "createTimeStampStr": "2026-06-22-08-56-52"
+   },
+   "agencyDetails": {
+    "code": "DZA",
+    "seed": "DOS-DZA",
+    "agencyName": "U.S. Mission to Algeria",
+    "agencyCode": "DOS-DZA",
+    "topAgencyCode": "DOS"
+   },
+   "topAgencyDetails": {
+    "code": "DOS",
+    "seed": "DOS",
+    "agencyName": "Department of State",
+    "agencyCode": "DOS",
+    "topAgencyCode": "DOS"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 434225,
+     "opportunityId": 362903,
+     "cfdaNumber": "19.040",
+     "programTitle": "Public Diplomacy Programs"
+    }
+   ],
+   "originalDueDate": "Aug 08, 2026 12:00:00 AM EDT",
+   "originalDueDateDesc": "",
+   "synopsisModifiedFields": [
+    "revision",
+    "version",
+    "agencyAddressDesc",
+    "agencyContactEmail",
+    "agencyContactEmailDesc",
+    "synopsisDesc"
+   ],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "CLOSED"
+  }
+ }
+}

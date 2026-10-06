@@ -168,6 +168,13 @@ export interface ConversationSummary {
 
 export interface ConversationDetail extends ConversationSummary {
   messages: { role: 'user' | 'assistant'; content: string; timestamp: number }[];
+  /**
+   * The organization this chat belongs to. A chat is bound to the organization
+   * that was active when it was first used and is only listed, read or
+   * continued under that organization. Absent on chats from before
+   * organizations existed, which stay visible until they are next used.
+   */
+  organizationId?: string | null;
 }
 
 // A file the user uploaded into the current session. Bytes live under
@@ -199,6 +206,8 @@ export interface ProjectDetail extends ProjectSummary {
   // task run "in" this project.
   instructions: string;
   fileIds: string[];
+  /** The organization the project belongs to; absent on projects from before organizations. */
+  organizationId?: string | null;
 }
 
 // What the user attached to a single run. The renderer sends only references
@@ -219,6 +228,8 @@ export interface AgentRunRequest {
   attachments?: RunAttachment[];
   /** Step budget for this task; defaults to the Settings value. */
   budget?: number;
+  /** The funding document the user has open, so answers can be about it. */
+  focusRfpId?: string;
 }
 
 export interface AppInfo {

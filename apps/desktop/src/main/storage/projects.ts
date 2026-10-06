@@ -34,19 +34,30 @@ class ProjectStore {
       : { ...p, fileIds, fileCount: fileIds.length };
   }
 
-  list(): ProjectSummary[] {
+  // A project carries standing instructions and files, so it stays with the
+  // organization it was made under. With no organization argument every project
+  // is visible (the behaviour before organizations); projects from before
+  // organizations are unbound and visible to all.
+  private visibleTo(project: ProjectDetail, organizationId: string | null | undefined): boolean {
+    if (organizationId === undefined) return true;
+    const owner = project.organizationId ?? null;
+    return owner === null || owner === organizationId;
+  }
+
+  list(organizationId?: string | null): ProjectSummary[] {
     return this.store
       .get('projects')
+      .filter((p) => this.visibleTo(p, organizationId))
       .map((p) => toSummary(this.live(p)))
       .sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
-  get(id: string): ProjectDetail | null {
+  get(id: string, organizationId?: string | null): ProjectDetail | null {
     const found = this.store.get('projects').find((p) => p.id === id);
-    return found ? this.live(found) : null;
+    return found && this.visibleTo(found, organizationId) ? this.live(found) : null;
   }
 
-  create(name: string): ProjectDetail {
+  create(name: string, organizationId?: string | null): ProjectDetail {
     const now = Date.now();
     const project: ProjectDetail = {
       id: randomUUID(),
@@ -56,6 +67,7 @@ class ProjectStore {
       fileCount: 0,
       instructions: '',
       fileIds: [],
+      ...(organizationId ? { organizationId } : {}),
     };
     this.store.set('projects', [project, ...this.store.get('projects')]);
     return project;
@@ -95,6 +107,14 @@ class ProjectStore {
       'projects',
       this.store.get('projects').filter((p) => p.id !== id),
     );
+  }
+
+  /** Removes every project bound to an organization, e.g. when it is deleted. */
+  deleteForOrganization(organizationId: string): number {
+    const all = this.store.get('projects');
+    const kept = all.filter((p) => (p.organizationId ?? null) !== organizationId);
+    if (kept.length !== all.length) this.store.set('projects', kept);
+    return all.length - kept.length;
   }
 }
 

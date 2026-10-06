@@ -1,0 +1,417 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=100&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "1"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "status": [
+                  "31094502"
+                ]
+              }
+            },
+            {
+              "range": {
+                "deadlineDate": {
+                  "gte": "2026-10-06T00:00:00.000+0000"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "identifier",
+        "order": "ASC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 89,
+    "totalResults": 4,
+    "pageNumber": 1,
+    "pageSize": 100,
+    "sort": "[identifier:ASC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "52657951TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMOVE",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Films on the Move",
+        "weight": 0,
+        "content": "Films on the Move",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "CREA-MEDIA-2027-FILMOVE"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-09-30T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2027-01-21T00:00:00.000+0000",
+            "2027-07-15T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Films on the Move"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMOVE"
+          ],
+          "typesOfAction": [
+            "CREA Project Grants"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMOVE"
+          ],
+          "callIdentifier": [
+            "CREA-MEDIA-2027-FILMOVE"
+          ],
+          "callccm2Id": [
+            "52657971"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "52657951TOPICSen"
+          ],
+          "callTitle": [
+            "Films on the Move"
+          ],
+          "frameworkProgramme": [
+            "43251814"
+          ],
+          "startDate": [
+            "2026-09-30T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2027\"],\"budgetTopicActionMap\":{\"115881\":[{\"action\":\"CREA-MEDIA-2027-FILMOVE - CREA-PJG CREA Project Grants\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2027\":\"23500000\"},\"plannedOpeningDate\":\"2026-09-30\",\"deadlineModel\":\"multiple cut-off\",\"deadlineDates\":[\"2027-01-21\",\"2027-07-15\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Objective:</p><p>The Films on the Move action shall encourage and support the wider distribution of recent non-national European films by encouraging sales agents and theatrical distributors in particular to invest in promotion and adequate distribution of non- national European films.</p><p><u>Expected Results:</u></p><ul level=\"0\"><li>Development of pan-European theatrical and/or online distribution strategies for non-national European films.</li><li>Increased investment in theatrical and/or online promotion and distribution of non-national European films in view of expanding audience reach.</li><li>Develop links between the production and distribution sector thus improving the competitive position of non-national European films on a global market</li> </ul><p><u>Description of the activities to be funded under the call for proposals:</u></p><p>The activities to be funded are campaigns for the pan-European theatrical and/or online distribution of eligible European films, coordinated by the sales agent of the film.</p><p>Applications should present adequate strategies to ensure more sustainable and more environmentally-respectful industry and to ensure gender balance, inclusion, diversity and representativeness.</p>"
+          ],
+          "deadlineModel": [
+            "multiple cut-off"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Films on the Move. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMOVE"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "52641807TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/EUBA-EFSA-2026-PLANTS-02",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Database on alternatives to pesticides (emergency authorisations)",
+        "weight": 0,
+        "content": "Database on alternatives to pesticides (emergency authorisations)",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "EUBA-EFSA-2026-PLANTS-02"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-10-06T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-12-08T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Database on alternatives to pesticides (emergency authorisations)"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/EUBA-EFSA-2026-PLANTS-02"
+          ],
+          "typesOfAction": [
+            "EUBA Type of Action"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/EUBA-EFSA-2026-PLANTS-02"
+          ],
+          "callIdentifier": [
+            "EUBA-EFSA-2026-PLANTS-02"
+          ],
+          "callccm2Id": [
+            "52641816"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "52641807TOPICSen"
+          ],
+          "callTitle": [
+            "Database on alternatives to pesticides (emergency authorisations)"
+          ],
+          "frameworkProgramme": [
+            "45532249"
+          ],
+          "startDate": [
+            "2026-10-06T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2027\"],\"budgetTopicActionMap\":{\"115842\":[{\"action\":\"EUBA-EFSA-2026-PLANTS-02 - EUBA EUBA Type of Action\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2027\":\"500000\"},\"plannedOpeningDate\":\"2026-10-06\",\"deadlineModel\":\"single-stage\",\"deadlineDates\":[\"2026-12-08\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Scope:</p><p>Only <a href=\"https://efsa.my.site.com/competentorganisations/s/competentorganisation/CompetentOrganisation__c/00B1v000009LqfIEAS\">competent organisations</a>, based on designations by Member States, are eligible to apply to the call</p>"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Database on alternatives to pesticides (emergency authorisations). Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/EUBA-EFSA-2026-PLANTS-02"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "51572985TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIC-2026-DEFENCE-01",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "EIC defence call",
+        "weight": 0,
+        "content": "EIC defence call",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIC-2026-DEFENCE-01"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-06-30T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-10-28T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "EIC defence call"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIC-2026-DEFENCE-01"
+          ],
+          "typesOfAction": [
+            "HORIZON EIC Equity Only"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIC-2026-DEFENCE-01"
+          ],
+          "callIdentifier": [
+            "HORIZON-EIC-2026-STEP-DEFENCE-01"
+          ],
+          "callccm2Id": [
+            "51572992"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "51572985TOPICSen"
+          ],
+          "callTitle": [
+            "EIC STEP Scale Up Defence"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-06-30T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2026\"],\"budgetTopicActionMap\":{\"115201\":[{\"action\":\"HORIZON-EIC-2026-DEFENCE-01 - HORIZON-EIC-EQU HORIZON EIC Equity Only\",\"expectedGrants\":10,\"minContribution\":10000000,\"maxContribution\":30000000,\"budgetYearMap\":{\"2026\":\"100000000\"},\"plannedOpeningDate\":\"2026-06-30\",\"deadlineModel\":\"single-stage\",\"deadlineDates\":[\"2026-10-28\"]}]}}"
+          ],
+          "descriptionByte": [],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "EIC defence call. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIC-2026-DEFENCE-01"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "52395682TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Women Leadership Category",
+        "weight": 0,
+        "content": "Women Leadership Category",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-09-02T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-12-01T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Women Leadership Category"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+          ],
+          "typesOfAction": [
+            "HORIZON Recognition Prize"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+          ],
+          "callIdentifier": [
+            "HORIZON-EIT-2026-PRIZE-WIP"
+          ],
+          "callccm2Id": [
+            "52395690"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "52395682TOPICSen"
+          ],
+          "callTitle": [
+            "The European Prize for Women Innovators"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-09-02T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2026\"],\"budgetTopicActionMap\":{\"115442\":[{\"action\":\"HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP - HORIZON-RPr HORIZON Recognition Prize\",\"expectedGrants\":3,\"minContribution\":20000,\"maxContribution\":50000,\"budgetYearMap\":{\"2026\":\"100000\"},\"plannedOpeningDate\":\"2026-09-02\",\"deadlineModel\":\"single-stage\",\"deadlineDates\":[\"2026-12-01\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Expected Impact:</p><p>The prize will boost public awareness of the potential, importance and contribution of women to the EU innovation ecosystem and create strong role models, inspiring more women to become innovators themselves.</p>"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Women Leadership Category. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+      }
+    ],
+    "warnings": []
+  }
+}

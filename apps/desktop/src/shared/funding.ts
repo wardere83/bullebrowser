@@ -39,6 +39,8 @@ export type FundingErrorCode =
 export interface PublicError {
   code: FundingErrorCode;
   message: string;
+  /** With CONSENT_REQUIRED: the acknowledgement the user has not given yet. */
+  consent?: keyof OrgConsents;
 }
 
 /** Every funding-platform call returns one of these instead of throwing. */
@@ -876,6 +878,16 @@ export interface DocumentedFact {
   claimId: string | null;
 }
 
+export type AlignmentFinding = 'documented' | 'partial' | 'gap' | 'not_documented' | 'unassessed';
+
+export const ALIGNMENT_FINDING_LABELS: Record<AlignmentFinding, string> = {
+  documented: 'Documented',
+  partial: 'Partly documented',
+  gap: 'Gap',
+  not_documented: 'Not in your documents',
+  unassessed: 'Not assessed',
+};
+
 export interface AlignmentItem {
   id: string;
   /** What is being compared, e.g. "Eligibility: nonprofit status". */
@@ -886,8 +898,10 @@ export interface AlignmentItem {
    * partial     — the documents show part of it.
    * gap         — the documents show it is not met.
    * not_documented — nothing in the approved profile or documents speaks to it.
+   * unassessed  — no judgement was made (no assistant is connected); passages
+   *               that may relate are listed for the user to read.
    */
-  finding: 'documented' | 'partial' | 'gap' | 'not_documented';
+  finding: AlignmentFinding;
   /** What the funder asks for, cited to the funding document. */
   requirement: RfpItem;
   /** What the organization's own documents say, cited to them. */

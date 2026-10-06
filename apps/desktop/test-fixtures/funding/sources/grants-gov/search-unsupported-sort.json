@@ -1,0 +1,114 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/search2",
+  "body": {
+   "keyword": "community health",
+   "oppStatuses": "posted",
+   "rows": 3,
+   "startRecordNum": 0,
+   "sortBy": "oppTitle|asc"
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "searchParams": {
+    "resultType": "json",
+    "searchOnly": false,
+    "oppNum": "",
+    "cfda": "",
+    "sortBy": "oppTitle|asc",
+    "oppStatuses": "posted",
+    "startRecordNum": 0,
+    "eligibilities": "",
+    "fundingInstruments": "",
+    "fundingCategories": "",
+    "agencies": "",
+    "rows": 3,
+    "keyword": "community health",
+    "keywordEncoded": true
+   },
+   "hitCount": 0,
+   "startRecord": 0,
+   "oppHits": [],
+   "oppStatusOptions": [
+    {
+     "label": "posted",
+     "value": "posted",
+     "count": 528
+    },
+    {
+     "label": "closed",
+     "value": "closed",
+     "count": 6595
+    },
+    {
+     "label": "archived",
+     "value": "archived",
+     "count": 50001
+    },
+    {
+     "label": "forecasted",
+     "value": "forecasted",
+     "count": 405
+    }
+   ],
+   "dateRangeOptions": [
+    {
+     "label": "Posted Date - Last 3 Days",
+     "value": "3",
+     "count": 2
+    },
+    {
+     "label": "Posted Date - Last 1 Week",
+     "value": "7",
+     "count": 20
+    },
+    {
+     "label": "Posted Date - Last 2 Weeks",
+     "value": "14",
+     "count": 33
+    },
+    {
+     "label": "Posted Date - Last 3 Weeks",
+     "value": "21",
+     "count": 48
+    },
+    {
+     "label": "Posted Date - Last 4 Weeks",
+     "value": "28",
+     "count": 55
+    },
+    {
+     "label": "Posted Date - Last 5 Weeks",
+     "value": "35",
+     "count": 67
+    },
+    {
+     "label": "Posted Date - Last 6 Weeks",
+     "value": "42",
+     "count": 112
+    },
+    {
+     "label": "Posted Date - Last 7 Weeks",
+     "value": "49",
+     "count": 123
+    },
+    {
+     "label": "Posted Date - Last 8 Weeks",
+     "value": "56",
+     "count": 135
+    }
+   ],
+   "suggestion": "",
+   "eligibilities": [],
+   "fundingCategories": [],
+   "fundingInstruments": [],
+   "agencies": [],
+   "accessKey": "",
+   "errorMsgs": []
+  }
+ }
+}

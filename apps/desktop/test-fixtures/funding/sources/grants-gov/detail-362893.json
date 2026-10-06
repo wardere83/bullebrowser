@@ -1,0 +1,126 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 362893
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 362893,
+   "revision": 0,
+   "opportunityNumber": "F26AS00104",
+   "opportunityTitle": "F26AS00104 State ANS Management Plan 2026",
+   "owningAgencyCode": "DOI-FWS",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 362893,
+    "version": 1,
+    "agencyCode": "DOI-FWS",
+    "agencyName": "Fish and Wildlife Service",
+    "agencyDetails": {
+     "code": "FWS",
+     "seed": "DOI-FWS",
+     "agencyName": "Fish and Wildlife Service",
+     "agencyCode": "DOI-FWS",
+     "topAgencyCode": "DOI"
+    },
+    "topAgencyDetails": {
+     "code": "DOI",
+     "seed": "DOI",
+     "agencyName": "Department of the Interior",
+     "agencyCode": "DOI",
+     "topAgencyCode": "DOI"
+    },
+    "synopsisDesc": "This Notice of Funding Opportunity requests pre-proposals, and then later full applications, for the implementation of State and Interstate Aquatic Nuisance Species Management Plans (SIANSMP) that have been approved by the Aquatic Nuisance Species Task Force (ANSTF) as per Section 4724 (b)(3)(a) of the Nonindigenous Aquatic Nuisance Prevention and Control Act of 1990 as amended (16 U.S.C. 4701-4741). These plans identify activities needed to prevent introductions and spread, and eliminate or reduce the risks associated with, aquatic nuisance species, as part of the broader objective of moving towards a nationally coordinated aquatic invasive species program.The grant process includes a pre-proposal review that occurs outside GrantSolutions. After receiving approval of pre-proposals, eligible applicants can complete the full application process within GrantSolutions.  The grant program includes a 25% cost-share (of total project costs) and a 5% limit on administrative costs.",
+    "responseDate": "Dec 16, 2026 12:00:00 AM EST",
+    "responseDateDesc": "Pre-proposals are due on July 29, 2026, and are submitted outside GrantSolutions.Important note: The Closing Date for this funding opportunity is December 16, 2026. However, that is the date that the funding opportunity closes and applications can no longer be accepted. To give applicants the time for the &quot;back and forth&quot; necessary to fix issues and complete their applications, the actual due date for Application Submission in GrantSolutions is October 14, 2026.",
+    "postingDate": "Jun 19, 2026 12:00:00 AM EDT",
+    "archiveDate": "Dec 31, 2026 12:00:00 AM EST",
+    "costSharing": true,
+    "numberOfAwards": "47",
+    "estimatedFunding": "4084000",
+    "estimatedFundingFormatted": "4,084,000",
+    "awardCeiling": "150000",
+    "awardCeilingFormatted": "150,000",
+    "awardFloor": "5000",
+    "awardFloorFormatted": "5,000",
+    "applicantEligibilityDesc": "Eligible applicants are ONLY the States, Territories, or Indian tribes involved together with States and/or Territories in an interstate organization, that have an approved ANS Management Plan.  For eligibility questions, please contact the appropriate Service Regional AIS Coordinator. Unless the hosting entity of one of the 47 approved plans has an unforeseen change, the currently eligible applicants are:Approved State or Interstate PlanState Entity That Applies for FundingAlabamaAL Dept. of Conservation and Natural ResourcesAlaskaAK Department of Fish and GameArizonaAZ Game and Fish DepartmentArkansasAR Game and Fish CommissionCaliforniaCA Department of Fish and GameColoradoCO Parks and WildlifeConnecticutCT State Department of Environmental ProtectionDelawareDE Dept. of Natural Resources and Environmental ControlGeorgiaGA Department of Natural ResourcesHawaiiHI Department of Land and Natural ResourcesIdahoID Department of AgricultureIllinoisIL Department of Natural ResourcesIndianaIN Department of Natural ResourcesIowaIA Department of Natural ResourcesKansasKS Department of Wildlife &amp; ParksKentuckyKY Department of Fish and Wildlife ResourcesLake Champlain BasinVT Department of Environmental ConservationLake Tahoe RegionNV Department of WildlifeLouisianaLA Department of Wildlife and FisheriesMaineME Department of Environmental ProtectionMarylandMD Department of Natural ResourcesMassachusettsMA Dept. of Conservation and Recreation, Lakes and Ponds ProgramMichiganMI Department of Environmental QualityMinnesotaMN Department of Natural ResourcesMississippiMS Department of Environmental QualityMissouriMO Department of ConservationMontanaMT Fish, Wildlife, and ParksNebraskaNE Game and Parks CommissionNew JerseyNJ Department of Environmental ProtectionNevadaNV Department of WildlifeNew MexicoNM Department of Game and FishNew YorkNY DEC via The State University of New YorkOhioOH Department of Natural ResourcesOklahomaOK Department of Wildlife ConservationOregonOR Center for Lakes and ReservoirsPennsylvaniaPA Fish and Boat CommissionRhode IslandRI Department of Environmental ManagementSouth CarolinaSC Department of Natural ResourcesSouth DakotaSD Department of Game, Fish, and ParksSt. Croix National Scenic RiverwayMN Department of Natural Resources, or WI Department of Natural ResourcesTennesseeTN Wildlife Resources AgencyTexasTX Parks and Wildlife DepartmentUtahUT Department of Natural ResourcesVirginiaVA Department of Conservation and RecreationWashingtonWA Department of Fish and WildlifeWisconsinWI Department of Natural ResourcesWyomingWY Game and Fish Department",
+    "createTimeStamp": "Jun 19, 2026 12:30:41 PM EDT",
+    "createdDate": "Jun 19, 2026 12:29:52 PM EDT",
+    "lastUpdatedDate": "Jun 19, 2026 12:29:52 PM EDT",
+    "applicantTypes": [
+     {
+      "id": "00",
+      "description": "State governments"
+     },
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "ENV",
+      "description": "Environment"
+     }
+    ],
+    "responseDateStr": "2026-12-16-00-00-00",
+    "postingDateStr": "2026-06-19-00-00-00",
+    "archiveDateStr": "2026-12-31-00-00-00",
+    "createTimeStampStr": "2026-06-19-12-30-41"
+   },
+   "agencyDetails": {
+    "code": "FWS",
+    "seed": "DOI-FWS",
+    "agencyName": "Fish and Wildlife Service",
+    "agencyCode": "DOI-FWS",
+    "topAgencyCode": "DOI"
+   },
+   "topAgencyDetails": {
+    "code": "DOI",
+    "seed": "DOI",
+    "agencyName": "Department of the Interior",
+    "agencyCode": "DOI",
+    "topAgencyCode": "DOI"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 434214,
+     "opportunityId": 362893,
+     "cfdaNumber": "15.608",
+     "programTitle": "Fish and Aquatic Conservation - Aquatic Invasive Species"
+    }
+   ],
+   "originalDueDate": "Dec 16, 2026 12:00:00 AM EST",
+   "originalDueDateDesc": "Pre-proposals are due on July 29, 2026, and are submitted outside GrantSolutions.Important note: The Closing Date for this funding opportunity is December 16, 2026. However, that is the date that the funding opportunity closes and applications can no longer be accepted. To give applicants the time for the &quot;back and forth&quot; necessary to fix issues and complete their applications, the actual due date for Application Submission in GrantSolutions is October 14, 2026.",
+   "synopsisModifiedFields": [],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}
