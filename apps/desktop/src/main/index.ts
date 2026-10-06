@@ -2,7 +2,7 @@ import { app, BrowserWindow, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { product } from '@bullebrowser/brand-tokens';
-import { createBrowserWindow } from './window.js';
+import { createBrowserWindow, runsHidden } from './window.js';
 import { registerIpc } from './ipc-handlers.js';
 import { tabManager } from './tabs/manager.js';
 import { setupAutoUpdate } from './updater.js';
@@ -23,6 +23,16 @@ if (!gotLock) {
 
 app.setName(product.name);
 
+// Hidden automated runs stay out of the Dock and are never activated, so they
+// cannot pull focus away from whatever the person at the machine is doing. A
+// fully transparent window counts as occluded, which would throttle painting
+// and timers to a crawl; keep it running at the speed of a visible session.
+if (runsHidden()) {
+  app.dock?.hide();
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+}
+
 // Present as the Chrome this is built on. Electron's default user agent adds
 // "Electron/x" and the app name, and sites that gate features on the browser —
 // Microsoft 365 (Word for the web can drop to view-only), Google sign-in —
@@ -33,7 +43,10 @@ app.userAgentFallback = app.userAgentFallback
 app.setAppUserModelId(product.appId);
 
 // Disable Chromium's "from <product>" affordance in window titles by force.
-app.commandLine.appendSwitch('disable-features', 'ChromeLabs');
+app.commandLine.appendSwitch(
+  'disable-features',
+  runsHidden() ? 'ChromeLabs,MacWebContentsOcclusion' : 'ChromeLabs',
+);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

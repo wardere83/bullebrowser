@@ -6,6 +6,17 @@ export interface WindowOptions {
   preloadPath: string;
 }
 
+// Automated checks only: run with no visible window and without taking the
+// desktop's focus, so a suite can run while someone is using the machine. The
+// window is still composited (fully transparent, click-through, never key and
+// never in the Dock) rather than left unshown, because a window that is never
+// shown stops painting, and screenshots and visibility-dependent timers would
+// then no longer match a real session. Ignored in a packaged build, so an
+// installed app can never be started invisibly.
+export function runsHidden(): boolean {
+  return !app.isPackaged && process.env.BULLEBROWSER_HIDDEN === '1';
+}
+
 export function createBrowserWindow(opts: WindowOptions): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
@@ -40,7 +51,15 @@ export function createBrowserWindow(opts: WindowOptions): BrowserWindow {
     },
   });
 
-  win.once('ready-to-show', () => win.show());
+  if (runsHidden()) {
+    win.setOpacity(0);
+    win.setHasShadow(false);
+    win.setIgnoreMouseEvents(true);
+    win.setFocusable(false);
+    win.once('ready-to-show', () => win.showInactive());
+  } else {
+    win.once('ready-to-show', () => win.show());
+  }
   win.on('page-title-updated', (e) => e.preventDefault()); // keep our title
 
   return win;
