@@ -179,7 +179,10 @@ function readRow(record: unknown): Row {
   if (!isRecord(record)) throw unavailable(UNEXPECTED_FORM);
   const row = {} as Row;
   for (const column of COLUMNS) {
-    const value = record[column];
+    // CKAN may type PortalID as numeric after refreshing the CSV datastore.
+    // Normalize only safe integer ids; other fields retain strict text validation.
+    const raw = record[column];
+    const value = column === 'PortalID' && typeof raw === 'number' && Number.isSafeInteger(raw) ? String(raw) : raw;
     // The source writes an empty field as null. A missing one is a renamed column.
     if (value !== null && typeof value !== 'string') throw unavailable(UNEXPECTED_FORM);
     row[column] = typeof value === 'string' ? value.slice(0, MAX_FIELD_LENGTH).trim() : '';

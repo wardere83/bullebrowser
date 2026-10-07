@@ -133,6 +133,18 @@ describe('California Grants Portal source', () => {
 });
 
 describe('California Grants Portal search', () => {
+  it('accepts CKAN numeric portal ids without changing their official identity or facts', async () => {
+    const numeric = changed(active, (result) => {
+      for (const record of result.records) record.PortalID = Number(record.PortalID);
+    });
+    const before = await find([active]);
+    expect(await find([numeric])).toEqual(before);
+  });
+
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, true, {}])('rejects an invalid numeric portal id %j', async (id) => {
+    await expect(find([withField('191046', 'PortalID', id)])).rejects.toMatchObject({ code: 'SOURCE_UNAVAILABLE' });
+  });
+
   it('asks only for active listings by default, and sends nothing else about the search', async () => {
     const source = replay([active, activeAndForecasted, closed]);
     const found = await caGrantsPortalAdapter.search(
