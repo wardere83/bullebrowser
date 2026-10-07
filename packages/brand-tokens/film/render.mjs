@@ -21,7 +21,10 @@ const { chromium } = require('playwright');
 
 const FPS = 30;
 const POSTER_AT = 15.6;
-const OUT_DIRS = [resolve(repo, 'apps/web/public/media')];
+const OUT_DIRS = [
+  resolve(repo, 'apps/web/public/media'),
+  resolve(repo, 'apps/desktop/src/renderer/assets'),
+];
 const args = process.argv.slice(2);
 const previewIdx = args.indexOf('--preview');
 

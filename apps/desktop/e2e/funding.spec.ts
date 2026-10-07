@@ -25,7 +25,7 @@ async function open(win: Page, name: string) {
     .click();
 }
 
-test('blank tabs leave the browsing area clear and funding tools open only on request', async () => {
+test('blank tabs show the funding video intro and webpages keep the browsing area', async () => {
   const server = createServer((_request, response) => {
     response.setHeader('Content-Type', 'text/html');
     response.end('<!doctype html><title>Browsing area check</title><h1>This is the browsed page</h1>');
@@ -38,16 +38,36 @@ test('blank tabs leave the browsing area clear and funding tools open only on re
   try {
     await expect(panel).toBeVisible();
     await expect(workspace).toBeHidden();
+    const intro = win.getByRole('region', { name: 'BulleBrowser funding introduction' });
+    await expect(intro).toBeVisible();
+    await expect(intro).toContainText('businesses and CBOs');
+    await win.emulateMedia({ reducedMotion: 'no-preference' });
+    const film = intro.locator('video');
+    await expect.poll(() => film.evaluate((element: HTMLVideoElement) => ({
+      loaded: element.readyState >= 2,
+      width: element.videoWidth,
+      muted: element.muted,
+      playing: !element.paused,
+    }))).toEqual({ loaded: true, width: 1920, muted: true, playing: true });
+    await intro.getByRole('button', { name: 'Pause intro video', exact: true }).click();
+    await expect.poll(() => film.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true);
+    await intro.getByRole('button', { name: 'Play intro video', exact: true }).click();
+    await expect.poll(() => film.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false);
+    await win.emulateMedia({ reducedMotion: 'reduce' });
+    await expect.poll(() => film.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true);
     await expect(panel.locator('header')).not.toContainText('BulleBrowser Agentic AI');
     await expect(panel.getByRole('button', { name: 'History', exact: true })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'New chat', exact: true })).toBeVisible();
     await win.getByRole('button', { name: 'Organization Knowledge Hub', exact: true }).click();
     await expect(workspace).toBeVisible();
+    await expect(intro).toHaveCount(0);
     await expect(win.getByRole('button', { name: 'Dashboard', exact: true })).toHaveCount(0);
     await win.getByRole('button', { name: 'Back to browsing', exact: true }).click();
     await expect(workspace).toBeHidden();
+    await expect(intro).toBeVisible();
     await win.evaluate(async () => { await window.bullebrowser.tabs.create(); });
     await expect(workspace).toBeHidden();
+    await expect(intro).toBeVisible();
     await win.evaluate(async (url) => { await window.bullebrowser.tabs.create(url); }, url);
     await expect.poll(() => app.evaluate(async ({ BrowserWindow }, url) => {
       const page = BrowserWindow.getAllWindows()[0]?.contentView.children.find((view) =>
@@ -61,6 +81,7 @@ test('blank tabs leave the browsing area clear and funding tools open only on re
       };
     }, url)).toMatchObject({ title: 'Browsing area check', visible: true, fillsPageSlot: true });
     await expect(workspace).toBeHidden();
+    await expect(intro).toHaveCount(0);
     await win.screenshot({ path: '/tmp/bulle-browser-layout.png' });
   } finally {
     await app.close();

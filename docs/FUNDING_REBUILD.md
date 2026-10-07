@@ -9,7 +9,7 @@ BulleBrowser now centers funding strategies for businesses and CBOs across the w
 
 ## Delivered workflows
 
-The app opens with a clear browsing area. It has no dashboard or title above the chat controls. Organization documents and funding tools open only through the Knowledge Hub button or a selected assistant action; Back to browsing clears that view.
+Blank tabs show the previous wordmark-and-video introduction, updated for the funding strategy. The muted film can be paused and respects reduced motion. Navigating opens the webpage in the browsing area; there is no dashboard or title above the chat controls. Organization documents and funding tools open only through the Knowledge Hub button or a selected assistant action; Back to browsing returns to the intro.
 
 - Official-source discovery with geographic funding levels, recipient-location filters, eligibility, categories, amounts and deadlines; sourced facts, relevance explanations and Active / Expired / Unverified statuses.
 - Organization Knowledge Hub in onboarding and navigation. PDF, DOCX, TXT and Markdown extraction, processing status, extracted-text inspection, document categorization, replacement, retry, deletion and passage search.

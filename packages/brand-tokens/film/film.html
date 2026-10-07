@@ -118,7 +118,7 @@
   .state { display: grid; }
   .state .chip { grid-area: 1 / 1; justify-self: end; }
 
-  /* The four options, as the dashboard lists them. */
+  /* The four funding actions, opened from the assistant when needed. */
   .opt { margin-top: 16px; height: 108px; padding: 0 26px; display: flex; align-items: center; gap: 22px;
     font-size: 29px; font-weight: 600; letter-spacing: -.012em; color: var(--ink); white-space: nowrap; opacity: 0; }
   h3 + .opt { margin-top: 22px; }
@@ -359,7 +359,7 @@ function drawGlobe(t) {
 const OPEN_UNTIL = 2.5; // the opening card starts to lift
 const SCENES = [
   { id: 'hub', from: 3.0, to: 8.8, title: 'Organization Knowledge Hub' },
-  { id: 'ask', from: 8.8, to: 12.6, title: 'Dashboard' },
+  { id: 'ask', from: 8.8, to: 12.6, title: 'Funding workflows' },
   { id: 'find', from: 12.6, to: 17.6, title: 'Opportunities' },
   { id: 'rfp', from: 17.6, to: 22.6, title: 'RFP analysis' },
   { id: 'guide', from: 22.6, to: 27.4, title: 'Proposal guide' },

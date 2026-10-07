@@ -8,7 +8,7 @@ BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.
 
 ## Funding workflows
 
-The assistant offers four actions; funding tools open on request while blank tabs remain clear for browsing:
+Blank tabs show the funding video introduction; navigating opens the webpage in the browsing area. The assistant offers four actions, and funding tools open on request:
 
 - **Find Relevant Grant Opportunities** — filter official listings by jurisdiction, recipient geography, eligibility, category, award amount, deadline and verified status.
 - **Assess Our Funding Alignment** — compare funder requirements with approved organization statements and cited document evidence.

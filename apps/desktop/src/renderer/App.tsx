@@ -6,6 +6,7 @@ import { AiPanel } from './components/AiPanel.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { AboutModal } from './components/AboutModal.js';
+import { Splash } from './components/Splash.js';
 import { Workspace } from './workspace/Workspace.js';
 import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
@@ -41,6 +42,7 @@ export function App() {
   const showWorkspace = Boolean(
     activeTab && activeTab.id === workspaceTabId && isStartPageUrl(activeTab.url),
   );
+  const showIntro = !showWorkspace && (!activeTab || isStartPageUrl(activeTab.url));
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -134,8 +136,8 @@ export function App() {
       <TopBar />
       <TabStrip />
       <div className="flex flex-1 overflow-hidden">
-        {/* The page slot belongs to browsing. Funding tools appear only in a
-            tab explicitly opened for them; ordinary blank tabs stay empty. */}
+        {/* Blank tabs show the video intro. Funding tools open only on request;
+            navigating to a web page gives the slot to its native page view. */}
         <div className="flex min-w-0 flex-1 flex-col bg-surface-light">
           {showWorkspace && (
             <div className="flex shrink-0 justify-end bg-surface-dark px-4 py-2">
@@ -149,6 +151,7 @@ export function App() {
             </div>
           )}
           <div className="min-h-0 flex-1">
+            {showIntro && <Splash />}
             <Workspace visible={showWorkspace} />
           </div>
         </div>
