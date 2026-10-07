@@ -6,7 +6,7 @@
 // One rule shapes this file: nothing that belongs to one organization may stay
 // on screen after another becomes active. Everything held for an organization
 // is cleared in `applyIdentity` the moment the active one changes, the route
-// goes back to the dashboard, and events about any other organization are
+// goes back to the Knowledge Hub, and events about any other organization are
 // dropped before a screen can see them.
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -36,7 +36,7 @@ import { useBrowserStore } from './browser-store.js';
 
 // ─────────────────────────────────── routes ───────────────────────────────────
 
-export type WorkspaceRoute = 'dashboard' | 'opportunities' | 'knowledge' | 'rfp' | 'guide';
+export type WorkspaceRoute = 'knowledge' | 'opportunities' | 'rfp' | 'guide';
 
 export type KnowledgeTab = 'documents' | 'profile' | 'priorities' | 'search';
 export type RfpView = 'analysis' | 'alignment' | 'priorities';
@@ -47,7 +47,6 @@ export type RfpView = 'analysis' | 'alignment' | 'priorities';
  * key to its own entry here and nowhere else.
  */
 export interface WorkspaceParams {
-  dashboard: Record<string, never>;
   opportunities: { view?: 'search' | 'saved' | 'portals'; opportunityId?: string };
   knowledge: { tab?: KnowledgeTab; documentId?: string; field?: ProfileFieldId };
   rfp: { rfpId?: string; view?: RfpView };
@@ -194,7 +193,7 @@ export interface WorkspaceActions {
   switchOrganization(organizationId: string): Promise<void>;
   deleteOrganization(organizationId: string): Promise<void>;
   recordConsent(consent: keyof OrgConsents): Promise<void>;
-  /** Leaves the first-run steps; the dashboard carries the setup status from here. */
+  /** Leaves the first-run steps; the Knowledge Hub carries the setup status from here. */
   finishOnboarding(): void;
   /** Asks main to stop a running job. The job's final state arrives as an event. */
   stopJob(jobId: string): Promise<void>;
@@ -204,7 +203,7 @@ export interface WorkspaceActions {
 export type WorkspaceState = WorkspaceData & WorkspaceActions;
 
 export const INITIAL_WORKSPACE_DATA: WorkspaceData = {
-  route: 'dashboard',
+  route: 'knowledge',
   params: NO_PARAMS,
   visit: 0,
   identity: null,
@@ -231,7 +230,7 @@ let confirmedOrganizationId: string | null | undefined;
 // True while the first-run steps are creating their organization. Main's
 // "identity changed" event can reach the store before the answer to the create
 // call does; the organization that turns up meanwhile is the one being set up,
-// and the steps must carry on rather than give way to the dashboard.
+// and the steps must carry on rather than give way to the Knowledge Hub.
 let creatingForOnboarding = false;
 
 type EventKind = FundingEvent['kind'];
@@ -293,7 +292,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         (state.onboardingOrganizationId !== null && state.onboardingOrganizationId === next)
           ? next
           : null,
-      ...(switched ? { route: 'dashboard', params: NO_PARAMS, visit: state.visit + 1 } : {}),
+      ...(switched ? { route: 'knowledge', params: NO_PARAMS, visit: state.visit + 1 } : {}),
       ...(switched || first
         ? {
             setup: null,
@@ -605,12 +604,10 @@ export function useScreenState<T>(key: string, initial: T): [T, (value: T) => vo
 // ─────────────────────────────── opening the workspace ─────────────────────────
 
 /**
- * Brings the user to a workspace screen from anywhere in the app. The workspace
- * is painted on the start page, so this makes sure a start-page tab is in
- * front (reusing one when there is one) and sets the route. Inside the
- * workspace itself, use `navigate`.
+ * Explicitly opens funding tools in a blank tab. Ordinary blank tabs do not
+ * display them. Inside an already open funding screen, use `navigate`.
  */
-export async function openWorkspace<R extends WorkspaceRoute = 'dashboard'>(
+export async function openWorkspace<R extends WorkspaceRoute = 'knowledge'>(
   route?: R,
   params?: WorkspaceParams[R],
 ): Promise<void> {
@@ -618,13 +615,22 @@ export async function openWorkspace<R extends WorkspaceRoute = 'dashboard'>(
   // Asking for a screen by name is a way of leaving the first-run steps, which
   // can be left at any point once the organization exists.
   if (store.onboardingOrganizationId) store.finishOnboarding();
-  if (route === undefined) store.navigate('dashboard');
+  if (route === undefined) store.navigate('knowledge');
   else store.navigate(route, params);
   try {
-    const plan = planStartPageTab(await window.bullebrowser.tabs.list());
-    if (plan.kind === 'switch') await window.bullebrowser.tabs.switch(plan.tabId);
-    else if (plan.kind === 'create') await window.bullebrowser.tabs.create();
+    const tabs = await window.bullebrowser.tabs.list();
+    const plan = planStartPageTab(tabs);
+    let tabId: string;
+    if (plan.kind === 'switch') {
+      await window.bullebrowser.tabs.switch(plan.tabId);
+      tabId = plan.tabId;
+    } else if (plan.kind === 'create') {
+      tabId = (await window.bullebrowser.tabs.create()).id;
+    } else {
+      tabId = tabs.find((tab) => tab.active)!.id;
+    }
+    useBrowserStore.getState().setWorkspaceTab(tabId);
   } catch {
-    // The route is set; the screen shows as soon as a start-page tab is in front.
+    // Leave browsing untouched if the tab could not be opened.
   }
 }

@@ -10,18 +10,16 @@ import { ICON_NAMES } from './ui/icons.js';
 import { WORKFLOWS, workflowForSkill } from './workflows.js';
 
 describe('the navigation', () => {
-  it('lists the five screens in order, with their exact names', () => {
+  it('lists the four screens in order, with their exact names', () => {
     expect(ROUTES.map((definition) => definition.label)).toEqual([
-      'Dashboard',
-      'Opportunities',
       'Organization Knowledge Hub',
+      'Opportunities',
       'RFP Analysis',
       'Proposal Guide',
     ]);
     expect(ROUTES.map((definition) => definition.route)).toEqual([
-      'dashboard',
-      'opportunities',
       'knowledge',
+      'opportunities',
       'rfp',
       'guide',
     ]);
@@ -37,7 +35,7 @@ describe('the navigation', () => {
 
   it('finds the screen for a route', () => {
     expect(routeDefinition('rfp').label).toBe('RFP Analysis');
-    expect(routeDefinition('dashboard')).toBe(ROUTES[0]);
+    expect(routeDefinition('knowledge')).toBe(ROUTES[0]);
   });
 });
 

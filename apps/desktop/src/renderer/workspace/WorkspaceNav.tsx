@@ -6,7 +6,7 @@ import { Icon, cx } from './ui/index.js';
 import { nav as styles } from './ui/styles.js';
 
 /**
- * The workspace's navigation: the five screens, in a rail beside the content
+ * The workspace's navigation: the four screens, in a rail beside the content
  * or, when the slot is narrow, in one row above it that scrolls sideways. The
  * current screen is marked with aria-current="page" as well as by its look.
  */

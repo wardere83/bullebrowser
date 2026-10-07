@@ -22,6 +22,8 @@ export function App() {
   const setSearchProvider = useBrowserStore((s) => s.setSearchProvider);
   const showSettings = useBrowserStore((s) => s.showSettings);
   const showAbout = useBrowserStore((s) => s.showAbout);
+  const workspaceTabId = useBrowserStore((s) => s.workspaceTabId);
+  const setWorkspaceTab = useBrowserStore((s) => s.setWorkspaceTab);
   const appendStep = useAgentStore((s) => s.appendStep);
   const finishRun = useAgentStore((s) => s.finishRun);
   const setError = useAgentStore((s) => s.setError);
@@ -33,11 +35,12 @@ export function App() {
   // assistant panel's grounding line, which shows on every tab.
   useWorkspaceConnection();
 
-  // The start page shows when there's nothing to browse yet: no tabs at all,
-  // or the active tab is still sitting on the start page. Must agree with
-  // isStartPage() in the tab manager, which hides the page view to match.
+  // Only an explicitly opened funding tab shows tools in the page slot.
+  // Main hides the native page view on about:blank to let those tools show.
   const activeTab = tabs.find((t) => t.active);
-  const showStartPage = tabs.length === 0 || isStartPageUrl(activeTab?.url);
+  const showWorkspace = Boolean(
+    activeTab && activeTab.id === workspaceTabId && isStartPageUrl(activeTab.url),
+  );
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -131,14 +134,23 @@ export function App() {
       <TopBar />
       <TabStrip />
       <div className="flex flex-1 overflow-hidden">
-        {/* The active WebContentsView is laid out by main and covers this
-            area — except on the start page, where main hides the view so the
-            funding workspace below shows through. The workspace stays mounted
-            while a page is in front and is only hidden, so what the user was
-            doing in it is still there when they come back to the tab. min-w-0
-            lets wide workspace content scroll instead of squeezing the panel. */}
-        <div className="min-w-0 flex-1 bg-surface-light">
-          <Workspace visible={showStartPage} />
+        {/* The page slot belongs to browsing. Funding tools appear only in a
+            tab explicitly opened for them; ordinary blank tabs stay empty. */}
+        <div className="flex min-w-0 flex-1 flex-col bg-surface-light">
+          {showWorkspace && (
+            <div className="flex shrink-0 justify-end bg-surface-dark px-4 py-2">
+              <button
+                type="button"
+                onClick={() => setWorkspaceTab(null)}
+                className="rounded px-2 py-1 text-xs text-ink-inverse hover:bg-white/10"
+              >
+                Back to browsing
+              </button>
+            </div>
+          )}
+          <div className="min-h-0 flex-1">
+            <Workspace visible={showWorkspace} />
+          </div>
         </div>
         {aiPanelOpen && <AiPanel />}
       </div>

@@ -34,8 +34,8 @@ import {
 import { SetupIndicator, WorkspaceNav } from './WorkspaceNav.js';
 
 /**
- * The funding workspace: what the app paints in the page slot while the active
- * tab is on the start page. It shows, in order of what is known: a loading
+ * Funding tools shown only in an explicitly opened funding tab. They show,
+ * in order of what is known: a loading
  * state, an error with a way to try again, the first-run steps when there is
  * no organization, and otherwise the navigation with the current screen.
  *

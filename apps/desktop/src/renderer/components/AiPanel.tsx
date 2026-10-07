@@ -518,10 +518,7 @@ export function AiPanel() {
           onClose={() => setVoiceMode(null)}
         />
       )}
-      <header className="flex items-center justify-between gap-2 px-4 py-3">
-        <div className="text-[13px] font-semibold tracking-tight text-ink-primary">
-          BulleBrowser Agentic AI
-        </div>
+      <header className="flex items-center justify-end gap-2 px-4 py-3">
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -545,8 +542,7 @@ export function AiPanel() {
         </div>
       </header>
 
-      {/* What the assistant's guidance rests on. Kept outside the header so the
-          header stays exactly the title and its two controls. */}
+      {/* What the assistant's guidance rests on, below the chat controls. */}
       <AssistantGrounding />
 
       {voiceMode === 'continuous' && (
@@ -1010,8 +1006,7 @@ function AllowAccess({ task }: { task: string }) {
   );
 }
 
-// What the assistant offers before the first message: the same four workflows
-// as the dashboard, read from the same list so the two cannot drift apart.
+// The four workflows offered by the assistant before the first message.
 // Choosing one opens its screen in the workspace and selects its rules for
 // this chat; it sends nothing. Voice is still one click away on the microphone
 // and Voice Mode controls under the composer.

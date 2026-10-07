@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
+import { createServer } from 'node:http';
 import {
   launchApp,
   chooseFiles,
@@ -23,6 +24,50 @@ async function open(win: Page, name: string) {
     .getByRole('button', { name, exact: true })
     .click();
 }
+
+test('blank tabs leave the browsing area clear and funding tools open only on request', async () => {
+  const server = createServer((_request, response) => {
+    response.setHeader('Content-Type', 'text/html');
+    response.end('<!doctype html><title>Browsing area check</title><h1>This is the browsed page</h1>');
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw Error('No browser test port');
+  const url = `http://127.0.0.1:${address.port}/`;
+  const { app, win, workspace, panel, userData } = await launchApp({ openFunding: false });
+  try {
+    await expect(panel).toBeVisible();
+    await expect(workspace).toBeHidden();
+    await expect(panel.locator('header')).not.toContainText('BulleBrowser Agentic AI');
+    await expect(panel.getByRole('button', { name: 'History', exact: true })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'New chat', exact: true })).toBeVisible();
+    await win.getByRole('button', { name: 'Organization Knowledge Hub', exact: true }).click();
+    await expect(workspace).toBeVisible();
+    await expect(win.getByRole('button', { name: 'Dashboard', exact: true })).toHaveCount(0);
+    await win.getByRole('button', { name: 'Back to browsing', exact: true }).click();
+    await expect(workspace).toBeHidden();
+    await win.evaluate(async () => { await window.bullebrowser.tabs.create(); });
+    await expect(workspace).toBeHidden();
+    await win.evaluate(async (url) => { await window.bullebrowser.tabs.create(url); }, url);
+    await expect.poll(() => app.evaluate(async ({ BrowserWindow }, url) => {
+      const page = BrowserWindow.getAllWindows()[0]?.contentView.children.find((view) =>
+        'webContents' in view && (view as import('electron').WebContentsView).webContents.getURL() === url,
+      ) as import('electron').WebContentsView | undefined;
+      if (!page) return null;
+      return {
+        title: await page.webContents.executeJavaScript('document.title'),
+        visible: page.getVisible(),
+        fillsPageSlot: page.getBounds().width > 300 && page.getBounds().height > 300,
+      };
+    }, url)).toMatchObject({ title: 'Browsing area check', visible: true, fillsPageSlot: true });
+    await expect(workspace).toBeHidden();
+    await win.screenshot({ path: '/tmp/bulle-browser-layout.png' });
+  } finally {
+    await app.close();
+    removeUserData(userData);
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
+});
 
 test('organization documents are searchable, reviewable, persistent and isolated; RFPs and guides work without a key', async () => {
   test.setTimeout(180000);

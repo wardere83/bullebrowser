@@ -71,15 +71,12 @@ export function TopBar() {
     >
       <img src={logo} alt="" width={20} height={20} className="no-drag opacity-95" />
       <div className="no-drag flex items-center gap-1">
-        {/* Home for the funding workspace. It lives on the start page, so this
-            brings a start-page tab to the front and shows the dashboard. The
-            word is shown when the window has room for it; the name is the
-            same either way. */}
+        {/* Organization documents and funding tools open only on request. */}
         <button
           type="button"
-          aria-label="Open workspace"
-          title="Open workspace"
-          onClick={() => void openWorkspace('dashboard')}
+          aria-label="Organization Knowledge Hub"
+          title="Organization Knowledge Hub"
+          onClick={() => void openWorkspace('knowledge')}
           className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-ink-inverse transition-colors hover:bg-white/10"
         >
           <svg
@@ -96,7 +93,7 @@ export function TopBar() {
             <path d="M4 11.5 12 5l8 6.5" />
             <path d="M6.5 10v9.5h11V10" />
           </svg>
-          <span className="hidden min-[1100px]:inline">Workspace</span>
+          <span className="hidden min-[1100px]:inline">Knowledge Hub</span>
         </button>
         <NavBtn
           label="Back"

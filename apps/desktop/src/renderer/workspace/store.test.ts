@@ -166,7 +166,7 @@ function installBridge(initial: IdentityState) {
   const tabs = {
     list: vi.fn(async (): Promise<Pick<TabState, 'id' | 'url' | 'active'>[]> => []),
     switch: vi.fn(async () => {}),
-    create: vi.fn(async () => ({})),
+    create: vi.fn(async () => ({ id: 'created-tab' })),
   };
   vi.stubGlobal('window', { bullebrowser: { funding, tabs } });
   return {
@@ -184,7 +184,7 @@ const store = () => useWorkspaceStore.getState();
 
 beforeEach(() => {
   resetWorkspaceStore();
-  useBrowserStore.setState({ showSettings: false });
+  useBrowserStore.setState({ showSettings: false, workspaceTabId: null });
 });
 
 afterEach(() => {
@@ -258,6 +258,7 @@ describe('identity', () => {
     store().navigate('opportunities');
     await store().refreshIdentity();
     expect(store().route).toBe('opportunities');
+    expect(useBrowserStore.getState().workspaceTabId).toBeNull();
   });
 
   it('asks for nothing organization-specific when there is no organization', async () => {
@@ -341,7 +342,7 @@ describe('switching organization', () => {
     return bridge;
   }
 
-  it('goes back to the dashboard and clears everything held for the previous one', async () => {
+  it('goes back to the Knowledge Hub and clears everything held for the previous one', async () => {
     const bridge = await workingInRiverbend();
     expect(store().jobs).toHaveLength(1);
     const pendingSetup = deferred<Outcome<SetupStatus>>();
@@ -352,7 +353,7 @@ describe('switching organization', () => {
     // At once, before anything for the new organization has arrived.
     expect(activeOrganization(store().identity)?.name).toBe('Harbor Works');
     expect(store()).toMatchObject({
-      route: 'dashboard',
+      route: 'knowledge',
       params: {},
       setup: null,
       setupStatus: 'loading',
@@ -400,7 +401,7 @@ describe('switching organization', () => {
     handleFundingEvent({ kind: 'identity_changed' });
     await settle();
     expect(activeOrganization(store().identity)?.id).toBe(HARBOR);
-    expect(store()).toMatchObject({ route: 'dashboard', jobs: [], screenState: {} });
+    expect(store()).toMatchObject({ route: 'knowledge', jobs: [], screenState: {} });
   });
 
   it('does not reset anything when the organization is only edited', async () => {
@@ -426,7 +427,7 @@ describe('switching organization', () => {
     await store().deleteOrganization(RIVERBEND);
     expect(activeOrganization(store().identity)).toBeNull();
     expect(store()).toMatchObject({
-      route: 'dashboard',
+      route: 'knowledge',
       setup: null,
       setupStatus: 'idle',
       jobs: [],
@@ -514,7 +515,7 @@ describe('creating an organization', () => {
     await store().createOrganization({ ...input, name: 'Harbor Works', kind: 'business' });
     expect(store().onboardingOrganizationId).toBeNull();
     expect(activeOrganization(store().identity)?.id).toBe(HARBOR);
-    expect(store().route).toBe('dashboard');
+    expect(store().route).toBe('knowledge');
   });
 
   it('passes on what main says is wrong with the input', async () => {
@@ -759,6 +760,7 @@ describe('openWorkspace', () => {
     bridge.tabs.list.mockResolvedValue([tab('1', 'about:blank', true)]);
     await openWorkspace('opportunities');
     expect(store().route).toBe('opportunities');
+    expect(useBrowserStore.getState().workspaceTabId).toBe('1');
     expect(bridge.tabs.switch).not.toHaveBeenCalled();
     expect(bridge.tabs.create).not.toHaveBeenCalled();
   });
@@ -771,17 +773,19 @@ describe('openWorkspace', () => {
     ]);
     await openWorkspace('rfp', { view: 'alignment' });
     expect(bridge.tabs.switch).toHaveBeenCalledWith('2');
+    expect(useBrowserStore.getState().workspaceTabId).toBe('2');
     expect(bridge.tabs.create).not.toHaveBeenCalled();
     expect(store()).toMatchObject({ route: 'rfp', params: { view: 'alignment' } });
   });
 
-  it('opens a new tab when every tab is on a web page, and goes to the dashboard by default', async () => {
+  it('opens a new tab when every tab is on a web page, and goes to the Knowledge Hub by default', async () => {
     const bridge = installBridge(identityWith([riverbend], RIVERBEND));
     bridge.tabs.list.mockResolvedValue([tab('1', 'https://a.example', true)]);
     store().navigate('guide');
     await openWorkspace();
     expect(bridge.tabs.create).toHaveBeenCalledWith();
-    expect(store().route).toBe('dashboard');
+    expect(useBrowserStore.getState().workspaceTabId).toBe('created-tab');
+    expect(store().route).toBe('knowledge');
   });
 
   it('leaves the first-run steps once their organization exists', async () => {

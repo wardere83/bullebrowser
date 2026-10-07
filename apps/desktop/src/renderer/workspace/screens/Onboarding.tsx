@@ -82,7 +82,7 @@ const PROFILE_TOPICS = listInWords(
  * and, once one has been created here, until the user finishes or leaves. It
  * is a screen like any other: the assistant panel stays where it is and stays
  * usable throughout. After the first step it can be left at any point; the
- * dashboard then carries the setup status.
+ * Knowledge Hub then carries the setup status.
  */
 export function Onboarding() {
   const organization = useActiveOrganization();
@@ -204,13 +204,13 @@ function OrganizationStep({
 
 // ─────────────────────────── 2. Organization Knowledge Hub ─────────────────────
 
-/** Leaves the first-run steps for the dashboard, whatever route was set in the meantime. */
+/** Leaves the first-run steps for the Knowledge Hub, whatever route was set in the meantime. */
 function useLeaveOnboarding(): () => void {
   const finishOnboarding = useWorkspaceStore((state) => state.finishOnboarding);
   const navigate = useWorkspaceStore((state) => state.navigate);
   return () => {
     finishOnboarding();
-    navigate('dashboard');
+    navigate('knowledge');
   };
 }
 
@@ -345,7 +345,7 @@ function DocumentsStep({ headingRef, onContinue }: { headingRef: HeadingRef; onC
         </div>
         {!hasDocuments && (
           <p className={text.caption}>
-            Add at least one document to continue, or do this later from the dashboard.
+            Add at least one document to continue, or do this later from the Knowledge Hub.
           </p>
         )}
       </div>
@@ -453,7 +453,7 @@ function ReviewStep({ headingRef, onBack }: { headingRef: HeadingRef; onBack(): 
         >
           Review profile
         </Button>
-        <Button onClick={leave}>Go to dashboard</Button>
+        <Button onClick={leave}>Go to Knowledge Hub</Button>
         <Button variant="quiet" onClick={onBack}>
           Back
         </Button>

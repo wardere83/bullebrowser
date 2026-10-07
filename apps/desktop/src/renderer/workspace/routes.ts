@@ -23,7 +23,6 @@
 
 import type { ComponentType } from 'react';
 import type { WorkspaceRoute } from '../state/workspace-store.js';
-import { Dashboard } from './screens/Dashboard.js';
 import { KnowledgeHub } from './screens/KnowledgeHub.js';
 import { Opportunities } from './screens/Opportunities.js';
 import { ProposalGuide } from './screens/ProposalGuide.js';
@@ -40,14 +39,13 @@ export interface RouteDefinition {
 
 /** In navigation order. */
 export const ROUTES: readonly RouteDefinition[] = [
-  { route: 'dashboard', label: 'Dashboard', icon: 'home', component: Dashboard },
-  { route: 'opportunities', label: 'Opportunities', icon: 'search', component: Opportunities },
   {
     route: 'knowledge',
     label: 'Organization Knowledge Hub',
     icon: 'library',
     component: KnowledgeHub,
   },
+  { route: 'opportunities', label: 'Opportunities', icon: 'search', component: Opportunities },
   { route: 'rfp', label: 'RFP Analysis', icon: 'document', component: RfpAnalysis },
   { route: 'guide', label: 'Proposal Guide', icon: 'pencil', component: ProposalGuide },
 ];

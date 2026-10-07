@@ -37,7 +37,7 @@ export function AssistantGrounding() {
 
   const open = () => {
     if (grounding.kind === 'organization') void openWorkspace('knowledge', { tab: 'profile' });
-    else void openWorkspace('dashboard');
+    else void openWorkspace('knowledge');
   };
 
   return (

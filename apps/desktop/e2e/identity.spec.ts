@@ -15,7 +15,7 @@ async function launch(provider: 'none' | 'anthropic' | 'openai' = 'none') {
   const app = await electron.launch({ cwd: appRoot,
     args: ['.', '--no-sandbox', `--user-data-dir=${mkdtempSync(join(tmpdir(), 'bullebrowser-identity-'))}`], env });
   const win = await app.firstWindow({ timeout: 20_000 });
-  await expect(win.locator('aside').getByText('BulleBrowser Agentic AI', { exact: true })).toBeVisible();
+  await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
   await expect(win.locator('aside textarea')).toBeEnabled();
   await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.conversations.list()).length)).toBeGreaterThan(0);
   await win.evaluate(() => {

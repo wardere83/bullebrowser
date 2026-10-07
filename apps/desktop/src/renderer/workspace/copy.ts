@@ -5,10 +5,6 @@
 export const POSITIONING =
   'BulleBrowser is a strategic funding platform for businesses and CBOs: discover opportunities, understand funder priorities, assess your alignment and develop proposals ethically.';
 
-/** The same four things, as the line under an organization's name on the dashboard. */
-export const POSITIONING_SHORT =
-  'Discover funding opportunities, understand funder priorities, assess your alignment and develop proposals ethically.';
-
 /** What the Organization Knowledge Hub is for. The wording is fixed. */
 export const KNOWLEDGE_HUB_DESCRIPTION =
   "Upload your organization’s documents so BulleBrowser aligns its guidance with your mission, priorities, strengths, and funding goals.";

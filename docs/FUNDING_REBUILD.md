@@ -1,6 +1,6 @@
 # Funding rebuild
 
-BulleBrowser now centers funding strategies for businesses and CBOs across the website and desktop app. The assistant and dashboard show the four requested actions exactly:
+BulleBrowser now centers funding strategies for businesses and CBOs across the website and desktop app. The assistant shows the four requested actions exactly:
 
 1. Find Relevant Grant Opportunities
 2. Assess Our Funding Alignment
@@ -8,6 +8,8 @@ BulleBrowser now centers funding strategies for businesses and CBOs across the w
 4. Ethical Strengths-Based Proposal Guide
 
 ## Delivered workflows
+
+The app opens with a clear browsing area. It has no dashboard or title above the chat controls. Organization documents and funding tools open only through the Knowledge Hub button or a selected assistant action; Back to browsing clears that view.
 
 - Official-source discovery with geographic funding levels, recipient-location filters, eligibility, categories, amounts and deadlines; sourced facts, relevance explanations and Active / Expired / Unverified statuses.
 - Organization Knowledge Hub in onboarding and navigation. PDF, DOCX, TXT and Markdown extraction, processing status, extracted-text inspection, document categorization, replacement, retry, deletion and passage search.

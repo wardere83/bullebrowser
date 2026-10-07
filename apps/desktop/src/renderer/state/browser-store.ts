@@ -11,6 +11,8 @@ interface BrowserStoreState {
   searchProvider: AppSettings['searchProvider'];
   showSettings: boolean;
   showAbout: boolean;
+  workspaceTabId: string | null;
+  setWorkspaceTab: (tabId: string | null) => void;
   setTabs: (tabs: TabState[]) => void;
   toggleAiPanel: () => void;
   setAiPanelOpen: (open: boolean) => void;
@@ -27,7 +29,17 @@ export const useBrowserStore = create<BrowserStoreState>((set) => ({
   searchProvider: 'bullebrowser',
   showSettings: false,
   showAbout: false,
-  setTabs: (tabs) => set({ tabs }),
+  workspaceTabId: null,
+  setWorkspaceTab: (workspaceTabId) => set({ workspaceTabId }),
+  setTabs: (tabs) =>
+    set((state) => ({
+      tabs,
+      workspaceTabId: tabs.some(
+        (tab) => tab.id === state.workspaceTabId && (!tab.url || tab.url === 'about:blank'),
+      )
+        ? state.workspaceTabId
+        : null,
+    })),
   toggleAiPanel: () => set((s) => ({ aiPanelOpen: !s.aiPanelOpen })),
   setAiPanelOpen: (open) => set({ aiPanelOpen: open }),
   setSearchProvider: (searchProvider) => set({ searchProvider }),

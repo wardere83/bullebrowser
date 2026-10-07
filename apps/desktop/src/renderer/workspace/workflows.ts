@@ -1,6 +1,5 @@
-// The four things BulleBrowser offers to help with. The dashboard and the
-// assistant panel both show exactly these, in this order and with these
-// labels, and both read them from here so they cannot drift apart.
+// The four things the assistant offers to help with, in this order and with
+// these exact labels.
 //
 // `route` and `params` are where the workflow lives in the workspace.
 // `skillId` names the set of rules the assistant follows for that workflow; the

@@ -51,17 +51,17 @@ async function launch(
   await win.waitForLoadState('domcontentloaded');
 
   // The panel ships open by default; open it idempotently either way.
-  const panelHeader = win.locator('aside').getByText('BulleBrowser Agent');
-  if (!(await panelHeader.isVisible().catch(() => false))) {
+  const panel = win.getByRole('complementary', { name: 'Assistant chat' });
+  if (!(await panel.isVisible().catch(() => false))) {
     await win.getByRole('button', { name: 'Your Assistant' }).click();
   }
-  await expect(panelHeader).toBeVisible({ timeout: 10_000 });
+  await expect(panel).toBeVisible({ timeout: 10_000 });
   return { app, win };
 }
 
 test('the agent panel mounts with its composer', async () => {
   const { app, win } = await launch();
-  await expect(win.locator('aside').getByText('BulleBrowser Agent')).toBeVisible();
+  await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
   await expect(win.locator('aside textarea')).toBeEnabled();
   await app.close();
 });
@@ -123,7 +123,7 @@ test('the "+" menu closes on an outside click', async () => {
   const { app, win } = await launch();
   await win.locator('[aria-label="Add attachment"]').click();
   await expect(win.getByText('Upload your file', { exact: true })).toBeVisible();
-  await win.locator('aside').getByText('BulleBrowser Agent').click();
+  await win.getByRole('button', { name: 'New chat', exact: true }).click();
   await expect(win.getByText('Upload your file', { exact: true })).toBeHidden();
   await app.close();
 });

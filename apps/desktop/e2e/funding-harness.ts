@@ -45,7 +45,7 @@ export function removeUserData(userData: string): void {
  * checked. With `assistantUrl` the app has a key and sends document questions
  * to that address; without it no assistant is connected.
  */
-export async function launchApp(options: { userData?: string; assistantUrl?: string } = {}): Promise<Launched> {
+export async function launchApp(options: { userData?: string; assistantUrl?: string; openFunding?: boolean } = {}): Promise<Launched> {
   const userData = options.userData ?? freshUserData();
   const env: Record<string, string> = { ...(process.env as Record<string, string>), NODE_ENV: 'test' };
   // See smoke.spec.ts: with this set, Electron starts as plain Node.
@@ -66,6 +66,10 @@ export async function launchApp(options: { userData?: string; assistantUrl?: str
   await win.waitForLoadState('domcontentloaded');
   const workspace = win.getByRole('region', { name: 'Funding workspace' });
   const panel = win.getByRole('complementary', { name: 'Assistant chat' });
+  if (options.openFunding !== false) {
+    await win.getByRole('button', { name: 'Organization Knowledge Hub', exact: true }).click();
+  }
+  if (options.openFunding === false) return { app, win, userData, workspace, panel };
   await expect(workspace).toBeVisible({ timeout: 20_000 });
   return { app, win, userData, workspace, panel };
 }
