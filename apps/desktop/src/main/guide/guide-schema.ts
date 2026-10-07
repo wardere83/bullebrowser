@@ -11,8 +11,18 @@
 import { z } from 'zod';
 import type { OutputSchema } from '../funding/pipeline.js';
 import type { RawEvidence } from '../funding/prompting.js';
-import { EVIDENCE_JSON, STATEMENT_JSON, evidenceList, statementOf, type RawStatement } from './material.js';
-import { OUTLINE_LIMITS, STANDARD_SECTION_IDS, type StandardSectionId } from './standard-outline.js';
+import {
+  EVIDENCE_JSON,
+  STATEMENT_JSON,
+  evidenceList,
+  statementOf,
+  type RawStatement,
+} from './material.js';
+import {
+  OUTLINE_LIMITS,
+  STANDARD_SECTION_IDS,
+  type StandardSectionId,
+} from './standard-outline.js';
 
 /** A strength is one fact in one sentence, not a description of the organization. */
 export const STRENGTH_MAX_CHARACTERS = 300;
@@ -47,6 +57,9 @@ const sectionReply: z.ZodType<SectionReply> = z.object({
   evidence_to_gather: z.array(z.string().min(1).max(OUTLINE_LIMITS.evidenceNote)),
 });
 
+const reference = (name: string): Record<string, unknown> => ({ $ref: `#/$defs/${name}` });
+const evidenceJson = { type: 'array', items: reference('evidence') };
+
 const SECTION_JSON: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
@@ -60,10 +73,10 @@ const SECTION_JSON: Record<string, unknown> = {
         type: 'object',
         additionalProperties: false,
         required: ['requirement_id', 'evidence'],
-        properties: { requirement_id: { type: 'string' }, evidence: EVIDENCE_JSON },
+        properties: { requirement_id: { type: 'string' }, evidence: evidenceJson },
       },
     },
-    strengths: { type: 'array', items: STATEMENT_JSON },
+    strengths: { type: 'array', items: reference('statement') },
     questions: {
       type: 'array',
       items: {
@@ -86,7 +99,17 @@ export const outlineSchema: OutputSchema<OutlineReply> = {
     type: 'object',
     additionalProperties: false,
     required: [...STANDARD_SECTION_IDS],
-    properties: forEachPart(SECTION_JSON),
+    // Reuse the nested grammar instead of expanding it for every outline
+    // part, which the provider rejects as too large to compile.
+    properties: forEachPart(reference('section')),
+    $defs: {
+      section: SECTION_JSON,
+      statement: {
+        ...STATEMENT_JSON,
+        properties: { text: { type: 'string' }, evidence: evidenceJson },
+      },
+      evidence: EVIDENCE_JSON.items,
+    },
   },
   zod: z.object(forEachPart(sectionReply)),
 };

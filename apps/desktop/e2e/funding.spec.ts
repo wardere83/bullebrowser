@@ -278,6 +278,16 @@ test('official links use official-source adapters and a prohibited AI policy pre
       }),
     ).toBeVisible();
     expect(assistant.requests).toHaveLength(1);
+    // Check the schema the built app actually sent. The former inline format
+    // was rejected by the real service before an analysis could begin.
+    expect(assistant.requests[0]?.schema).toMatchObject({
+      $defs: { section: { required: ['coverage', 'note', 'items'] } },
+      properties: {
+        sections: {
+          properties: { award_amounts: { $ref: '#/$defs/section' } },
+        },
+      },
+    });
     expect(assistant.requests[0]?.system).not.toContain('deadline has been waived');
     expect(assistant.requests[0]?.documents).toContain('deadline has been waived');
     await workspace.getByRole('tab', { name: 'Funder priorities', exact: true }).click();

@@ -85,7 +85,11 @@ const MAX_PASSAGE_ID = 80;
 type Json = Record<string, unknown>;
 
 const text = (description: string): Json => ({ type: 'string', description });
-const choice = (values: readonly string[], description: string): Json => ({ type: 'string', enum: [...values], description });
+const choice = (values: readonly string[], description: string): Json => ({
+  type: 'string',
+  enum: [...values],
+  description,
+});
 const listOf = (items: Json, description: string): Json => ({ type: 'array', description, items });
 /** A closed object: every property is required and nothing else is allowed. */
 const closed = (properties: Record<string, Json>, description?: string): Json => ({
@@ -96,61 +100,86 @@ const closed = (properties: Record<string, Json>, description?: string): Json =>
   properties,
 });
 
+const reference = (name: string): Json => ({ $ref: `#/$defs/${name}` });
+
 const evidenceJson = listOf(
-  closed({
-    block_id: text('The id of one passage, copied exactly as shown, for example F1:b0007.'),
-    quote: text('Words copied exactly from that passage, without its id or its page note.'),
-  }),
+  reference('evidence'),
   'The passages that support this, each with a quotation.',
 );
 
-const sectionJson = (label: string): Json =>
-  closed(
-    {
-      coverage: choice(COVERAGE, 'Whether the document covers this topic.'),
-      note: text('What is unclear or missing, in one or two sentences. Empty when coverage is "stated".'),
-      items: listOf(
-        closed({
-          text: text('One point, in one or two plain sentences.'),
-          basis: choice(BASIS, '"explicit" when the document states it; "interpretation" when it is your reading.'),
-          evidence: evidenceJson,
-        }),
-        'The separate points the document makes on this topic, in its own order.',
+const noteJson = (description: string): Json => listOf(reference('note'), description);
+
+// Reuse the grammar for repeated sections and citations. Expanding every
+// section inline exceeds the provider's compiled-grammar limit even though
+// each individual object is valid. References keep the same required report
+// shape and constraints without compiling thirteen copies of its nested arrays.
+const definitions = {
+  evidence: closed({
+    block_id: text('The id of one passage, copied exactly as shown, for example F1:b0007.'),
+    quote: text('Words copied exactly from that passage, without its id or its page note.'),
+  }),
+  item: closed({
+    text: text('One point, in one or two plain sentences.'),
+    basis: choice(
+      BASIS,
+      '"explicit" when the document states it; "interpretation" when it is your reading.',
+    ),
+    evidence: evidenceJson,
+  }),
+  section: closed({
+    coverage: choice(COVERAGE, 'Whether the document covers this topic.'),
+    note: text(
+      'What is unclear or missing, in one or two sentences. Empty when coverage is "stated".',
+    ),
+    items: listOf(
+      reference('item'),
+      'The separate points the document makes on this topic, in its own order.',
+    ),
+  }),
+  note: closed({ text: text('One point, in one or two plain sentences.'), evidence: evidenceJson }),
+};
+
+const json = {
+  ...closed({
+    overview: text(
+      'Two or three plain sentences on what the funder is investing in, or an empty string.',
+    ),
+    sections: closed(
+      Object.fromEntries(
+        RFP_SECTIONS.map((id) => [
+          id,
+          { ...reference('section'), description: RFP_SECTION_LABELS[id] },
+        ]),
       ),
-    },
-    label,
-  );
-
-const noteJson = (description: string): Json =>
-  listOf(closed({ text: text('One point, in one or two plain sentences.'), evidence: evidenceJson }), description);
-
-const json = closed({
-  overview: text('Two or three plain sentences on what the funder is investing in, or an empty string.'),
-  sections: closed(Object.fromEntries(RFP_SECTIONS.map((id) => [id, sectionJson(RFP_SECTION_LABELS[id])]))),
-  glossary: listOf(
-    closed({
-      term: text('The funding term.'),
-      plain_language: text('What the term means, in one or two plain sentences.'),
-      evidence: evidenceJson,
-    }),
-    'Each funding term that was explained.',
-  ),
-  ai_use: closed(
-    {
-      stance: choice(STANCES, 'The position the document takes.'),
-      summary: text('One or two plain sentences on what the document says.'),
-      evidence: evidenceJson,
-    },
-    'What the document says about using AI tools to prepare an application.',
-  ),
-  uncertainties: noteJson('Things the document leaves open that an applicant should settle.'),
-  questions: noteJson('Questions to ask the funder, or to answer internally, before applying.'),
-});
+    ),
+    glossary: listOf(
+      closed({
+        term: text('The funding term.'),
+        plain_language: text('What the term means, in one or two plain sentences.'),
+        evidence: evidenceJson,
+      }),
+      'Each funding term that was explained.',
+    ),
+    ai_use: closed(
+      {
+        stance: choice(STANCES, 'The position the document takes.'),
+        summary: text('One or two plain sentences on what the document says.'),
+        evidence: evidenceJson,
+      },
+      'What the document says about using AI tools to prepare an application.',
+    ),
+    uncertainties: noteJson('Things the document leaves open that an applicant should settle.'),
+    questions: noteJson('Questions to ask the funder, or to answer internally, before applying.'),
+  }),
+  $defs: definitions,
+};
 
 // ───────────────────────────── as checked on the device ─────────────────────────────
 
 const sentences = z.string().max(MAX_SENTENCES);
-const evidenceZod = z.array(z.object({ block_id: z.string().max(MAX_PASSAGE_ID), quote: z.string().max(MAX_QUOTE) }));
+const evidenceZod = z.array(
+  z.object({ block_id: z.string().max(MAX_PASSAGE_ID), quote: z.string().max(MAX_QUOTE) }),
+);
 const sectionZod = z.object({
   coverage: z.enum(COVERAGE),
   note: sentences,
@@ -160,8 +189,15 @@ const noteZod = z.array(z.object({ text: sentences, evidence: evidenceZod }));
 
 const zod: z.ZodType<RawRfpAnalysis> = z.object({
   overview: z.string().max(MAX_OVERVIEW),
-  sections: z.object(Object.fromEntries(RFP_SECTIONS.map((id) => [id, sectionZod])) as Record<RfpSectionId, typeof sectionZod>),
-  glossary: z.array(z.object({ term: z.string().max(MAX_TERM), plain_language: sentences, evidence: evidenceZod })),
+  sections: z.object(
+    Object.fromEntries(RFP_SECTIONS.map((id) => [id, sectionZod])) as Record<
+      RfpSectionId,
+      typeof sectionZod
+    >,
+  ),
+  glossary: z.array(
+    z.object({ term: z.string().max(MAX_TERM), plain_language: sentences, evidence: evidenceZod }),
+  ),
   ai_use: z.object({ stance: z.enum(STANCES), summary: sentences, evidence: evidenceZod }),
   uncertainties: noteZod,
   questions: noteZod,
@@ -172,4 +208,8 @@ const zod: z.ZodType<RawRfpAnalysis> = z.object({
  * one object rather than a list, so the wire format itself guarantees that all
  * thirteen are present and none appears twice.
  */
-export const RFP_ANALYSIS_SCHEMA: OutputSchema<RawRfpAnalysis> = { name: 'rfp_analysis', json, zod };
+export const RFP_ANALYSIS_SCHEMA: OutputSchema<RawRfpAnalysis> = {
+  name: 'rfp_analysis',
+  json,
+  zod,
+};
