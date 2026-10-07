@@ -37,7 +37,7 @@ export const WORKFLOWS: readonly Workflow[] = [
   },
   {
     id: 'assess_alignment',
-    label: 'Assess Our Funding Alignment',
+    label: 'Assess Your Funding Alignment',
     description:
       'Compare what a funding document asks for with what your organization’s documents show.',
     route: 'rfp',

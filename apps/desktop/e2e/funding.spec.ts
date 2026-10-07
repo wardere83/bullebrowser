@@ -98,13 +98,15 @@ test('organization documents are searchable, reviewable, persistent and isolated
     let { app, win, workspace, panel } = launched;
     for (const name of [
       'Find Relevant Grant Opportunities',
-      'Assess Our Funding Alignment',
+      'Assess Your Funding Alignment',
       'Explore Funder Priorities',
       'Ethical Strengths-Based Proposal Guide',
     ]) {
       await expect(panel.getByRole('button', { name, exact: true })).toBeVisible();
     }
     await createOrganization(workspace, 'Riverbend test CBO');
+    await expect(panel).not.toContainText('Grounded in');
+    await expect(panel).not.toContainText('profile not approved yet');
     await open(win, 'Organization Knowledge Hub');
     await expect(
       workspace.getByText(
@@ -165,7 +167,7 @@ test('organization documents are searchable, reviewable, persistent and isolated
     await workspace.getByRole('tab', { name: 'Our alignment', exact: true }).click();
     await workspace.getByRole('button', { name: 'Assess funding alignment', exact: true }).click();
     await expect(
-      workspace.getByRole('heading', { name: 'Assess Our Funding Alignment', exact: true }),
+      workspace.getByRole('heading', { name: 'Assess Your Funding Alignment', exact: true }),
     ).toBeVisible();
     await workspace
       .getByRole('button', { name: 'Open ethical proposal guide', exact: true })

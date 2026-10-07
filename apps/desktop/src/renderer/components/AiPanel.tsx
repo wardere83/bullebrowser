@@ -11,7 +11,6 @@ import {
   openWorkspace,
   useWorkspaceStore,
 } from '../state/workspace-store.js';
-import { AssistantGrounding } from '../workspace/AssistantGrounding.js';
 import { Icon } from '../workspace/ui/icons.js';
 import { WORKFLOWS, workflowForSkill, type Workflow } from '../workspace/workflows.js';
 import { AGENT_PROMPT_EVENT } from '../lib/url.js';
@@ -541,9 +540,6 @@ export function AiPanel() {
           </button>
         </div>
       </header>
-
-      {/* What the assistant's guidance rests on, below the chat controls. */}
-      <AssistantGrounding />
 
       {voiceMode === 'continuous' && (
         <RealtimeVoice

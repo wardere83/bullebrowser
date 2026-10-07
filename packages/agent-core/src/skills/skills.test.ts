@@ -42,7 +42,7 @@ describe('skill registry', () => {
 describe('funding workflows', () => {
   const WORKFLOWS = [
     ['find_opportunities', 'Find Relevant Grant Opportunities'],
-    ['assess_alignment', 'Assess Our Funding Alignment'],
+    ['assess_alignment', 'Assess Your Funding Alignment'],
     ['funder_priorities', 'Explore Funder Priorities'],
     ['proposal_guide', 'Ethical Strengths-Based Proposal Guide'],
   ] as const;

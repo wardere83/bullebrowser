@@ -43,7 +43,7 @@ describe('the four workflows', () => {
   it('are exactly these, in this order, with this capitalization', () => {
     expect(WORKFLOWS.map((workflow) => workflow.label)).toEqual([
       'Find Relevant Grant Opportunities',
-      'Assess Our Funding Alignment',
+      'Assess Your Funding Alignment',
       'Explore Funder Priorities',
       'Ethical Strengths-Based Proposal Guide',
     ]);

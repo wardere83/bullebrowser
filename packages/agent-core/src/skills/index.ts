@@ -200,11 +200,11 @@ export const skills: Skill[] = [
   },
   {
     id: 'assess_alignment',
-    label: 'Assess Our Funding Alignment',
+    label: 'Assess Your Funding Alignment',
     shortDescription:
       'Compare what a funder asks for with what your documents show, one requirement at a time.',
     inputPlaceholder: 'Which opportunity or funding document should I compare with your organization?',
-    systemPrompt: fundingWorkflow('Assess Our Funding Alignment', [
+    systemPrompt: fundingWorkflow('Assess Your Funding Alignment', [
       'The user wants to see how their organization lines up with one funding opportunity.',
       '',
       '1. Establish both sides before comparing: the funding document or listing (supplied as',

@@ -7,7 +7,7 @@
 /** The four options under "What can I help you with?", in the app's order. */
 export const WORKFLOWS = [
   { id: 'find', label: 'Find Relevant Grant Opportunities' },
-  { id: 'align', label: 'Assess Our Funding Alignment' },
+  { id: 'align', label: 'Assess Your Funding Alignment' },
   { id: 'priorities', label: 'Explore Funder Priorities' },
   { id: 'guide', label: 'Ethical Strengths-Based Proposal Guide' },
 ] as const;

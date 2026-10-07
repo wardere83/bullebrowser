@@ -137,7 +137,7 @@ describe('the keyless assistant', () => {
     });
 
     it.each([
-      'Assess Our Funding Alignment',
+      'Assess Your Funding Alignment',
       'Are we eligible for this grant?',
       'How well does our mission align with this funder?',
       'Is this grant a good fit for us?',

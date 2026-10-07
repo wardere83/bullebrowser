@@ -176,7 +176,7 @@ function AlignmentResult({ report }: { report: AlignmentReport }) {
   return (
     <div className={layout.stack}>
       <Card>
-        <h2 className={text.h2}>Assess Our Funding Alignment</h2>
+        <h2 className={text.h2}>Assess Your Funding Alignment</h2>
         <p className={text.body}>{report.summary}</p>
         <p className={text.caption}>
           {report.profileApprovedAt

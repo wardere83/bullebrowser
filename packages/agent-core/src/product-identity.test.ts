@@ -148,7 +148,7 @@ describe('product identity and support answers', () => {
 describe('funding work is never routed to the product replies', () => {
   const FUNDING_WORK = [
     // the four workflows by name
-    'Find Relevant Grant Opportunities', 'Assess Our Funding Alignment',
+    'Find Relevant Grant Opportunities', 'Assess Your Funding Alignment',
     'Explore Funder Priorities', 'Ethical Strengths-Based Proposal Guide',
     // "the application" is the grant application
     'help me outline the application', 'what does the application require',
