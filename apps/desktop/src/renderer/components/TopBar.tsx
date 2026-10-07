@@ -124,7 +124,7 @@ export function TopBar() {
         </NavBtn>
       </div>
 
-      <form onSubmit={submit} className="no-drag flex-1">
+      <form onSubmit={submit} className="no-drag min-w-0 flex-1">
         <div
           className={`h-7 prompt-input-shell prompt-input-shell--dark prompt-input-shell--${addressActivity.state}`}
           data-activity-state={addressActivity.state}
@@ -213,7 +213,7 @@ export function TopBar() {
         )}
       </div>
 
-      {/* Top-right corner: appears only once an update is downloaded and ready. */}
+      {/* Published updates stay visible through download and preparation. */}
       <UpdateBanner />
     </header>
   );

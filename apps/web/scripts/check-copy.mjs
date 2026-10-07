@@ -55,20 +55,45 @@ const SPELLED_OUT = [
   new RegExp(join('organis(?:ation|me)s?\\s+commu', 'nautaires?|base\\s+commu', 'nautaire'), 'i'),
   new RegExp(join('organizaci(?:ó|o)n(?:es)?\\s+comu', 'nitarias?|base\\s+comu', 'nitaria'), 'i'),
   new RegExp(
-    join('organiza(?:ç|c)(?:ã|a)o\\s+comu', 'nit(?:á|a)ria|organiza(?:ç|c)(?:õ|o)es\\s+comu', 'nit(?:á|a)rias'),
+    join(
+      'organiza(?:ç|c)(?:ã|a)o\\s+comu',
+      'nit(?:á|a)ria|organiza(?:ç|c)(?:õ|o)es\\s+comu',
+      'nit(?:á|a)rias',
+    ),
     'i',
   ),
-  new RegExp(join('منظم(?:ة|ات)\\s+(?:ال)?مجت', 'معي|المنظمات\\s+المجت', 'معية|منظمات\\s+المجت', 'مع')),
+  new RegExp(
+    join('منظم(?:ة|ات)\\s+(?:ال)?مجت', 'معي|المنظمات\\s+المجت', 'معية|منظمات\\s+المجت', 'مع'),
+  ),
 ];
 
 // Wording that was true of an earlier product, or names a client or a vendor.
 const RETIRED = [
-  ['client term', new RegExp(join('\\bE', 'EO\\b|\\bC', 'RM\\b|live\\s?', 'chat|suite', 'dash'), 'i')],
-  ['retired positioning', new RegExp(join('navigates for ', 'you|agentic ', 'browser|compliance ', '(?:review|checklist)'), 'i')],
+  [
+    'client term',
+    new RegExp(join('\\bE', 'EO\\b|\\bC', 'RM\\b|live\\s?', 'chat|suite', 'dash'), 'i'),
+  ],
+  [
+    'retired positioning',
+    new RegExp(
+      join('navigates for ', 'you|agentic ', 'browser|compliance ', '(?:review|checklist)'),
+      'i',
+    ),
+  ],
   ['inaccurate key-storage claim', new RegExp(join('key', 'chain|lib', 'secret|DP', 'API'), 'i')],
   [
     'vendor or model name',
-    new RegExp(join('\\bAnth', 'ropic\\b|\\bOpen', 'AI\\b|\\bHugging\\s?', 'Face\\b|\\bCl', 'aude\\b|sk-', 'ant'), 'i'),
+    new RegExp(
+      join(
+        '\\bAnth',
+        'ropic\\b|\\bOpen',
+        'AI\\b|\\bHugging\\s?',
+        'Face\\b|\\bCl',
+        'aude\\b|sk-',
+        'ant',
+      ),
+      'i',
+    ),
   ],
 ];
 
@@ -100,7 +125,7 @@ const KEPT = [
 const FIXED = {
   'ask.h2': 'What can I help you with?',
   'hub.description':
-    "Upload your organization’s documents so BulleBrowser aligns its guidance with your mission, priorities, strengths, and funding goals.",
+    'Upload your organization’s documents so BulleBrowser aligns its guidance with your mission, priorities, strengths, and funding goals.',
   'privacy.5': 'Keys are encrypted and stored on this device.',
   'common.illustration': 'Illustration — sample data, not a live listing',
   'footer.tagline': 'The strategic funding platform for businesses and CBOs.',
@@ -125,7 +150,8 @@ const ending = (text) => {
 for (const [locale, dictionary] of Object.entries(dictionaries)) {
   const own = Object.keys(dictionary);
   for (const key of keys) if (!(key in dictionary)) fail(`[${locale}] ${key}`, 'missing');
-  for (const key of own) if (!(key in english)) fail(`[${locale}] ${key}`, 'not in the English dictionary');
+  for (const key of own)
+    if (!(key in english)) fail(`[${locale}] ${key}`, 'not in the English dictionary');
 
   for (const key of own) {
     const value = dictionary[key];
@@ -149,10 +175,13 @@ for (const [locale, dictionary] of Object.entries(dictionaries)) {
       if (source.includes(term) && !value.includes(term)) fail(where, `lost “${term}”`);
     }
     for (const acronym of [/\bCBOs\b/, /\bCBO\b/]) {
-      if (acronym.test(source) !== acronym.test(value)) fail(where, `${acronym.source} does not match the English`);
+      if (acronym.test(source) !== acronym.test(value))
+        fail(where, `${acronym.source} does not match the English`);
     }
-    if (figures(source) !== figures(value)) fail(where, `figures differ from the English (${figures(source)})`);
-    if (ending(source) !== ending(value)) fail(where, `ends with ${ending(value)}, the English with ${ending(source)}`);
+    if (figures(source) !== figures(value))
+      fail(where, `figures differ from the English (${figures(source)})`);
+    if (ending(source) !== ending(value))
+      fail(where, `ends with ${ending(value)}, the English with ${ending(source)}`);
   }
 }
 for (const [key, wording] of Object.entries(FIXED)) {
@@ -225,26 +254,54 @@ for (const file of pages) {
   if (/target="_blank"/.test(html)) fail(where, 'a link opens a new tab without saying so');
 }
 
+// The public overview explains the app and its value. App action labels and
+// setup details still belong in the installation guide, rather than a catalog
+// of workflow sections on the marketing pages.
 if (pages.length) {
-  const home = strip(readFileSync(path.join(OUT, 'index.html'), 'utf8'));
-  const workflows = strip(readFileSync(path.join(OUT, 'features/index.html'), 'utf8'));
-  const options = [
-    'Find Relevant Grant Opportunities',
-    'Assess Our Funding Alignment',
-    'Explore Funder Priorities',
-    'Ethical Strengths-Based Proposal Guide',
+  const removedSections = [
+    'workflows',
+    'knowledge-hub',
+    'funding-finder',
+    'rfp-analysis',
+    'proposal-guide',
+    'browser',
   ];
-  const order = options.map((option) => home.indexOf(option));
-  if (order.includes(-1) || order.some((at, index) => index > 0 && at < order[index - 1])) {
-    fail('/', 'the four options are missing or out of order');
-  }
-  for (const [where, text] of [['/', home], ['/features/', workflows]]) {
-    for (const wording of [FIXED['hub.description'], 'Organization Knowledge Hub']) {
+  for (const [where, file] of [
+    ['/', 'index.html'],
+    ['/features/', 'features/index.html'],
+  ]) {
+    const html = readFileSync(path.join(OUT, file), 'utf8');
+    const text = strip(html);
+    const required = [
+      english['app.value.h2'],
+      english['app.audience.businesses.t'],
+      english['app.audience.cbos.t'],
+      english['app.benefit.context.t'],
+      english['app.benefit.focus.t'],
+      english['app.benefit.strengths.t'],
+      english['app.assistant'],
+      'About the app',
+    ];
+    for (const wording of required) {
       if (!text.includes(wording)) fail(where, `missing “${wording}”`);
     }
+    for (const id of removedSections) {
+      if (new RegExp(`(?:id="${id}"|href="[^" ]*#${id}")`).test(html)) {
+        fail(where, `the removed ${id} section or link is still present`);
+      }
+    }
   }
-  if (!home.includes(FIXED['ask.h2'])) fail('/', `missing “${FIXED['ask.h2']}”`);
-  if (!workflows.includes(FIXED['privacy.5'])) fail('/features/', `missing “${FIXED['privacy.5']}”`);
+  const overview = strip(readFileSync(path.join(OUT, 'features/index.html'), 'utf8'));
+  for (const wording of [
+    english['app.overview'],
+    english['app.control.body'],
+    FIXED['privacy.5'],
+  ]) {
+    if (!overview.includes(wording)) fail('/features/', `missing “${wording}”`);
+  }
+  const guide = strip(readFileSync(path.join(OUT, 'install/index.html'), 'utf8'));
+  if (!guide.includes(english['install.updates.d']))
+    fail('/install/', 'missing the current update behavior');
 }
 
 console.log(
@@ -254,7 +311,9 @@ console.log(
 );
 console.log(`${sourceFiles.length} source files checked.`);
 console.log(
-  pages.length ? `${exported.length} exported files and ${pages.length} pages checked.` : 'No export found; build the site to check the pages too.',
+  pages.length
+    ? `${exported.length} exported files and ${pages.length} pages checked.`
+    : 'No export found; build the site to check the pages too.',
 );
 
 if (problems.length) {

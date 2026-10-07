@@ -1,9 +1,9 @@
 import { pageMetadata } from '@/lib/metadata';
 
 export const metadata = pageMetadata({
-  title: 'Workflows',
+  title: 'About the app',
   description:
-    'How BulleBrowser helps businesses and CBOs find funding in official sources, understand funder priorities, assess their alignment and develop proposals ethically.',
+    'Discover BulleBrowser, the desktop app that brings web research and organization evidence together to support funding strategy for businesses and CBOs.',
   path: '/features/',
 });
 

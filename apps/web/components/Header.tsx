@@ -22,8 +22,8 @@ import { TranslationMenu } from './TranslationMenu';
 // menu still lists it), so the bar fits a 320px-wide view; at 360px the
 // wordmark, the button, the language control and the menu button come to about
 // 345px. Check that sum again if a label here gets longer.
-const BAR_LINKS: SectionId[] = ['home', 'workflows', 'guides'];
-const MENU_LINKS: SectionId[] = ['home', 'workflows', 'guides', 'download', 'about', 'privacy'];
+const BAR_LINKS: SectionId[] = ['home', 'app', 'guides'];
+const MENU_LINKS: SectionId[] = ['home', 'app', 'guides', 'download', 'about', 'privacy'];
 
 export function Header() {
   const pathname = usePathname();
@@ -79,7 +79,9 @@ export function Header() {
                       lang={lang}
                       aria-current={current ? 'page' : undefined}
                       className={`inline-flex rounded-md px-4 py-2 font-medium transition-colors ${
-                        current ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        current
+                          ? 'bg-white/10 text-white'
+                          : 'text-white/80 hover:bg-white/10 hover:text-white'
                       }`}
                     >
                       {label(id)}
@@ -112,7 +114,11 @@ export function Header() {
         </div>
 
         {/* No display utility below md, so the hidden attribute decides. */}
-        <ul id={menuId} hidden={!open} className="border-t border-white/10 px-4 pb-4 pt-2 md:hidden">
+        <ul
+          id={menuId}
+          hidden={!open}
+          className="border-t border-white/10 px-4 pb-4 pt-2 md:hidden"
+        >
           {MENU_LINKS.map((id) => {
             const current = isCurrent(pathname, id);
             return (
@@ -122,7 +128,9 @@ export function Header() {
                   lang={lang}
                   aria-current={current ? 'page' : undefined}
                   className={`block rounded-md px-3 py-3 text-base font-medium transition-colors ${
-                    current ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    current
+                      ? 'bg-white/10 text-white'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {label(id)}

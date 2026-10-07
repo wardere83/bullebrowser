@@ -55,19 +55,24 @@ let mainWindow: BrowserWindow | null = null;
 
 async function createWindow() {
   const preloadPath = join(__dirname, '../preload/index.cjs');
-  mainWindow = createBrowserWindow({ preloadPath });
-  tabManager.attachWindow(mainWindow);
-  registerIpc(mainWindow, () => mainWindow);
-  setupAppMenu(mainWindow);
+  const win = createBrowserWindow({ preloadPath });
+  mainWindow = win;
+  win.once('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+  tabManager.attachWindow(win);
+  registerIpc(win, () => mainWindow);
+  setupAppMenu(win);
   // Deny capability requests to everything except this window's own chrome —
   // the agent browses arbitrary sites in this same session.
-  setupPermissions(mainWindow.webContents.id);
+  setupPermissions(win.webContents.id);
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    await mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+    await win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
-    await mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    await win.loadFile(join(__dirname, '../renderer/index.html'));
   }
+  if (!win.isDestroyed()) setupAutoUpdate(win);
 }
 
 app.whenReady().then(async () => {
@@ -86,11 +91,9 @@ app.whenReady().then(async () => {
       runtime: new DesktopToolRuntime({ request: async () => true }),
     });
   }
-  // The updater pushes status to this window, so it needs the handle.
-  if (mainWindow) setupAutoUpdate(mainWindow);
-
-  app.on('second-instance', () => {
-    if (mainWindow) {
+  app.on('second-instance', async () => {
+    if (!mainWindow || mainWindow.isDestroyed()) await createWindow();
+    else {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }

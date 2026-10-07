@@ -6,8 +6,40 @@
 import type { Messages } from './en';
 
 export const ptPT: Messages = {
+  'app.eyebrow': 'Sobre a aplicação',
+  'app.value.h2': 'Reúna a sua pesquisa e as suas evidências.',
+  'app.value.body':
+    'A estratégia de financiamento começa por compreender o que a sua organização pretende alcançar e quais as oportunidades que o apoiam. Mantenha as fontes e as prioridades por perto enquanto explora o próximo passo.',
+  'app.overview':
+    'O BulleBrowser é uma aplicação de computador para macOS, Windows e Linux. Reúne navegação, documentos da sua organização e um assistente ligado opcional num só lugar para pesquisar financiamento sem perder de vista os seus objetivos.',
+  'app.benefit.context.t': 'Coloque o financiamento em contexto',
+  'app.benefit.context.d':
+    'Leia páginas oficiais de financiamento a par da sua missão, dos seus planos e dos seus resultados documentados. Relacione o que um financiador pede com o que a sua organização realmente faz.',
+  'app.benefit.focus.t': 'Decida onde concentrar esforços',
+  'app.benefit.focus.d':
+    'Compare prioridades, requisitos e prazos com os seus objetivos. Identifique questões e lacunas nas evidências antes de dedicar tempo a uma candidatura.',
+  'app.benefit.strengths.t': 'Prepare-se a partir das suas forças reais',
+  'app.benefit.strengths.d':
+    'Utilize evidências aprovadas da organização, conclusões com citações e orientação reflexiva para planear uma proposta pelas suas próprias palavras.',
+  'app.audiences.eyebrow': 'Para empresas e CBOs',
+  'app.audiences.h2': 'Objetivos diferentes. Uma estratégia assente no seu trabalho.',
+  'app.audiences.body':
+    'Parta das prioridades da sua organização e avalie as oportunidades segundo as respetivas condições. A aplicação apoia a pesquisa; a decisão de financiamento continua a caber-lhe a si e ao financiador.',
+  'app.audience.businesses.t': 'Para empresas',
+  'app.audience.businesses.d':
+    'Integre os seus planos de crescimento, orçamentos e evidências das suas capacidades na pesquisa de financiamento. Compreenda quais as oportunidades que merecem atenção e o que precisa de demonstrar antes de preparar uma candidatura.',
+  'app.audience.cbos.t': 'Para CBOs',
+  'app.audience.cbos.d':
+    'Mantenha a missão, os programas e o impacto documentado no centro das decisões de financiamento. Explore oportunidades que apoiem as suas prioridades e apresente as suas forças com evidências rastreáveis.',
+  'app.control.eyebrow': 'Mantém o controlo',
+  'app.control.h2': 'As suas evidências. O seu critério.',
+  'app.control.body':
+    'Reveja as evidências de cada conclusão e aprove as afirmações sobre a sua organização. Escolhe as oportunidades e escreve as propostas; o BulleBrowser fornece estrutura e comentários, enquanto continua responsável pelas decisões e candidaturas.',
+  'app.assistant':
+    'A análise escrita com IA requer a sua própria chave de fornecedor. Sem ela, pode continuar a navegar, pesquisar fontes de financiamento e encontrar texto nos seus documentos.',
+
   'nav.home': 'Início',
-  'nav.workflows': 'Fluxos de trabalho',
+  'nav.app': 'Sobre a aplicação',
   'nav.guides': 'Guias',
   'nav.download': 'Transferir',
   'nav.about': 'Sobre',
@@ -49,8 +81,8 @@ export const ptPT: Messages = {
   'home.badge': 'Estratégia de financiamento · Por Bulle Consulting',
   'home.h1': 'A plataforma estratégica de financiamento para empresas e CBOs.',
   'home.sub':
-    'O BulleBrowser ajuda-o a descobrir oportunidades de financiamento, a compreender as prioridades dos financiadores, a avaliar o seu alinhamento e a desenvolver as suas propostas de forma ética. É um navegador para computador com um assistente integrado, feito para o trabalho de financiamento.',
-  'home.cta.workflows': 'Ver como funciona',
+    'Passe de pesquisas de financiamento dispersas a uma estratégia assente na sua organização. O BulleBrowser reúne fontes oficiais, os seus documentos e um assistente integrado para que empresas e CBOs possam tomar decisões de financiamento mais informadas.',
+  'home.cta.app': 'Explorar a aplicação',
   'home.pill.sources': 'Fontes oficiais',
   'home.pill.status': 'Ativa, expirada ou não verificada',
   'home.pill.citations': 'Citações por página e secção',
@@ -59,21 +91,22 @@ export const ptPT: Messages = {
   'marquee.pause': 'Pausar a lista em movimento',
   'marquee.play': 'Retomar a lista em movimento',
 
-  'film.title': 'Veja o assistente a trabalhar.',
+  'film.title': 'Veja a sua estratégia de financiamento ganhar forma.',
   'film.caption':
-    'Os financiadores, as oportunidades, os montantes e as datas deste filme são fictícios. Foi gravado antes de ser acrescentada a área de trabalho de financiamento, pelo que alguns textos no ecrã mudaram entretanto.',
+    'Apresentação ilustrativa: a organização, os financiadores, as oportunidades, os montantes e as datas são fictícios.',
   'film.play': 'Reproduzir o filme do BulleBrowser',
   'film.pause': 'Pausar o filme',
   'film.fallback': 'Não foi possível carregar o filme. Tente atualizar a página.',
   'film.description':
-    'Ilustração sem som com dados de exemplo fictícios. Uma pessoa pede ao BulleBrowser que encontre subvenções para um projeto de capacitação comunitária em Nova Jérsia e Los Angeles. O assistente abre uma maqueta do Grants.gov com publicações fictícias, pesquisa nela, lê os resultados, abre três em novos separadores e devolve uma comparação que indica as suas fontes, enquanto a pessoa mantém o controlo. Nenhum dos financiadores, oportunidades, montantes ou datas apresentados é real.',
+    'Uma apresentação silenciosa de uma estratégia de financiamento com dados fictícios. Uma organização adiciona documentos e aprova evidências das suas prioridades. O filme mostra as quatro ações de financiamento da aplicação, os estados das oportunidades segundo fontes oficiais, a comparação de requisitos com evidências da organização e perguntas de reflexão para uma proposta escrita pelo candidato.',
 
   'ask.eyebrow': 'Quatro formas de começar',
   'ask.h2': 'Em que posso ajudar?',
   'ask.body':
     'O BulleBrowser abre com quatro opções. Cada uma é um percurso guiado que assenta em fontes oficiais e nos documentos da sua própria organização.',
   'ask.more': 'Como funciona cada percurso',
-  'ask.find.lede': 'Encontre subvenções relevantes em fontes oficiais, de acordo com a sua organização.',
+  'ask.find.lede':
+    'Encontre subvenções relevantes em fontes oficiais, de acordo com a sua organização.',
   'ask.find.body':
     'Defina a zona geográfica, a elegibilidade, a categoria de financiamento, o montante e o prazo, ou parta das suas prioridades aprovadas. Cada publicação remete para a respetiva página oficial e tem a etiqueta Ativa, Expirada ou Não verificada.',
   'ask.align.lede': 'Avalie como os seus documentos se alinham com uma oportunidade.',
@@ -82,7 +115,8 @@ export const ptPT: Messages = {
   'ask.priorities.lede': 'Explore as prioridades de um financiador e aquilo em que investe.',
   'ask.priorities.body':
     'Carregue um pedido de propostas (RFP) ou abra uma publicação guardada e leia um resumo em linguagem clara do propósito do financiador, das suas prioridades, dos resultados pretendidos e dos critérios de avaliação, com cada ponto citado pela página ou secção.',
-  'ask.guide.lede': 'Um guia ético, assente nos seus pontos fortes, para escrever a sua própria proposta.',
+  'ask.guide.lede':
+    'Um guia ético, assente nos seus pontos fortes, para escrever a sua própria proposta.',
   'ask.guide.body':
     'Trabalhe a partir de uma estrutura que segue os critérios do financiador, responda a perguntas de reflexão e receba observações sobre o seu rascunho. O guia parte dos pontos fortes que os seus documentos comprovam e não escreve a proposta por si.',
 
@@ -233,7 +267,8 @@ export const ptPT: Messages = {
   'rfp.more': 'O que a análise abrange',
   'rfp.covers.h3': 'O que o resumo abrange',
   'rfp.cover.purpose.t': 'Propósito, prioridades e resultados',
-  'rfp.cover.purpose.d': 'Aquilo em que o financiador investe, o que prioriza e os resultados que pretende.',
+  'rfp.cover.purpose.d':
+    'Aquilo em que o financiador investe, o que prioriza e os resultados que pretende.',
   'rfp.cover.eligibility.t': 'Elegibilidade e atividades apoiadas',
   'rfp.cover.eligibility.d':
     'Quem se pode candidatar, e que atividades e despesas o financiamento apoia.',
@@ -319,34 +354,10 @@ export const ptPT: Messages = {
   'privacy.more': 'Ler a política de privacidade',
   'privacy.english': 'A política de privacidade é publicada em inglês.',
 
-  'features.h1': 'O trabalho de financiamento, da primeira pesquisa à sua própria proposta.',
+  'features.h1': 'Um navegador concebido para a sua estratégia de financiamento.',
   'features.sub':
-    'O BulleBrowser junta um navegador para computador a um assistente que trabalha a partir de fontes oficiais de financiamento e dos documentos da sua própria organização. Esta página explica cada parte, e o que não fará.',
-  'features.toc': 'Nesta página',
-  'features.flows.eyebrow': 'Percursos',
-  'features.flows.h2': 'Quatro percursos, passo a passo.',
-  'features.flow.find.1':
-    'Parta das suas prioridades aprovadas, ou defina os filtros: zona geográfica, elegibilidade, categoria de financiamento, montante e prazo.',
-  'features.flow.find.2':
-    'O BulleBrowser pesquisa nas fontes oficiais a partir do seu dispositivo e verifica o prazo de cada publicação.',
-  'features.flow.find.3':
-    'Analise cada publicação com a sua etiqueta, o motivo dessa etiqueta, o montante e a ligação para a página oficial. Guarde as que merecem uma leitura mais atenta.',
-  'features.flow.align.1': 'Escolha uma publicação guardada ou um RFP que tenha carregado.',
-  'features.flow.align.2':
-    'O BulleBrowser percorre os requisitos do financiador, um a um, e procura o que o seu perfil aprovado e os seus documentos dizem sobre cada um.',
-  'features.flow.align.3':
-    'Leia as conclusões, cada uma citada de ambos os lados, com as recomendações separadas do que está documentado.',
-  'features.flow.priorities.1': 'Carregue um RFP, ou use a publicação oficial de uma oportunidade guardada.',
-  'features.flow.priorities.2':
-    'Leia um resumo em linguagem clara daquilo em que o financiador investe, de quem se pode candidatar e de como são avaliadas as candidaturas, citado pela página ou secção.',
-  'features.flow.priorities.3':
-    'Veja o que o documento deixa pouco claro, com perguntas a colocar ao financiador.',
-  'features.flow.guide.1':
-    'O guia procura primeiro as regras do financiador sobre o apoio de IA e segue-as.',
-  'features.flow.guide.2':
-    'Trabalhe a partir de uma estrutura que segue os critérios do financiador, com os seus pontos fortes documentados e perguntas de reflexão para cada secção.',
-  'features.flow.guide.3': 'Escreva por palavras suas e, depois, peça observações sobre o seu rascunho.',
-  'features.cta.h2': 'Comece pelos seus próprios documentos.',
+    'Reúna a pesquisa na web e as evidências da sua organização num só lugar. O BulleBrowser ajuda empresas e CBOs a compreender as suas opções, decidir onde concentrar esforços e preparar-se com confiança nas fontes.',
+  'features.cta.h2': 'Fundamente a sua próxima decisão de financiamento em evidências.',
   'features.cta.sub': 'Disponível para macOS, Windows e Linux.',
 
   'download.h1': 'Transferir o BulleBrowser',
@@ -405,8 +416,8 @@ export const ptPT: Messages = {
     'As versões para macOS são assinadas com um Developer ID e notarizadas pela Apple. No Windows, o SmartScreen pode mostrar um aviso antes de executar um instalador publicado recentemente. Cada versão inclui um ficheiro de somas de verificação SHA-256, com ligação a partir da página de transferências.',
   'install.updates.t': 'Atualizações',
   'install.updates.d':
-    'O BulleBrowser verifica cerca de uma vez por hora se existe uma versão nova e transfere-a em segundo plano. Nada é instalado até escolher «Update App» ou sair da aplicação.',
-  'install.next': 'Ver os percursos',
+    'O BulleBrowser procura versões publicadas ao iniciar e a cada cinco minutos, e descarrega as atualizações em segundo plano. Escolha “Update App” para continuar a trabalhar e ocultar o aviso dessa versão. A atualização entra em vigor depois de fechar normalmente a aplicação e voltar a abri-la. Uma versão mais recente faz reaparecer o aviso. No macOS, prepara-se uma atualização de cada vez; uma descarga mais recente aguarda até que a versão preparada entre em vigor.',
+  'install.next': 'Explorar a aplicação',
 
   'about.h1': 'Sobre a Bulle Consulting',
   'about.lead':

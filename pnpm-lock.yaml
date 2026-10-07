@@ -92,6 +92,9 @@ importers:
       saxes:
         specifier: 6.0.0
         version: 6.0.0
+      semver:
+        specifier: ^7.8.0
+        version: 7.8.0
       shiki:
         specifier: ^1.24.4
         version: 1.29.2
@@ -120,6 +123,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.14)
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.8.0
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -1184,6 +1190,9 @@ packages:
 
   '@types/responselike@1.0.3':
     resolution: {integrity: sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
@@ -5354,6 +5363,8 @@ snapshots:
   '@types/responselike@1.0.3':
     dependencies:
       '@types/node': 22.19.18
+
+  '@types/semver@7.8.0': {}
 
   '@types/unist@2.0.11': {}
 

@@ -10,10 +10,42 @@
 // "CBO"), which is always written as the acronym.
 
 export const en = {
+  'app.eyebrow': 'About the app',
+  'app.value.h2': 'Bring your research and your evidence together.',
+  'app.value.body':
+    'Funding strategy starts with understanding what your organization wants to achieve and which opportunities support it. Keep your sources and your priorities close as you explore the next step.',
+  'app.overview':
+    'BulleBrowser is a desktop app for macOS, Windows and Linux. It brings browsing, your organization’s documents and an optional connected assistant into one place, so you can research funding with your own goals in view.',
+  'app.benefit.context.t': 'Put funding in context',
+  'app.benefit.context.d':
+    'Read official funding pages alongside your mission, plans and documented results. Connect what a funder is asking for with what your organization actually does.',
+  'app.benefit.focus.t': 'Decide where to focus',
+  'app.benefit.focus.d':
+    'Compare priorities, requirements and deadlines with your own goals. Identify questions and evidence gaps before committing time to an application.',
+  'app.benefit.strengths.t': 'Prepare from your real strengths',
+  'app.benefit.strengths.d':
+    'Use approved organization evidence, cited findings and reflective guidance to plan a proposal in your own words.',
+  'app.audiences.eyebrow': 'For businesses and CBOs',
+  'app.audiences.h2': 'Different goals. A strategy rooted in your work.',
+  'app.audiences.body':
+    'Start from your organization’s priorities and assess opportunities on their own terms. The app supports your research; the funding decision stays with you and the funder.',
+  'app.audience.businesses.t': 'For businesses',
+  'app.audience.businesses.d':
+    'Bring growth plans, budgets and evidence of your capabilities into funding research. Understand which opportunities deserve attention and what you need to demonstrate before preparing an application.',
+  'app.audience.cbos.t': 'For CBOs',
+  'app.audience.cbos.d':
+    'Keep your mission, programs and documented impact at the center of funding decisions. Explore opportunities that support your priorities and explain your strengths through evidence you can trace.',
+  'app.control.eyebrow': 'You stay in control',
+  'app.control.h2': 'Your evidence. Your judgment.',
+  'app.control.body':
+    'Review the evidence behind each finding and approve statements about your organization. You choose what to pursue and write your own proposals; BulleBrowser provides structure and feedback while you remain responsible for decisions and submissions.',
+  'app.assistant':
+    'Written AI analysis requires your own provider key. Without one, you can still browse, search funding sources and find text in your documents.',
+
   // Navigation. The section names are used only when components/sections.ts
   // says to translate them; the rest of this block is always in use.
   'nav.home': 'Home',
-  'nav.workflows': 'Workflows',
+  'nav.app': 'About the app',
   'nav.guides': 'Guides',
   'nav.download': 'Download',
   'nav.about': 'About',
@@ -46,7 +78,8 @@ export const en = {
   'status.unverified': 'Unverified',
   'status.active.d':
     'Shown only when the official source reports the opportunity open and its deadline has not passed, checked when you search.',
-  'status.expired.d': 'The official source reports the opportunity closed, or its deadline has passed.',
+  'status.expired.d':
+    'The official source reports the opportunity closed, or its deadline has passed.',
   'status.unverified.d':
     'Everything else, such as a forecast, a missing or implausible deadline, a check that failed, or a result that is no longer fresh. Confirm it on the official listing.',
 
@@ -59,8 +92,8 @@ export const en = {
   'home.badge': 'Funding strategy · By Bulle Consulting',
   'home.h1': 'The strategic funding platform for businesses and CBOs.',
   'home.sub':
-    'BulleBrowser helps you discover funding opportunities, understand funder priorities, assess your alignment, and navigate proposal development ethically. It is a desktop browser with a built-in assistant, made for funding work.',
-  'home.cta.workflows': 'See how it works',
+    'Move from scattered funding research to a strategy grounded in your organization. BulleBrowser keeps official sources, your documents and a built-in assistant together, so businesses and CBOs can make more informed funding decisions.',
+  'home.cta.app': 'Explore the app',
   'home.pill.sources': 'Official sources',
   'home.pill.status': 'Active, Expired or Unverified',
   'home.pill.citations': 'Page and section citations',
@@ -70,14 +103,14 @@ export const en = {
   'marquee.play': 'Resume the moving list',
 
   // The film. The description is what a screen reader hears in place of it.
-  'film.title': 'See the assistant at work.',
+  'film.title': 'See your funding strategy take shape.',
   'film.caption':
-    'The funders, opportunities, amounts and dates in this film are fictional. It was recorded before the funding workspace was added, so some on-screen wording has since changed.',
+    'Illustrative walkthrough: the organization, funders, opportunities, amounts and dates are fictional.',
   'film.play': 'Play the BulleBrowser film',
   'film.pause': 'Pause the film',
   'film.fallback': 'The film could not load. Try refreshing the page.',
   'film.description':
-    'A silent illustration with fictional sample data. A person asks BulleBrowser to find grants for a community empowerment project in New Jersey and Los Angeles. The assistant opens a mock-up of Grants.gov filled with fictional listings, searches it, reads the results, opens three of them in new tabs and returns a comparison that names its sources, while the person stays in control. None of the funders, opportunities, amounts or dates shown is real.',
+    'A silent funding strategy walkthrough using fictional data. An organization adds documents and approves evidence about its priorities. The film shows the app’s four funding actions, official-source opportunity statuses, requirements compared with organization evidence, and reflective questions for a proposal the applicant writes.',
 
   // The four options. Their names are in lib/terms.ts.
   'ask.eyebrow': 'Four ways to start',
@@ -101,7 +134,7 @@ export const en = {
   // Organization Knowledge Hub. `hub.description` is fixed wording.
   'hub.eyebrow': 'Your organization, in its own words',
   'hub.description':
-    "Upload your organization’s documents so BulleBrowser aligns its guidance with your mission, priorities, strengths, and funding goals.",
+    'Upload your organization’s documents so BulleBrowser aligns its guidance with your mission, priorities, strengths, and funding goals.',
   'hub.more': 'How the Organization Knowledge Hub works',
   'hub.formats.t': 'PDF, DOCX, TXT and Markdown',
   'hub.formats.d':
@@ -123,7 +156,8 @@ export const en = {
     'Every organization you add has its own documents, profile and funding work on your device. Nothing is looked up across organizations.',
   'hub.how.h3': 'From documents to an approved profile',
   'hub.how.1': 'Add PDF, DOCX, TXT or Markdown files of up to 40 MB each.',
-  'hub.how.2': 'BulleBrowser reads them on your device and makes them searchable for that organization only.',
+  'hub.how.2':
+    'BulleBrowser reads them on your device and makes them searchable for that organization only.',
   'hub.how.3':
     'It proposes statements about your mission, the people you serve, where you work, your priorities, programs, strengths, impact evidence, capacity and funding goals, each with the passage it came from.',
   'hub.how.4':
@@ -145,7 +179,8 @@ export const en = {
   'hub.sample.served.b.source': 'Previous proposal, page 7',
   'hub.sample.goals.field': 'Funding goals',
   'hub.sample.goals.state': 'Missing',
-  'hub.sample.goals.note': 'Not found in your documents. Add them yourself, or upload a document that states them.',
+  'hub.sample.goals.note':
+    'Not found in your documents. Add them yourself, or upload a document that states them.',
   'hub.sample.approve': 'Approve',
   'hub.sample.edit': 'Edit',
   'hub.sample.reject': 'Reject',
@@ -220,7 +255,8 @@ export const en = {
   'filter.amount': 'Award amount',
   'filter.deadline': 'Deadline',
   'finder.sources.h3': 'Live sources today',
-  'finder.sources.body': 'When you search, BulleBrowser reads these official sources directly from your device.',
+  'finder.sources.body':
+    'When you search, BulleBrowser reads these official sources directly from your device.',
   'finder.sources.caption': 'Official sources BulleBrowser reads today',
   'finder.col.source': 'Official source',
   'finder.col.level': 'Level',
@@ -245,9 +281,11 @@ export const en = {
   'rfp.more': 'What the analysis covers',
   'rfp.covers.h3': 'What the summary covers',
   'rfp.cover.purpose.t': 'Purpose, priorities and outcomes',
-  'rfp.cover.purpose.d': 'What the funder is investing in, what it prioritizes and the outcomes it intends.',
+  'rfp.cover.purpose.d':
+    'What the funder is investing in, what it prioritizes and the outcomes it intends.',
   'rfp.cover.eligibility.t': 'Eligibility and supported activities',
-  'rfp.cover.eligibility.d': 'Who may apply, and which activities and expenses the funding supports.',
+  'rfp.cover.eligibility.d':
+    'Who may apply, and which activities and expenses the funding supports.',
   'rfp.cover.terms.t': 'Amounts, match, period and deadlines',
   'rfp.cover.terms.d':
     'Award amounts, matching requirements, the funding period and each deadline the document states.',
@@ -255,7 +293,8 @@ export const en = {
   'rfp.cover.process.d':
     'How applications are evaluated, which documents are required, the submission steps and the reporting obligations.',
   'rfp.cover.alignment.t': 'Alignment with your approved priorities',
-  'rfp.cover.alignment.d': 'Where the funder’s requirements meet what your approved profile and documents show.',
+  'rfp.cover.alignment.d':
+    'Where the funder’s requirements meet what your approved profile and documents show.',
   'rfp.cover.gaps.t': 'Gaps and questions to resolve',
   'rfp.cover.gaps.d':
     'What the document leaves unclear or does not cover, and the questions to settle before you apply.',
@@ -298,7 +337,8 @@ export const en = {
   'browser.body':
     'BulleBrowser is a desktop browser with tabs, bookmarks and history. Its built-in assistant can read pages and browse official sites for you, and it stays under your control.',
   'browser.access.t': 'Asks before it browses',
-  'browser.access.d': 'Each task asks once for permission to use your tabs, and says what it wants to do.',
+  'browser.access.d':
+    'Each task asks once for permission to use your tabs, and says what it wants to do.',
   'browser.steps.t': 'Shows every step',
   'browser.steps.d': 'You see each step as it happens, and Stop halts the task.',
   'browser.budget.t': 'Works within a step budget',
@@ -319,7 +359,8 @@ export const en = {
   'privacy.h2': 'Stored on your device. Sent only where you direct it.',
   'privacy.body':
     'Documents, extracted text, your profile and your analyses are stored on your device. When you connect your own AI provider and ask for analysis, relevant document excerpts go directly to that provider under your own key. Funding searches send search terms and filters, never documents, directly to the official sources. Nothing is routed through Bulle Consulting, and there is no analytics or telemetry.',
-  'privacy.1': 'Documents, extracted text, your profile and your analyses are stored on your device.',
+  'privacy.1':
+    'Documents, extracted text, your profile and your analyses are stored on your device.',
   'privacy.2':
     'When you connect your own AI provider and ask for analysis, relevant document excerpts go directly to that provider under your own key.',
   'privacy.3':
@@ -330,33 +371,11 @@ export const en = {
   'privacy.more': 'Read the privacy policy',
   'privacy.english': 'The privacy policy is published in English.',
 
-  // Workflows page
-  'features.h1': 'Funding work, from the first search to your own proposal.',
+  // About the app page
+  'features.h1': 'A browser built for your funding strategy.',
   'features.sub':
-    'BulleBrowser pairs a desktop browser with an assistant that works from official funding sources and your organization’s own documents. This page explains each part, and what it will not do.',
-  'features.toc': 'On this page',
-  'features.flows.eyebrow': 'Workflows',
-  'features.flows.h2': 'Four workflows, step by step.',
-  'features.flow.find.1':
-    'Start from your approved priorities, or set the filters yourself: geography, eligibility, funding category, award amount and deadline.',
-  'features.flow.find.2':
-    'BulleBrowser searches the official sources from your device and checks each listing’s deadline.',
-  'features.flow.find.3':
-    'Review each listing with its status, the reason for that status, the amount and the link to the official page. Save the ones that deserve a closer read.',
-  'features.flow.align.1': 'Choose a saved listing or an RFP you uploaded.',
-  'features.flow.align.2':
-    'BulleBrowser takes the funder’s requirements one at a time and looks for what your approved profile and documents say about each.',
-  'features.flow.align.3':
-    'Read the findings, each cited on both sides, with recommendations kept apart from what is documented.',
-  'features.flow.priorities.1': 'Upload an RFP, or use the official listing of a saved opportunity.',
-  'features.flow.priorities.2':
-    'Read a plain-language summary of what the funder is investing in, who may apply and how applications are judged, cited to the page or section.',
-  'features.flow.priorities.3': 'See what the document leaves unclear, with questions to put to the funder.',
-  'features.flow.guide.1': 'The guide first looks for the funder’s rules on AI assistance and follows them.',
-  'features.flow.guide.2':
-    'Work from an outline that follows the funder’s criteria, with your documented strengths and reflective questions for each section.',
-  'features.flow.guide.3': 'Write in your own words, then ask for observations on your draft.',
-  'features.cta.h2': 'Start with your own documents.',
+    'Bring web research and your organization’s evidence into one place. BulleBrowser helps businesses and CBOs understand their options, decide where to focus and prepare with confidence in their sources.',
+  'features.cta.h2': 'Build your next funding decision on evidence.',
   'features.cta.sub': 'Available for macOS, Windows and Linux.',
 
   // Download page
@@ -366,7 +385,8 @@ export const en = {
   'download.signed':
     'macOS releases are signed with a Developer ID and notarized by Apple. On Windows, SmartScreen may ask you to confirm before the installer runs.',
   'download.checking': 'Checking for the latest release…',
-  'download.unavailableNow': 'The release list could not be loaded right now. Try again in a few minutes.',
+  'download.unavailableNow':
+    'The release list could not be loaded right now. Try again in a few minutes.',
   'download.latest': 'Latest release:',
   'download.published': 'published',
   'download.none': 'No public release has been published yet.',
@@ -416,8 +436,8 @@ export const en = {
     'macOS releases are signed with a Developer ID and notarized by Apple. On Windows, SmartScreen can show a prompt before a newly published installer runs. Each release includes a SHA-256 checksum file, linked from the download page.',
   'install.updates.t': 'Updates',
   'install.updates.d':
-    'BulleBrowser checks for a new version about once an hour and downloads it in the background. Nothing is installed until you choose “Update App” or quit the app.',
-  'install.next': 'See the workflows',
+    'BulleBrowser checks for published releases when it starts and every five minutes, then downloads updates in the background. Choose “Update App” to keep working and hide the notice for that version. The update takes effect after you quit normally and open the app again. A newer release brings the notice back. On macOS, one update is prepared at a time; a newer download waits until the prepared version takes effect.',
+  'install.next': 'Explore the app',
 
   // About page
   'about.h1': 'About Bulle Consulting',

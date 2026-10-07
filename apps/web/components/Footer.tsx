@@ -10,7 +10,7 @@ import { SECTIONS, useSectionNames, type SectionId } from './sections';
 // Dark footer in the Bulle Consulting style: the light wordmark, the tagline
 // and what the product is not on the left, a quick-links column on the right,
 // and the copyright on a hairline below.
-const LINKS: SectionId[] = ['workflows', 'guides', 'download', 'about', 'privacy'];
+const LINKS: SectionId[] = ['app', 'guides', 'download', 'about', 'privacy'];
 
 export function Footer() {
   const t = useT();
@@ -29,7 +29,9 @@ export function Footer() {
               />
             </Link>
             <p className="mt-4 text-sm text-ink-inverse/80">{t('footer.tagline')}</p>
-            <p className="mt-3 text-xs leading-relaxed text-ink-inverse/70">{t('common.disclaimer')}</p>
+            <p className="mt-3 text-xs leading-relaxed text-ink-inverse/70">
+              {t('common.disclaimer')}
+            </p>
           </div>
           <nav aria-label={t('nav.footer')}>
             <ul className="flex flex-col gap-2 text-sm">

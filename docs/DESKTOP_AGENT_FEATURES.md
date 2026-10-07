@@ -95,11 +95,22 @@ collapsed Settings section for open-ended reasoning and cloud-specific skills.
 
 ### Updating the installed app
 
-Published releases download in the background. Click **Update App** in the top
-bar to install the downloaded version and relaunch. After the updated app opens,
-the button disappears; it returns only when a later release is ready. The app
-checks at launch and hourly while open. A downloaded installer stays available
-through network failures and is not repeatedly downloaded while awaiting install.
+Published releases download in the background. The top bar shows the version,
+download progress and any retryable interruption. Click **Update App** once it is
+ready to prepare it without closing the window; the notice disappears for that
+version. Keep working normally. The new version takes effect after the next
+normal quit and reopen. The app checks at launch and every five minutes while
+open, including when an earlier update is prepared, so a later release gets a
+new notice. Downloaded installers remain available through unrelated feed errors
+and the same version is not repeatedly downloaded. A commit becomes an available
+app update only after the signed release workflow publishes it.
+
+macOS keeps one verified native update prepared per running session. If a later
+release appears, its notice names both versions; the later release downloads
+after the prepared version takes effect on the next normal launch. This avoids
+replacing Squirrel's pending bundle while the user is still working. Native
+preparation timeouts leave the app open and ask for a normal reopen, rather than
+starting another native installation over an unconfirmed attempt.
 
 These changes reach installed users only after the PR is merged and the existing
 signed release workflow successfully publishes its installers and update manifests.

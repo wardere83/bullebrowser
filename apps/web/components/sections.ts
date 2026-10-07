@@ -11,7 +11,7 @@ export const TRANSLATE_SECTION_NAMES: boolean = false;
 
 export const SECTIONS = {
   home: { href: '/', name: 'Home', key: 'nav.home' },
-  workflows: { href: '/features', name: 'Workflows', key: 'nav.workflows' },
+  app: { href: '/features', name: 'About the app', key: 'nav.app' },
   guides: { href: '/install', name: 'Guides', key: 'nav.guides' },
   download: { href: '/download', name: 'Download', key: 'nav.download' },
   about: { href: '/about', name: 'About', key: 'nav.about' },

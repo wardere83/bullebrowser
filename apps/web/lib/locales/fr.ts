@@ -6,8 +6,40 @@
 import type { Messages } from './en';
 
 const text: Messages = {
+  'app.eyebrow': 'À propos de l’application',
+  'app.value.h2': 'Réunissez vos recherches et vos éléments probants.',
+  'app.value.body':
+    'Une stratégie de financement commence par comprendre les objectifs de votre organisation et les opportunités qui les soutiennent. Gardez vos sources et vos priorités à portée de main pour envisager la suite.',
+  'app.overview':
+    'BulleBrowser est une application de bureau pour macOS, Windows et Linux. Elle réunit navigation, documents de votre organisation et assistant connecté facultatif pour rechercher des financements en gardant vos objectifs en vue.',
+  'app.benefit.context.t': 'Replacez le financement dans son contexte',
+  'app.benefit.context.d':
+    'Lisez les pages officielles de financement aux côtés de votre mission, de vos plans et de vos résultats documentés. Reliez les attentes d’un bailleur de fonds à ce que votre organisation réalise réellement.',
+  'app.benefit.focus.t': 'Choisissez où concentrer vos efforts',
+  'app.benefit.focus.d':
+    'Comparez les priorités, les exigences et les échéances à vos objectifs. Repérez les questions et les preuves manquantes avant de consacrer du temps à une candidature.',
+  'app.benefit.strengths.t': 'Préparez-vous à partir de vos forces réelles',
+  'app.benefit.strengths.d':
+    'Utilisez les preuves approuvées de votre organisation, les constats cités et les questions de réflexion pour préparer une proposition avec vos propres mots.',
+  'app.audiences.eyebrow': 'Pour les entreprises et les CBOs',
+  'app.audiences.h2': 'Des objectifs différents. Une stratégie ancrée dans votre travail.',
+  'app.audiences.body':
+    'Partez des priorités de votre organisation et évaluez chaque opportunité selon ses conditions. L’application accompagne vos recherches ; la décision de financement reste entre vous et le bailleur de fonds.',
+  'app.audience.businesses.t': 'Pour les entreprises',
+  'app.audience.businesses.d':
+    'Intégrez vos plans de croissance, vos budgets et les preuves de vos capacités à vos recherches de financement. Comprenez quelles opportunités méritent votre attention et ce que vous devez démontrer avant de préparer une candidature.',
+  'app.audience.cbos.t': 'Pour les CBOs',
+  'app.audience.cbos.d':
+    'Placez votre mission, vos programmes et votre impact documenté au cœur des décisions de financement. Explorez les opportunités qui soutiennent vos priorités et présentez vos forces grâce à des preuves traçables.',
+  'app.control.eyebrow': 'Vous gardez le contrôle',
+  'app.control.h2': 'Vos preuves. Votre jugement.',
+  'app.control.body':
+    'Examinez les preuves derrière chaque constat et approuvez les énoncés sur votre organisation. Vous choisissez les opportunités et rédigez vos propositions ; BulleBrowser apporte structure et retours, tandis que vous restez responsable des décisions et des dépôts.',
+  'app.assistant':
+    'Les analyses rédigées par l’IA nécessitent votre propre clé de fournisseur. Sans clé, vous pouvez toujours naviguer, rechercher dans les sources de financement et retrouver du texte dans vos documents.',
+
   'nav.home': 'Accueil',
-  'nav.workflows': 'Flux de travail',
+  'nav.app': 'À propos de l’application',
   'nav.guides': 'Guides',
   'nav.download': 'Télécharger',
   'nav.about': 'À propos',
@@ -49,8 +81,8 @@ const text: Messages = {
   'home.badge': 'Stratégie de financement · Par Bulle Consulting',
   'home.h1': 'La plateforme stratégique de financement pour les entreprises et les CBOs.',
   'home.sub':
-    'BulleBrowser vous aide à repérer les opportunités de financement, à comprendre les priorités des bailleurs de fonds, à évaluer votre adéquation et à mener l’élaboration de vos propositions de manière éthique. C’est un navigateur de bureau doté d’un assistant intégré, conçu pour le travail de financement.',
-  'home.cta.workflows': 'Voir comment cela fonctionne',
+    'Passez de recherches de financement dispersées à une stratégie ancrée dans votre organisation. BulleBrowser réunit sources officielles, documents et assistant intégré pour aider les entreprises et les CBOs à prendre des décisions de financement mieux informées.',
+  'home.cta.app': 'Découvrir l’application',
   'home.pill.sources': 'Sources officielles',
   'home.pill.status': 'Active, expirée ou non vérifiée',
   'home.pill.citations': 'Citations par page et par section',
@@ -59,30 +91,33 @@ const text: Messages = {
   'marquee.pause': 'Mettre en pause la liste défilante',
   'marquee.play': 'Reprendre la liste défilante',
 
-  'film.title': 'Voyez l’assistant à l’œuvre.',
+  'film.title': 'Voyez votre stratégie de financement prendre forme.',
   'film.caption':
-    'Les bailleurs de fonds, les opportunités, les montants et les dates de ce film sont fictifs. Il a été réalisé avant l’ajout de l’espace de travail consacré au financement ; certaines mentions à l’écran ont changé depuis.',
+    'Présentation illustrative : l’organisation, les bailleurs de fonds, les opportunités, les montants et les dates sont fictifs.',
   'film.play': 'Lire le film BulleBrowser',
   'film.pause': 'Mettre le film en pause',
   'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
   'film.description':
-    'Illustration muette reposant sur des données d’exemple fictives. Une personne demande à BulleBrowser de trouver des subventions pour un projet d’autonomisation communautaire dans le New Jersey et à Los Angeles. L’assistant ouvre une maquette de Grants.gov remplie d’annonces fictives, y lance une recherche, lit les résultats, ouvre trois d’entre elles dans de nouveaux onglets et rend une comparaison qui cite ses sources, tandis que la personne garde le contrôle. Aucun des bailleurs de fonds, opportunités, montants ou dates présentés n’est réel.',
+    'Présentation muette d’une stratégie de financement à partir de données fictives. Une organisation ajoute des documents et approuve les éléments attestant ses priorités. Le film présente les quatre actions de financement, le statut des opportunités selon les sources officielles, la comparaison des exigences avec les preuves de l’organisation et des questions de réflexion pour une proposition rédigée par le candidat.',
 
   'ask.eyebrow': 'Quatre façons de commencer',
   'ask.h2': 'Comment puis-je vous aider ?',
   'ask.body':
     'BulleBrowser s’ouvre sur quatre options. Chacune est un parcours guidé qui s’appuie sur des sources officielles et sur les documents de votre organisation.',
   'ask.more': 'Le détail de chaque parcours',
-  'ask.find.lede': 'Trouver des subventions pertinentes dans les sources officielles, selon votre organisation.',
+  'ask.find.lede':
+    'Trouver des subventions pertinentes dans les sources officielles, selon votre organisation.',
   'ask.find.body':
     'Définissez la zone géographique, l’éligibilité, la catégorie de financement, le montant et la date limite, ou partez de vos priorités approuvées. Chaque annonce renvoie à sa page officielle et porte la mention Active, Expirée ou Non vérifiée.',
   'ask.align.lede': 'Évaluer l’adéquation entre vos documents et une opportunité.',
   'ask.align.body':
     'BulleBrowser reprend une à une les exigences du bailleur de fonds et montre ce que vos documents en disent : documenté, partiellement documenté, écart, ou absent des documents. Il ne vous dit jamais que vous êtes éligible, ni que vous ne l’êtes pas.',
-  'ask.priorities.lede': 'Explorer les priorités d’un bailleur de fonds et ce dans quoi il investit.',
+  'ask.priorities.lede':
+    'Explorer les priorités d’un bailleur de fonds et ce dans quoi il investit.',
   'ask.priorities.body':
     'Importez un appel à propositions (RFP) ou ouvrez une annonce enregistrée, puis lisez un résumé en langage clair de l’objectif du bailleur de fonds, de ses priorités, des résultats attendus et de ses critères d’évaluation, chaque point étant rattaché à sa page ou à sa section.',
-  'ask.guide.lede': 'Un guide éthique, fondé sur vos forces, pour rédiger vous-même votre proposition.',
+  'ask.guide.lede':
+    'Un guide éthique, fondé sur vos forces, pour rédiger vous-même votre proposition.',
   'ask.guide.body':
     'Travaillez à partir d’un plan qui suit les critères du bailleur de fonds, répondez à des questions de réflexion et recevez des observations sur votre brouillon. Le guide part des forces que vos documents attestent et ne rédige pas la proposition à votre place.',
 
@@ -164,7 +199,8 @@ const text: Messages = {
   'demo.listing.b.funder': 'Agence fédérale (exemple)',
   'demo.listing.b.meta': 'Montant non précisé · pas encore de date limite',
   'demo.listing.b.reason': 'Une prévision : la source n’a pas publié de date limite.',
-  'demo.listing.c.title': 'Annonce d’exemple C : subvention pour des programmes destinés aux habitants',
+  'demo.listing.c.title':
+    'Annonce d’exemple C : subvention pour des programmes destinés aux habitants',
   'demo.listing.c.funder': 'Agence municipale (exemple)',
   'demo.listing.c.meta': 'Jusqu’à 50 000 $ · close',
   'demo.listing.c.reason': 'La date limite est dépassée.',
@@ -290,7 +326,8 @@ const text: Messages = {
   'browser.access.d':
     'Chaque tâche demande une fois l’autorisation d’utiliser vos onglets et précise ce qu’elle veut faire.',
   'browser.steps.t': 'Montre chaque étape',
-  'browser.steps.d': 'Vous voyez chaque étape au fur et à mesure, et le bouton Stop interrompt la tâche.',
+  'browser.steps.d':
+    'Vous voyez chaque étape au fur et à mesure, et le bouton Stop interrompt la tâche.',
   'browser.budget.t': 'Travaille dans un budget d’étapes',
   'browser.budget.d':
     'Chaque tâche de navigation dispose d’un budget d’étapes. Elle s’arrête à la limite, et vous décidez si elle continue.',
@@ -308,7 +345,8 @@ const text: Messages = {
   'privacy.h2': 'Stocké sur votre appareil. Envoyé uniquement là où vous le décidez.',
   'privacy.body':
     'Les documents, le texte extrait, votre profil et vos analyses sont stockés sur votre appareil. Lorsque vous connectez votre propre fournisseur d’IA et demandez une analyse, les extraits de documents pertinents sont envoyés directement à ce fournisseur, avec votre propre clé. Les recherches de financement envoient des termes de recherche et des filtres, jamais de documents, directement aux sources officielles. Rien ne transite par Bulle Consulting, et il n’y a ni mesure d’audience ni télémétrie.',
-  'privacy.1': 'Les documents, le texte extrait, votre profil et vos analyses sont stockés sur votre appareil.',
+  'privacy.1':
+    'Les documents, le texte extrait, votre profil et vos analyses sont stockés sur votre appareil.',
   'privacy.2':
     'Lorsque vous connectez votre propre fournisseur d’IA et demandez une analyse, les extraits de documents pertinents sont envoyés directement à ce fournisseur, avec votre propre clé.',
   'privacy.3':
@@ -319,34 +357,10 @@ const text: Messages = {
   'privacy.more': 'Lire la politique de confidentialité',
   'privacy.english': 'La politique de confidentialité est publiée en anglais.',
 
-  'features.h1': 'Le travail de financement, de la première recherche à votre propre proposition.',
+  'features.h1': 'Un navigateur conçu pour votre stratégie de financement.',
   'features.sub':
-    'BulleBrowser associe un navigateur de bureau à un assistant qui travaille à partir de sources de financement officielles et des documents de votre organisation. Cette page explique chaque volet, et ce qu’il ne fera pas.',
-  'features.toc': 'Sur cette page',
-  'features.flows.eyebrow': 'Parcours',
-  'features.flows.h2': 'Quatre parcours, étape par étape.',
-  'features.flow.find.1':
-    'Partez de vos priorités approuvées, ou réglez vous-même les filtres : zone géographique, éligibilité, catégorie de financement, montant et date limite.',
-  'features.flow.find.2':
-    'BulleBrowser interroge les sources officielles depuis votre appareil et vérifie la date limite de chaque annonce.',
-  'features.flow.find.3':
-    'Examinez chaque annonce avec sa mention, la raison de cette mention, le montant et le lien vers la page officielle. Enregistrez celles qui méritent une lecture attentive.',
-  'features.flow.align.1': 'Choisissez une annonce enregistrée ou un RFP que vous avez importé.',
-  'features.flow.align.2':
-    'BulleBrowser reprend une à une les exigences du bailleur de fonds et cherche ce qu’en disent votre profil approuvé et vos documents.',
-  'features.flow.align.3':
-    'Lisez les constats, chacun cité des deux côtés, les recommandations étant séparées de ce qui est documenté.',
-  'features.flow.priorities.1': 'Importez un RFP, ou utilisez l’annonce officielle d’une opportunité enregistrée.',
-  'features.flow.priorities.2':
-    'Lisez un résumé en langage clair de ce dans quoi le bailleur de fonds investit, de qui peut déposer une demande et de la façon dont les demandes sont jugées, avec la page ou la section à l’appui.',
-  'features.flow.priorities.3':
-    'Voyez ce que le document laisse dans le flou, avec les questions à poser au bailleur de fonds.',
-  'features.flow.guide.1':
-    'Le guide cherche d’abord les règles du bailleur de fonds sur l’aide de l’IA et s’y conforme.',
-  'features.flow.guide.2':
-    'Travaillez à partir d’un plan qui suit les critères du bailleur de fonds, avec vos forces documentées et des questions de réflexion pour chaque section.',
-  'features.flow.guide.3': 'Rédigez avec vos propres mots, puis demandez des observations sur votre brouillon.',
-  'features.cta.h2': 'Commencez par vos propres documents.',
+    'Réunissez vos recherches sur le web et les éléments probants de votre organisation. BulleBrowser aide les entreprises et les CBOs à comprendre leurs options, à choisir leurs priorités et à préparer leur démarche en s’appuyant sur leurs sources.',
+  'features.cta.h2': 'Appuyez votre prochaine décision de financement sur des preuves.',
   'features.cta.sub': 'Disponible pour macOS, Windows et Linux.',
 
   'download.h1': 'Télécharger BulleBrowser',
@@ -405,8 +419,8 @@ const text: Messages = {
     'Les versions macOS sont signées avec un Developer ID et notariées par Apple. Sous Windows, SmartScreen peut afficher un avertissement avant le lancement d’un programme d’installation récemment publié. Chaque version comprend un fichier de sommes de contrôle SHA-256, accessible depuis la page de téléchargement.',
   'install.updates.t': 'Mises à jour',
   'install.updates.d':
-    'BulleBrowser vérifie environ une fois par heure si une nouvelle version existe et la télécharge en arrière-plan. Rien n’est installé tant que vous n’avez pas choisi « Update App » ou quitté l’application.',
-  'install.next': 'Voir les parcours',
+    'BulleBrowser recherche les versions publiées au démarrage et toutes les cinq minutes, puis télécharge les mises à jour en arrière-plan. Choisissez « Update App » pour continuer à travailler et masquer l’avis pour cette version. La mise à jour prend effet après avoir quitté normalement puis rouvert l’application. Une nouvelle version fait réapparaître l’avis. Sur macOS, une seule mise à jour est préparée à la fois ; le téléchargement suivant attend que cette version prenne effet.',
+  'install.next': 'Découvrir l’application',
 
   'about.h1': 'À propos de Bulle Consulting',
   'about.lead':

@@ -66,7 +66,9 @@ export const IPC = {
   // Updates
   UPDATE_STATUS: 'update:status', // main → renderer
   UPDATE_GET_STATUS: 'update:get-status',
-  UPDATE_INSTALL: 'update:install',
+  UPDATE_PREPARE: 'update:prepare',
+  UPDATE_RETRY: 'update:retry',
+  UPDATE_DISMISS: 'update:dismiss',
   // UI events from main → renderer
   UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
   // Funding platform. One typed call channel instead of one channel per method:
@@ -97,13 +99,14 @@ export interface AgentResultEvent {
   error?: string;
 }
 
-// Where an update has got to. `version` is the version being offered, which is
-// what the "Relaunch to update" button names — a bare "an update is ready" tells
-// the user nothing about what they're getting.
+// A published release is prepared without interrupting the current session.
+// Its binaries become active after the user's next normal quit and reopen.
 export type UpdateStatus =
   | { state: 'idle' }
-  | { state: 'downloading'; version: string }
-  | { state: 'ready'; version: string };
+  | { state: 'downloading'; version: string; percent?: number; phase?: 'preparing' }
+  | { state: 'ready'; version: string }
+  | { state: 'deferred'; version: string; preparedVersion: string }
+  | { state: 'error'; version: string; message: string; retryable?: boolean };
 
 export interface TabState {
   id: string;
@@ -322,7 +325,9 @@ export interface BrowserBridge {
   updates: {
     status(): Promise<UpdateStatus>;
     onStatus(cb: (status: UpdateStatus) => void): () => void;
-    install(): Promise<void>;
+    prepare(version: string): Promise<void>;
+    retry(): Promise<void>;
+    dismiss(version: string): Promise<void>;
   };
   ui: {
     onAskAgent(cb: (prompt: string) => void): () => void;

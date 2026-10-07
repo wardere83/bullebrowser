@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -56,7 +56,7 @@ async function launch(
     await win.getByRole('button', { name: 'Your Assistant' }).click();
   }
   await expect(panel).toBeVisible({ timeout: 10_000 });
-  return { app, win };
+  return { app, win, userData };
 }
 
 test('the agent panel mounts with its composer', async () => {
@@ -315,72 +315,147 @@ test('dictation releases permission granted after cancellation', async () => {
 });
 
 
-test('the update button clears after installation and returns for a later release', async () => {
-  const { app, win } = await launch({ withoutKeys: true });
+test('updates show progress, keep browsing open, clear after preparation and return for a later release', async () => {
+  const server = createServer((_request, response) => {
+    response.setHeader('Content-Type', 'text/html');
+    response.end('<!doctype html><title>Work during update</title><h1>Continue working</h1>');
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw Error('No update test port');
+  const url = `http://127.0.0.1:${address.port}/`;
+  const { app, win, userData } = await launch({ withoutKeys: true });
   try {
+    const processId = await app.evaluate(() => process.pid);
     await app.evaluate(({ ipcMain, BrowserWindow }) => {
       ipcMain.removeHandler('update:get-status');
-      ipcMain.handle('update:get-status', () => new Promise((resolve) => {
+      ipcMain.handle('update:get-status', () => new Promise(resolve => {
         ipcMain.once('test:resolve-update-status', () => resolve({ state: 'idle' }));
       }));
       let attempts = 0;
-      (globalThis as Record<string, unknown>).__updateInstallAttempts = attempts;
-      ipcMain.removeHandler('update:install');
-      ipcMain.handle('update:install', () => {
+      ipcMain.removeHandler('update:prepare');
+      ipcMain.handle('update:prepare', (_event, version: string) => {
         attempts += 1;
-        (globalThis as Record<string, unknown>).__updateInstallAttempts = attempts;
-        if (attempts === 1) throw new Error('Installer fixture failure');
-        if (attempts === 2) {
-          // Installation can fail asynchronously after IPC already resolved.
-          ipcMain.once('test:fail-update-install', () => {
-            BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.38' });
-          });
-          return;
-        }
+        (globalThis as Record<string, unknown>).__updatePrepare = { attempts, version };
+        if (attempts === 1) throw new Error('Preparation fixture failure');
+        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
+      });
+      ipcMain.removeHandler('update:retry');
+      ipcMain.handle('update:retry', () => {
+        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 0 });
+      });
+      ipcMain.removeHandler('update:dismiss');
+      ipcMain.handle('update:dismiss', (_event, version: string) => {
+        (globalThis as Record<string, unknown>).__dismissedUpdate = version;
         BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
       });
     });
     await win.reload();
-    await expect(win.locator('aside textarea')).toBeEnabled();
+    const composer = win.locator('aside textarea');
+    await expect(composer).toBeEnabled();
+    await composer.fill('Keep this work while updating.');
+    await win.evaluate(async target => {
+      const tabs = await window.bullebrowser.tabs.list();
+      await window.bullebrowser.tabs.navigate(tabs.find(tab => tab.active)!.id, target);
+    }, url);
+    const notice = win.getByRole('region', { name: 'App update' });
     const update = win.getByRole('button', { name: 'Update App', exact: true });
-    await expect(update).toBeHidden();
+    await expect(notice).toBeHidden();
     await app.evaluate(({ BrowserWindow, ipcMain }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.38' });
-      // A delayed initial snapshot must not erase a newer update event.
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 25 });
+      // A delayed initial idle snapshot must not erase a newer event.
       ipcMain.emit('test:resolve-update-status');
     });
+    await expect(notice).toContainText('Downloading v0.2.50 · 25%');
+    await expect(win.getByRole('progressbar', { name: 'Update download progress' })).toHaveAttribute('value', '25');
+    await expect(update).toBeHidden();
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'error', version: '0.2.50', message: 'Check your connection and retry.' });
+    });
+    await expect(notice).toContainText('Check your connection and retry.');
+    await win.getByRole('button', { name: 'Retry update', exact: true }).click();
+    await expect(notice).toContainText('Downloading v0.2.50 · 0%');
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 100, phase: 'preparing' });
+    });
+    await expect(notice).toContainText('Preparing v0.2.50');
+    await expect(win.getByRole('progressbar', { name: 'Update download progress' })).not.toHaveAttribute('value');
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'error', version: '0.2.50', message: 'Reopen BulleBrowser to finish preparing this update.', retryable: false });
+    });
+    await expect(notice).toContainText('Reopen BulleBrowser');
+    await expect(win.getByRole('button', { name: 'Retry update', exact: true })).toBeHidden();
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.50' });
+    });
     await expect(update).toBeVisible();
+    await expect(notice).toContainText('Applies after you quit and reopen');
+    await expect(update).toHaveAttribute('title', /without closing the app/);
     await update.click();
+    await expect(notice).toContainText('Couldn’t prepare. Try again.');
     await expect(update).toBeEnabled();
     await update.click();
-    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updateInstallAttempts)).toBe(2);
-    // Installation starts on this click; there is no lingering update prompt
-    // while the native installer is replacing the app.
     await expect(update).toBeHidden();
-    await expect(win.getByRole('button', { name: 'Updating…', exact: true })).toBeHidden();
-    // A renderer reload during installation reads idle from the main process;
-    // it must not bring the same downloaded update prompt back.
+    await expect(notice).toBeHidden();
+    await expect(win.getByRole('status').filter({ hasText: 'v0.2.50 prepared.' })).toBeVisible();
+    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updatePrepare))
+      .toEqual({ attempts: 2, version: '0.2.50' });
+    expect(await app.evaluate(() => process.pid)).toBe(processId);
+    await expect(composer).toHaveValue('Keep this work while updating.');
+    await expect.poll(() => app.evaluate(({ BrowserWindow }, target) => {
+      const browserWindow = BrowserWindow.getAllWindows()[0];
+      const page = browserWindow.contentView.children.find(view =>
+        'webContents' in view && (view as import('electron').WebContentsView).webContents.getURL() === target,
+      ) as import('electron').WebContentsView | undefined;
+      return { open: !browserWindow.isDestroyed(), pageVisible: page?.getVisible(), pageUrl: page?.webContents.getURL() };
+    }, url)).toEqual({ open: true, pageVisible: true, pageUrl: url });
+    // The main-process acknowledgment survives reloading the renderer.
     await app.evaluate(({ ipcMain }) => {
       ipcMain.removeHandler('update:get-status');
       ipcMain.handle('update:get-status', () => ({ state: 'idle' }));
     });
     await win.reload();
-    await expect(win.locator('aside textarea')).toBeEnabled();
-    await expect(update).toBeHidden();
-    await app.evaluate(({ ipcMain }) => { ipcMain.emit('test:fail-update-install'); });
-    await expect(update).toBeEnabled();
-    await update.click();
-    await expect(update).toBeHidden();
-    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updateInstallAttempts)).toBe(3);
-    await win.reload();
-    await expect(win.locator('aside textarea')).toBeEnabled();
+    await expect(composer).toBeEnabled();
     await expect(update).toBeHidden();
     await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.39' });
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.51' });
     });
     await expect(update).toBeVisible();
-    await expect(update).toHaveAttribute('title', /0\.2\.39/);
-  } finally { await app.close(); }
+    await expect(update).toHaveAttribute('title', /0\.2\.51/);
+    await win.screenshot({ path: '/tmp/bulle-background-update.png' });
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'deferred', version: '0.2.52', preparedVersion: '0.2.50' });
+    });
+    await expect(notice).toContainText('v0.2.52 available');
+    await expect(notice).toContainText('After v0.2.50’s next launch');
+    await expect(update).toBeHidden();
+    await win.getByRole('button', { name: 'Got it', exact: true }).click();
+    await expect(notice).toBeHidden();
+    expect(await app.evaluate(() => (globalThis as Record<string, unknown>).__dismissedUpdate)).toBe('0.2.52');
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'deferred', version: '0.2.53', preparedVersion: '0.2.50' });
+    });
+    await expect(notice).toContainText('v0.2.53 available');
+    expect(await app.evaluate(() => process.pid)).toBe(processId);
+    if (process.platform === 'darwin') {
+      // Red-dot close keeps the Mac process alive; opening it again must rebind
+      // its window and IPC instead of leaving the updater attached to a dead UI.
+      const reopened = app.waitForEvent('window');
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
+      await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(0);
+      await app.evaluate(({ app: electronApp }) => { electronApp.emit('second-instance'); });
+      const next = await reopened;
+      await expect(next.locator('aside textarea')).toBeEnabled();
+      await expect(next.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
+      await next.getByRole('button', { name: 'Organization Knowledge Hub', exact: true }).click();
+      await expect(next.getByRole('region', { name: 'Funding workspace' })).toBeVisible();
+      expect(await app.evaluate(() => process.pid)).toBe(processId);
+    }
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
 });
 
 
