@@ -45,6 +45,8 @@ jobs:
         run: pnpm --filter @bullebrowser/desktop test
       - name: Web build smoke
         run: pnpm --filter @bullebrowser/web build
+      - name: Web copy rules (terminology, translations, exported pages)
+        run: pnpm --filter @bullebrowser/web test
       - name: Desktop build smoke
         run: pnpm --filter @bullebrowser/desktop build
 

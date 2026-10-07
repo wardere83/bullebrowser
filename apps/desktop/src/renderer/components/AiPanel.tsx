@@ -5,6 +5,15 @@ import { product } from '@bullebrowser/brand-tokens';
 import { providerFor, type ModelId } from '@bullebrowser/agent-core';
 import { useAgentStore } from '../state/agent-store.js';
 import { useBrowserStore } from '../state/browser-store.js';
+import {
+  activeOrganization,
+  focusedRfpId,
+  openWorkspace,
+  useWorkspaceStore,
+} from '../state/workspace-store.js';
+import { AssistantGrounding } from '../workspace/AssistantGrounding.js';
+import { Icon } from '../workspace/ui/icons.js';
+import { WORKFLOWS, workflowForSkill, type Workflow } from '../workspace/workflows.js';
 import { AGENT_PROMPT_EVENT } from '../lib/url.js';
 import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
@@ -14,6 +23,8 @@ import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskRes
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
 import type {
   AppSettings,
+  BrowserBridge,
+  ConversationDetail,
   ConversationSummary,
   RunAttachment,
 } from '../../shared/ipc.js';
@@ -39,8 +50,8 @@ function toRunAttachments(list: UiAttachment[]): RunAttachment[] {
 
 export const FOCUS_AI_PANEL_EVENT = 'bullebrowser:focus-ai-panel';
 
-function browserBridge(): any {
-  return (window as unknown as { bullebrowser: any }).bullebrowser;
+function browserBridge(): BrowserBridge {
+  return window.bullebrowser;
 }
 
 export function AiPanel() {
@@ -173,6 +184,8 @@ export function AiPanel() {
       const bridge = browserBridge();
       const skill = skillId || undefined;
       const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
+      // The funding document open in the workspace, so the answer can be about it.
+      const focusRfpId = focusedRfpId(useWorkspaceStore.getState());
       // Product answers can finish before IPC returns their handle. Track
       // terminal events first so a completed reply cannot leave Stop stuck on.
       const finished = new Set<string>();
@@ -187,6 +200,7 @@ export function AiPanel() {
           ...(skill ? { skillId: skill } : {}),
           ...(runAttachments ? { attachments: runAttachments } : {}),
           ...(budget ? { budget } : {}),
+          ...(focusRfpId ? { focusRfpId } : {}),
         });
         if (!finished.has(runId)) startRun(runId);
       } finally {
@@ -278,6 +292,7 @@ export function AiPanel() {
       return { status: 'failed', text: 'The assistant is still connecting. Try again shortly.' };
     }
     const context = voiceContextRef.current;
+    const focusRfpId = focusedRfpId(useWorkspaceStore.getState());
     dispatchingRef.current = true;
     setCurrent({
       ...conversation,
@@ -292,6 +307,7 @@ export function AiPanel() {
         model: context.model,
         ...(context.skillId ? { skillId: context.skillId } : {}),
         ...(context.attachments.length > 0 ? { attachments: toRunAttachments(context.attachments) } : {}),
+        ...(focusRfpId ? { focusRfpId } : {}),
       }, signal, (id) => {
         startRun(id);
         dispatchingRef.current = false;
@@ -367,8 +383,14 @@ export function AiPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
 
+  // Set when a new chat is opened by something the user did elsewhere in the
+  // window (switching organization in the workspace): focus stays where they are.
+  const keepFocusElsewhere = useRef(false);
   useEffect(() => {
+    const elsewhere = keepFocusElsewhere.current;
+    keepFocusElsewhere.current = false;
     if (!current || current.messages.length > 0 || status === 'running') return;
+    if (elsewhere) return;
     textareaRef.current?.focus();
   }, [current, status]);
 
@@ -398,6 +420,67 @@ export function AiPanel() {
     const el = messagesRef.current;
     if (el && atBottom) el.scrollTop = el.scrollHeight;
   }, [current?.messages, steps, status, atBottom]);
+
+  // A workflow chosen from the empty state applies to the chat it was chosen
+  // in. Another chat (a new one, or one opened from History) starts without
+  // one, so its rules never carry over to an unrelated conversation.
+  const conversationId = current?.id;
+  useEffect(() => {
+    setSkillId('');
+  }, [conversationId]);
+
+  // A chat belongs to the organization it was used in: main only lists, reads
+  // and continues it under that organization. So when the user moves from one
+  // organization to another (or the one they were in is deleted), the chat that
+  // was open must not stay on screen. Land on a new session for the
+  // organization now active, exactly as opening the app does: the newest chat
+  // when it is still empty, a fresh one otherwise. What was queued or attached
+  // for the previous organization goes with it. Creating the first organization
+  // is not a move: the chat open then belongs to none yet.
+  const activeOrganizationId = useWorkspaceStore(
+    (state) => activeOrganization(state.identity)?.id ?? null,
+  );
+  const identityConfirmed = useWorkspaceStore((state) => state.identityStatus === 'ready');
+  const chatOrganization = useRef<string | null | undefined>(undefined);
+  const sessionRequest = useRef(0);
+  useEffect(() => {
+    if (!identityConfirmed) return;
+    const previous = chatOrganization.current;
+    chatOrganization.current = activeOrganizationId;
+    if (typeof previous !== 'string' || previous === activeOrganizationId) return;
+    sessionRequest.current += 1;
+    const request = sessionRequest.current;
+    queuedRef.current = [];
+    setQueued([]);
+    setAttachments([]);
+    setShowHistory(false);
+    // The switch was made in the workspace; opening the new chat must not pull
+    // keyboard focus out of it and into the composer.
+    const show = (conversation: ConversationDetail) => {
+      const active = document.activeElement;
+      const panel = textareaRef.current?.closest('aside');
+      keepFocusElsewhere.current = Boolean(
+        active && active !== document.body && panel && !panel.contains(active),
+      );
+      setCurrent(conversation);
+    };
+    void (async () => {
+      const bridge = browserBridge();
+      const list = await bridge.conversations.list();
+      const newest = list[0];
+      const newestDetail = newest ? await bridge.conversations.get(newest.id) : null;
+      if (request !== sessionRequest.current) return;
+      if (newestDetail && newestDetail.messages.length === 0) {
+        setConversations(list);
+        show(newestDetail);
+        return;
+      }
+      const fresh = await bridge.conversations.create();
+      if (request !== sessionRequest.current) return;
+      show(fresh);
+      setConversations(await bridge.conversations.list());
+    })();
+  }, [identityConfirmed, activeOrganizationId, setConversations, setCurrent]);
 
   const createConversation = async () => {
     const bridge = browserBridge();
@@ -462,6 +545,10 @@ export function AiPanel() {
         </div>
       </header>
 
+      {/* What the assistant's guidance rests on. Kept outside the header so the
+          header stays exactly the title and its two controls. */}
+      <AssistantGrounding />
+
       {voiceMode === 'continuous' && (
         <RealtimeVoice
           onBrowserTask={onVoiceBrowserTask}
@@ -490,12 +577,14 @@ export function AiPanel() {
       >
         {current && current.messages.length === 0 && (
           <EmptyState
-            onAction={(text, skill) => {
-              setDraft(text);
-              setSkillId(skill ?? '');
+            selectedSkillId={skillId}
+            onWorkflow={(workflow) => {
+              // Opens the workflow's screen and sets its rules for this chat.
+              // Nothing is sent: the next message is still the user's to write.
+              setSkillId(workflow.skillId);
+              void openWorkspace(workflow.route, workflow.params);
               textareaRef.current?.focus();
             }}
-            onSpeak={() => void startVoice('once')}
           />
         )}
         {current?.messages.map((m, i) => (
@@ -921,65 +1010,59 @@ function AllowAccess({ task }: { task: string }) {
   );
 }
 
-// Plain-language actions instead of a list of internal "skills". Each seeds the
-// composer with a natural-language prompt (and quietly selects the matching
-// skill under the hood, so the orchestration is unchanged); "Speak" opens the
-// same voice flow as the mic. The user thinks in verbs, not tools.
+// What the assistant offers before the first message: the same four workflows
+// as the dashboard, read from the same list so the two cannot drift apart.
+// Choosing one opens its screen in the workspace and selects its rules for
+// this chat; it sends nothing. Voice is still one click away on the microphone
+// and Voice Mode controls under the composer.
 function EmptyState({
-  onAction,
-  onSpeak,
+  selectedSkillId,
+  onWorkflow,
 }: {
-  onAction: (text: string, skillId?: string) => void;
-  onSpeak: () => void;
+  selectedSkillId: string;
+  onWorkflow: (workflow: Workflow) => void;
 }) {
-  const ACTIONS: { label: string; text: string; skillId?: string; icon: React.ReactNode }[] = [
-    {
-      label: 'Summarize this page',
-      text: 'Summarize this page',
-      skillId: 'page_assistant',
-      icon: <path d="M4 6h16M4 12h16M4 18h10" />,
-    },
-    {
-      label: 'Compare options',
-      text: 'Compare the options across my open tabs and recommend one',
-      skillId: 'workflow_automator',
-      icon: <path d="M4 5h6v14H4zM14 5h6v14h-6z" />,
-    },
-    {
-      label: 'Act on this',
-      text: 'Act on this page: ',
-      skillId: 'site_navigator',
-      icon: <path d="M13 3 4 14h7l-1 7 9-11h-7z" />,
-    },
-  ];
+  const selected = workflowForSkill(selectedSkillId);
   const chip =
-    'flex items-center gap-2.5 rounded-lg border border-line px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-primary/40 hover:bg-surface-muted';
+    'flex w-full items-start gap-2.5 rounded-lg border px-3 py-2 text-left text-[13px] text-ink-primary transition-colors';
   return (
     <div className="space-y-5 pt-1 text-sm">
-      <p className="text-[15px] font-semibold tracking-tight text-ink-primary">
+      <h2 className="text-[15px] font-semibold tracking-tight text-ink-primary">
         What can I help you with?
-      </p>
+      </h2>
       <p className="leading-relaxed text-ink-secondary">
-        Ask in plain language — or pick one. I can read, compare, and act across
-        your tabs, and you can talk to me instead of typing.
+        Guidance here is grounded in your organization’s approved profile and the
+        funding documents you add. Pick a workflow to open it in the workspace,
+        or ask in your own words.
       </p>
       <div className="grid gap-2">
-        {ACTIONS.map((a) => (
-          <button key={a.label} type="button" onClick={() => onAction(a.text, a.skillId)} className={chip}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-              {a.icon}
-            </svg>
-            {a.label}
-          </button>
-        ))}
-        <button type="button" onClick={onSpeak} className={chip}>
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-          </svg>
-          Speak
-        </button>
+        {WORKFLOWS.map((workflow) => {
+          const isSelected = workflow.id === selected?.id;
+          return (
+            <button
+              key={workflow.id}
+              type="button"
+              onClick={() => onWorkflow(workflow)}
+              aria-current={isSelected ? 'true' : undefined}
+              className={`${chip} ${
+                isSelected
+                  ? 'border-primary bg-primary/10'
+                  : 'border-line hover:border-primary/40 hover:bg-surface-muted'
+              }`}
+            >
+              <Icon name={workflow.icon} className="mt-0.5 text-primary" />
+              <span className="min-w-0 flex-1">{workflow.label}</span>
+              {isSelected && <Icon name="check" className="mt-0.5 text-primary" />}
+            </button>
+          );
+        })}
       </div>
+      {/* Always present, so the change is read out when a workflow is chosen. */}
+      <p role="status" className="min-h-4 text-xs leading-relaxed text-ink-secondary">
+        {selected
+          ? `${selected.label} is open in the workspace. Messages in this chat follow that workflow.`
+          : ''}
+      </p>
     </div>
   );
 }

@@ -6,9 +6,10 @@ import { AiPanel } from './components/AiPanel.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { AboutModal } from './components/AboutModal.js';
-import { Splash } from './components/Splash.js';
+import { Workspace } from './workspace/Workspace.js';
 import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
+import { isStartPageUrl, useWorkspaceConnection } from './state/workspace-store.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { AGENT_PROMPT_EVENT } from './lib/url.js';
 import { refreshVoiceConversation } from './lib/voice-agent.js';
@@ -28,13 +29,15 @@ export function App() {
   const initialized = useRef(false);
 
   useKeyboardShortcuts();
+  // Identity, setup status and funding events for the workspace and for the
+  // assistant panel's grounding line, which shows on every tab.
+  useWorkspaceConnection();
 
   // The start page shows when there's nothing to browse yet: no tabs at all,
   // or the active tab is still sitting on the start page. Must agree with
   // isStartPage() in the tab manager, which hides the page view to match.
   const activeTab = tabs.find((t) => t.active);
-  const showStartPage =
-    tabs.length === 0 || !activeTab?.url || activeTab.url === 'about:blank';
+  const showStartPage = tabs.length === 0 || isStartPageUrl(activeTab?.url);
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -130,9 +133,12 @@ export function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* The active WebContentsView is laid out by main and covers this
             area — except on the start page, where main hides the view so the
-            branded start page below shows through. */}
-        <div className="flex-1 bg-surface-light">
-          {showStartPage && <Splash />}
+            funding workspace below shows through. The workspace stays mounted
+            while a page is in front and is only hidden, so what the user was
+            doing in it is still there when they come back to the tab. min-w-0
+            lets wide workspace content scroll instead of squeezing the panel. */}
+        <div className="min-w-0 flex-1 bg-surface-light">
+          <Workspace visible={showStartPage} />
         </div>
         {aiPanelOpen && <AiPanel />}
       </div>

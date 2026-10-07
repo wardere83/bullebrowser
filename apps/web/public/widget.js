@@ -1,25 +1,25 @@
 /*
- * BulleBrowser embed widget — a LiveChat-style launcher bubble + chat panel you
- * drop into a page (for example a CRM or client portal) to replace a chatbot.
- * The BulleBrowser agent then operates the CRM in the user's own logged-in
- * session, right on the page the widget lives in.
+ * BulleBrowser embed widget — a launcher bubble + chat panel you drop into a
+ * web application of your own. The BulleBrowser agent then operates that
+ * application in the user's own logged-in session, right on the page the
+ * widget lives in.
  *
- * Embed (replaces the LiveChat snippet):
+ * Embed:
  *   <script src="https://bullebrowser.com/widget.js"></script>
  *   <script>
  *     BulleBrowser.init({
  *       endpoint: 'https://YOUR-BACKEND',  // required — see the contract below
  *       title: 'BulleBrowser',             // optional
  *       accent: '#2563EB',                 // optional
- *       greeting: 'Ask me to do anything in the CRM.'  // optional
+ *       greeting: 'Ask me to do anything on this page.'  // optional
  *     });
  *   </script>
  *
  * Why a backend is required: an API key must never live in page JavaScript, so
  * the model loop runs on a small backend you host. The widget executes the
  * agent's tool calls against THIS page (that's the whole point — it drives the
- * CRM), and streams results back. The transport is SSE + POST, no WebSocket, so
- * it works through corporate proxies.
+ * page it is on), and streams results back. The transport is SSE + POST, no
+ * WebSocket, so it works through corporate proxies.
  *
  * Backend contract (host these three; the agent loop uses @bullebrowser/agent-core):
  *   POST {endpoint}/start        body: { sessionId, prompt, url, title }

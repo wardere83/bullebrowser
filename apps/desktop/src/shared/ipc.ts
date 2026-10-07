@@ -124,7 +124,6 @@ export interface AppSettings {
   aiPanelOpen: boolean;
   searchProvider: 'bullebrowser' | 'google' | 'bing';
   homepageUrl: string;
-  complianceChecklist: string[];
   /** Press the least-permissive option on common cookie banners. */
   autoDismissConsent: boolean;
   /** Default step budget per agent task (weighted; raise per task). */
@@ -138,11 +137,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   homepageUrl: 'about:blank',
   autoDismissConsent: true,
   stepBudget: 40,
-  complianceChecklist: [
-    'EEO: Equal Employment Opportunity references and required language',
-    'FERPA: Family Educational Rights and Privacy Act references',
-    'ADA: Americans with Disabilities Act and accessibility obligations',
-  ],
 };
 
 export interface HistoryEntry {

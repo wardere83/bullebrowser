@@ -5,23 +5,43 @@
 :root {
   --color-primary: #20bad1;
   --color-accent: #20bad1;
-  /* Width of the persistent left rail on desktop. Consumed by the shell
-     grid in layout.tsx via Tailwind's arbitrary-value syntax and kept here
-     as the single source of truth. */
+  --color-ink: #142127;
 }
 
 html {
   font-family: 'Inter', system-ui, sans-serif;
-  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
-/* ---------------------------------------------------------------------------
-   Halo effect — a gentle conic glow that circles the chat composer while the
-   user is focused in it or the agent is actively typing. It rides on a
-   ::before pseudo-element behind the box so it never intercepts clicks, and
+/* Keyboard focus. The site alternates charcoal and white bands, so one ring
+   colour cannot show on both. The ring is therefore two: charcoal against the
+   control and white outside it. Whichever surface it lands on, one of the two
+   stands out. */
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-ink);
+}
+/* The skip link sends focus to the page body, which needs no ring of its own. */
+#main:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Arabic is written joined up; letter-spacing would pull its letters apart. */
+:lang(ar) {
+  letter-spacing: 0 !important;
+}
+
+/* Halo effect — a gentle conic glow that circles the composer in the home
+   page's walk-through while a request is being typed. It rides on a ::before
+   pseudo-element behind the box so it never intercepts clicks, and
    fades/animates in only when the parent carries `.is-active`. Honors
-   prefers-reduced-motion by holding a static glow instead of rotating.
---------------------------------------------------------------------------- */
+   prefers-reduced-motion by holding a static glow instead of rotating. */
 @property --halo-angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -58,8 +78,7 @@ html {
   transition: opacity 0.35s ease;
   pointer-events: none;
 }
-.halo.is-active::before,
-.halo:focus-within::before {
+.halo.is-active::before {
   opacity: 1;
   animation: halo-spin 4s linear infinite;
 }
@@ -68,15 +87,8 @@ html {
     --halo-angle: 360deg;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .halo.is-active::before,
-  .halo:focus-within::before {
-    animation: none;
-    opacity: 0.7;
-  }
-}
 
-/* Soft breathing dot / pulse used for "listening"/"working" indicators. */
+/* Soft breathing dot used for "working" indicators. */
 @keyframes soft-pulse {
   0%,
   100% {
@@ -89,23 +101,9 @@ html {
   }
 }
 
-/* Voice-input equalizer bars for the agent panel's listening / voice modes. */
-@keyframes eq-bar {
-  0%,
-  100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .eq-bar {
-    animation: none !important;
-    transform: scaleY(0.6);
-  }
-}
-
+/* Long-form pages (About, Privacy). Links are charcoal and underlined in
+   charcoal: teal on white is too faint for text or for the line under it, so
+   teal is kept for the hover state. */
 .prose-lite {
   font-size: 16px;
   line-height: 1.7;
@@ -113,7 +111,8 @@ html {
 .prose-lite h2 {
   font-weight: 700;
   font-size: 1.5rem;
-  margin-top: 2rem;
+  line-height: 1.3;
+  margin-top: 2.25rem;
   margin-bottom: 0.5rem;
 }
 .prose-lite h3 {
@@ -127,47 +126,55 @@ html {
 }
 .prose-lite ul {
   list-style: disc;
-  padding-left: 1.5rem;
+  padding-inline-start: 1.5rem;
   margin-bottom: 1rem;
 }
+.prose-lite li {
+  margin-bottom: 0.4rem;
+}
 .prose-lite a {
-  color: var(--color-primary);
+  color: var(--color-ink);
+  font-weight: 600;
   text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.prose-lite a:hover {
+  text-decoration-color: var(--color-primary);
+}
+.prose-lite code {
+  font-family: var(--font-jetbrains), ui-monospace, Menlo, monospace;
+  font-size: 0.875em;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  overflow-wrap: anywhere;
 }
 
-/* Translation label ticker: a fixed window the word scrolls through at a calm,
-   readable pace. Paused for anyone who prefers reduced motion. */
-.ticker-window {
-  display: inline-block;
-  width: 5.5rem;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.ticker-track {
-  display: inline-block;
-  padding-left: 100%;
-  animation: ticker 9s linear infinite;
-}
-@keyframes ticker {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-200%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ticker-track { animation: none; padding-left: 0; }
-}
-
-/* ---------------------------------------------------------------------------
-   Reference-site motion: an infinite marquee, a fade-in-up scroll reveal, and
-   slow drifting hero blobs. All are disabled under prefers-reduced-motion.
---------------------------------------------------------------------------- */
+/* Motion: an infinite marquee, a fade-in-up scroll reveal, and slow drifting
+   hero blobs. */
 @keyframes marquee-scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+/* In a right-to-left page the row starts at the right and must leave that way. */
+@keyframes marquee-scroll-rtl {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(50%); }
+}
 .animate-scroll {
   animation: marquee-scroll 40s linear infinite;
 }
-.marquee:hover .animate-scroll {
+[dir='rtl'] .animate-scroll {
+  animation-name: marquee-scroll-rtl;
+}
+.marquee {
+  mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+}
+.marquee:hover .animate-scroll,
+.marquee[data-paused='true'] .animate-scroll {
   animation-play-state: paused;
 }
 
@@ -187,10 +194,43 @@ html {
   animation: blob-drift 16s ease-in-out infinite;
 }
 
+/* Reduced motion. Nothing loops, drifts or slides. The marquee stops being a
+   marquee: its pills wrap onto as many lines as they need, its second copy and
+   its pause button go, and nothing is cut off at the edges. */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
   .animate-scroll,
   .animate-fade-in-up,
   .animate-blob {
     animation: none;
+  }
+  .halo.is-active::before {
+    animation: none;
+    opacity: 0.7;
+  }
+  .marquee {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .marquee .marquee-track {
+    width: auto;
+  }
+  .marquee .marquee-track ul {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-inline: 1rem;
+  }
+  .marquee .marquee-copy,
+  .marquee-toggle {
+    display: none;
+  }
+  .marquee-row {
+    padding-inline: 0;
   }
 }

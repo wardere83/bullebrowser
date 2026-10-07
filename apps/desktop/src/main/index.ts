@@ -57,7 +57,7 @@ async function createWindow() {
   const preloadPath = join(__dirname, '../preload/index.cjs');
   mainWindow = createBrowserWindow({ preloadPath });
   tabManager.attachWindow(mainWindow);
-  registerIpc(mainWindow);
+  registerIpc(mainWindow, () => mainWindow);
   setupAppMenu(mainWindow);
   // Deny capability requests to everything except this window's own chrome —
   // the agent browses arbitrary sites in this same session.
@@ -80,10 +80,11 @@ app.whenReady().then(async () => {
   // Only ever set by the test harness; never in a normal launch.
   if (process.env.BULLEBROWSER_TEST_HOOKS === '1') {
     const { DesktopToolRuntime } = await import('./agent/runtime.js');
-    (globalThis as Record<string, unknown>).__bbTest = {
+    // The funding platform adds its own hooks to the same object when it starts.
+    Object.assign(((globalThis as Record<string, unknown>).__bbTest ??= {}) as Record<string, unknown>, {
       tabManager,
       runtime: new DesktopToolRuntime({ request: async () => true }),
-    };
+    });
   }
   // The updater pushes status to this window, so it needs the handle.
   if (mainWindow) setupAutoUpdate(mainWindow);

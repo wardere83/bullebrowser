@@ -42,7 +42,6 @@ export function getSettings(): AppSettings {
     aiPanelOpen: store.get('aiPanelOpen'),
     searchProvider: resolvedSearchProvider,
     homepageUrl: normalizedHomepageUrl ?? DEFAULT_SETTINGS.homepageUrl,
-    complianceChecklist: store.get('complianceChecklist'),
     autoDismissConsent: (store.get('autoDismissConsent') as boolean | undefined) ?? DEFAULT_SETTINGS.autoDismissConsent,
     stepBudget: clampBudget(store.get('stepBudget') as number | undefined),
   };

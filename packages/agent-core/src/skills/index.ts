@@ -143,11 +143,7 @@ export const skills: Skill[] = [
       'Return a brief execution summary and note anything the user should review next.',
     ].join('\n'),
   },
-  // Settings has always offered a compliance checklist (EEO / FERPA / ADA by
-  // default) and the run path has always appended it — but only for a skill
-  // with this id, and no such skill existed. The condition could never be true,
-  // so everything the user typed into that box was silently discarded. This
-  // registers the skill the rest of the code was already written against.
+  // A documentation review of one page against a checklist. Not legal advice.
   {
     id: 'compliance_review',
     label: 'Compliance review',

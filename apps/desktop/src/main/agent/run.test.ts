@@ -14,12 +14,24 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@bullebrowser/agent-core', () => ({
   DEFAULT_MODEL: 'gpt-4o',
+  FUNDING_RULES: 'Rules for funding work.',
+  FUNDING_WORKFLOW_IDS: ['find_opportunities', 'assess_alignment', 'funder_priorities', 'proposal_guide'],
   findSkill: () => undefined,
   providerFor: () => 'openai',
   runAgent: mocks.runAgent,
 }));
 vi.mock('../storage/conversations.js', () => ({
-  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage },
+  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage, bind: () => true },
+}));
+vi.mock('../funding/platform.js', () => ({ fundingPlatform: () => null }));
+vi.mock('../identity/service.js', () => ({ identityService: {} }));
+vi.mock('../funding/grounding.js', () => ({
+  groundChat: async () => ({
+    organizationId: null,
+    referenceContext: [],
+    tools: [],
+    systemNote: "Today's date on the user's device is 2026-10-06.",
+  }),
 }));
 vi.mock('../storage/session-files.js', () => ({ sessionFileStore: {} }));
 vi.mock('../storage/projects.js', () => ({ projectStore: {} }));

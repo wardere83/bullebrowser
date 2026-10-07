@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBrowserStore, activeTabSelector } from '../state/browser-store.js';
 import { useAgentStore } from '../state/agent-store.js';
+import { openWorkspace } from '../state/workspace-store.js';
 import { AGENT_PROMPT_EVENT, parseAddressBarInput } from '../lib/url.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { FOCUS_AI_PANEL_EVENT } from './AiPanel.js';
@@ -70,6 +71,33 @@ export function TopBar() {
     >
       <img src={logo} alt="" width={20} height={20} className="no-drag opacity-95" />
       <div className="no-drag flex items-center gap-1">
+        {/* Home for the funding workspace. It lives on the start page, so this
+            brings a start-page tab to the front and shows the dashboard. The
+            word is shown when the window has room for it; the name is the
+            same either way. */}
+        <button
+          type="button"
+          aria-label="Open workspace"
+          title="Open workspace"
+          onClick={() => void openWorkspace('dashboard')}
+          className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-ink-inverse transition-colors hover:bg-white/10"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 11.5 12 5l8 6.5" />
+            <path d="M6.5 10v9.5h11V10" />
+          </svg>
+          <span className="hidden min-[1100px]:inline">Workspace</span>
+        </button>
         <NavBtn
           label="Back"
           disabled={!active?.canGoBack}

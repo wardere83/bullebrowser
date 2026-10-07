@@ -884,7 +884,7 @@ export const ALIGNMENT_FINDING_LABELS: Record<AlignmentFinding, string> = {
   documented: 'Documented',
   partial: 'Partly documented',
   gap: 'Gap',
-  not_documented: 'Not in your documents',
+  not_documented: 'Not in the documents',
   unassessed: 'Not assessed',
 };
 

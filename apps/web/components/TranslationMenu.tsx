@@ -1,133 +1,110 @@
 'use client';
 
 // The Translation control in the top bar. It shows just the active language's
-// flag and a chevron — no label, no ticker — and opens a language list with
-// each country's flag beside it. The accessible name stays "Translation".
+// flag and a chevron — no label, no ticker — and opens a list of languages,
+// each named in its own language. The accessible name stays "Translation",
+// fixed in every language like the section names beside it.
 //
-// Choosing a language records the preference and sets the document language,
-// which is what assistive tech and the browser's own translation prompt read.
-// The page copy itself is not translated yet: that needs a content layer, and
-// wiring one is a separate piece of work.
+// It is a plain disclosure: a button that shows and hides a list of buttons.
+// Tab moves through the list, Escape closes it, and focus returns to the
+// button, so it works the same with a keyboard as with a pointer.
 
-import { useEffect, useRef, useState } from 'react';
-
-interface Language {
-  code: string;
-  label: string;
-  flag: string;
-  dir: 'ltr' | 'rtl';
-}
-
-const LANGUAGES: Language[] = [
-  { code: 'en', label: 'English', flag: '🇺🇸', dir: 'ltr' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷', dir: 'ltr' },
-  { code: 'ar', label: 'العربية', flag: '🇸🇦', dir: 'rtl' },
-  // Latin American Spanish: the variety the great majority of the world's
-  // Spanish speakers use, and neutral across the region.
-  { code: 'es-419', label: 'Español', flag: '🇲🇽', dir: 'ltr' },
-  // European Portuguese as the formal standard, readable to speakers in
-  // Portugal, Brazil and lusophone Africa alike.
-  { code: 'pt-PT', label: 'Português', flag: '🇵🇹', dir: 'ltr' },
-];
-
-const STORAGE_KEY = 'bullebrowser:lang';
+import { useEffect, useId, useRef, useState } from 'react';
+import { LANGUAGES, useLocale, type Locale } from '@/lib/i18n';
+import { Icon } from './Icon';
 
 export function TranslationMenu({ dark = false }: { dark?: boolean } = {}) {
+  const { locale, setLocale } = useLocale();
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<Language>(LANGUAGES[0]!);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    const found = LANGUAGES.find((l) => l.code === saved);
-    if (found) {
-      setActive(found);
-      document.documentElement.lang = found.code;
-      document.documentElement.dir = found.dir;
-    }
-  }, []);
+  const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const listId = useId();
+  const active = LANGUAGES.find((language) => language.code === locale) ?? LANGUAGES[0];
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    const onPointer = (event: MouseEvent) => {
+      if (wrap.current && !wrap.current.contains(event.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      trigger.current?.focus();
     };
-    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('mousedown', onPointer);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('mousedown', onPointer);
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
 
-  const choose = (lang: Language) => {
-    setActive(lang);
+  const choose = (code: Locale) => {
+    setLocale(code);
     setOpen(false);
-    window.localStorage.setItem(STORAGE_KEY, lang.code);
-    window.dispatchEvent(new CustomEvent('bullebrowser:locale', { detail: lang.code }));
-    document.documentElement.lang = lang.code;
-    document.documentElement.dir = lang.dir;
+    trigger.current?.focus();
   };
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div
+      ref={wrap}
+      className="relative"
+      onBlur={(event) => {
+        // Tabbing out of the list closes it. A click that moves focus nowhere
+        // is left to the pointer handler above, so a click on a language is
+        // not cancelled by the list closing under it.
+        const next = event.relatedTarget;
+        if (next && !event.currentTarget.contains(next)) setOpen(false);
+      }}
+    >
       <button
+        ref={trigger}
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
+        onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
+        aria-controls={listId}
         aria-label="Translation"
-        className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors ${
-          dark ? 'text-white/80 hover:text-white' : 'text-ink-secondary hover:text-ink-primary'
+        lang="en"
+        className={`flex h-10 items-center gap-1.5 rounded-md px-2 text-sm transition-colors ${
+          dark ? 'text-white/80 hover:bg-white/10 hover:text-white' : 'text-ink-secondary hover:text-ink-primary'
         }`}
       >
-        <span className="text-base leading-none" aria-hidden>{active.flag}</span>
-        <span className="sr-only">Translation</span>
-        <svg
-          viewBox="0 0 24 24"
-          className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <span className="text-base leading-none" aria-hidden="true">
+          {active.flag}
+        </span>
+        <Icon name="chevron" className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <ul
-          role="listbox"
-          aria-label="Choose a language"
-          className="absolute right-0 top-full z-50 mt-2 max-h-80 w-52 overflow-y-auto rounded-xl border border-line bg-surface-light p-1 shadow-xl"
-        >
-          {LANGUAGES.map((lang) => (
-            <li key={lang.code}>
+      <ul
+        id={listId}
+        hidden={!open}
+        className="absolute end-0 top-full z-50 mt-2 max-h-80 w-52 overflow-y-auto rounded-xl border border-line bg-surface-light p-1 shadow-xl"
+      >
+        {LANGUAGES.map((language) => {
+          const current = language.code === active.code;
+          return (
+            <li key={language.code}>
               <button
                 type="button"
-                role="option"
-                aria-selected={lang.code === active.code}
-                onClick={() => choose(lang)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  lang.code === active.code
-                    ? 'bg-primary/10 font-medium text-primary'
+                onClick={() => choose(language.code)}
+                aria-current={current ? 'true' : undefined}
+                lang={language.code}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-sm transition-colors ${
+                  current
+                    ? 'bg-primary/10 font-semibold text-ink-primary'
                     : 'text-ink-primary hover:bg-surface-muted'
                 }`}
               >
-                <span className="text-base" aria-hidden>
-                  {lang.flag}
+                <span className="text-base" aria-hidden="true">
+                  {language.flag}
                 </span>
-                {lang.label}
+                <span className="flex-1">{language.label}</span>
+                {current && <Icon name="check" className="h-4 w-4" />}
               </button>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
     </div>
   );
 }
