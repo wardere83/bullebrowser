@@ -1,0 +1,416 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/search2",
+  "body": {
+   "keyword": "algerian AND collaboration",
+   "oppStatuses": "archived|closed",
+   "eligibilities": "",
+   "fundingCategories": "",
+   "sortBy": "closeDate|desc",
+   "rows": 500,
+   "startRecordNum": 0
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "searchParams": {
+    "resultType": "json",
+    "searchOnly": false,
+    "oppNum": "",
+    "cfda": "",
+    "sortBy": "closeDate|desc",
+    "oppStatuses": "archived|closed",
+    "startRecordNum": 0,
+    "eligibilities": "",
+    "fundingInstruments": "",
+    "fundingCategories": "",
+    "agencies": "",
+    "rows": 500,
+    "keyword": "algerian AND collaboration",
+    "keywordEncoded": true
+   },
+   "hitCount": 25,
+   "startRecord": 0,
+   "oppHits": [
+    {
+     "id": "363121",
+     "number": "PAS-ALG-FY26-02",
+     "title": "Freedom250 Advancing U.S. Artificial Intelligence Leadership in Algeria",
+     "agencyCode": "DOS-DZA",
+     "agency": "U.S. Mission to Algeria",
+     "openDate": "07/09/2026",
+     "closeDate": "08/10/2026",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.441"
+     ]
+    },
+    {
+     "id": "362903",
+     "number": "OFOP0002813",
+     "title": "Prosperity through Partnership:  Catalyzing U.S.-Algerian Collaboration in Innovation, Commerce and English Language",
+     "agencyCode": "DOS-DZA",
+     "agency": "U.S. Mission to Algeria",
+     "openDate": "06/22/2026",
+     "closeDate": "08/08/2026",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.040"
+     ]
+    },
+    {
+     "id": "357414",
+     "number": "OFOP0001693",
+     "title": "Alumni Engagement Innovation Fund  2025 (AEIF 2025)",
+     "agencyCode": "DOS-QAT",
+     "agency": "U.S. Mission to Qatar",
+     "openDate": "11/27/2024",
+     "closeDate": "02/01/2025",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.022"
+     ]
+    },
+    {
+     "id": "355893",
+     "number": "ALG-PAS-FY24-10",
+     "title": "Fencing Futures &ndash; Bridging Algeria and the U.S.",
+     "agencyCode": "DOS-DZA",
+     "agency": "U.S. Mission to Algeria",
+     "openDate": "08/06/2024",
+     "closeDate": "09/05/2024",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.040"
+     ]
+    },
+    {
+     "id": "354058",
+     "number": "DFOP0014385",
+     "title": "MEPI Local Grants 2024",
+     "agencyCode": "DOS-NEA-AC",
+     "agency": "Assistance Coordination",
+     "openDate": "05/07/2024",
+     "closeDate": "06/18/2024",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.500"
+     ]
+    },
+    {
+     "id": "354091",
+     "number": "SFOP0010305",
+     "title": "FY 2024 Youth Ambassadors Programs",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "05/08/2024",
+     "closeDate": "05/29/2024",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.415"
+     ]
+    },
+    {
+     "id": "352573",
+     "number": "USDA-FAS-10777-0700-10-24-0002",
+     "title": "2024 Norman E. Borlaug International Agricultural Science and Technology Fellowship Program",
+     "agencyCode": "USDA-FAS",
+     "agency": "Foreign Agricultural Service",
+     "openDate": "02/22/2024",
+     "closeDate": "04/08/2024",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.777"
+     ]
+    },
+    {
+     "id": "350966",
+     "number": "PAS-QAT-FY24-001",
+     "title": "2024 Alumni Engagement Innovation Fund (AEIF 2024)",
+     "agencyCode": "DOS-QAT",
+     "agency": "U.S. Mission to Qatar",
+     "openDate": "11/13/2023",
+     "closeDate": "01/15/2024",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.022"
+     ]
+    },
+    {
+     "id": "334556",
+     "number": "SFOP0008251",
+     "title": "2021 TIP Office Notification of Funding Opportunity - Statement of  Interest",
+     "agencyCode": "DOS-GTIP",
+     "agency": "Office to Monitor-Combat Trafficking in Persons",
+     "openDate": "07/02/2021",
+     "closeDate": "08/04/2021",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.019"
+     ]
+    },
+    {
+     "id": "333626",
+     "number": "MEPILOCALGRANTS2021",
+     "title": "MEPI Local Grants 2021",
+     "agencyCode": "DOS-NEA-AC",
+     "agency": "Assistance Coordination",
+     "openDate": "05/24/2021",
+     "closeDate": "08/01/2021",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.500"
+     ]
+    },
+    {
+     "id": "332020",
+     "number": "SFOP0007741",
+     "title": "FY 2021 Youth Leadership Programs with Algeria, Iraq, the Philippines, and Russia",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "03/10/2021",
+     "closeDate": "05/10/2021",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.415"
+     ]
+    },
+    {
+     "id": "329946",
+     "number": "USDA-FAS-10777-0700-10-21-0002",
+     "title": "2021 Norman E. Borlaug International Agricultural Science and Technology Fellowship, Fall Release",
+     "agencyCode": "USDA-FAS-GP-10777",
+     "agency": "Norman E. Borlaug Intl Ag Science and Tech 10.777",
+     "openDate": "11/20/2020",
+     "closeDate": "02/01/2021",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.777"
+     ]
+    },
+    {
+     "id": "327712",
+     "number": "USDA-FAS-10777-0700-10-20-0008",
+     "title": "2020 Norman E. Borlaug International Agricultural Science and Technology Fellowship",
+     "agencyCode": "USDA-FAS-GP-10777",
+     "agency": "Norman E. Borlaug Intl Ag Science and Tech 10.777",
+     "openDate": "06/16/2020",
+     "closeDate": "08/07/2020",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.777"
+     ]
+    },
+    {
+     "id": "322439",
+     "number": "MEPILOCALGRANTS2020",
+     "title": "MEPI Local Grants Program",
+     "agencyCode": "DOS-NEA-AC",
+     "agency": "Assistance Coordination",
+     "openDate": "01/06/2020",
+     "closeDate": "02/25/2020",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.500"
+     ]
+    },
+    {
+     "id": "319757",
+     "number": "SAG10019GR0054",
+     "title": "The Role of the Media in Countering Violent Extremism",
+     "agencyCode": "DOS-DZA",
+     "agency": "U.S. Mission to Algeria",
+     "openDate": "08/20/2019",
+     "closeDate": "09/06/2019",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.222"
+     ]
+    },
+    {
+     "id": "315083",
+     "number": "SFOP0005770",
+     "title": "2019 MEPI Local Grants",
+     "agencyCode": "DOS-NEA-AC",
+     "agency": "Assistance Coordination",
+     "openDate": "04/19/2019",
+     "closeDate": "05/21/2019",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.500"
+     ]
+    },
+    {
+     "id": "303114",
+     "number": "SFOP0004343",
+     "title": "Supporting Private Sector Growth in Algeria",
+     "agencyCode": "DOS-NEA-AC",
+     "agency": "Assistance Coordination",
+     "openDate": "04/12/2018",
+     "closeDate": "06/12/2018",
+     "oppStatus": "closed",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.500"
+     ]
+    },
+    {
+     "id": "301124",
+     "number": "ECA-ECAPEC-18-103",
+     "title": "FY 2018 Youth Leadership Programs with Algeria, Iraq, the Philippines, and Russia",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "02/28/2018",
+     "closeDate": "04/30/2018",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.415"
+     ]
+    },
+    {
+     "id": "301096",
+     "number": "72068718RFA00004",
+     "title": "Accessible Continuum of Care and Essential Services Sustained (ACCESS) Program in Madagascar",
+     "agencyCode": "USAID-MAD",
+     "agency": "Madagascar USAID-Antananarivo",
+     "openDate": "02/27/2018",
+     "closeDate": "04/19/2018",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "98.001"
+     ]
+    },
+    {
+     "id": "293350",
+     "number": "NEAAC-ACBURGR-17-008",
+     "title": "Entrepreneurship in the MENA region",
+     "agencyCode": "DOS-NEA-AC",
+     "agency": "Assistance Coordination",
+     "openDate": "04/21/2017",
+     "closeDate": "06/20/2017",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.600"
+     ]
+    },
+    {
+     "id": "287529",
+     "number": "SOL-486-16-000022",
+     "title": "Counter Trafficking in Persons (CTIP)",
+     "agencyCode": "USAID-THA",
+     "agency": "Thailand USAID-Bangkok",
+     "openDate": "08/16/2016",
+     "closeDate": "09/26/2016",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "98.001"
+     ]
+    },
+    {
+     "id": "275898",
+     "number": "ECA-ECAPEC-15-026",
+     "title": "FY 2015 Youth Leadership Programs with Algeria, Belarus, Iraq, the Philippines, and Russia",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "04/15/2015",
+     "closeDate": "06/05/2015",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.415"
+     ]
+    },
+    {
+     "id": "131594",
+     "number": "ECA-PE-C-PY-12-09",
+     "title": "Youth Leadership Program with Algeria",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "11/21/2011",
+     "closeDate": "01/04/2012",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.415"
+     ]
+    },
+    {
+     "id": "43382",
+     "number": "ECA-PE-C-PY-09-10",
+     "title": "Youth Leadership Program with Algeria, the Philippines, or Serbia",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "11/17/2008",
+     "closeDate": "01/09/2009",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "00.000"
+     ]
+    },
+    {
+     "id": "40009",
+     "number": "ECA-PE-C-PY-08-12",
+     "title": "Algeria Youth Leadership Program",
+     "agencyCode": "DOS-ECA",
+     "agency": "Bureau Of Educational and Cultural Affairs",
+     "openDate": "11/02/2007",
+     "closeDate": "01/03/2008",
+     "oppStatus": "archived",
+     "docType": "synopsis",
+     "cfdaList": [
+      "00.000"
+     ]
+    }
+   ],
+   "oppStatusOptions": [
+    {
+     "label": "posted",
+     "value": "posted",
+     "count": 0
+    },
+    {
+     "label": "closed",
+     "value": "closed",
+     "count": 9
+    },
+    {
+     "label": "archived",
+     "value": "archived",
+     "count": 16
+    },
+    {
+     "label": "forecasted",
+     "value": "forecasted",
+     "count": 0
+    }
+   ],
+   "suggestion": "",
+   "accessKey": "",
+   "errorMsgs": []
+  }
+ }
+}

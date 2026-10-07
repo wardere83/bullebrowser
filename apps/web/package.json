@@ -9,7 +9,7 @@
     "preview": "npx --yes serve@latest out -l 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"no tests\" && exit 0"
+    "test": "node scripts/check-copy.mjs"
   },
   "dependencies": {
     "@bullebrowser/brand-tokens": "workspace:*",

@@ -1,0 +1,175 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=10&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "1"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "identifier": [
+                  "ERASMUS-EDU-2022-ECHE-CERT-FP"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "deadlineDate",
+        "order": "DESC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE",
+        "topicConditions",
+        "furtherInformation",
+        "beneficiaryAdministration",
+        "duration",
+        "links",
+        "publicationDocuments"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 23,
+    "totalResults": 1,
+    "pageNumber": 1,
+    "pageSize": 10,
+    "sort": "[deadlineDate:DESC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "44774210ERASMUSECHECharter1645574400000",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/ERASMUS-EDU-2022-ECHE-CERT-FP",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Erasmus Charter for Higher Education",
+        "weight": 0,
+        "content": "Erasmus Charter for Higher Education",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "ERASMUS-EDU-2022-ECHE-CERT-FP"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2022-02-23T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2022-05-03T00:00:00.000+0000",
+            "2023-01-26T00:00:00.000+0000",
+            "2024-01-25T00:00:00.000+0000",
+            "2025-01-28T00:00:00.000+0000",
+            "2026-03-24T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Erasmus Charter for Higher Education"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/ERASMUS-EDU-2022-ECHE-CERT-FP"
+          ],
+          "typesOfAction": [
+            "ERASMUS ECHE Charter"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/ERASMUS-EDU-2022-ECHE-CERT-FP"
+          ],
+          "callIdentifier": [
+            "ERASMUS-EDU-2022-ECHE-CERT"
+          ],
+          "callccm2Id": [
+            "44774225"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "44774210ERASMUSECHECharter1645574400000"
+          ],
+          "callTitle": [
+            "Erasmus Charter for Higher Education 2022"
+          ],
+          "frameworkProgramme": [
+            "43353764"
+          ],
+          "startDate": [
+            "2022-02-23T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[],\"budgetTopicActionMap\":{\"108211\":[{\"action\":\"ERASMUS-EDU-2022-ECHE-CERT-FP - ERASMUS-CERT ERASMUS ECHE Charter\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{},\"plannedOpeningDate\":\"2022-02-23\",\"deadlineModel\":\"multiple cut-off\",\"deadlineDates\":[\"2022-05-03\",\"2023-01-26\",\"2024-01-25\",\"2025-01-28\",\"2026-03-24\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Expected Outcome:</p><p>This Call aims at accrediting recognised Higher Education Institutions located in eligible countries, which have operational capacity to take part in Erasmus+ Programme’s activities, such as learning mobility of individuals and/or cooperation for innovation and good practices.</p><p><strong>There is only ONE TOPIC. NO LIGHT PROCEDURE any longer. Therefore, ALL PARTS of the APPLICATION FORM PART B should be filled in.</strong></p><p><strong>HEIs are reminded to use their existing PIC or create a new one if necessary. It is important to ensure that the organisational data under the used PIC to apply is up to date (e.g. address, legal information, etc.). Please note that OIDs cannot be used.</strong></p><p><strong>Eligible applicants</strong></p><p>In order to be eligible, the applicants must:</p><ul level=\"0\"><li>be higher education institution (HEI) (public or private) and</li><li>be established in one of the eligible countries, i.e.:</li> </ul><p>Erasmus+ Programme Countries:</p><p>- EU Member States (including overseas countries and territories (OCTs))</p><p>Non-EU countries:</p><p>- Listed EEA (European Economic Area) countries and countries associated to the Erasmus+ Programme (associated countries) or countries which are in ongoing negotiations for an association agreement, in particular Switzerland and United Kingdom (see below).</p><p>- Western Balkans third countries not associated to the Erasmus+ Programme: Albania, Bosnia and Herzegovina, Kosovo and Montenegro.</p><p>All applicants must register in the Participant Register — before the call deadline.</p><p><strong>Specific cases and definitions</strong></p><p><em>Higher education institutions (HEIs) —</em>are institutions which offer recognised degrees or other tertiary level qualifications and other comparable institutions at tertiary level, if recognised by the national authorities. The applicant must be recognised as higher education institution by the national authority of its country. After closure of the call, the national authorities will be asked by EACEA to confirm that they are recognised in their countries.</p><p><em>Switzerland, the United Kingdom and other countries currently negotiating association agreements -</em>where an applicant established in Switzerland, the United Kingdom - or in other countries currently negotiating association agreements - is awarded the ECHE under this call, the validity of the ECHE is conditional upon and will only commence on the date when Switzerland, the United Kingdom - or other countries currently negotiating association agreements - officially becomes a third country associated to the Programme according to the Article 19 of the Erasmus+ Regulation 2021/817.</p><p><strong>Deadline for the submission of applications and indicative date for selection results</strong></p><p>Please check the call document for yearly deadlines.</p>"
+          ],
+          "deadlineModel": [
+            "multiple cut-off"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Erasmus Charter for Higher Education. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/ERASMUS-EDU-2022-ECHE-CERT-FP"
+      }
+    ],
+    "warnings": []
+  }
+}

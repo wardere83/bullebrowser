@@ -1,26 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
-import {
-  fetchDownloads,
-  formatBytes,
-  type Downloads,
-  type Platform,
-} from '@/lib/releases';
+import { useLocale, useT, type MessageKey } from '@/lib/i18n';
+import { RELEASES_PAGE, fetchDownloads, formatBytes, type Downloads, type Platform } from '@/lib/releases';
+import { button, link } from './styles';
 
-const PLATFORMS: { key: Platform; label: string; req: string }[] = [
-  { key: 'mac-arm64', label: 'macOS · Apple Silicon (.dmg)', req: 'macOS 12 or newer' },
-  { key: 'mac-x64', label: 'macOS · Intel (.dmg)', req: 'macOS 12 or newer' },
-  { key: 'win-x64', label: 'Windows 10/11 · x64 (.exe)', req: 'Windows 10 or newer' },
-  { key: 'win-arm64', label: 'Windows · ARM64 (.exe)', req: 'Windows 11 ARM' },
-  { key: 'linux-x64', label: 'Linux · x64 (.AppImage)', req: 'glibc 2.31+' },
-  { key: 'linux-arm64', label: 'Linux · ARM64 (.AppImage)', req: 'glibc 2.31+' },
+// The platform names are the same in every language; what each one needs is
+// a sentence, so it is translated.
+const PLATFORMS: { key: Platform; label: string; requirement: MessageKey }[] = [
+  { key: 'mac-arm64', label: 'macOS · Apple Silicon (.dmg)', requirement: 'download.req.mac' },
+  { key: 'mac-x64', label: 'macOS · Intel (.dmg)', requirement: 'download.req.mac' },
+  { key: 'win-x64', label: 'Windows 10/11 · x64 (.exe)', requirement: 'download.req.win' },
+  { key: 'win-arm64', label: 'Windows · ARM64 (.exe)', requirement: 'download.req.winArm' },
+  { key: 'linux-x64', label: 'Linux · x64 (.AppImage)', requirement: 'download.req.linux' },
+  { key: 'linux-arm64', label: 'Linux · ARM64 (.AppImage)', requirement: 'download.req.linux' },
 ];
 
+// The installers for the current release, read from the manifest baked into
+// the site when it was built. Whatever the outcome it says so in words:
+// checking, the release it found, none published, or the list unavailable.
 export function DownloadTable() {
+  const t = useT();
+  const { locale } = useLocale();
   const [dl, setDl] = useState<Downloads | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const captionId = useId();
 
   useEffect(() => {
     fetchDownloads()
@@ -28,73 +33,80 @@ export function DownloadTable() {
       .finally(() => setLoaded(true));
   }, []);
 
-  const noneYet = loaded && dl && !dl.latestTag && !dl.apiUnavailable;
+  let status = t('download.checking');
+  if (loaded) {
+    if (!dl || dl.apiUnavailable) status = t('download.unavailableNow');
+    else if (!dl.latestTag) status = t('download.none');
+    else {
+      status = `${t('download.latest')} ${dl.latestTag}`;
+      if (dl.publishedAt) {
+        status += ` · ${t('download.published')} ${new Date(dl.publishedAt).toLocaleDateString(locale)}`;
+      }
+    }
+  }
+
+  // Until the list has been read, a row is still being checked, not unavailable:
+  // it shows a dash and says nothing, and the line above says what is going on.
+  const missing = loaded ? t('download.unavailable') : null;
 
   return (
     <>
-      <p className="mt-2 text-ink-secondary">
-        {!loaded
-          ? 'Checking for the latest release…'
-          : dl?.apiUnavailable
-            ? 'The live version check is busy right now. '
-            : dl?.latestTag
-              ? `Latest release: ${dl.latestTag}${
-                  dl.publishedAt
-                    ? ` · published ${new Date(dl.publishedAt).toLocaleDateString()}`
-                    : ''
-                }`
-              : 'No public release has been published yet. '}
+      <p className="text-ink-secondary" aria-live="polite">
+        {status}
       </p>
 
-      {loaded && dl && (
-        <div
-          className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
-            dl.agentReady
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-              : 'border-amber-300 bg-amber-50 text-amber-800'
-          }`}
-        >
-          <span className={`h-2 w-2 rounded-full ${dl.agentReady ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-          {dl.agentReady
-            ? 'Agentic browser build ready'
-            : `Agentic browser baseline requires ${dl.agentMinTag} or newer`}
-        </div>
-      )}
-
-      <div className="mt-8 overflow-hidden rounded-lg border border-line">
-        <table className="w-full text-sm">
-          <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-secondary">
+      {/* Scrolls sideways on a narrow screen, and can be scrolled by keyboard. */}
+      <div
+        role="region"
+        aria-labelledby={captionId}
+        tabIndex={0}
+        className="mt-6 overflow-x-auto rounded-lg border border-line"
+      >
+        <table className="w-full min-w-[36rem] text-sm">
+          <caption id={captionId} className="sr-only">
+            {t('download.caption')}
+          </caption>
+          <thead className="bg-surface-muted text-start text-xs uppercase tracking-wide text-ink-secondary">
             <tr>
-              <th className="px-4 py-3">Platform</th>
-              <th className="px-4 py-3">Requirements</th>
-              <th className="px-4 py-3">Size</th>
-              <th className="px-4 py-3">Version</th>
-              <th className="px-4 py-3"></th>
+              <th scope="col" className="px-4 py-3 text-start font-semibold">
+                {t('download.col.platform')}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-semibold">
+                {t('download.col.requirements')}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-semibold">
+                {t('download.col.size')}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-semibold">
+                {t('download.col.version')}
+              </th>
+              <th scope="col" className="px-4 py-3 text-end font-semibold">
+                {t('download.col.action')}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {PLATFORMS.map((p) => {
-              const asset = dl?.forPlatform?.[p.key];
+            {PLATFORMS.map((platform) => {
+              const installer = dl?.forPlatform?.[platform.key];
               return (
-                <tr key={p.key} className="border-t border-line">
-                  <td className="px-4 py-3">{p.label}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{p.req}</td>
+                <tr key={platform.key} className="border-t border-line">
+                  <th scope="row" className="px-4 py-3 text-start font-medium text-ink-primary">
+                    {platform.label}
+                  </th>
+                  <td className="px-4 py-3 text-ink-secondary">{t(platform.requirement)}</td>
                   <td className="px-4 py-3 text-ink-secondary">
-                    {asset ? formatBytes(asset.size) : 'n/a'}
+                    {installer ? formatBytes(installer.size) : <Missing label={missing} />}
                   </td>
-                  <td className="px-4 py-3 text-ink-secondary">{asset?.tag ?? 'n/a'}</td>
-                  <td className="px-4 py-3 text-right">
-                    {asset ? (
-                      <a
-                        href={asset.browserDownloadUrl}
-                        className="inline-block rounded bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Download
+                  <td className="px-4 py-3 text-ink-secondary">
+                    {installer ? installer.tag : <Missing label={missing} />}
+                  </td>
+                  <td className="px-4 py-3 text-end">
+                    {installer ? (
+                      <a href={installer.browserDownloadUrl} className={button.small} aria-label={`${t('download.action')} — ${platform.label}`}>
+                        {t('download.action')}
                       </a>
                     ) : (
-                      <span className="text-xs text-ink-secondary">Unavailable</span>
+                      missing && <span className="text-xs text-ink-secondary">{missing}</span>
                     )}
                   </td>
                 </tr>
@@ -104,11 +116,30 @@ export function DownloadTable() {
         </table>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-secondary">
-        <Link href="/install" className="text-primary underline">
-          Installation &amp; first-launch guide
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <Link href="/install" className={link.onLight}>
+          {t('download.guide')}
         </Link>
+        {dl?.checksumsUrl && (
+          <a href={dl.checksumsUrl} className={link.onLight}>
+            {t('download.checksums')}
+          </a>
+        )}
+        {/* A way forward even when the list above could not be loaded. */}
+        <a href={RELEASES_PAGE} className={link.onLight}>
+          {t('download.releases')}
+        </a>
       </div>
+    </>
+  );
+}
+
+/** A dash for the eye and, once there is something to say, words for a screen reader. */
+function Missing({ label }: { label: string | null }) {
+  return (
+    <>
+      <span aria-hidden="true">—</span>
+      {label && <span className="sr-only">{label}</span>}
     </>
   );
 }

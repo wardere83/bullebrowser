@@ -26,6 +26,12 @@ files:
   - "!**/coverage/**"
   - "!**/{test,tests,__tests__,.vitest}/**"
   - "!**/{tsconfig.json,tsconfig.*.json,vitest.config.*,.eslintrc*,eslint.config.*}"
+  # pdf.js is used only to read text from PDFs. Ship its Node build and
+  # character maps; leave out the viewer, the script sandbox, fonts and WASM
+  # decoders, none of which are loaded.
+  - "!**/node_modules/pdfjs-dist/{build,web,wasm,image_decoders,standard_fonts,iccs,types}/**"
+  - "!**/node_modules/pdfjs-dist/legacy/web/**"
+  - "!**/node_modules/pdfjs-dist/legacy/build/{pdf.min.mjs,pdf.worker.min.mjs,pdf.sandbox.mjs,pdf.sandbox.min.mjs}"
 
 asar: false
 npmRebuild: false

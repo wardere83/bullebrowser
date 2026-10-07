@@ -1,0 +1,126 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 355211
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 355211,
+   "revision": 0,
+   "opportunityNumber": "OFOP0001473",
+   "opportunityTitle": "U.S. EMBASSY TO LIBYA PAS ANNUAL PROGRAM STATEMENT",
+   "owningAgencyCode": "DOS-TUN",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 355211,
+    "version": 1,
+    "agencyCode": "DOS-TUN",
+    "agencyName": "U.S. Mission to Tunisia",
+    "agencyPhone": "703-516-1684",
+    "agencyDetails": {
+     "code": "TUN",
+     "seed": "DOS-TUN",
+     "agencyName": "U.S. Mission to Tunisia",
+     "agencyCode": "DOS-TUN",
+     "topAgencyCode": "DOS"
+    },
+    "topAgencyDetails": {
+     "code": "DOS",
+     "seed": "DOS",
+     "agencyName": "Department of State",
+     "agencyCode": "DOS",
+     "topAgencyCode": "DOS"
+    },
+    "agencyContactPhone": "703-516-1684",
+    "agencyContactName": "U.S. Mission to Tunisia",
+    "agencyContactDesc": "LibyaUSAExchanges@state.gov",
+    "synopsisDesc": "U.S. DEPARTMENT OF STATE\nU.S. EMBASSY TO LIBYA, PUBLIC AFFAIRS SECTION\nNotice of Funding Opportunity (NOFO)\n\nFunding Opportunity Title: U.S. Embassy to Libya PAS Annual Program Statement\nFunding Opportunity Number: PAS Tripoli FY2024\nCFDA Number: 19.040 Public Diplomacy Programs\nMaximum for Each Award: $25,000 USD\n\nPROGRAM DESCRIPTION\nThe U.S. Embassy Tripoli Public Affairs Section (PAS) is pleased to announce that funding is available through its Public Diplomacy Small Grants Program. This is an Annual Program Statement, outlining our funding priorities, the strategic themes we focus on, and the procedures for submitting requests for funding. Please carefully follow all instructions below.\n\nThe objectives of the Public Diplomacy Grant Program are to build capacity and community, promote social good, and enhance mutual understanding between the people of Libya and the United States. The U.S. Embassy to Libya is seeking projects that:\n\nCapitalize on arts initiatives to increase unity, social cohesion, and reconciliation that deepen Libyan national identity and are consistent with U.S. values.\nPromote leadership, positive community engagement, volunteerism, entrepreneurship, and soft skills development among youth, women, and underserved communities.\nIncrease Libyan youth capabilities to help them explore and develop technological solutions for social problems through Science, Technology, Engineering, Arts, and Math (STEAM) programs.\nProjects that address environmental challenges to mitigate the effects of climate change are highly encouraged.\n\nNote: Alumni of U.S. Government funded exchange programs are encouraged to apply. Initiatives that support diversity and inclusion of minority groups and link with U.S. universities or organizations are also welcome.  \n\nAdditional information on this link: https://ly.usembassy.gov/notice-of-funding-opportunity-nofo/",
+    "responseDate": "Jan 01, 2099 12:00:00 AM EST",
+    "responseDateDesc": "undefined",
+    "fundingDescLinkUrl": "https://mygrants.servicenowservices.com/mygrants?id=mygrants_form&table=x_g_usd4_o_grant_funding_opportunity&sys_id=15b0c4fb87fa0650203441d6cebb3591&view=Default",
+    "fundingDescLinkDesc": "Link to Opportunity in MyGrants",
+    "postingDate": "Jun 28, 2024 12:00:00 AM EDT",
+    "costSharing": true,
+    "numberOfAwards": "25",
+    "estimatedFunding": "25000",
+    "estimatedFundingFormatted": "25,000",
+    "awardCeiling": "25000",
+    "awardCeilingFormatted": "25,000",
+    "awardFloor": "500",
+    "awardFloorFormatted": "500",
+    "applicantEligibilityDesc": "The Public Affairs Office encourages applications from all sectors: committed and organized civil-society organizations, local representatives of civil society, think tanks, non-governmental organizations, cultural institutions, academic institutions, and individuals.&#8239; All grantees must have non-profit status. \n\nWe seek proposals for geographically and demographically diverse audiences within Libya.&#8239; U.S. NGOs and individuals may apply, but preference is given to Libyan NGOs or to partnerships that develop capacity with Libyan NGOs and include plans to transfer programs to sustainable local management in Libya.",
+    "createTimeStamp": "Jun 28, 2024 10:21:19 AM EDT",
+    "createdDate": "Jun 28, 2024 10:21:19 AM EDT",
+    "lastUpdatedDate": "Jun 28, 2024 10:21:19 AM EDT",
+    "applicantTypes": [
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "CD",
+      "description": "Community Development"
+     }
+    ],
+    "responseDateStr": "2099-01-01-00-00-00",
+    "postingDateStr": "2024-06-28-00-00-00",
+    "createTimeStampStr": "2024-06-28-10-21-19"
+   },
+   "agencyDetails": {
+    "code": "TUN",
+    "seed": "DOS-TUN",
+    "agencyName": "U.S. Mission to Tunisia",
+    "agencyCode": "DOS-TUN",
+    "topAgencyCode": "DOS"
+   },
+   "topAgencyDetails": {
+    "code": "DOS",
+    "seed": "DOS",
+    "agencyName": "Department of State",
+    "agencyCode": "DOS",
+    "topAgencyCode": "DOS"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 421784,
+     "opportunityId": 355211,
+     "cfdaNumber": "19.040",
+     "programTitle": "Public Diplomacy Programs"
+    }
+   ],
+   "originalDueDate": "Jan 01, 2099 12:00:00 AM EST",
+   "originalDueDateDesc": "undefined",
+   "synopsisModifiedFields": [],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

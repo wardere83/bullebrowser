@@ -1,0 +1,31 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 999999999
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "revision": 0,
+   "flag2006": "N",
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [],
+   "synopsisModifiedFields": [],
+   "forecastModifiedFields": [],
+   "errorMessages": [
+    "There is no record found for your search."
+   ],
+   "synPostDateInPast": false,
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N"
+  }
+ }
+}

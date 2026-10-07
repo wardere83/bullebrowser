@@ -1,0 +1,19 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.montgomerycountymd.gov/resource/eeq6-nnwe.json?%24select=status%2Ctype%2Cnumber%2Cdescription%2Cissuancedate%2Cclosingdate%2Ccancelledpostponed%2Cconstruction%2Clsbrpindicator%2Cbuyer%2Cdepartment%2Cdeptcontact%2Cbidtab&%24where=number%3D%271197772%27&%24order=issuancedate+DESC&%24limit=2"
+  },
+  "response": [
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1197772",
+      "description": "Construction Services for North Bethesda Fire Station #43",
+      "issuancedate": "2026-09-30T00:00:00.000",
+      "closingdate": "2026-11-06T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of General Services"
+    }
+  ]
+}

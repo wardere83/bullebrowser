@@ -20,6 +20,8 @@ import { getSettings, setSettings } from './storage/settings.js';
 import { conversationStore } from './storage/conversations.js';
 import { sessionFileStore } from './storage/session-files.js';
 import { projectStore } from './storage/projects.js';
+import { identityService } from './identity/service.js';
+import { startFundingPlatform } from './funding/platform.js';
 import { transcribeAudio } from './voice.js';
 import { prepareSpeech, synthesizeAudio } from './speech.js';
 import { connectRealtimeVoice, disconnectRealtimeVoice, disposeRealtimeVoice } from './realtime-voice.js';
@@ -37,7 +39,20 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export function registerIpc(win: BrowserWindow) {
+// Chats and projects can hold what an organization's documents say, so they
+// are listed, opened and changed only under the organization they belong to.
+async function activeOrganizationId(): Promise<string | null> {
+  try {
+    return (await identityService.currentSession()).organizationId;
+  } catch {
+    return null;
+  }
+}
+
+export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow | null = () => win) {
+  // The funding platform has one door of its own (funding/rpc.ts).
+  startFundingPlatform(getWindow);
+
   // tabs
   ipcMain.handle(IPC.TAB_LIST, () => tabManager.list());
   ipcMain.handle(IPC.TAB_CREATE, (_e, url?: string) => tabManager.create(url));
@@ -73,10 +88,14 @@ export function registerIpc(win: BrowserWindow) {
   ipcMain.handle(IPC.SECRET_CLEAR_API_KEY, (_e, provider?: ProviderId) => clearApiKey(provider));
 
   // conversations
-  ipcMain.handle(IPC.CONVERSATION_LIST, () => conversationStore.list());
-  ipcMain.handle(IPC.CONVERSATION_GET, (_e, id: string) => conversationStore.get(id));
-  ipcMain.handle(IPC.CONVERSATION_NEW, () => conversationStore.create());
-  ipcMain.handle(IPC.CONVERSATION_DELETE, (_e, id: string) => conversationStore.delete(id));
+  ipcMain.handle(IPC.CONVERSATION_LIST, async () => conversationStore.list(await activeOrganizationId()));
+  ipcMain.handle(IPC.CONVERSATION_GET, async (_e, id: string) =>
+    conversationStore.get(id, await activeOrganizationId()),
+  );
+  ipcMain.handle(IPC.CONVERSATION_NEW, async () => conversationStore.create(await activeOrganizationId()));
+  ipcMain.handle(IPC.CONVERSATION_DELETE, async (_e, id: string) =>
+    conversationStore.delete(id, await activeOrganizationId()),
+  );
 
   // agent
   ipcMain.handle(IPC.AGENT_RUN, (_e, req: AgentRunRequest) => startAgentRun(win, req));
@@ -111,18 +130,24 @@ export function registerIpc(win: BrowserWindow) {
   ipcMain.handle(IPC.FILE_REMOVE, (_e, id: string) => sessionFileStore.remove(id));
 
   // projects
-  ipcMain.handle(IPC.PROJECT_LIST, () => projectStore.list());
-  ipcMain.handle(IPC.PROJECT_GET, (_e, id: string) => projectStore.get(id));
-  ipcMain.handle(IPC.PROJECT_CREATE, (_e, name: string) => projectStore.create(name));
+  ipcMain.handle(IPC.PROJECT_LIST, async () => projectStore.list(await activeOrganizationId()));
+  ipcMain.handle(IPC.PROJECT_GET, async (_e, id: string) => projectStore.get(id, await activeOrganizationId()));
+  ipcMain.handle(IPC.PROJECT_CREATE, async (_e, name: string) =>
+    projectStore.create(name, await activeOrganizationId()),
+  );
+  // A project that is not visible under the active organization is treated as missing.
+  const ownProject = async (id: string) => projectStore.get(id, await activeOrganizationId()) !== null;
   ipcMain.handle(
     IPC.PROJECT_UPDATE,
-    (_e, id: string, patch: { name?: string; instructions?: string }) =>
-      projectStore.update(id, patch),
+    async (_e, id: string, patch: { name?: string; instructions?: string }) =>
+      (await ownProject(id)) ? projectStore.update(id, patch) : null,
   );
-  ipcMain.handle(IPC.PROJECT_ATTACH_FILES, (_e, id: string, fileIds: string[]) =>
-    projectStore.attachFiles(id, fileIds),
+  ipcMain.handle(IPC.PROJECT_ATTACH_FILES, async (_e, id: string, fileIds: string[]) =>
+    (await ownProject(id)) ? projectStore.attachFiles(id, fileIds) : null,
   );
-  ipcMain.handle(IPC.PROJECT_DELETE, (_e, id: string) => projectStore.delete(id));
+  ipcMain.handle(IPC.PROJECT_DELETE, async (_e, id: string) => {
+    if (await ownProject(id)) projectStore.delete(id);
+  });
 
   // voice → local transcription (no API key)
   ipcMain.handle(IPC.VOICE_TRANSCRIBE, (event, audio: Float32Array) => {

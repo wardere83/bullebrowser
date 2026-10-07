@@ -134,3 +134,31 @@ describe('projectStore.list / delete', () => {
     expect(projectStore.list()).toHaveLength(0);
   });
 });
+
+describe('projects and organizations', () => {
+  const ORG_A = '11111111-1111-4111-8111-111111111111';
+  const ORG_B = '22222222-2222-4222-8222-222222222222';
+
+  it('lists and reads a project only under its own organization', () => {
+    const mine = projectStore.create('Workforce grant', ORG_A);
+    const theirs = projectStore.create('Furnace replacement', ORG_B);
+    const legacy = projectStore.create('From before organizations');
+
+    expect(projectStore.list(ORG_A).map((p) => p.id).sort()).toEqual([mine.id, legacy.id].sort());
+    expect(projectStore.list(ORG_B).map((p) => p.id).sort()).toEqual([theirs.id, legacy.id].sort());
+    expect(projectStore.list(null).map((p) => p.id)).toEqual([legacy.id]);
+    expect(projectStore.get(mine.id, ORG_B)).toBeNull();
+    expect(projectStore.get(mine.id, ORG_A)).not.toBeNull();
+    // Without an organization argument nothing changes for existing callers.
+    expect(projectStore.list()).toHaveLength(3);
+    expect(projectStore.get(theirs.id)).not.toBeNull();
+  });
+
+  it('removes an organization\'s projects with it', () => {
+    projectStore.create('One', ORG_A);
+    projectStore.create('Two', ORG_A);
+    const other = projectStore.create('Other', ORG_B);
+    expect(projectStore.deleteForOrganization(ORG_A)).toBe(2);
+    expect(projectStore.list().map((p) => p.id)).toEqual([other.id]);
+  });
+});

@@ -1,7 +1,7 @@
 // SDP signaling for live voice. Only main reads the saved OpenAI key; the
 // renderer receives an SDP answer and an owned call id, never a credential.
 import { getApiKey } from './storage/secrets.js';
-import { PRODUCT_IDENTITY_INSTRUCTIONS } from '@bullebrowser/agent-core';
+import { PRODUCT_IDENTITY_INSTRUCTIONS, TERMINOLOGY_INSTRUCTIONS } from '@bullebrowser/agent-core';
 
 const CALLS_ENDPOINT = 'https://api.openai.com/v1/realtime/calls';
 const MAX_SDP_BYTES = 128 * 1024;
@@ -11,13 +11,16 @@ const SESSION_LIFETIME_MS = 60 * 60 * 1000;
 
 class VoiceConnectionError extends Error {}
 
-const INSTRUCTIONS = `${PRODUCT_IDENTITY_INSTRUCTIONS}\n\nHave a natural,
+const INSTRUCTIONS = `${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\nHave a natural,
 concise spoken conversation with the user. Reply in the user's language. You may
 be interrupted; listen to the user's correction and continue from it. Ignore
 background speech unless the user addresses you, and ask briefly if unclear.
 For requests to inspect, research, navigate, interact with, or change browser
 pages or websites, call perform_browser_task. The tool runs BulleBrowser's agent
-and returns its actual result. Never say you opened, inspected, submitted,
+and returns its actual result. Use the same tool for funding questions about the
+user's organization, funding opportunities, a funder or a proposal: only the
+agent can read the organization's approved profile and the official funding
+sources, so never answer those from memory or describe a listing as open yourself. Never say you opened, inspected, submitted,
 changed, or completed anything without a successful corresponding tool result.
 If the tool returns cancelled or failed, say so plainly. Sensitive actions need
 the browser agent's existing approval UI; do not claim verbal permission bypasses

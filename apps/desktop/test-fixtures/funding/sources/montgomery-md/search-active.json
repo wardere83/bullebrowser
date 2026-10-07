@@ -1,0 +1,192 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.montgomerycountymd.gov/resource/eeq6-nnwe.json?%24select=status%2Ctype%2Cnumber%2Cdescription%2Cissuancedate%2Cclosingdate%2Ccancelledpostponed%2Cconstruction%2Clsbrpindicator%2Cbuyer%2Cdepartment%2Cdeptcontact%2Cbidtab&%24where=status%3D%27Active%27&%24order=closingdate+ASC%2C+number+ASC&%24limit=2000"
+  },
+  "response": [
+    {
+      "status": "Active",
+      "type": "IFB",
+      "number": "1192172",
+      "description": "Refuse and Recycling Collection Services for Various County Facilities",
+      "issuancedate": "2026-06-26T00:00:00.000",
+      "closingdate": "2026-10-07T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of General Services"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1182845",
+      "description": "Bus Depot Washdown & Degreasing Service",
+      "issuancedate": "2026-09-04T00:00:00.000",
+      "closingdate": "2026-10-12T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "Y",
+      "department": "Department of Transportation"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1195755",
+      "description": "Municipal Solid Waste Sorting and Recovery",
+      "issuancedate": "2026-07-14T00:00:00.000",
+      "closingdate": "2026-10-14T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1199751",
+      "description": "Temporary Administrative and Paraprofessional Support Services",
+      "issuancedate": "2026-09-18T00:00:00.000",
+      "closingdate": "2026-10-22T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "Y",
+      "department": "Office of Human Resources"
+    },
+    {
+      "status": "Active",
+      "type": "IFB",
+      "number": "1192593",
+      "description": "Emergency Generator Services",
+      "issuancedate": "2026-06-24T00:00:00.000",
+      "closingdate": "2026-10-23T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of General Services"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1194839",
+      "description": "Medical Insurance Services and Administration for Montgomery County",
+      "issuancedate": "2026-09-10T00:00:00.000",
+      "closingdate": "2026-10-23T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Office of Human Resources"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1201380",
+      "description": "Operation of an Outdoor Ice Rink at Veterans Plaza in Silver Spring, Maryland",
+      "issuancedate": "2026-10-02T00:00:00.000",
+      "closingdate": "2026-10-23T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Community Use of Public Facilities"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1196087",
+      "description": "County-Wide Contract Security Officer Services",
+      "issuancedate": "2026-08-10T00:00:00.000",
+      "closingdate": "2026-10-28T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Police"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1197772",
+      "description": "Construction Services for North Bethesda Fire Station #43",
+      "issuancedate": "2026-09-30T00:00:00.000",
+      "closingdate": "2026-11-06T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of General Services"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1131334",
+      "description": "Residential Refuse, Recyclable Materials, Yard Trim, and Scrap Metal/e-Waste Collection Services in Service Area 6",
+      "issuancedate": "2022-01-05T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurements"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1131335",
+      "description": "Residential Refuse, Recyclable Materials, Yard Trim, and Scrap Metal/e-Waste Collection Services in Service Area 8",
+      "issuancedate": "2022-01-05T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurements"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1191538",
+      "description": "Residential Refuse & Recyclable Materials Collection Services, Service Area 1",
+      "issuancedate": "2026-05-21T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1191539",
+      "description": "Residential Refuse & Recyclable Materials Collection Services, Service Area 2",
+      "issuancedate": "2026-05-21T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1191540",
+      "description": "Residential Refuse & Recyclable Materials Collection Services, Service Area 4",
+      "issuancedate": "2026-05-21T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1191541",
+      "description": "Residential Refuse & Recyclable Materials Collection Services, Service Area 5",
+      "issuancedate": "2026-05-21T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team"
+    },
+    {
+      "status": "Active",
+      "type": "RFP",
+      "number": "1191542",
+      "description": "Residential Refuse & Recyclable Materials Collection Services, Service Area 7",
+      "issuancedate": "2026-05-21T00:00:00.000",
+      "cancelledpostponed": "Cancelled or Indefinitely Postponed",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team"
+    }
+  ]
+}

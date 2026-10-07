@@ -6,6 +6,8 @@ import { randomUUID } from 'node:crypto';
 import { type BrowserWindow } from 'electron';
 import {
   DEFAULT_MODEL,
+  FUNDING_RULES,
+  FUNDING_WORKFLOW_IDS,
   findSkill,
   providerFor,
   runAgent,
@@ -29,6 +31,9 @@ import { getSettings } from '../storage/settings.js';
 import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError } from './errors.js';
 import { buildAttachmentAppendix, type AttachmentSources } from './attachments.js';
+import { groundChat, type ChatGrounding } from '../funding/grounding.js';
+import { fundingPlatform } from '../funding/platform.js';
+import { identityService } from '../identity/service.js';
 
 // The real, store-backed resolvers. buildAttachmentAppendix takes these by
 // injection so it can be unit-tested without booting Electron.
@@ -119,6 +124,26 @@ const BASE_SYSTEM = [
   '  and a "next" hint; transient ones are already retried for you.',
 ].join('\n');
 
+// Funding questions asked without choosing one of the four workflows are held
+// to the same rules as the workflows themselves.
+const FUNDING_GENERAL = [
+  'BulleBrowser is a strategic funding platform for businesses and CBOs. When the user asks about',
+  'their own organization, funding opportunities, a funder or a proposal, treat it as funding work:',
+  'ground what you say about the organization in its approved profile and documents, find listings',
+  'through the funding tools, and help the user develop their own proposal with structure,',
+  'reflective questions, outlines and feedback on their draft rather than writing narrative for them',
+  'to submit. Check what the funder says about AI assistance before offering help with a proposal.',
+  '',
+  FUNDING_RULES,
+].join('\n');
+
+const NO_GROUNDING = (now: number): ChatGrounding => ({
+  organizationId: null,
+  referenceContext: [],
+  tools: [],
+  systemNote: `Today's date on the user's device is ${new Date(now).toISOString().slice(0, 10)}.`,
+});
+
 export async function startAgentRun(
   win: BrowserWindow,
   req: AgentRunRequest,
@@ -128,8 +153,24 @@ export async function startAgentRun(
   // confusing 401.
   const model = req.model ?? getSettings().defaultModel ?? DEFAULT_MODEL;
   const apiKey = getApiKey(providerFor(model));
-  const conversation = conversationStore.get(req.conversationId);
+
+  const controller = new AbortController();
+  // What the run may know about the active organization. A failure here must
+  // not stop the chat: the run then simply has no organization material.
+  const grounding = await groundChat(fundingPlatform(), identityService, {
+    ...(req.focusRfpId ? { focusRfpId: req.focusRfpId } : {}),
+    signal: controller.signal,
+    now: Date.now(),
+  }).catch((err: unknown) => {
+    console.error('[agent] could not ground the run in the organization', err);
+    return NO_GROUNDING(Date.now());
+  });
+
+  // A chat belongs to the organization it was first used under, and is not
+  // continued under another one.
+  const conversation = conversationStore.get(req.conversationId, grounding.organizationId);
   if (!conversation) throw new Error('Conversation not found');
+  if (grounding.organizationId) conversationStore.bind(req.conversationId, grounding.organizationId);
 
   // Store the user's message CLEAN (what they typed), but hand the model an
   // enriched version that folds in any attached file/project/screenshot
@@ -155,7 +196,6 @@ export async function startAgentRun(
   }
 
   const runId = randomUUID();
-  const controller = new AbortController();
   const pendingConfirms = new Map<string, (approved: boolean) => void>();
   runs.set(runId, { controller, pendingConfirms });
 
@@ -193,18 +233,16 @@ export async function startAgentRun(
   });
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
-  // The compliance skill now exists, so this reaches the user's checklist from
-  // Settings and appends it to the skill's own prompt.
-  const userChecklist =
-    skill?.id === 'compliance_review' ? getSettings().complianceChecklist : [];
-  const checklistAppendix =
-    userChecklist.length > 0
-      ? '\n\nUser-provided checklist items (run these in addition to the defaults above, using the same Status legend):\n' +
-        userChecklist.map((i) => `- ${i}`).join('\n')
-      : '';
-  const systemPrompt = skill
-    ? `${BASE_SYSTEM}\n\n${skill.systemPrompt}${checklistAppendix}`
-    : BASE_SYSTEM;
+  const isFundingWorkflow = !!skill && (FUNDING_WORKFLOW_IDS as readonly string[]).includes(skill.id);
+  const systemPrompt = [
+    BASE_SYSTEM,
+    skill ? skill.systemPrompt : '',
+    // A funding workflow carries the funding rules itself.
+    isFundingWorkflow ? '' : FUNDING_GENERAL,
+    grounding.systemNote,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const startTabId = activeTabId;
   const ctx: ToolContext = {
@@ -237,6 +275,9 @@ export async function startAgentRun(
           .map((m) => ({ role: m.role, content: m.content })),
         userMessage: composedMessage,
         userRequest: req.userMessage,
+        // Sealed by the loop as reference material; never part of the instructions.
+        ...(grounding.referenceContext.length > 0 ? { referenceContext: grounding.referenceContext } : {}),
+        ...(grounding.tools.length > 0 ? { extraTools: grounding.tools } : {}),
         context: ctx,
         requestBrowseAccess: () => ask(req.userMessage, 'browse_access'),
         budget: req.budget ?? getSettings().stepBudget,

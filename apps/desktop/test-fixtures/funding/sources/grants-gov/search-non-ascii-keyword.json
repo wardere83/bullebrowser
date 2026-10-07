@@ -1,0 +1,30 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/search2",
+  "body": {
+   "keyword": "educación",
+   "oppStatuses": "posted",
+   "rows": 0,
+   "startRecordNum": 0
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "hitCount": 0,
+   "startRecord": 0,
+   "oppHits": [],
+   "oppStatusOptions": [],
+   "dateRangeOptions": [],
+   "suggestion": "",
+   "eligibilities": [],
+   "fundingCategories": [],
+   "fundingInstruments": [],
+   "agencies": [],
+   "accessKey": "",
+   "errorMsgs": []
+  }
+ }
+}

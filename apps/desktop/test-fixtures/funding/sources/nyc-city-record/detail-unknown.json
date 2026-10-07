@@ -1,0 +1,7 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.cityofnewyork.us/resource/dg92-zbpx.json?%24select=request_id%2Cstart_date%2Cend_date%2Cagency_name%2Ctype_of_notice_description%2Ccategory_description%2Cshort_title%2Cselection_method_description%2Csection_name%2Cspecial_case_reason_description%2Cpin%2Cdue_date%2Caddress_to_request%2Ccontact_name%2Ccontact_phone%2Cemail%2Ccontract_amount%2Cadditional_description_1%2Cadditional_description_2%2Cadditional_description_3%2Cother_info_1%2Cother_info_2%2Cother_info_3%2Cdocument_links&%24where=section_name%3D%27Procurement%27+AND+type_of_notice_description%3D%27Solicitation%27+AND+request_id%3D19990101001&%24order=request_id+ASC&%24limit=2"
+  },
+  "response": []
+}

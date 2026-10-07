@@ -1,0 +1,329 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=100&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "1",
+                  "2",
+                  "8"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "status": [
+                  "31094503"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "deadlineDate",
+        "order": "DESC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 92,
+    "totalResults": 3,
+    "pageNumber": 1,
+    "pageSize": 100,
+    "sort": "[deadlineDate:DESC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "51121589TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/LIFE-2026-STRAT-CLIMA-SIP-two-stage",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Strategic Integrated Projects - Climate Action",
+        "weight": 0,
+        "content": "Strategic Integrated Projects - Climate Action",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "LIFE-2026-STRAT-CLIMA-SIP-two-stage"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-04-21T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-09-03T00:00:00.000+0000",
+            "2027-03-04T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Strategic Integrated Projects - Climate Action"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/LIFE-2026-STRAT-CLIMA-SIP-two-stage"
+          ],
+          "typesOfAction": [
+            "LIFE Project Grants"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/LIFE-2026-STRAT-CLIMA-SIP-two-stage"
+          ],
+          "callIdentifier": [
+            "LIFE-2026-STRAT-two-stage"
+          ],
+          "callccm2Id": [
+            "51121600"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "51121589TOPICSen"
+          ],
+          "callTitle": [
+            "Strategic Nature and Integrated Projects (SNAP/SIP)"
+          ],
+          "frameworkProgramme": [
+            "43252405"
+          ],
+          "startDate": [
+            "2026-04-21T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2026\"],\"budgetTopicActionMap\":{\"114288\":[{\"action\":\"LIFE-2026-STRAT-ENV-SIP-two-stage - LIFE-PJG LIFE Project Grants\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2026\":\"58000000\"},\"plannedOpeningDate\":\"2026-04-21\",\"deadlineModel\":\"two-stage\",\"deadlineDates\":[\"2026-09-03\",\"2027-03-04\"]}],\"114287\":[{\"action\":\"LIFE-2026-STRAT-CLIMA-SIP-two-stage - LIFE-PJG LIFE Project Grants\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2026\":\"30000000\"},\"plannedOpeningDate\":\"2026-04-21\",\"deadlineModel\":\"two-stage\",\"deadlineDates\":[\"2026-09-03\",\"2027-03-04\"]}],\"114286\":[{\"action\":\"LIFE-2026-STRAT-NAT-SNAP-two-stage - LIFE-PJG LIFE Project Grants\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2026\":\"75000000\"},\"plannedOpeningDate\":\"2026-04-21\",\"deadlineModel\":\"two-stage\",\"deadlineDates\":[\"2026-09-03\",\"2027-03-04\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Expected Impact:</p><ul level=\"0\"><li>By the end of the project: at least substantial contribution to the implementation of the targeted plan/strategy, and mechanisms established to ensure full implementation of the plan/strategy.</li><li>After the project: Full implementation of the plan/strategy.</li> </ul><p>In relation to those expected impacts, applicants are expected to define, calculate, explain and achieve the <strong>expected impacts as described in Award criterion ‘Impact’ of the full proposal evaluation (<u>see Call document</u>).</strong></p><p class=\"topicdescriptionkind\">Objective:</p><p>Target the implementation of one or more of the following plans/strategies: </p><ol level=\"0\">  <li>Final updated National Energy and Climate Plans (NECP) and Long-Term Strategies (LTS) pursuant to Regulation on the governance of the energy union and climate action (EU) 2018/1999.</li><li>National adaptation strategies and plans pursuant to Article 5 of the Regulation 2021/1119 (‘European Climate Law’), or regional adaptation strategies or action plans.</li><li>Urban or community-based action plans pioneering the transition to a climate neutral and/or climate resilient society, - including climate-neutral cities plans and actions, for instance in the context of the EU Mission ‘Climate neutral and smart cities’ and Sustainable Urban Mobility Plans -which would work in parallel with the Commission’s new integrated framework for European climate resilience and risk management expected in late 2026.</li><li>National, regional or industry-/sector-specific greenhouse gas mitigation strategies or roadmaps contributing to climate neutrality. </li></ol><p class=\"topicdescriptionkind\">Scope:</p><p>SIPs should aim at the full implementation of the strategies and plans listed in \"Objective\". This might not mean that the SIP will cover all actions foreseen in the strategy/plan or that the strategy/plan will be fully implemented during the lifetime of the SIP. However, the SIP shall include strategic actions to catalyse a process and mobilise supplementary commitments and funding that will lead, in due time, to the full implementation of the plan or strategy.</p><p>SIPs shall promote the coordination with and mobilisation of other relevant Union, national or private funding sources for the implementation of the complementary measures or actions outside of the SIP in the framework of the targeted plan or strategy, giving preference to EU funding. Within the SIP itself, however, co-funding may not come from other EU funding sources.</p><p>SIPs shall actively involve the main stakeholders necessary for the implementation of the targeted plan or strategy. They should be involved in both the design and implementation of the given project. This involvement is expected to be achieved by including them - where possible and reasonable - as associated beneficiaries of the SIP, or through their active participation in the implementation of the SIP itself and/or of the complementary actions.</p><p>SIPs should facilitate and result in the building up of strategic capacities among the competent authorities and stakeholders to ensure a long-term sustainability of project results and actions, and to ensure that they will be able to function as co-deliverers of the targeted plan or strategy during or after the end of the SIP.</p><p>The SIP complexity requires an adaptive approach in the design of the implementing mechanism. For this reason, SIPs will be implemented based on a revolving programming mechanism structured in phases (i.e. Phase 1, Phase 2, etc.). Each phase should normally last at least 3 years, to reduce administrative burden, although duration might be shorter if properly justified.</p><p><u>See Call document</u> and <u>Frequently Asked Questions (FAQ)</u> for a more detailed description of SIPs scope and features.</p>"
+          ],
+          "deadlineModel": [
+            "two-stage"
+          ],
+          "status": [
+            "31094503"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Strategic Integrated Projects - Climate Action. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/LIFE-2026-STRAT-CLIMA-SIP-two-stage"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "15241COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/47365875",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Cultural Horizons: Artistic Debuts",
+        "weight": 0,
+        "content": "Cultural Horizons: Artistic Debuts",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "CREA-CULT-2025-COOP-UA-2"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-08-03T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-10-05T05:00:00.000+0000"
+          ],
+          "description": [],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Fostering Ukrainians’ access to culture and cultural heritage"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/47365875"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/47365875"
+          ],
+          "callccm2Id": [
+            "15241"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "15241COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "Cultural Horizons"
+          ],
+          "callTitle": [
+            "Cultural Horizons: Artistic Debuts"
+          ],
+          "projectName": [
+            "Cultural Horizons"
+          ],
+          "frameworkProgramme": [
+            "43251814"
+          ],
+          "startDate": [
+            "2026-08-03T00:00:00.000+0000"
+          ],
+          "budget": [
+            "350000"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094503"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Fostering Ukrainians’ access to culture and cultural heritage. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/47365875"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "11264COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/45033429",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Urban Mobility Explained (UMX) Open Call (Multi-cut-off)",
+        "weight": 0,
+        "content": "Urban Mobility Explained (UMX) Open Call (Multi-cut-off)",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIT-2023-25-KIC-EITURBANMOBILITY"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2025-07-02T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2025-09-30T17:00:04.000+0000",
+            "2026-09-29T17:00:00.000+0000"
+          ],
+          "description": [],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "EIT Urban Mobility Business Plan 2023-2025"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/45033429"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/45033429"
+          ],
+          "callccm2Id": [
+            "11264"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "11264COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "EITUM-BP23-25"
+          ],
+          "callTitle": [
+            "Urban Mobility Explained (UMX) Open Call (Multi-cut-off)"
+          ],
+          "projectName": [
+            "EIT Urban Mobility Business Plan 2023-2025"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2025-07-02T00:00:00.000+0000"
+          ],
+          "budget": [
+            "4000000"
+          ],
+          "deadlineModel": [
+            "multiple cut-off"
+          ],
+          "status": [
+            "31094503"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "EIT Urban Mobility Business Plan 2023-2025. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/45033429"
+      }
+    ],
+    "warnings": []
+  }
+}

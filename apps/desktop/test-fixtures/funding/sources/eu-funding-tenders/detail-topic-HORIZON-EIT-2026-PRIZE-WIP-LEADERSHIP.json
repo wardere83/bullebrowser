@@ -1,0 +1,171 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=10&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "1"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "identifier": [
+                  "HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "deadlineDate",
+        "order": "DESC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE",
+        "topicConditions",
+        "furtherInformation",
+        "beneficiaryAdministration",
+        "duration",
+        "links",
+        "publicationDocuments"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 16,
+    "totalResults": 1,
+    "pageNumber": 1,
+    "pageSize": 10,
+    "sort": "[deadlineDate:DESC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "52395682TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Women Leadership Category",
+        "weight": 0,
+        "content": "Women Leadership Category",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-09-02T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-12-01T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Women Leadership Category"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+          ],
+          "typesOfAction": [
+            "HORIZON Recognition Prize"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+          ],
+          "callIdentifier": [
+            "HORIZON-EIT-2026-PRIZE-WIP"
+          ],
+          "callccm2Id": [
+            "52395690"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "52395682TOPICSen"
+          ],
+          "callTitle": [
+            "The European Prize for Women Innovators"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-09-02T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2026\"],\"budgetTopicActionMap\":{\"115442\":[{\"action\":\"HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP - HORIZON-RPr HORIZON Recognition Prize\",\"expectedGrants\":3,\"minContribution\":20000,\"maxContribution\":50000,\"budgetYearMap\":{\"2026\":\"100000\"},\"plannedOpeningDate\":\"2026-09-02\",\"deadlineModel\":\"single-stage\",\"deadlineDates\":[\"2026-12-01\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Expected Impact:</p><p>The prize will boost public awareness of the potential, importance and contribution of women to the EU innovation ecosystem and create strong role models, inspiring more women to become innovators themselves.</p>"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Women Leadership Category. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/HORIZON-EIT-2026-PRIZE-WIP-LEADERSHIP"
+      }
+    ],
+    "warnings": []
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.lacity.org/resource/hf3r-utnq.json?%24select=rampid%2Ctitle%2Cstagename%2Ccategory%2Ctype%2Cbidpost%2Cclosedate%2Cdepartment%2Curl&%24where=rampid%3D%271%27&%24order=rampid+ASC&%24limit=2"
+  },
+  "response": []
+}

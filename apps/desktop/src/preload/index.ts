@@ -8,12 +8,33 @@ import {
   type AppSettings,
   type BrowserBridge,
 } from '../shared/ipc.js';
+import {
+  FUNDING_METHODS,
+  type FundingBridge,
+  type FundingEvent,
+  type FundingNamespace,
+} from '../shared/funding.js';
 
 const subscribe = <T>(channel: string, cb: (payload: T) => void) => {
   const handler = (_e: unknown, payload: T) => cb(payload);
   ipcRenderer.on(channel, handler);
   return () => ipcRenderer.off(channel, handler);
 };
+
+// The funding platform goes through one call channel. Each method listed in the
+// shared table becomes a function here; main checks the name, the sender, the
+// active organization and the permission again before anything runs.
+const fundingCalls = Object.fromEntries(
+  (Object.keys(FUNDING_METHODS) as FundingNamespace[]).map((namespace) => [
+    namespace,
+    Object.fromEntries(
+      Object.keys(FUNDING_METHODS[namespace]).map((method) => [
+        method,
+        (...args: unknown[]) => ipcRenderer.invoke(IPC.FUNDING_CALL, namespace, method, args),
+      ]),
+    ),
+  ]),
+) as unknown as Omit<FundingBridge, 'onEvent'>;
 
 const bridge: BrowserBridge = {
   tabs: {
@@ -96,6 +117,10 @@ const bridge: BrowserBridge = {
   },
   ui: {
     onAskAgent: (cb) => subscribe(IPC.UI_ASK_AGENT, cb),
+  },
+  funding: {
+    ...fundingCalls,
+    onEvent: (cb) => subscribe<FundingEvent>(IPC.FUNDING_EVENT, cb),
   },
 };
 

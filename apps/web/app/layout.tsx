@@ -9,6 +9,7 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import { product } from '@bullebrowser/brand-tokens';
 import { LocaleProvider } from '@/lib/i18n';
+import { SHARE_IMAGE, SITE_URL } from '@/lib/metadata';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import './globals.css';
@@ -33,8 +34,9 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  // connect-src must include api.github.com so the Download button can
-  // resolve the latest release; github.com for any other XHR to releases.
+  // connect-src must include api.github.com so the download page can fall
+  // back to the live release list; github.com for any other XHR to releases.
+  // No funding source is listed, on purpose: the site never queries one.
   "connect-src 'self' https://api.github.com https://github.com",
   "object-src 'none'",
   "base-uri 'self'",
@@ -48,16 +50,29 @@ const CSP = [
   'upgrade-insecure-requests',
 ].join('; ');
 
+// The home page's own title and description, and the defaults every other page
+// starts from. Each route with a page of its own sets these again in its
+// layout or page (see lib/metadata.ts).
+const HOME_TITLE = `${product.name} — ${product.tagline}`;
+
 export const metadata: Metadata = {
-  title: { default: product.name, template: `%s · ${product.name}` },
-  description: product.tagline,
-  metadataBase: new URL(`https://${product.domain}`),
+  title: { default: HOME_TITLE, template: `%s · ${product.name}` },
+  description: product.description,
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: `${SITE_URL}/` },
   openGraph: {
-    title: product.name,
-    description: product.tagline,
-    url: `https://${product.domain}`,
+    title: HOME_TITLE,
+    description: product.description,
+    url: `${SITE_URL}/`,
     siteName: product.name,
     type: 'website',
+    images: [SHARE_IMAGE],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: HOME_TITLE,
+    description: product.description,
+    images: [SHARE_IMAGE],
   },
   robots: { index: true, follow: true },
   // Renders as <meta name="referrer">, the W3C-standard way for this one
@@ -74,11 +89,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-surface-light text-ink-primary antialiased">
         <LocaleProvider>
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            {/* The skip link in the header lands here. */}
+            <main id="main" tabIndex={-1} className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </LocaleProvider>
       </body>
     </html>

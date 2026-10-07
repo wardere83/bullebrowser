@@ -1,0 +1,58 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.montgomerycountymd.gov/resource/eeq6-nnwe.json?%24select=status%2Ctype%2Cnumber%2Cdescription%2Cissuancedate%2Cclosingdate%2Ccancelledpostponed%2Cconstruction%2Clsbrpindicator%2Cbuyer%2Cdepartment%2Cdeptcontact%2Cbidtab&%24where=status%3D%27Closed%27+AND+closingdate+IS+NOT+NULL&%24order=closingdate+DESC%2C+number+DESC&%24limit=200"
+  },
+  "response": [
+    {
+      "status": "Closed",
+      "type": "Informal",
+      "number": "1201132",
+      "description": "AUDIOLOGY SERVICES FOR CHILDREN WITH LANGUAGE DELAYS MONTGOMERY COUNTY, MARYLAND DEPARTMENT OF HEALTH AND HUMAN SERVICE",
+      "issuancedate": "2026-09-28T00:00:00.000",
+      "closingdate": "2026-10-06T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "Y",
+      "buyer": "--",
+      "department": "Department of Health & Human Svcs"
+    },
+    {
+      "status": "Closed",
+      "type": "IFB",
+      "number": "1201355",
+      "description": "Vehicle Towing Services for Various DEP Sites",
+      "issuancedate": "2026-08-31T00:00:00.000",
+      "closingdate": "2026-10-05T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "DEP Procurement Team",
+      "bidtab": {
+        "url": "https://apps.montgomerycountymd.gov/prosolicitation/BidTabDetail.aspx?type=bidtab&solnumber=1201355"
+      }
+    },
+    {
+      "status": "Closed",
+      "type": "RFP",
+      "number": "1195158",
+      "description": "Vision Zero Action Plan Update",
+      "issuancedate": "2026-09-02T00:00:00.000",
+      "closingdate": "2026-10-05T00:00:00.000",
+      "construction": "N",
+      "lsbrpindicator": "N",
+      "department": "County Executive"
+    },
+    {
+      "status": "Closed",
+      "type": "RFP",
+      "number": "1183590",
+      "description": "O&M: Oaks Landfill Leachate Pretreatment Facility",
+      "issuancedate": "2025-08-04T00:00:00.000",
+      "closingdate": "2025-09-05T00:00:00.000",
+      "construction": "Y",
+      "lsbrpindicator": "N",
+      "department": "Department of Environmental Protection",
+      "deptcontact": "Department of Environmental Protection (DEP)"
+    }
+  ]
+}

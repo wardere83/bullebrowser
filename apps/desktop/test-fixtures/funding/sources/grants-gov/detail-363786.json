@@ -1,0 +1,142 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 363786
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 363786,
+   "revision": 1,
+   "opportunityNumber": "DFOP0018819",
+   "opportunityTitle": "Egypt  Annual Program Statement",
+   "owningAgencyCode": "DOS-NEA",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 363786,
+    "version": 2,
+    "agencyCode": "DOS-NEA",
+    "agencyName": "Bureau of Near Eastern Affairs",
+    "agencyPhone": "703-516-1684",
+    "agencyAddressDesc": "NEA-Grants@state.gov",
+    "agencyDetails": {
+     "code": "NEA",
+     "seed": "DOS-NEA",
+     "agencyName": "Bureau of Near Eastern Affairs",
+     "agencyCode": "DOS-NEA",
+     "topAgencyCode": "DOS"
+    },
+    "topAgencyDetails": {
+     "code": "DOS",
+     "seed": "DOS",
+     "agencyName": "Department of State",
+     "agencyCode": "DOS",
+     "topAgencyCode": "DOS"
+    },
+    "agencyContactPhone": "703-516-1684",
+    "agencyContactName": "Bureau of Near Eastern Affairs",
+    "agencyContactDesc": "NEA-Grants@state.gov",
+    "agencyContactEmail": "NEA-Grants@state.gov",
+    "agencyContactEmailDesc": "NEA-Grants@state.gov",
+    "synopsisDesc": "<p>The Bureau of Near Eastern Affairs’ Office of Assistance Coordination (NEA/AC) seeks proposals for projects in Egypt that advance U.S. commercial diplomacy and put American interests first. Proposals must demonstrate how projects will leverage assistance as a tool of statecraft to advance U.S. economic, security, and diplomatic objectives. Programming should promote trade, not aid, by leveraging assistance resources to champion American enterprise and infrastructure and catalyze private capital through market principles. Proposals may address sectors including: energy development and exports; trade facilitation; emerging technologies (particularly AI and telecommunications); critical infrastructure (aviation, transport); critical minerals; regional economic integration; advanced manufacturing; workforce training aligned with U.S. business needs; and economic recovery in conflict-affected areas. Projects should orient implementing partners toward the American business community, foster burden-sharing, and demonstrate how they will help U.S. businesses secure foreign contracts and tenders for key projects. Review country-specific guidance in the sections below and tailor your proposal to address identified priorities. NEA/AC may decide to grant multiple awards, one award, or no awards, subject to funding availability and proposal viability.</p>",
+    "responseDate": "Jan 01, 2099 12:00:00 AM EST",
+    "responseDateDesc": "The deadline for submission for the initial round of proposals closed on August 31, 2026, at 11:59pm ET. Applications may continue to be submitted after August 31, 2026 and will be reviewed on a rolling basis.",
+    "fundingDescLinkUrl": "https://mygrants.servicenowservices.com/mygrants?id=mygrants_form&table=x_g_usd4_d_grant_funding_opportunity&sys_id=8b7e22e7876d8350203441d6cebb35ff&view=Default",
+    "fundingDescLinkDesc": "Link to Opportunity in MyGrants",
+    "postingDate": "Sep 02, 2026 12:00:00 AM EDT",
+    "fundingActivityCategoryDesc": "Proposals may address sectors including: energy development and exports; trade facilitation; emerging technologies (particularly AI and telecommunications); critical infrastructure (aviation, 5G, transport); critical minerals; regional economic integration; advanced manufacturing; workforce training aligned with U.S. business needs; and economic recovery in conflict-affected areas.  Projects should orient implementing partners toward the American business community, foster burden-sharing, and demonstrate how they will help U.S. businesses secure foreign contracts and tenders for key projects.",
+    "costSharing": false,
+    "numberOfAwards": "7",
+    "estimatedFunding": "0",
+    "estimatedFundingFormatted": "0",
+    "awardCeiling": "25000000",
+    "awardCeilingFormatted": "25,000,000",
+    "awardFloor": "0",
+    "awardFloorFormatted": "0",
+    "applicantEligibilityDesc": "Applicants must be able to operate legally in Egypt.  The following are eligible to apply: - Not-for-profit organizations, including think tanks and civil society/non-governmental organizations  - Public and private educational institutions  - For-profit organizations, such as corporations and commercial firms- Public International Organizations and Governmental institutions",
+    "sendEmail": "N",
+    "createTimeStamp": "Sep 03, 2026 08:35:12 AM EDT",
+    "modComments": "Modification to address formatting issues.",
+    "createdDate": "Sep 02, 2026 10:23:25 AM EDT",
+    "lastUpdatedDate": "Sep 03, 2026 08:27:16 AM EDT",
+    "applicantTypes": [
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "CA",
+      "description": "Cooperative Agreement"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "O",
+      "description": "Other (see text field entitled \"Explanation of Other Category of Funding Activity\" for clarification)"
+     }
+    ],
+    "responseDateStr": "2099-01-01-00-00-00",
+    "postingDateStr": "2026-09-02-00-00-00",
+    "createTimeStampStr": "2026-09-03-08-35-12"
+   },
+   "agencyDetails": {
+    "code": "NEA",
+    "seed": "DOS-NEA",
+    "agencyName": "Bureau of Near Eastern Affairs",
+    "agencyCode": "DOS-NEA",
+    "topAgencyCode": "DOS"
+   },
+   "topAgencyDetails": {
+    "code": "DOS",
+    "seed": "DOS",
+    "agencyName": "Department of State",
+    "agencyCode": "DOS",
+    "topAgencyCode": "DOS"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 435319,
+     "opportunityId": 363786,
+     "cfdaNumber": "19.600",
+     "programTitle": "Bureau of Near Eastern Affairs"
+    }
+   ],
+   "originalDueDate": "Jan 01, 2099 12:00:00 AM EST",
+   "originalDueDateDesc": "undefined",
+   "synopsisModifiedFields": [
+    "revision",
+    "version",
+    "agencyAddressDesc",
+    "agencyContactEmail",
+    "agencyContactEmailDesc",
+    "synopsisDesc",
+    "responseDateDesc",
+    "applicantEligibilityDesc",
+    "createTimeStamp"
+   ],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

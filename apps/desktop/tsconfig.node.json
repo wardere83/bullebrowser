@@ -6,7 +6,7 @@
     "moduleResolution": "Bundler",
     "outDir": "out",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "types": ["node", "electron-vite/node"],
     "noEmit": true
   },
   "include": [

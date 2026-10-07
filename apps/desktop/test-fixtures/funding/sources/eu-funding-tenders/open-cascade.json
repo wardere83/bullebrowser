@@ -1,0 +1,333 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=100&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "8"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "status": [
+                  "31094502"
+                ]
+              }
+            },
+            {
+              "range": {
+                "deadlineDate": {
+                  "gte": "2026-10-06T00:00:00.000+0000"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "callccm2Id",
+        "order": "ASC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 71,
+    "totalResults": 3,
+    "pageNumber": 1,
+    "pageSize": 100,
+    "sort": "[callccm2Id:ASC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "14741COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49521170",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Open Call of Perform Europe 2026 – 2028",
+        "weight": 0,
+        "content": "Open Call of Perform Europe 2026 – 2028",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "CREA-CULT-2026-PERFORM-EU"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-06-23T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-10-22T23:59:00.000+0000"
+          ],
+          "description": [],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Perform EU"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49521170"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49521170"
+          ],
+          "callccm2Id": [
+            "14741"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "14741COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "PE 3"
+          ],
+          "callTitle": [
+            "Open Call of Perform Europe 2026 – 2028"
+          ],
+          "projectName": [
+            "Perform Europe 3"
+          ],
+          "frameworkProgramme": [
+            "43251814"
+          ],
+          "startDate": [
+            "2026-06-23T00:00:00.000+0000"
+          ],
+          "budget": [
+            "1400000"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Perform EU. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49521170"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "14841COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Co-Creation Accelerator 2026-2027",
+        "weight": 0,
+        "content": "Co-Creation Accelerator 2026-2027",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIT-2025-MOC-IBA"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-07-01T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-09-08T17:00:00.000+0000",
+            "2027-04-30T17:00:00.000+0000"
+          ],
+          "description": [],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "2026-2027 MOC Activities"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485"
+          ],
+          "callccm2Id": [
+            "14841"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "14841COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "EIT Digital 2026-27"
+          ],
+          "callTitle": [
+            "Co-Creation Accelerator 2026-2027"
+          ],
+          "projectName": [
+            "EIT Digital 2026-2027 MoC Activities"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-07-01T00:00:00.000+0000"
+          ],
+          "budget": [
+            "3200000"
+          ],
+          "deadlineModel": [
+            "multiple cut-off"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "2026-2027 MOC Activities. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "15322COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/48939754",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "KAVA Call 14 - RIS Innovation",
+        "weight": 0,
+        "content": "KAVA Call 14 - RIS Innovation",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIT-2025-KIC-IBA-RM"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-08-07T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-10-16T13:00:00.000+0000"
+          ],
+          "description": [
+            "<p>The call text, as well as all supporting documents and link to the application platform can be found on the website of EIT RawMaterials <strong><a href=\"https://eitrawmaterials.eu/call-ris-projects\" rel=\"noopener noreferrer\" target=\"_blank\">her﻿e</a></strong>.</p>"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "EITRAWMATERIALS Business Plan 2026"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/48939754"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/48939754"
+          ],
+          "callccm2Id": [
+            "15322"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "15322COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "EIT RM BP26-28"
+          ],
+          "callTitle": [
+            "KAVA Call 14 - RIS Innovation"
+          ],
+          "projectName": [
+            "EIT RawMaterials Business Plan 2026-2028"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-08-07T00:00:00.000+0000"
+          ],
+          "budget": [
+            "3000000"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "EITRAWMATERIALS Business Plan 2026. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/48939754"
+      }
+    ],
+    "warnings": []
+  }
+}

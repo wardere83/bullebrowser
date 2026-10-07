@@ -4,6 +4,7 @@
 
 import type { ModelId, ProviderId } from '@bullebrowser/agent-core';
 import type { AgentStepEvent } from './agent-events.js';
+import type { FundingBridge } from './funding.js';
 
 export const IPC = {
   // Tabs
@@ -68,6 +69,11 @@ export const IPC = {
   UPDATE_INSTALL: 'update:install',
   // UI events from main → renderer
   UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
+  // Funding platform. One typed call channel instead of one channel per method:
+  // the method table in shared/funding.ts is the allowlist, and main checks the
+  // sender, the active organization and the method's permission in one place.
+  FUNDING_CALL: 'funding:call',
+  FUNDING_EVENT: 'funding:event', // main → renderer
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -120,7 +126,6 @@ export interface AppSettings {
   aiPanelOpen: boolean;
   searchProvider: 'bullebrowser' | 'google' | 'bing';
   homepageUrl: string;
-  complianceChecklist: string[];
   /** Press the least-permissive option on common cookie banners. */
   autoDismissConsent: boolean;
   /** Default step budget per agent task (weighted; raise per task). */
@@ -134,11 +139,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   homepageUrl: 'about:blank',
   autoDismissConsent: true,
   stepBudget: 40,
-  complianceChecklist: [
-    'EEO: Equal Employment Opportunity references and required language',
-    'FERPA: Family Educational Rights and Privacy Act references',
-    'ADA: Americans with Disabilities Act and accessibility obligations',
-  ],
 };
 
 export interface HistoryEntry {
@@ -164,6 +164,13 @@ export interface ConversationSummary {
 
 export interface ConversationDetail extends ConversationSummary {
   messages: { role: 'user' | 'assistant'; content: string; timestamp: number }[];
+  /**
+   * The organization this chat belongs to. A chat is bound to the organization
+   * that was active when it was first used and is only listed, read or
+   * continued under that organization. Absent on chats from before
+   * organizations existed, which stay visible until they are next used.
+   */
+  organizationId?: string | null;
 }
 
 // A file the user uploaded into the current session. Bytes live under
@@ -195,6 +202,8 @@ export interface ProjectDetail extends ProjectSummary {
   // task run "in" this project.
   instructions: string;
   fileIds: string[];
+  /** The organization the project belongs to; absent on projects from before organizations. */
+  organizationId?: string | null;
 }
 
 // What the user attached to a single run. The renderer sends only references
@@ -215,6 +224,8 @@ export interface AgentRunRequest {
   attachments?: RunAttachment[];
   /** Step budget for this task; defaults to the Settings value. */
   budget?: number;
+  /** The funding document the user has open, so answers can be about it. */
+  focusRfpId?: string;
 }
 
 export interface AppInfo {
@@ -316,6 +327,8 @@ export interface BrowserBridge {
   ui: {
     onAskAgent(cb: (prompt: string) => void): () => void;
   };
+  // Organizations, the Knowledge Hub, opportunities, RFP analysis and the guide.
+  funding: FundingBridge;
 }
 
 declare global {

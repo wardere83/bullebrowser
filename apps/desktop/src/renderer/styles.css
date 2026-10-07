@@ -500,97 +500,6 @@ textarea {
   background-color: #206174;
 }
 
-/* ---------------------------------------------------------------------------
-   Start-page logo: fade in, hold, shine, fade out, loop.
-
-   One 9s cycle so it reads as a slow breath rather than a blink: ~1.2s in,
-   a long hold, the shine sweeping across near the end, then ~1.2s out and a
-   beat of rest before it comes back.
-
-   The shine is masked to the logo's own alpha (mask-image: url(...)) so the
-   highlight travels over the mark's shapes instead of a rectangle around it.
-   --------------------------------------------------------------------------- */
-
-.splash-logo {
-  position: relative;
-  display: inline-block;
-  /* Contain the sweep so it can't bleed past the mark. */
-  overflow: hidden;
-  animation: splash-breathe 9s ease-in-out infinite;
-}
-
-.splash-logo__img {
-  display: block;
-}
-
-.splash-logo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* A narrow band of light, angled so it reads as a specular sweep. */
-  background: linear-gradient(
-    100deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.1) 45%,
-    rgba(255, 255, 255, 0.85) 50%,
-    rgba(255, 255, 255, 0.1) 55%,
-    transparent 65%
-  );
-  background-size: 300% 100%;
-  background-repeat: no-repeat;
-  /* Clip the light to the logo's silhouette. */
-  -webkit-mask-image: var(--splash-logo-mask);
-  mask-image: var(--splash-logo-mask);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  opacity: 0;
-  animation: splash-shine 9s ease-in-out infinite;
-}
-
-.splash-tagline {
-  animation: splash-breathe 9s ease-in-out infinite;
-}
-
-/* Above the start-page film the mark holds steady; only the shine moves. */
-.splash-logo--steady {
-  animation: none;
-}
-
-@keyframes splash-breathe {
-  0% { opacity: 0; }
-  14% { opacity: 1; }   /* faded in */
-  78% { opacity: 1; }   /* held, shine happens in here */
-  92% { opacity: 0; }   /* faded out */
-  100% { opacity: 0; }  /* rest before looping */
-}
-
-/* Sweeps across at the end of the hold, just before the fade-out. */
-@keyframes splash-shine {
-  0%, 60% { background-position: 150% 0; opacity: 0; }
-  64% { opacity: 1; }
-  76% { background-position: -50% 0; opacity: 1; }
-  80%, 100% { background-position: -50% 0; opacity: 0; }
-}
-
-/* Motion is decorative here: show the logo, steady and legible, and skip both
-   the pulse and the sweep entirely. */
-@media (prefers-reduced-motion: reduce) {
-  .splash-logo,
-  .splash-tagline {
-    animation: none;
-    opacity: 1;
-  }
-  .splash-logo::after {
-    animation: none;
-    opacity: 0;
-  }
-}
-
 /* Activity feed "still working" dot. Slow and low-contrast on purpose — it
    should register as alive without pulling the eye off the answer. */
 .activity-pulse {
@@ -652,4 +561,80 @@ textarea {
 @keyframes soft-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ------------------------------------------------------------------ */
+/* The funding workspace: what the app paints in the page slot while  */
+/* the active tab is on the start page. Colour, type and spacing come */
+/* from Tailwind utilities (see workspace/ui/styles.ts); the rules    */
+/* here are the few things utilities cannot say once for everything   */
+/* inside it. Nothing below reaches outside `.workspace`.             */
+/* ------------------------------------------------------------------ */
+.workspace {
+  /* Native controls (the list a select opens, scrollbars, the caret) follow
+     the dark surface. */
+  color-scheme: dark;
+  scrollbar-color: rgb(255 255 255 / 24%) transparent;
+  caret-color: #20bad1;
+}
+
+/* One visible focus ring for everything that can take keyboard focus, as the
+   chat panel has: teal, clear of the control's own edge. It is 7.9:1 against
+   the page and 7.3:1 against a card. Text fields set `outline: none` nowhere,
+   so they get it too. */
+.workspace :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #20bad1;
+  outline-offset: 2px;
+}
+
+/* A heading or the content area takes focus when a screen opens, so a
+   keyboard or screen-reader user starts at the top of it. That is a landing
+   place, not a control: show where focus is without drawing a box round a
+   whole region. */
+.workspace :is(h1, h2, h3)[tabindex='-1']:focus-visible {
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.workspace [data-workspace-focus-fallback]:focus-visible,
+.workspace [role='dialog']:focus-visible {
+  outline: none;
+}
+
+/* A row that scrolls sideways (the compact navigation, a set of tabs) clips
+   whatever sticks out of it, a ring drawn outside the control included. There
+   the ring is drawn just inside the control's edge instead. */
+.workspace :is(.workspace-nav-row button, [role='tablist'] [role='tab']):focus-visible {
+  outline-offset: -2px;
+}
+
+.workspace ::selection {
+  color: #ffffff;
+  background-color: #1a6f80;
+}
+
+/* Text in the workspace is content people copy (citations, listings, their own
+   profile), so the content area carries `.selectable`; labels inside controls
+   stay unselectable like the rest of the chrome. */
+.workspace .selectable :is(button, [role='tab'], [role^='menuitem'], label, summary) {
+  user-select: none;
+}
+
+/* The compact layout's navigation is one row that scrolls sideways. Keep its
+   scrollbar thin so the row stays one line tall. */
+.workspace .workspace-nav-row {
+  scrollbar-width: thin;
+}
+
+/* Motion in the workspace is never information: the words beside a spinner
+   say what is happening. When the user asks for less motion, everything
+   holds still. */
+@media (prefers-reduced-motion: reduce) {
+  .workspace *,
+  .workspace *::before,
+  .workspace *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

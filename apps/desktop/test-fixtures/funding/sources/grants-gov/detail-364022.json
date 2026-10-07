@@ -1,0 +1,150 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 364022
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 364022,
+   "revision": 0,
+   "opportunityNumber": "PDR-2700-DC-0054",
+   "opportunityTitle": "Distressed Cities Technical Assistance (DCTA) Program for Fiscal Years 2026 and 2027",
+   "owningAgencyCode": "HUD",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "agencyDetails": {
+    "code": "HUD",
+    "seed": "HUD",
+    "agencyName": "Department of Housing and Urban Development",
+    "agencyCode": "HUD",
+    "topAgencyCode": "HUD"
+   },
+   "topAgencyDetails": {
+    "code": "HUD",
+    "seed": "HUD",
+    "agencyName": "Department of Housing and Urban Development",
+    "agencyCode": "HUD",
+    "topAgencyCode": "HUD"
+   },
+   "forecast": {
+    "opportunityId": 364022,
+    "version": 1,
+    "postingDate": "Oct 02, 2026 12:00:00 AM EDT",
+    "forecastDesc": "<p>The Distressed Cities Technical Assistance (DCTA) Program competitively awards funding to eligible applicants. If selected through this NOFO, you will deliver technical assistance (TA) to Units of General Local Government (UGLG) that serve communities of 50,000 or fewer people facing economic hardship. As an awardee, you will work in close consultation with HUD, and in coordination with other awardees, to help UGLG officials and staff better meet the needs of their communities. You should have the capacity to either:</p><ul style=\"margin-left:8px;\"><li data-list-item-id=\"e7bdabad7d8ecb4da5a464629d82a47ac\">Deliver TA across HUD's jurisdiction (Category N), or</li><li data-list-item-id=\"e74cd5b45b83e580924432f04bae28f2e\">Deliver TA to specific areas as defined by this NOFO (Category L).</li></ul>",
+    "costSharing": false,
+    "numberOfAwards": "6",
+    "estimatedFunding": "5000000",
+    "awardCeiling": "3000000",
+    "awardFloor": "400000",
+    "fundingDescLinkUrl": "https://www.huduser.gov/portal/ota/distressed-cities-and-persistant-poverty-ta-program.html",
+    "fundingDescLinkDesc": "https://www.huduser.gov/portal/ota/distressed-cities-and-persistant-poverty-ta-program.html",
+    "agencyContactName": "Distressed Cities Technical Assistance",
+    "agencyContactPhone": "See email contact",
+    "agencyContactEmail": "distressedcities@hud.gov",
+    "agencyContactEmailDesc": "All communication regarding this NOFO opportunity should be addressed to distressedcities@hud.gov",
+    "agencyCode": "HUD",
+    "applicantEligibilityDesc": "Individuals, foreign entities, and sole proprietorship organizations are not eligible to compete for, or receive, awards made under this announcement.",
+    "estSynopsisPostingDate": "Jan 11, 2027 12:00:00 AM EST",
+    "estApplicationResponseDate": "Mar 11, 2027 12:00:00 AM EST",
+    "estApplicationResponseDateDesc": "Electronically submitted applications must be submitted no later than 11:59 p.m., ET, on the listed application due date.",
+    "estAwardDate": "Apr 30, 2027 12:00:00 AM EDT",
+    "estProjectStartDate": "May 28, 2027 12:00:00 AM EDT",
+    "fiscalYear": 2026,
+    "createTimeStamp": "Oct 02, 2026 10:30:47 AM EDT",
+    "createdDate": "Oct 02, 2026 10:30:47 AM EDT",
+    "lastUpdatedDate": "Oct 02, 2026 10:30:47 AM EDT",
+    "agencyDetails": {
+     "code": "HUD",
+     "seed": "HUD",
+     "agencyName": "Department of Housing and Urban Development",
+     "agencyCode": "HUD",
+     "topAgencyCode": "HUD"
+    },
+    "estimatedFundingFormatted": "5,000,000",
+    "awardCeilingFormatted": "3,000,000",
+    "awardFloorFormatted": "400,000",
+    "applicantTypes": [
+     {
+      "id": "13",
+      "description": "Nonprofits that do not have a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "23",
+      "description": "Small businesses"
+     },
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "22",
+      "description": "For profit organizations other than small businesses"
+     },
+     {
+      "id": "20",
+      "description": "Private institutions of higher education"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "CA",
+      "description": "Cooperative Agreement"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "BC",
+      "description": "Business and Commerce"
+     },
+     {
+      "id": "CD",
+      "description": "Community Development"
+     },
+     {
+      "id": "HO",
+      "description": "Housing"
+     },
+     {
+      "id": "OZ",
+      "description": "Opportunity Zone Benefits"
+     }
+    ],
+    "postingDateStr": "2026-10-02-00-00-00",
+    "estSynopsisPostingDateStr": "2027-01-11-00-00-00",
+    "estApplicationResponseDateStr": "2027-03-11-00-00-00",
+    "estAwardDateStr": "2027-04-30-00-00-00",
+    "estProjectStartDateStr": "2027-05-28-00-00-00",
+    "createTimeStampStr": "2026-10-02-10-30-47"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 435627,
+     "opportunityId": 364022,
+     "cfdaNumber": "14.259",
+     "programTitle": "Community Compass Technical Assistance and Capacity Building"
+    }
+   ],
+   "synopsisModifiedFields": [],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "forecast",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "FORECASTED"
+  }
+ }
+}

@@ -60,6 +60,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm --filter @bullebrowser/web build
 
+      # The site is not published if its copy breaks a rule it has to keep:
+      # terminology, matching translations, one h1 per exported page.
+      - name: Check copy rules
+        run: pnpm --filter @bullebrowser/web test
+
       # enablement: true turns GitHub Pages ON automatically (build type =
       # GitHub Actions) if it isn't already — no manual Settings toggle.
       - uses: actions/configure-pages@v5

@@ -1,24 +1,25 @@
 # BulleBrowser
 
-> The agentic browser for grants, RFPs, and compliance work.
+> Strategic funding for businesses and CBOs.
 
-BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) with a local assistant for page summaries and explicit browser commands. No API key is required for local mode or voice. Optional cloud engines support open-ended research, RFP comparison, and compliance workflows using your own provider key.
+BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) that connects official funding opportunities with your organization’s mission, priorities and documented strengths.
 
 **Website:** [bullebrowser.com](https://bullebrowser.com)
 
----
+## Funding workflows
 
-## What it does
+The assistant and dashboard offer four actions:
 
-The agent operates the active browser tab — same pages, same logins, same data you’d see — through a focused set of actions: navigate, read, click & type, extract, manage tabs, and wait.
+- **Find Relevant Grant Opportunities** — filter official listings by jurisdiction, recipient geography, eligibility, category, award amount, deadline and verified status.
+- **Assess Our Funding Alignment** — compare funder requirements with approved organization statements and cited document evidence.
+- **Explore Funder Priorities** — read the funder’s stated priorities, expected outcomes and evaluation criteria, with interpretation labelled separately.
+- **Ethical Strengths-Based Proposal Guide** — reflective questions, evidence checklists, outlines and comments on your own writing; restricted AI policies disable tailored outlines and draft feedback.
 
-### Preset Skills (optional cloud engines)
+The **Organization Knowledge Hub** reads PDF, DOCX, TXT and Markdown files, lets you inspect, replace and delete them, and searches extracted passages. Profile statements and priorities require explicit approval before they guide funding work. Replaced or deleted evidence triggers review. Funding notices stay in RFP Analysis rather than becoming organization memory.
 
-| Skill | What it does |
-|---|---|
-| **Grant scanner** | Searches SAM.gov and Grants.gov, follows listings into detail pages, returns a comparison table sorted by deadline with award ceilings and links. |
-| **RFP comparator** | Paste 2–4 RFP links. Reads each end to end and returns a side-by-side of deadline, scope, eligibility, contract value, and evaluation criteria. |
-| **Compliance review** | Flags clauses against EEO, FERPA, and ADA — plus any checklist items you add — and quotes each clause with its section reference. |
+Each organization has its own stored documents, searchable index, approved profile, saved listings, RFPs and guides. Access uses the existing device-local identity and organization roles. This is not a hosted account or team synchronization service.
+
+Without an assistant key, document extraction, search, verbatim profile proposals, literal RFP findings and reflective guides work locally. A connected assistant adds cited educational analysis, alignment interpretation and draft feedback after organization consent. Live discovery queries the six connected official sources; unsupported portals remain explicitly marked as links to visit.
 
 ### Control & Trust
 
