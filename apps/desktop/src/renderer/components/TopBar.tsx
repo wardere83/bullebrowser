@@ -5,7 +5,7 @@ import { openWorkspace } from '../state/workspace-store.js';
 import { AGENT_PROMPT_EVENT, parseAddressBarInput } from '../lib/url.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { FOCUS_AI_PANEL_EVENT } from './AiPanel.js';
-import logo from '@bullebrowser/brand-tokens/logo.svg';
+import brandIcon from '../assets/bullebrowser-icon.png';
 import { UpdateBanner } from './UpdateBanner.js';
 
 const IS_MAC = navigator.userAgent.includes('Macintosh');
@@ -69,7 +69,7 @@ export function TopBar() {
       // screen, where macOS hides them.
       style={IS_MAC && !fullScreen ? { paddingLeft: MAC_TRAFFIC_LIGHT_GUTTER } : undefined}
     >
-      <img src={logo} alt="" width={20} height={20} className="no-drag opacity-95" />
+      <img src={brandIcon} alt="" width={20} height={20} className="no-drag shrink-0" />
       <div className="no-drag flex items-center gap-1">
         {/* Organization documents and funding tools open only on request. */}
         <button
@@ -181,7 +181,7 @@ export function TopBar() {
           className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-semibold text-ink-inverse hover:bg-white/20"
           aria-label="Profile menu"
         >
-          B
+          <img src={brandIcon} alt="" width={20} height={20} />
         </button>
         {profileOpen && (
           <div className="absolute right-0 top-9 z-50 w-48 overflow-hidden rounded-md border border-line bg-surface-light text-ink-primary shadow-lg">
