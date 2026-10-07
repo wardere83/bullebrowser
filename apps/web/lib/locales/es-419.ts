@@ -92,13 +92,14 @@ export const es419: Messages = {
   'marquee.play': 'Reanudar la lista en movimiento',
 
   'film.title': 'Mira cómo toma forma tu estrategia de financiamiento.',
+  'film.label': 'Presentación animada',
   'film.caption':
-    'Recorrido ilustrativo: la organización, los financiadores, las oportunidades, los montos y las fechas son ficticios.',
+    'Reúne tus prioridades, tu investigación sobre financiamiento y tu evidencia. Una presentación animada para empresas y CBOs.',
   'film.play': 'Reproducir el video de BulleBrowser',
   'film.pause': 'Pausar el video',
   'film.fallback': 'No se pudo cargar el video. Intenta actualizar la página.',
   'film.description':
-    'Un recorrido silencioso por una estrategia de financiamiento con datos ficticios. Una organización agrega documentos y aprueba evidencia sobre sus prioridades. El video muestra las cuatro acciones de financiamiento de la app, los estados de oportunidades según fuentes oficiales, la comparación de requisitos con evidencia de la organización y preguntas de reflexión para una propuesta que redacta la persona solicitante.',
+    'Una presentación animada y silenciosa de BulleBrowser. Pon el financiamiento en contexto con tus prioridades, fuentes oficiales y evidencia. Decide dónde enfocarte considerando el propósito, los requisitos y los plazos. Parte de tu trabajo documentado y de tu propio criterio. Conecta la estrategia de financiamiento con las metas empresariales y las prioridades de la comunidad, para empresas y CBOs.',
 
   'ask.eyebrow': 'Cuatro formas de empezar',
   'ask.h2': '¿En qué puedo ayudarte?',

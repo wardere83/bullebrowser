@@ -104,13 +104,14 @@ export const en = {
 
   // The film. The description is what a screen reader hears in place of it.
   'film.title': 'See your funding strategy take shape.',
+  'film.label': 'Animated overview',
   'film.caption':
-    'Illustrative walkthrough: the organization, funders, opportunities, amounts and dates are fictional.',
+    'Bring your priorities, funding research and evidence together. An animated overview for businesses and CBOs.',
   'film.play': 'Play the BulleBrowser film',
   'film.pause': 'Pause the film',
   'film.fallback': 'The film could not load. Try refreshing the page.',
   'film.description':
-    'A silent funding strategy walkthrough using fictional data. An organization adds documents and approves evidence about its priorities. The film shows the app’s four funding actions, official-source opportunity statuses, requirements compared with organization evidence, and reflective questions for a proposal the applicant writes.',
+    'A silent animated overview of BulleBrowser. Put funding in context with your priorities, official sources and evidence. Choose where to focus by considering purpose, requirements and timing. Build on your documented work and your own judgment. Connect funding strategy with business goals and community priorities for businesses and CBOs.',
 
   // The four options. Their names are in lib/terms.ts.
   'ask.eyebrow': 'Four ways to start',

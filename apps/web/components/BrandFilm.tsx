@@ -4,16 +4,19 @@ import { useEffect, useRef, useState } from 'react';
 import { asset } from '@/lib/asset';
 import { useT } from '@/lib/i18n';
 import { Icon } from './Icon';
-import { SampleLabel } from './SampleLabel';
+
+// Change the public media URL when the film changes so visitors receive the
+// current overview even while their previous static assets are still cached.
+const filmRevision = 'funding-overview-2026-10-07';
 
 // The BulleBrowser film: a muted, looping product film in a rounded "cinema"
 // frame. It autoplays like a hero video, except for visitors who ask for
 // reduced motion — they get the poster and a play button instead. The film is
 // rendered from packages/brand-tokens/film (see render.mjs there).
 //
-// What the film shows is made up, and the frame says so: a bar across the top
-// carries the illustration label for as long as the film is on screen, and the
-// caption underneath says what is fictional.
+// This is an animated overview of the app's benefits for businesses and CBOs.
+// Its label and accessible description introduce that story without presenting
+// sample organizations, funding listings or app interface screens.
 export function BrandFilm() {
   const t = useT();
   const video = useRef<HTMLVideoElement>(null);
@@ -56,7 +59,10 @@ export function BrandFilm() {
       <figure>
         <div className="relative isolate overflow-hidden rounded-2xl bg-[#071422] shadow-[0_35px_85px_-40px_rgba(0,0,0,0.6)] ring-1 ring-white/10 md:rounded-3xl">
           <div className="flex justify-center border-b border-white/10 px-3 py-2">
-            <SampleLabel tone="dark" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-ink-inverse">
+              <Icon name="info" className="h-3.5 w-3.5" />
+              {t('film.label')}
+            </span>
           </div>
           <div className="relative">
             <video
@@ -67,7 +73,7 @@ export function BrandFilm() {
               loop
               autoPlay={!reduced}
               preload="metadata"
-              poster={asset('/media/bullebrowser-film-poster.jpg')}
+              poster={asset(`/media/bullebrowser-film-poster.jpg?v=${filmRevision}`)}
               aria-labelledby="film-title"
               aria-describedby="film-description"
               onPlay={() => setPlaying(true)}
@@ -76,7 +82,7 @@ export function BrandFilm() {
             >
               {/* A failed <source> fires error on itself, not on the <video>. */}
               <source
-                src={asset('/media/bullebrowser-film.mp4')}
+                src={asset(`/media/bullebrowser-film.mp4?v=${filmRevision}`)}
                 type="video/mp4"
                 onError={() => setFailed(true)}
               />

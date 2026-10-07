@@ -56,7 +56,7 @@ export function Splash() {
             {failed ? (
               <img
                 src={posterUrl}
-                alt="An illustrative funding workflow"
+                alt="BulleBrowser funding strategy for businesses and CBOs"
                 className="block aspect-video w-full"
               />
             ) : (
@@ -91,12 +91,12 @@ export function Splash() {
             )}
           </div>
           <p id={descriptionId} className="mt-3 text-center text-xs leading-relaxed text-ink-inverse/60">
-            Discover relevant funding, understand funder priorities, assess your alignment and develop proposals ethically.
-            <span className="block">Illustrative walkthrough · fictional organization and funding data.</span>
+            Bring your priorities, funding research and evidence together.
+            <span className="block">Animated overview · funding strategy for businesses and CBOs.</span>
           </p>
           {failed && (
             <p role="status" className="mt-2 text-center text-xs text-ink-inverse/70">
-              The video couldn’t load. The funding tools in the chat are still available.
+              The video couldn’t load. Use the chat to explore your funding priorities.
             </p>
           )}
         </div>

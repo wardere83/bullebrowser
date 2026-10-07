@@ -92,13 +92,14 @@ const text: Messages = {
   'marquee.play': 'Reprendre la liste défilante',
 
   'film.title': 'Voyez votre stratégie de financement prendre forme.',
+  'film.label': 'Présentation animée',
   'film.caption':
-    'Présentation illustrative : l’organisation, les bailleurs de fonds, les opportunités, les montants et les dates sont fictifs.',
+    'Réunissez vos priorités, vos recherches de financement et vos preuves. Une présentation animée pour les entreprises et les CBOs.',
   'film.play': 'Lire le film BulleBrowser',
   'film.pause': 'Mettre le film en pause',
   'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
   'film.description':
-    'Présentation muette d’une stratégie de financement à partir de données fictives. Une organisation ajoute des documents et approuve les éléments attestant ses priorités. Le film présente les quatre actions de financement, le statut des opportunités selon les sources officielles, la comparaison des exigences avec les preuves de l’organisation et des questions de réflexion pour une proposition rédigée par le candidat.',
+    'Une présentation animée et muette de BulleBrowser. Mettez le financement en contexte avec vos priorités, les sources officielles et vos preuves. Choisissez où concentrer vos efforts en examinant les objectifs, les exigences et le calendrier. Appuyez-vous sur votre travail documenté et votre propre jugement. Reliez la stratégie de financement aux objectifs des entreprises et aux priorités des communautés, pour les entreprises et les CBOs.',
 
   'ask.eyebrow': 'Quatre façons de commencer',
   'ask.h2': 'Comment puis-je vous aider ?',

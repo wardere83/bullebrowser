@@ -2,35 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>BulleBrowser film</title>
-<!-- The BulleBrowser film, as a scene rather than footage. render.mjs seeks
-     this page frame by frame (window.render(t)) and encodes the frames to MP4,
-     so every frame is deterministic and the film can be re-cut by editing this
-     file. Open it in a browser to preview it playing live.
-
-     It shows the funding platform in the order a new organization meets it:
-     the Organization Knowledge Hub, the four options, the opportunity finder,
-     RFP analysis and the proposal guide, between an opening and a closing card.
-
-     Everything in the window is made up: the organization, its documents, the
-     listings, the funders and every figure. The label in the top right corner
-     says so and never leaves the frame. No real funding source is named or
-     imitated, and no real body appears as a funder. Keep it that way when
-     editing: neutral funder names, no scores, and no proposal text.
-
-     render.mjs takes the poster at a fixed time, so the frame carries the
-     product's name and its line throughout, not only on the two cards. -->
+<title>BulleBrowser funding strategy overview</title>
+<!-- A conceptual overview of the app's value for businesses and CBOs.
+     These animated words and diagrams explain the strategy; they are not
+     product screens. render.mjs seeks window.render(t) frame by frame and
+     ships the same video and poster in the website and desktop app. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet" />
 <style>
-  /* Text on the light window is --ink or --ink-2, and on the dark stage white
-     or one of the pale blues: each is at least 4.5:1 against what is behind
-     it. --teal is for shapes and for text on the dark stage only. Nothing is
-     set smaller than 22px. */
-  :root {
-    --navy: #071422; --navy-2: #0c2233; --teal: #20BAD1; --teal-2: #1A9BAE; --teal-ink: #0b6475;
-    --gold: #E8D833; --ink: #191825; --ink-2: #46535e; --ice: #EFF7F8; --line: #DCE9EC; --line-2: #BFD4D9;
-  }
+  :root { --navy: #071422; --teal: #20BAD1; --ice: #dbe8ec; --muted: #b9ccd3; --line: #507888; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
   body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -38,139 +18,64 @@
     background: radial-gradient(1200px 900px at 72% 50%, #0e2a3c 0%, var(--navy) 62%, #050e18 100%); }
   #globe { position: absolute; inset: 0; }
   .abs { position: absolute; }
-  svg.i { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2;
-    stroke-linecap: round; stroke-linejoin: round; }
-
-  /* The frame: the name, the line, and the label that says what the pictures
-     are. All three sit along the top, clear of the play button the website
-     lays over a bottom corner of the film. */
   #brand { left: 84px; top: 50px; height: 80px; }
-  #tag { left: 338px; top: 72px; height: 36px; padding-left: 26px; border-left: 1.5px solid rgba(255,255,255,.26);
-    font-size: 26px; line-height: 36px; font-weight: 500; letter-spacing: -.005em; color: #d5e3e8; white-space: nowrap; }
-  #sample { right: 88px; top: 64px; height: 52px; padding: 0 24px 0 16px; border-radius: 26px;
-    display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 600; color: #fff; white-space: nowrap;
-    background: rgba(7,20,34,.92); border: 1.5px solid rgba(232,216,51,.8); }
-  #sample svg.i { width: 28px; height: 28px; color: var(--gold); }
-  #foot { left: 92px; bottom: 64px; font-size: 22px; font-weight: 600; letter-spacing: .08em; color: #8fb3bd; }
+  #tag { left: 338px; top: 72px; padding-left: 26px; border-left: 1.5px solid rgba(255,255,255,.26);
+    font-size: 26px; line-height: 36px; font-weight: 500; color: #d5e3e8; white-space: nowrap; }
+  #label { right: 88px; top: 64px; height: 52px; padding: 0 24px; border-radius: 26px;
+    display: flex; align-items: center; font-size: 24px; font-weight: 600; color: #fff;
+    background: rgba(7,20,34,.92); border: 1.5px solid rgba(32,186,209,.7); }
+  #foot { left: 92px; bottom: 64px; font-size: 22px; font-weight: 600; letter-spacing: .08em; color: #a7c7d1; }
+  .scene { position: absolute; left: 132px; top: 302px; width: 750px; opacity: 0; }
+  .eyebrow { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: .04em; color: #a7c7d1; }
+  .scene h1 { font-size: 100px; line-height: 1.09; font-weight: 400; letter-spacing: -.045em; color: #fff; margin: 30px 0 34px; }
+  .scene h1 span { display: block; color: var(--teal); }
+  .scene p { font-size: 30px; line-height: 1.45; color: var(--muted); max-width: 680px; letter-spacing: -.01em; }
+  #visual { position: absolute; left: 944px; top: 214px; width: 874px; height: 640px; }
+  .diagram { position: absolute; inset: 0; opacity: 0; }
+  .arrive { opacity: 0; }
 
-  .eyebrow { font-size: 24px; line-height: 30px; letter-spacing: .05em; font-weight: 600; color: #8fb3bd; white-space: nowrap; }
-  .scene { position: absolute; left: 132px; top: 316px; width: 720px; opacity: 0; }
-  .scene h1 { font-size: 124px; line-height: 1.06; font-weight: 400; letter-spacing: -.045em; color: #fff;
-    margin: 30px 0 38px; white-space: nowrap; }
-  .scene h1 span { color: var(--teal); display: block; }
-  .scene p { font-size: 30px; line-height: 1.38; color: #b9ccd3; letter-spacing: -.01em; max-width: 690px; }
+  /* Abstract relationships, with no application chrome or interactive UI. */
+  #connections { position: absolute; inset: 0; width: 874px; height: 640px; }
+  #connections path { fill: none; stroke: var(--line); stroke-width: 2.5; stroke-dasharray: 1; }
+  .node { position: absolute; display: flex; align-items: center; justify-content: center;
+    font-size: 30px; line-height: 40px; font-weight: 600; color: #fff; gap: 15px; }
+  .node::before { content: ''; width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--teal);
+    box-shadow: 0 0 22px rgba(32,186,209,.45); }
+  #priorities { left: 10px; top: 92px; width: 344px; }
+  #sources { right: 0; top: 92px; width: 364px; }
+  #evidence { left: 236px; top: 541px; width: 400px; }
+  #strategy { position: absolute; left: 236px; top: 214px; width: 400px; height: 252px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; font-size: 42px; line-height: 51px; font-weight: 600; letter-spacing: -.02em; }
+  #strategy::before { content: ''; position: absolute; inset: -14px 48px; border: 1.5px solid rgba(32,186,209,.5);
+    border-radius: 50%; background: radial-gradient(circle, rgba(32,186,209,.12), rgba(7,20,34,.2) 72%); }
+  #strategy img { position: relative; width: 74px; height: 74px; margin-bottom: 20px; }
+  #strategy span { position: relative; }
 
-  /* The app's window. What it holds is drawn large enough to read, so it is a
-     close view of one screen at a time rather than the whole app. */
-  #win { position: absolute; left: 880px; top: 190px; width: 960px; height: 700px; border-radius: 20px;
-    background: var(--ice); overflow: hidden; transform-origin: 40% 50%;
-    box-shadow: 0 60px 120px -30px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.08); }
-  #chrome { position: absolute; left: 0; right: 0; top: 0; height: 58px; background: #0d1d2b; }
-  .light { position: absolute; top: 22px; width: 14px; height: 14px; border-radius: 50%; }
-  #title { position: absolute; left: 106px; top: 0; height: 58px; display: flex; align-items: center; gap: 12px;
-    font-size: 24px; font-weight: 600; color: #e6eff2; white-space: nowrap; }
-  #title img { width: 28px; height: 28px; }
-  #org { position: absolute; right: 16px; top: 9px; height: 40px; padding: 0 16px 0 12px; border-radius: 20px;
-    display: flex; align-items: center; gap: 8px; font-size: 23px; font-weight: 500; color: #e6eff2;
-    background: rgba(255,255,255,.1); white-space: nowrap; }
-  #org svg.i { width: 24px; height: 24px; }
-  #content { position: absolute; left: 0; right: 0; top: 58px; bottom: 0; }
-  .layer { position: absolute; inset: 0; padding: 30px; opacity: 0; }
+  .focus-item { position: absolute; left: 60px; right: 18px; display: grid; grid-template-columns: 82px 1fr;
+    gap: 26px; align-items: start; padding-bottom: 29px; border-bottom: 1.5px solid rgba(167,199,209,.28); }
+  .focus-item:nth-child(1) { top: 78px; }
+  .focus-item:nth-child(2) { top: 258px; }
+  .focus-item:nth-child(3) { top: 438px; }
+  .number { font-size: 30px; line-height: 54px; font-weight: 500; color: var(--teal); }
+  .focus-item h2 { font-size: 43px; line-height: 54px; font-weight: 600; color: #fff; letter-spacing: -.02em; }
+  .focus-item p { margin-top: 8px; font-size: 27px; line-height: 38px; color: var(--muted); }
 
-  .label { font-size: 23px; line-height: 30px; font-weight: 600; color: var(--ink-2); }
-  .card { background: #fff; border: 1.5px solid var(--line); border-radius: 16px;
-    box-shadow: 0 10px 28px -20px rgba(7,20,34,.35); }
-  /* A state is always a word with an icon whose shape goes with it. */
-  .chip { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 11px; border-radius: 21px;
-    border: 1.5px solid; font-size: 23px; font-weight: 600; white-space: nowrap; }
-  .chip.ok { color: #065f46; background: #ecfdf5; border-color: #6ee7b7; }
-  .chip.off { color: #334155; background: #f1f5f9; border-color: #cbd5e1; }
-  .chip.warn { color: #92400e; background: #fffbeb; border-color: #fcd34d; }
-  .chip.info { color: #075985; background: #f0f9ff; border-color: #7dd3fc; }
-  .chip.plain { color: var(--ink); background: var(--ice); border-color: var(--line-2); }
-  .chip.gold { color: var(--ink); background: #fbf6c4; border-color: #cdbd1c; }
-  .src { display: flex; align-items: center; gap: 8px; font-size: 23px; line-height: 30px; font-weight: 500; color: var(--ink-2); }
-  .src svg.i { width: 24px; height: 24px; }
-  .layer h3 { font-size: 38px; line-height: 46px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); opacity: 0; }
+  #strengths { padding: 90px 32px 0 58px; }
+  .strength { display: flex; align-items: center; gap: 24px; margin-bottom: 48px;
+    font-size: 42px; line-height: 57px; font-weight: 500; color: #fff; letter-spacing: -.025em; }
+  .strength::before { content: ''; width: 10px; height: 52px; flex: none; border-radius: 5px; background: var(--teal); }
+  #ownership { margin: 62px 0 0 34px; color: var(--muted); font-size: 29px; line-height: 42px; }
 
-  /* Organization Knowledge Hub: the documents, then the profile drawn from them. */
-  .files { display: flex; gap: 12px; margin-top: 10px; }
-  .file { height: 54px; padding: 0 18px 0 12px; border-radius: 14px; background: #fff; border: 1.5px solid var(--line);
-    display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 500; color: var(--ink);
-    white-space: nowrap; opacity: 0; }
-  .file .ic { width: 28px; height: 28px; position: relative; flex: none; }
-  .file .spin { position: absolute; inset: 2px; border-radius: 50%; border: 3px solid rgba(32,186,209,.28);
-    border-top-color: var(--teal-2); }
-  .file .ic svg.i { position: absolute; inset: 0; width: 28px; height: 28px; color: #047857; opacity: 0; }
-  #profile { margin-top: 24px; padding: 4px 26px 8px; opacity: 0; }
-  .tabs { display: flex; align-items: center; gap: 34px; height: 74px; border-bottom: 1.5px solid var(--line); }
-  .tab { position: relative; height: 74px; display: flex; align-items: center; font-size: 25px; font-weight: 600;
-    color: var(--ink-2); white-space: nowrap; }
-  .tab.on { color: var(--ink); }
-  .tab.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1.5px; height: 4px; border-radius: 2px;
-    background: var(--teal); }
-  #approve { margin-left: auto; height: 48px; padding: 0 26px; border-radius: 12px; background: var(--teal);
-    color: var(--ink); font-size: 24px; font-weight: 700; display: flex; align-items: center; }
-  .claim { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 18px; padding: 19px 0 18px;
-    border-top: 1.5px solid var(--line); opacity: 0; }
-  .tabs + .claim { border-top: 0; }
-  .claim p { font-size: 26px; line-height: 34px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); margin-bottom: 6px; }
-  .state { display: grid; }
-  .state .chip { grid-area: 1 / 1; justify-self: end; }
+  #audiences { padding: 70px 24px 0 58px; }
+  .audience { padding-left: 28px; border-left: 4px solid var(--teal); }
+  .audience + .audience { margin-top: 85px; }
+  .audience h2 { font-size: 43px; line-height: 56px; font-weight: 600; color: #fff; letter-spacing: -.02em; }
+  .audience p { margin-top: 18px; color: var(--muted); font-size: 30px; line-height: 45px; max-width: 670px; }
 
-  /* The four funding actions, opened from the assistant when needed. */
-  .opt { margin-top: 16px; height: 108px; padding: 0 26px; display: flex; align-items: center; gap: 22px;
-    font-size: 29px; font-weight: 600; letter-spacing: -.012em; color: var(--ink); white-space: nowrap; opacity: 0; }
-  h3 + .opt { margin-top: 22px; }
-  .tile { width: 60px; height: 60px; border-radius: 15px; background: rgba(32,186,209,.16); color: var(--teal-ink);
-    display: grid; place-items: center; flex: none; }
-  .tile svg.i { width: 32px; height: 32px; }
-  .opt.hot { border-color: var(--teal-2); background: #f3fbfc;
-    box-shadow: 0 0 0 4px rgba(32,186,209,.2), 0 10px 28px -20px rgba(7,20,34,.35); }
-
-  /* Opportunities: coverage, then listings with a status and the reason for it. */
-  .levels { display: flex; gap: 10px; margin-top: 8px; }
-  .lvl { height: 46px; padding: 0 17px; border-radius: 23px; background: #fff; border: 1.5px solid var(--line-2);
-    display: flex; align-items: center; font-size: 23px; font-weight: 600; color: var(--ink); white-space: nowrap; opacity: 0; }
-  .listing { margin-top: 14px; padding: 18px 24px 19px; display: grid; grid-template-columns: 1fr auto; column-gap: 18px;
-    align-items: start; opacity: 0; }
-  .levels + .listing { margin-top: 24px; }
-  .listing b { display: block; font-size: 27px; line-height: 36px; font-weight: 600; letter-spacing: -.012em; color: var(--ink); }
-  .listing div span { display: block; font-size: 23px; line-height: 31px; color: var(--ink-2); }
-  .listing .meta { font-weight: 600; }
-  .listing .chip { margin-top: 1px; }
-
-  /* RFP analysis: what the funder states, what the organization has on paper,
-     and the suggestion, which is kept visibly apart from both. */
-  .filebar { display: flex; align-items: center; gap: 10px; height: 34px; font-size: 24px; font-weight: 600; color: var(--ink); opacity: 0; }
-  .filebar em { font-style: normal; font-weight: 500; color: var(--ink-2); }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
-  .side { padding: 24px 24px 26px; opacity: 0; }
-  .side .chip { margin: 14px 0 18px; }
-  .side p, #rec p { font-size: 26px; line-height: 35px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
-  .side .src { margin-top: 18px; }
-  #rec { margin-top: 18px; padding: 22px 24px 26px; background: #fffdf2; border: 2px dashed #cdbd1c; box-shadow: none; opacity: 0; }
-  #rec .chip { margin-bottom: 14px; }
-
-  /* The proposal guide: questions, never wording. */
-  .q { margin-top: 16px; height: 100px; padding: 0 24px; display: flex; align-items: center; gap: 20px; opacity: 0; }
-  h3 + .q { margin-top: 24px; }
-  .q .n { width: 46px; height: 46px; border-radius: 50%; background: rgba(32,186,209,.2); color: var(--ink);
-    font-size: 24px; font-weight: 700; display: grid; place-items: center; flex: none; }
-  .q p { font-size: 27px; font-weight: 500; letter-spacing: -.012em; color: var(--ink); white-space: nowrap; }
-  #own { margin-top: 28px; height: 110px; padding: 0 28px; border-radius: 16px; background: var(--navy); color: #fff;
-    display: flex; align-items: center; gap: 18px; font-size: 29px; font-weight: 600; letter-spacing: -.012em;
-    white-space: nowrap; opacity: 0; }
-  #own svg.i { width: 34px; height: 34px; color: var(--teal); }
-
-  #cursor { position: absolute; left: 0; top: 0; width: 40px; height: 40px; z-index: 5; opacity: 0; transform-origin: 6px 3px; }
-  #ripple { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
-    border: 3px solid var(--teal); opacity: 0; z-index: 4; }
-
-  /* The two cards. */
-  .full { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: radial-gradient(900px 600px at 50% 50%, #0c2233, #050e18); opacity: 0; }
-  .full div { color: #dbe8ec; letter-spacing: -.015em; white-space: nowrap; }
+  .full { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; background: radial-gradient(900px 600px at 50% 50%, #0c2233, #050e18); opacity: 0; }
+  .full div { color: var(--ice); letter-spacing: -.015em; white-space: nowrap; }
   #open img { height: 230px; }
   #open div { font-size: 46px; margin-top: 6px; }
   #end img { height: 170px; }
@@ -180,353 +85,127 @@
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
-  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/></symbol>
-  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
-  <symbol id="i-question" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.6a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2 1-1.2 1.8M12 16.6h.01"/></symbol>
-  <symbol id="i-circle-dashed" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke-dasharray="3 3.3"/></symbol>
-  <symbol id="i-document" viewBox="0 0 24 24"><path d="M6.5 3.5h8l3 3v14h-11z"/><path d="M14.5 3.5v3h3M9.5 11.5h5M9.5 15h5"/></symbol>
-  <symbol id="i-building" viewBox="0 0 24 24"><path d="M5.5 20V5.5A1.5 1.5 0 0 1 7 4h7a1.5 1.5 0 0 1 1.5 1.5V20M15.5 10H18a1.5 1.5 0 0 1 1.5 1.5V20M3.5 20h17"/><path d="M8.5 8h1M11.5 8h1M8.5 11.5h1M11.5 11.5h1M8.5 15h1M11.5 15h1"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
-  <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 4.5V20M8 20h8M5.5 8h13"/><path d="M5.5 8 3 14a2.6 2.6 0 0 0 5 0L5.5 8ZM18.5 8 16 14a2.6 2.6 0 0 0 5 0l-2.5-6Z"/></symbol>
-  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m15.2 8.8-1.8 4.6-4.6 1.8 1.8-4.6 4.6-1.8Z"/></symbol>
-  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4.5 19.5 1-4L16.6 4.4a2 2 0 0 1 2.9 2.9L8.5 18.5l-4 1Z"/><path d="m14.5 6.5 3 3"/></symbol>
-  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-</svg>
-
 <div id="stage">
   <canvas id="globe" width="1920" height="1080"></canvas>
-
   <img id="brand" class="abs" src="../assets/wordmark-light.png" alt="BulleBrowser" />
   <div id="tag" class="abs">The strategic funding platform for businesses and CBOs</div>
-  <div id="sample" class="abs"><svg class="i"><use href="#i-info"/></svg>Illustration · sample data</div>
+  <div id="label" class="abs">Animated overview</div>
   <div id="foot" class="abs">By Bulle Consulting</div>
 
-  <div class="scene" id="s-hub"><div class="eyebrow">Organization Knowledge Hub</div><h1>Add your<span>documents.</span></h1><p>Each statement shows its source. A person approves it.</p></div>
-  <div class="scene" id="s-ask"><div class="eyebrow">Guided workflows</div><h1>Four ways<span>to start.</span></h1><p>Each one works from official sources and your own documents.</p></div>
-  <div class="scene" id="s-find"><div class="eyebrow">Find Relevant Grant Opportunities</div><h1>Every listing<span>has a status.</span></h1><p>Each status is checked at the official source when you search.</p></div>
-  <div class="scene" id="s-rfp"><div class="eyebrow">Assess Our Funding Alignment</div><h1>Cited on<span>both sides.</span></h1><p>What the funder asks, beside your documents.<br>The funder decides who is eligible.</p></div>
-  <div class="scene" id="s-guide"><div class="eyebrow">Ethical Strengths-Based Proposal Guide</div><h1>You write<span>every word.</span></h1><p>The guide asks questions and points to your evidence.</p></div>
+  <div class="scene" id="s-context"><div class="eyebrow">Put funding in context</div><h1>Your goals.<span>Clearer context.</span></h1><p>Bring your priorities, official sources and evidence into the same conversation.</p></div>
+  <div class="scene" id="s-focus"><div class="eyebrow">Choose where to focus</div><h1>Research with<span>purpose.</span></h1><p>Understand what deserves your time before committing to an application.</p></div>
+  <div class="scene" id="s-strengths"><div class="eyebrow">Build on real strengths</div><h1>Your work.<span>Your evidence.</span></h1><p>Ground your preparation in what your organization actually does.</p></div>
+  <div class="scene" id="s-audiences"><div class="eyebrow">For businesses and CBOs</div><h1>Different goals.<span>Shared clarity.</span></h1><p>Keep funding decisions connected to your priorities and the work ahead.</p></div>
 
-  <div id="win">
-    <div id="chrome">
-      <span class="light" style="left:22px;background:#ff5f57"></span>
-      <span class="light" style="left:46px;background:#febc2e"></span>
-      <span class="light" style="left:70px;background:#28c840"></span>
-      <div id="title"><img src="../assets/logo.svg" alt="" /><span></span></div>
-      <div id="org"><svg class="i"><use href="#i-building"/></svg>Sample CBO</div>
+  <div id="visual">
+    <div class="diagram" id="context">
+      <svg id="connections" viewBox="0 0 874 640" aria-hidden="true">
+        <path pathLength="1" d="M182 150C182 240 274 220 335 260"/>
+        <path pathLength="1" d="M690 150C690 240 598 220 537 260"/>
+        <path pathLength="1" d="M436 486V522"/>
+      </svg>
+      <div class="node arrive" id="priorities">Your priorities</div>
+      <div class="node arrive" id="sources">Official sources</div>
+      <div class="arrive" id="strategy"><img src="../assets/logo.svg" alt="" /><span>Funding strategy</span></div>
+      <div class="node arrive" id="evidence">Your evidence</div>
     </div>
-    <div id="content">
-      <div class="layer" id="hub">
-        <div class="label">Documents</div>
-        <div class="files">
-          <div class="file"><span class="ic"><span class="spin"></span><svg class="i"><use href="#i-check-circle"/></svg></span>strategic-plan.pdf</div>
-          <div class="file"><span class="ic"><span class="spin"></span><svg class="i"><use href="#i-check-circle"/></svg></span>budget.pdf</div>
-          <div class="file"><span class="ic"><span class="spin"></span><svg class="i"><use href="#i-check-circle"/></svg></span>impact-report.pdf</div>
-        </div>
-        <div class="card" id="profile">
-          <div class="tabs">
-            <span class="tab" id="tab-draft">Draft profile</span>
-            <span class="tab" id="tab-ours">Our Priorities</span>
-            <span id="approve">Approve</span>
-          </div>
-          <div class="claim">
-            <div><p>Workforce training in New Jersey and Los Angeles</p><div class="src"><svg class="i"><use href="#i-document"/></svg>strategic-plan.pdf, p. 3</div></div>
-            <div class="state"><span class="chip info"><svg class="i"><use href="#i-circle-dashed"/></svg>Proposed</span><span class="chip ok"><svg class="i"><use href="#i-check-circle"/></svg>Approved</span></div>
-          </div>
-          <div class="claim">
-            <div><p>Training that stays free for residents</p><div class="src"><svg class="i"><use href="#i-document"/></svg>budget.pdf, p. 2</div></div>
-            <div class="state"><span class="chip info"><svg class="i"><use href="#i-circle-dashed"/></svg>Proposed</span><span class="chip ok"><svg class="i"><use href="#i-check-circle"/></svg>Approved</span></div>
-          </div>
-          <div class="claim">
-            <div><p>Community empowerment led by residents</p><div class="src"><svg class="i"><use href="#i-document"/></svg>impact-report.pdf, p. 5</div></div>
-            <div class="state"><span class="chip info"><svg class="i"><use href="#i-circle-dashed"/></svg>Proposed</span><span class="chip ok"><svg class="i"><use href="#i-check-circle"/></svg>Approved</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="layer" id="ask">
-        <h3>What can I help you with?</h3>
-        <div class="card opt"><span class="tile"><svg class="i"><use href="#i-search"/></svg></span>Find Relevant Grant Opportunities</div>
-        <div class="card opt"><span class="tile"><svg class="i"><use href="#i-scale"/></svg></span>Assess Our Funding Alignment</div>
-        <div class="card opt"><span class="tile"><svg class="i"><use href="#i-compass"/></svg></span>Explore Funder Priorities</div>
-        <div class="card opt"><span class="tile"><svg class="i"><use href="#i-pencil"/></svg></span>Ethical Strengths-Based Proposal Guide</div>
-      </div>
-
-      <div class="layer" id="find">
-        <div class="label">Coverage</div>
-        <div class="levels"><span class="lvl">Citywide</span><span class="lvl">Countywide</span><span class="lvl">Statewide</span><span class="lvl">Federal</span><span class="lvl">International</span></div>
-        <div class="card listing">
-          <div><b>Neighborhood job training grant</b><span class="meta">City workforce office · Citywide</span><span>Open at the source. The deadline has not passed.</span></div>
-          <span class="chip ok"><svg class="i"><use href="#i-check-circle"/></svg>Active</span>
-        </div>
-        <div class="card listing">
-          <div><b>Workforce pathways grant</b><span class="meta">County training board · Countywide</span><span>The deadline has passed.</span></div>
-          <span class="chip off"><svg class="i"><use href="#i-clock"/></svg>Expired</span>
-        </div>
-        <div class="card listing">
-          <div><b>Community empowerment grant</b><span class="meta">State community fund · Statewide</span><span>A forecast. No deadline is published yet.</span></div>
-          <span class="chip warn"><svg class="i"><use href="#i-question"/></svg>Unverified</span>
-        </div>
-      </div>
-
-      <div class="layer" id="rfp">
-        <div class="filebar"><svg class="i"><use href="#i-document"/></svg>funding-notice.pdf<em>· a sample funding document</em></div>
-        <div class="cols">
-          <div class="card side">
-            <div class="label">The funder asks</div>
-            <span class="chip plain"><svg class="i"><use href="#i-document"/></svg>Stated in the document</span>
-            <p>Report training outcomes for the last two years.</p>
-            <div class="src"><svg class="i"><use href="#i-document"/></svg>funding-notice.pdf, p. 4</div>
-          </div>
-          <div class="card side">
-            <div class="label">Your organization</div>
-            <span class="chip plain"><svg class="i"><use href="#i-building"/></svg>Documented fact</span>
-            <p>Training outcomes are reported for two program years.</p>
-            <div class="src"><svg class="i"><use href="#i-document"/></svg>impact-report.pdf, p. 2</div>
-          </div>
-        </div>
-        <div class="card" id="rec">
-          <span class="chip gold"><svg class="i"><use href="#i-arrow"/></svg>Recommendation</span>
-          <p>Cite both years, with the page each result comes from.</p>
-        </div>
-      </div>
-
-      <div class="layer" id="guide">
-        <h3>Reflective questions</h3>
-        <div class="card q"><span class="n">1</span><p>What changed for the residents you trained?</p></div>
-        <div class="card q"><span class="n">2</span><p>Which result in your impact report shows it?</p></div>
-        <div class="card q"><span class="n">3</span><p>What does this funder need explained?</p></div>
-        <div id="own"><svg class="i"><use href="#i-pencil"/></svg>The proposal stays in your own words.</div>
-      </div>
+    <div class="diagram" id="focus">
+      <div class="focus-item arrive"><span class="number">01</span><div><h2>Purpose</h2><p>How does this support your goals?</p></div></div>
+      <div class="focus-item arrive"><span class="number">02</span><div><h2>Requirements</h2><p>What do you need to understand?</p></div></div>
+      <div class="focus-item arrive"><span class="number">03</span><div><h2>Timing</h2><p>What can your team prepare?</p></div></div>
     </div>
-    <div id="ripple"></div>
-    <svg id="cursor" viewBox="0 0 26 26"><path d="M4 2l15 12-6.5 1 4 8-3 1.4-4-8L4 21z" fill="#0f1c26" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    <div class="diagram" id="strengths">
+      <div class="strength arrive">What you do.</div>
+      <div class="strength arrive">What your evidence shows.</div>
+      <div class="strength arrive">What you decide.</div>
+      <p class="arrive" id="ownership">Your judgment. Your own words.</p>
+    </div>
+    <div class="diagram" id="audiences">
+      <div class="audience arrive"><h2>For businesses</h2><p>Growth plans, capabilities and the evidence behind your next step.</p></div>
+      <div class="audience arrive"><h2>For CBOs</h2><p>Community priorities, programs and the impact you can document.</p></div>
+    </div>
   </div>
 
   <div class="full" id="open"><img src="../assets/wordmark-light.png" alt="BulleBrowser" /><div>The strategic funding platform for businesses and CBOs</div></div>
   <div class="full" id="end"><img src="../assets/wordmark-light.png" alt="BulleBrowser" /><div>The strategic funding platform for businesses and CBOs</div><small>bullebrowser.com</small></div>
   <div id="black"></div>
 </div>
-
 <script>
 const DURATION = 29.5;
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
-const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-const seg = (t, a, b) => clamp((t - a) / (b - a));
-const eo = (x) => 1 - Math.pow(1 - x, 3);
-const eio = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const lerp = (a, b, x) => a + (b - a) * x;
-
-// Dotted globe: a fixed set of points on a sphere, rotated and projected.
-const G = (() => {
-  const pts = [];
-  for (let lat = -80; lat <= 80; lat += 6.5) {
-    const r = Math.cos((lat * Math.PI) / 180);
-    const n = Math.max(6, Math.round(58 * r));
-    for (let i = 0; i < n; i++) pts.push([(lat * Math.PI) / 180, (i / n) * Math.PI * 2]);
-  }
-  return pts;
-})();
-const ctx = $('#globe').getContext('2d');
-function drawGlobe(t) {
-  ctx.clearRect(0, 0, 1920, 1080);
-  const cx = 1390, cy = 545, R = 470, rot = t * 0.12, tilt = -0.32;
-  for (const [la, lo] of G) {
-    let x = Math.cos(la) * Math.sin(lo + rot), y = Math.sin(la), z = Math.cos(la) * Math.cos(lo + rot);
-    const y2 = y * Math.cos(tilt) - z * Math.sin(tilt), z2 = y * Math.sin(tilt) + z * Math.cos(tilt);
-    if (z2 < -0.15) continue;
-    const a = 0.1 + 0.42 * clamp((z2 + 0.15) / 1.15);
-    ctx.fillStyle = `rgba(32,186,209,${a})`;
-    ctx.beginPath(); ctx.arc(cx + x * R, cy - y2 * R, 1.3 + z2 * 1.1, 0, Math.PI * 2); ctx.fill();
-  }
-  // A few slow "signal" dots travelling across the globe.
-  for (let k = 0; k < 4; k++) {
-    const p = (t * 0.07 + k * 0.27) % 1;
-    const x = cx + Math.cos(p * Math.PI * 2 + k) * R * 1.08, y = cy + Math.sin(p * Math.PI * 2 * 0.7 + k) * R * 0.92;
-    ctx.fillStyle = `rgba(32,186,209,${0.55 * Math.sin(p * Math.PI)})`;
-    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-// The storyboard. Between the two cards, each scene is a headline on the left
-// and one screen in the window; `title` is what the window's bar calls that
-// screen. Everything inside a scene is timed from its `from`, so a scene can
-// be moved or stretched here without touching the rest. render.mjs takes the
-// poster at 15.6s: keep that inside a scene whose screen has finished arriving.
-const OPEN_UNTIL = 2.5; // the opening card starts to lift
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+const clamp = (value) => Math.min(1, Math.max(0, value));
+const seg = (time, from, to) => clamp((time - from) / (to - from));
+const easeOut = (value) => 1 - Math.pow(1 - value, 3);
+const easeInOut = (value) => value < 0.5 ? 4 * value ** 3 : 1 - Math.pow(-2 * value + 2, 3) / 2;
+const OPEN_UNTIL = 2.5;
+const END_FROM = 26.3;
 const SCENES = [
-  { id: 'hub', from: 3.0, to: 8.8, title: 'Organization Knowledge Hub' },
-  { id: 'ask', from: 8.8, to: 12.6, title: 'Funding workflows' },
-  { id: 'find', from: 12.6, to: 17.6, title: 'Opportunities' },
-  { id: 'rfp', from: 17.6, to: 22.6, title: 'RFP analysis' },
-  { id: 'guide', from: 22.6, to: 27.4, title: 'Proposal guide' },
+  { id: 'context', from: 3, to: 8.8 },
+  { id: 'focus', from: 8.8, to: 14.5 },
+  { id: 'strengths', from: 14.5, to: 20.5 },
+  { id: 'audiences', from: 20.5, to: 27.4 },
 ];
-const END_FROM = 26.3; // the closing card starts to arrive
-const at = Object.fromEntries(SCENES.map((s) => [s.id, s.from]));
-const APPROVE_AT = at.hub + 3.55; // the click on Approve
-const CHOOSE_AT = at.ask + 3.1; // the click on the first option
-const CLICKS = [APPROVE_AT, CHOOSE_AT];
 
-function sceneText(el, t, a, b) {
-  const i = eo(seg(t, a, a + 0.9)), o = eio(seg(t, b - 0.7, b));
-  el.style.opacity = i * (1 - o);
-  el.style.transform = `translateY(${(1 - i) * 36 - o * 24}px)`;
-  const h = el.querySelector('h1 span');
-  const i2 = eo(seg(t, a + 0.25, a + 1.15));
-  h.style.opacity = i2; h.style.transform = `translateY(${(1 - i2) * 26}px)`;
+const points = [];
+for (let latitude = -80; latitude <= 80; latitude += 6.5) {
+  const radius = Math.cos(latitude * Math.PI / 180);
+  const count = Math.max(6, Math.round(58 * radius));
+  for (let index = 0; index < count; index++) points.push([latitude * Math.PI / 180, index / count * Math.PI * 2]);
 }
-
-// An element arriving: it fades in and settles into place.
-function rise(el, t, from, d = 0.4, dy = 14) {
-  const v = eo(seg(t, from, from + d));
-  el.style.opacity = v;
-  el.style.transform = `translateY(${(1 - v) * dy}px)`;
-}
-// A chip arriving: it fades in and grows to its size.
-function pop(el, t, from, d = 0.3) {
-  const v = eo(seg(t, from, from + d));
-  el.style.opacity = v;
-  el.style.transform = `scale(${0.82 + v * 0.18})`;
-}
-
-// Where an element sits inside the window, before the window is tilted.
-const win = $('#win');
-function spot(el, fx = 0.5, fy = 0.5) {
-  let x = 0, y = 0;
-  for (let e = el; e && e !== win; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
-  return [x + el.offsetWidth * fx, y + el.offsetHeight * fy];
-}
-function along(keys, t) {
-  for (let i = 0; i < keys.length - 1; i++) {
-    const [ta, xa, ya] = keys[i], [tb, xb, yb] = keys[i + 1];
-    if (t <= tb) { const x = eio(seg(t, ta, tb)); return [lerp(xa, xb, x), lerp(ya, yb, x)]; }
+const context = $('#globe').getContext('2d');
+function drawGlobe(time) {
+  context.clearRect(0, 0, 1920, 1080);
+  const cx = 1390, cy = 545, radius = 470, rotation = time * .12, tilt = -.32;
+  for (const [latitude, longitude] of points) {
+    const x = Math.cos(latitude) * Math.sin(longitude + rotation);
+    const y = Math.sin(latitude), z = Math.cos(latitude) * Math.cos(longitude + rotation);
+    const y2 = y * Math.cos(tilt) - z * Math.sin(tilt), z2 = y * Math.sin(tilt) + z * Math.cos(tilt);
+    if (z2 < -.15) continue;
+    const alpha = .06 + .22 * clamp((z2 + .15) / 1.15);
+    context.fillStyle = `rgba(32,186,209,${alpha})`;
+    context.beginPath(); context.arc(cx + x * radius, cy - y2 * radius, 1.3 + z2 * 1.1, 0, Math.PI * 2); context.fill();
   }
-  const last = keys[keys.length - 1]; return [last[1], last[2]];
 }
+function rise(element, time, from, duration = .5, distance = 20) {
+  const progress = easeOut(seg(time, from, from + duration));
+  element.style.opacity = progress;
+  element.style.transform = `translateY(${(1 - progress) * distance}px)`;
+}
+window.render = function render(time) {
+  drawGlobe(time);
+  $('#black').style.opacity = 1 - easeOut(seg(time, 0, .8)) + easeInOut(seg(time, DURATION - .7, DURATION));
+  $('#open').style.opacity = 1 - easeInOut(seg(time, OPEN_UNTIL, OPEN_UNTIL + .6));
+  rise($('#open img'), time, .2, .8, 18);
+  rise($('#open div'), time, .95, .7, 18);
 
-window.render = function render(t) {
-  drawGlobe(t);
-  $('#black').style.opacity = 1 - eo(seg(t, 0, 0.8)) + eio(seg(t, DURATION - 0.7, DURATION));
-
-  // Opening card: the name, then the line.
-  const open = $('#open');
-  open.style.opacity = 1 - eio(seg(t, OPEN_UNTIL, OPEN_UNTIL + 0.6));
-  rise(open.children[0], t, 0.2, 0.8, 18);
-  rise(open.children[1], t, 0.95, 0.7, 18);
-
-  for (const s of SCENES) sceneText($(`#s-${s.id}`), t, s.from, s.id === 'guide' ? END_FROM + 0.6 : s.to);
-
-  // The window arrives as the opening card lifts, then drifts slowly.
-  const wi = eo(seg(t, OPEN_UNTIL + 0.2, OPEN_UNTIL + 1.4));
-  const drift = Math.sin(t * 0.35) * 1.1;
-  win.style.opacity = wi;
-  win.style.transform = `perspective(2600px) translateY(${(1 - wi) * 60}px) rotateY(${-8 + drift}deg) rotateX(2.5deg)`;
-
-  // One screen at a time: the old one leaves before the new one arrives.
-  const shown = (s) => eo(seg(t, s.from, s.from + 0.4)) * (1 - eio(seg(t, s.to - 0.3, s.to - 0.05)));
-  for (const s of SCENES) $(`#${s.id}`).style.opacity = shown(s);
-  const current = SCENES.findLast((s) => t >= s.from - 0.05) ?? SCENES[0];
-  const title = $('#title');
-  title.children[1].textContent = current.title;
-  title.style.opacity = t < SCENES[0].from ? 1 : 0.25 + 0.75 * shown(current);
-
-  // Organization Knowledge Hub: three documents arrive, a profile is proposed
-  // from them with a source under each statement, and a person approves it.
-  $$('.file').forEach((el, i) => {
-    const from = at.hub + 0.7 + i * 0.35;
-    rise(el, t, from, 0.3, -14);
-    const ready = seg(t, from + 0.5, from + 0.65);
-    el.querySelector('.spin').style.opacity = 1 - ready;
-    el.querySelector('.spin').style.transform = `rotate(${t * 540}deg)`;
-    el.querySelector('svg').style.opacity = ready;
-  });
-  rise($('#profile'), t, at.hub + 1.85, 0.45, 18);
-  const approve = $('#approve');
-  const approved = t >= APPROVE_AT + 0.2;
-  $('#tab-draft').classList.toggle('on', !approved);
-  $('#tab-ours').classList.toggle('on', approved);
-  approve.style.opacity = 1 - eo(seg(t, APPROVE_AT + 0.2, APPROVE_AT + 0.5));
-  approve.style.transform = `scale(${t >= APPROVE_AT - 0.08 && t < APPROVE_AT + 0.1 ? 0.95 : 1})`;
-  $$('.claim').forEach((el, i) => {
-    rise(el, t, at.hub + 2.05 + i * 0.2, 0.35, 12);
-    const done = eo(seg(t, APPROVE_AT + 0.1 + i * 0.14, APPROVE_AT + 0.35 + i * 0.14));
-    const [before, after] = el.querySelectorAll('.chip');
-    before.style.opacity = 1 - done;
-    after.style.opacity = done;
-    after.style.transform = `scale(${0.82 + done * 0.18})`;
+  for (const scene of SCENES) {
+    const incoming = easeOut(seg(time, scene.from, scene.from + .8));
+    const outgoing = easeInOut(seg(time, scene.to - .6, scene.to));
+    const text = $(`#s-${scene.id}`);
+    text.style.opacity = incoming * (1 - outgoing);
+    text.style.transform = `translateY(${(1 - incoming) * 30 - outgoing * 18}px)`;
+    rise(text.querySelector('h1 span'), time, scene.from + .2, .7, 14);
+    const diagram = $(`#${scene.id}`);
+    diagram.style.opacity = incoming * (1 - outgoing);
+    diagram.style.transform = `translateY(${(1 - incoming) * 24 - outgoing * 18}px)`;
+    diagram.querySelectorAll('.arrive').forEach((element, index) => rise(element, time, scene.from + .45 + index * .35));
+  }
+  $$('#connections path').forEach((line, index) => {
+    line.style.strokeDashoffset = 1 - easeInOut(seg(time, 3.65 + index * .35, 4.8 + index * .35));
   });
 
-  // The four options, and a click on the first.
-  rise($('#ask h3'), t, at.ask + 0.15, 0.4, 12);
-  const opts = $$('.opt');
-  opts.forEach((el, i) => rise(el, t, at.ask + 0.35 + i * 0.2, 0.35, 14));
-  opts[0].classList.toggle('hot', t >= at.ask + 2.45);
-
-  // Opportunities: the five levels of coverage, then three listings, each with
-  // its status and the reason for it.
-  $('#find .label').style.opacity = eo(seg(t, at.find + 0.15, at.find + 0.45));
-  $$('.lvl').forEach((el, i) => pop(el, t, at.find + 0.2 + i * 0.08));
-  $$('.listing').forEach((el, i) => {
-    const from = at.find + 0.65 + i * 0.35;
-    rise(el, t, from, 0.4, 16);
-    pop(el.querySelector('.chip'), t, from + 0.3);
-  });
-
-  // RFP analysis: the requirement, the organization's fact, the recommendation.
-  $('.filebar').style.opacity = eo(seg(t, at.rfp + 0.15, at.rfp + 0.5));
-  $$('.side').forEach((el, i) => {
-    const from = at.rfp + 0.35 + i * 0.8;
-    rise(el, t, from, 0.45, 16);
-    pop(el.querySelector('.chip'), t, from + 0.3);
-  });
-  rise($('#rec'), t, at.rfp + 2.1, 0.45, 16);
-  pop($('#rec .chip'), t, at.rfp + 2.4);
-
-  // The proposal guide: three questions, and whose words the proposal is in.
-  rise($('#guide h3'), t, at.guide + 0.15, 0.4, 12);
-  $$('.q').forEach((el, i) => rise(el, t, at.guide + 0.35 + i * 0.3, 0.4, 14));
-  rise($('#own'), t, at.guide + 1.45, 0.45, 16);
-
-  // The pointer: to Approve in the hub, then to the first option.
-  const [ax, ay] = spot(approve, 0.84, 0.72);
-  const [ox, oy] = spot(opts[0], 0.8, 0.6);
-  const inHub = t < at.ask;
-  const c0 = inHub ? at.hub + 2.5 : at.ask + 1.5; // the pointer appears
-  const c1 = inHub ? at.hub + 4.4 : at.ask + 3.45; // and starts to leave
-  const [cx, cy] = inHub
-    ? along([[c0, ax - 250, ay + 300], [c0 + 0.9, ax, ay], [c1, ax, ay]], t)
-    : along([[c0, ox + 130, oy + 340], [c0 + 1.1, ox, oy], [c1, ox, oy]], t);
-  const cur = $('#cursor');
-  cur.style.opacity = eo(seg(t, c0, c0 + 0.3)) * (1 - seg(t, c1, c1 + 0.25));
-  const press = CLICKS.some((c) => t >= c - 0.08 && t < c + 0.1);
-  cur.style.transform = `translate(${cx - 6}px, ${cy - 3}px) scale(${press ? 0.86 : 1})`;
-  const rip = $('#ripple');
-  const last = CLICKS.filter((c) => t >= c).pop();
-  if (last !== undefined && t - last < 0.55) {
-    const p = (t - last) / 0.55;
-    rip.style.left = `${cx}px`; rip.style.top = `${cy}px`;
-    rip.style.opacity = 1 - p; rip.style.transform = `scale(${0.4 + p * 0.9})`;
-  } else rip.style.opacity = 0;
-
-  // Closing card: the line again, then where to find it.
-  const end = $('#end');
-  const e = eo(seg(t, END_FROM, END_FROM + 0.8));
-  end.style.opacity = e;
-  end.style.transform = `scale(${1.04 - e * 0.04})`;
-  rise(end.children[1], t, END_FROM + 0.6, 0.6, 14);
-  rise(end.children[2], t, END_FROM + 1.2, 0.5, 12);
+  const closing = easeOut(seg(time, END_FROM, END_FROM + .8));
+  $('#end').style.opacity = closing;
+  $('#end').style.transform = `scale(${1.04 - closing * .04})`;
+  rise($('#end div'), time, END_FROM + .6, .6, 14);
+  rise($('#end small'), time, END_FROM + 1.2, .5, 12);
 };
-
 window.DURATION = DURATION;
 window.render(0);
-
-// Live preview when opened directly (render.mjs sets ?frames to disable it).
 if (!location.search.includes('frames')) {
-  const t0 = performance.now();
-  const tick = () => { window.render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(tick); };
+  const started = performance.now();
+  const tick = () => { window.render((performance.now() - started) / 1000 % DURATION); requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 }
 </script>

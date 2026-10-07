@@ -92,13 +92,14 @@ export const ptPT: Messages = {
   'marquee.play': 'Retomar a lista em movimento',
 
   'film.title': 'Veja a sua estratégia de financiamento ganhar forma.',
+  'film.label': 'Apresentação animada',
   'film.caption':
-    'Apresentação ilustrativa: a organização, os financiadores, as oportunidades, os montantes e as datas são fictícios.',
+    'Reúna as suas prioridades, a pesquisa de financiamento e as evidências. Uma apresentação animada para empresas e CBOs.',
   'film.play': 'Reproduzir o filme do BulleBrowser',
   'film.pause': 'Pausar o filme',
   'film.fallback': 'Não foi possível carregar o filme. Tente atualizar a página.',
   'film.description':
-    'Uma apresentação silenciosa de uma estratégia de financiamento com dados fictícios. Uma organização adiciona documentos e aprova evidências das suas prioridades. O filme mostra as quatro ações de financiamento da aplicação, os estados das oportunidades segundo fontes oficiais, a comparação de requisitos com evidências da organização e perguntas de reflexão para uma proposta escrita pelo candidato.',
+    'Uma apresentação animada e silenciosa do BulleBrowser. Contextualize o financiamento com as suas prioridades, fontes oficiais e evidências. Escolha onde concentrar esforços considerando o propósito, os requisitos e os prazos. Parta do seu trabalho documentado e do seu próprio discernimento. Ligue a estratégia de financiamento aos objetivos empresariais e às prioridades da comunidade, para empresas e CBOs.',
 
   'ask.eyebrow': 'Quatro formas de começar',
   'ask.h2': 'Em que posso ajudar?',
