@@ -10,6 +10,7 @@ import {
   providerFor,
   runAgent,
   type AgentStep,
+  type ActionPreview,
   type ToolContext,
 } from '@bullebrowser/agent-core';
 import {
@@ -177,7 +178,14 @@ export async function startAgentRun(
     });
 
   const runtime = new DesktopToolRuntime({
-    request: (message: string) => ask(message, 'destructive'),
+    request: (message: string, preview?: ActionPreview) => ask([
+      message,
+      preview?.summary,
+      preview?.url ? `Destination: ${preview.url}` : undefined,
+      ...(preview?.fields ?? []).map((field) => `${field.label}: ${field.value}`),
+      ...(preview?.files ?? []).map((file) => `File: ${file.name}`),
+      preview?.note,
+    ].filter(Boolean).join('\n'), 'destructive'),
   }, (tabId) => {
     // Consent is handled by the tool executor before the runtime touches the
     // page. Late operations after Stop must not restore the browsing effect.

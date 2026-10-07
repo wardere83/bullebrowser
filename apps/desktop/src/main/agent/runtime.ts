@@ -3,7 +3,18 @@
 // helpers at the bottom); keys go through sendInputEvent, and navigation
 // through the tab manager.
 
-import { ToolError, type KeyName, type TabSummary, type TargetFacts, type ToolRuntime } from '@bullebrowser/agent-core';
+import {
+  ToolError,
+  levelAllows,
+  type ActionPreview,
+  type KeyName,
+  type PermissionAsk,
+  type PermissionLevel,
+  type TabSummary,
+  type TargetFacts,
+  type ToolRuntime,
+} from '@bullebrowser/agent-core';
+import { originOf, sitePermissions } from '../storage/site-permissions.js';
 import type { WebContents, WebFrameMain } from 'electron';
 import { tabManager } from '../tabs/manager.js';
 import { assertWebUrl, evalPage, frameOffset, hostOf, inFrames, subFrames } from './browser/frames.js';
@@ -25,11 +36,20 @@ import {
   SCROLL_FN,
   TYPE_FN,
   WAIT_FOR_SELECTOR,
+  PREVIEW_FN,
   type ClickSpot,
 } from './browser/page-scripts.js';
 
 export interface ConfirmDelegate {
-  request(message: string): Promise<boolean>;
+  /** A consequential action: approve or decline, with what it will send. */
+  request(message: string, preview?: ActionPreview): Promise<boolean>;
+  /** A site needs a higher permission level for this action. */
+  permission?(ask: {
+    origin: string;
+    level: PermissionLevel;
+    action: string;
+    preview?: ActionPreview;
+  }): Promise<'once' | 'always' | 'deny'>;
 }
 
 // Screenshots go to the model as images; a full-resolution Retina capture can
@@ -37,9 +57,13 @@ export interface ConfirmDelegate {
 const SCREENSHOT_MAX_WIDTH = 1280;
 
 export class DesktopToolRuntime implements ToolRuntime {
+  // Levels the user allowed for this task only ("Allow once").
+  private readonly grantedForTask = new Map<string, PermissionLevel>();
+
   constructor(
     private confirmDelegate: ConfirmDelegate,
     private onPageActivity?: (tabId: string) => void,
+    private readonly profile = 'default',
   ) {}
 
   private wcFor(tabId: string): WebContents {
@@ -515,7 +539,46 @@ export class DesktopToolRuntime implements ToolRuntime {
   }
 
 
-  async confirmDestructive(message: string): Promise<boolean> {
-    return this.confirmDelegate.request(message);
+  async confirmDestructive(message: string, preview?: ActionPreview): Promise<boolean> {
+    return this.confirmDelegate.request(message, preview);
+  }
+
+  async checkPermission(tabId: string, level: PermissionLevel, ask: PermissionAsk): Promise<'granted' | 'confirmed' | 'denied'> {
+    const origin = originOf(this.wcFor(tabId).getURL());
+    if (!origin) return 'granted'; // start page, about:blank — nothing to protect
+    const task = this.grantedForTask.get(origin);
+    if (levelAllows(sitePermissions.level(this.profile, origin), level) || (task && levelAllows(task, level))) {
+      return 'granted';
+    }
+    const answer = this.confirmDelegate.permission
+      ? await this.confirmDelegate.permission({ origin, level, action: ask.action, ...(ask.preview ? { preview: ask.preview } : {}) })
+      : await this.confirmDelegate.request(
+          `Allow ${ask.action} on ${origin} for this task?`, ask.preview,
+        ) ? 'once' : 'deny';
+    if (answer === 'deny') return 'denied';
+    if (answer === 'always') sitePermissions.set(this.profile, origin, level);
+    else this.grantedForTask.set(origin, level);
+    // The prompt showed this exact action (and its preview for a submit), so
+    // approving it also answers the confirmation.
+    return level === 'full' ? 'confirmed' : 'granted';
+  }
+
+  async previewAction(tabId: string, target: string | null): Promise<ActionPreview> {
+    const wc = this.wcFor(tabId);
+    if (target !== null) {
+      return (
+        await inFrames<ActionPreview>(wc, target, this.prelude(wc, false), (t) => `(${PREVIEW_FN.toString()})(${JSON.stringify(t)})`)
+      ).value;
+    }
+    // The focused element, in whichever frame holds focus (frames first).
+    for (const frame of [...subFrames(wc).map((f) => f.frame).reverse(), wc.mainFrame]) {
+      const p = await evalPage<ActionPreview | null>(
+        frame,
+        PAGE_HELPERS,
+        `document.hasFocus() && !/^(IFRAME|FRAME)$/.test(__bb.Focused().tagName) ? (${PREVIEW_FN.toString()})(null) : null`,
+      ).catch(() => null);
+      if (p) return p;
+    }
+    return { summary: 'Press a key on the page', pageUrl: wc.getURL() };
   }
 }

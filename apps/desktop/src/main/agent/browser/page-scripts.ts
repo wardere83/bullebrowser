@@ -566,6 +566,7 @@ declare const __bb: {
   Select(el: Element, option: string): string;
   Label(el: Element): string;
   DeepQuery(selector: string): Element | null;
+  Focused(): HTMLElement;
 };
 type PageWindow = Window & {
   __bbCursor(el: Element | null, opts?: Record<string, unknown>): void;
@@ -791,4 +792,57 @@ export function WAIT_FOR_SELECTOR(selector: string, timeoutMs: number): Promise<
     };
     tick();
   });
+}
+
+// What a consequential action would send — shown on the confirmation card
+// before it runs, and returned by preview_action as a dry run. `target` null
+// means the focused element (for Enter / Space). Values are what the page
+// would submit, passwords masked, long values cut.
+export function PREVIEW_FN(target: string | null): Record<string, unknown> {
+  const el = (target === null ? __bb.Focused() : __bb.FindClickable(target)) as HTMLElement & {
+    form?: HTMLFormElement | null;
+    formAction?: string;
+    formMethod?: string;
+  };
+  const label = __bb.Label(el).slice(0, 80);
+  const form = el.form || (el.closest('form') as HTMLFormElement | null);
+  const cut = (v: string, n = 300) => (v.length > n ? `${v.slice(0, n)}…` : v);
+  if (!form) {
+    const ctx = el.closest('dialog, [role=dialog], [role=alertdialog], section, article, form, main');
+    const heading = ctx?.querySelector('h1, h2, h3, h4, [role=heading]');
+    return {
+      summary: label ? `Press "${label}"` : 'Press this control',
+      pageUrl: location.href,
+      ...(heading || ctx ? { note: cut(((heading as HTMLElement | null)?.innerText || (ctx as HTMLElement).innerText || '').replace(/\s+/g, ' ').trim(), 200) } : {}),
+    };
+  }
+  const fields: { label: string; value: string }[] = [];
+  const files: { name: string; size?: number }[] = [];
+  for (const f of Array.from(form.elements) as (HTMLInputElement & HTMLSelectElement & HTMLTextAreaElement)[]) {
+    if (!f.name || f.disabled) continue;
+    const type = (f.type || '').toLowerCase();
+    if (/^(submit|button|reset|image)$/.test(type)) continue;
+    if ((type === 'checkbox' || type === 'radio') && !f.checked) continue;
+    const name = __bb.Label(f) || f.name;
+    if (type === 'file') {
+      for (const file of Array.from(f.files || [])) files.push({ name: file.name, size: file.size });
+      continue;
+    }
+    let value: string;
+    if (type === 'password') value = '•'.repeat(Math.min(12, Math.max(6, f.value.length)));
+    else if (f.tagName === 'SELECT') value = Array.from(f.selectedOptions).map((o) => o.text.trim()).join(', ');
+    else if (type === 'checkbox' || type === 'radio') value = f.value === 'on' ? 'checked' : f.value;
+    else value = f.value;
+    fields.push({ label: type === 'hidden' ? `${f.name} (hidden)` : name.slice(0, 60), value: cut(value) });
+  }
+  const action = el.formAction && el.formAction !== location.href ? el.formAction : form.action;
+  const method = ((el.formMethod || form.method || 'get') as string).toUpperCase();
+  return {
+    summary: `Submit the form${label ? ` with "${label}"` : ''}`,
+    pageUrl: location.href,
+    url: action,
+    method,
+    fields,
+    ...(files.length ? { files } : {}),
+  };
 }
