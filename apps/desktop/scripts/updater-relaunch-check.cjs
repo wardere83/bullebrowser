@@ -75,6 +75,47 @@ describe('installed platform updater keeps the current session open', { concurre
     assert.equal(updater.autoRunAppAfterInstall, false);
   });
 
+  test('Mac passes the same pending ZIP to native staging without a redundant differential archive', async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bulle-updater-archive-'));
+    const pendingZip = path.join(directory, 'verified-pending.zip');
+    const differentialArchive = path.join(directory, 'update.zip');
+    fs.writeFileSync(pendingZip, Buffer.from('504b05060000000000000000000000000000000000000000', 'hex'));
+    try {
+      const { updater, actions } = createFixture(MacUpdater);
+      const handoffs = [];
+      const zipInfo = {
+        url: new URL('https://example.test/BulleBrowser-0.2.54.zip'),
+        info: { url: 'BulleBrowser-0.2.54.zip', size: fs.statSync(pendingZip).size },
+      };
+      updater.downloadedUpdateHelper = { cacheDir: directory };
+      // Replace validation/download and native OS boundaries. The installed
+      // library still chooses whether to copy its baseline ZIP and forwards
+      // the pending archive to Squirrel through its actual Mac download path.
+      updater.executeDownload = async task => task.done({ version: '0.2.54', downloadedFile: pendingZip });
+      updater.updateDownloaded = async (fileInfo, event) => {
+        handoffs.push({ fileInfo, event });
+        return [];
+      };
+      updater.updateInfoAndProvider = {
+        info: { version: '0.2.54', files: [zipInfo.info] },
+        provider: { resolveFiles: () => [zipInfo] },
+      };
+      for (const disabled of [true, false]) {
+        updater.disableDifferentialDownload = disabled;
+        await updater.downloadUpdate();
+        assert.equal(fs.existsSync(differentialArchive), !disabled);
+        const handoff = handoffs.at(-1);
+        assert.equal(handoff.fileInfo, zipInfo);
+        assert.equal(handoff.event.downloadedFile, pendingZip);
+        if (!disabled) assert.deepEqual(fs.readFileSync(differentialArchive), fs.readFileSync(pendingZip));
+        assert.deepEqual(actions, []);
+      }
+      assert.equal(handoffs.length, 2);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   test('Windows waits for normal quit and silently installs without forcing a reopen', async () => {
     const { updater, actions, quitHandlers } = createFixture(NsisUpdater);
     updater.downloadedUpdateHelper = {

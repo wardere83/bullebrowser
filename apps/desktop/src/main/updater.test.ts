@@ -11,6 +11,7 @@ const { app, updater, nativeUpdater } = vi.hoisted(() => ({
     autoDownload: true,
     autoInstallOnAppQuit: false,
     autoRunAppAfterInstall: true,
+    disableDifferentialDownload: false,
     allowDowngrade: true,
     on: vi.fn(),
     removeListener: vi.fn(),
@@ -85,6 +86,7 @@ describe('background app updates', () => {
     expect(updater.autoDownload).toBe(false);
     expect(updater.autoInstallOnAppQuit).toBe(true);
     expect(updater.autoRunAppAfterInstall).toBe(false);
+    expect(updater.disableDifferentialDownload).toBe(false);
     expect(updater.allowDowngrade).toBe(false);
     expect(() => api.prepareUpdate('0.2.38')).toThrow('no longer ready');
     events.emit('update-available', { version: '0.2.38' });
@@ -310,6 +312,7 @@ describe('background app updates', () => {
   it('waits for native Mac staging, allows staging retries, and never adds restart callbacks', async () => {
     Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
     const api = await start();
+    expect(updater.disableDifferentialDownload).toBe(true);
     events.emit('update-downloaded', { version: '0.2.38' });
     expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.38', phase: 'preparing' });
     expect(() => api.prepareUpdate('0.2.38')).toThrow('no longer ready');
@@ -334,6 +337,66 @@ describe('background app updates', () => {
     expect(nativeUpdater.checkForUpdates).not.toHaveBeenCalled();
     expect(nativeUpdater.quitAndInstall).not.toHaveBeenCalled();
     expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['ENOSPC', Object.assign(new Error('Cannot write /private/update.zip'), { code: 'ENOSPC' })],
+    ['native Cocoa code', Object.assign(new Error('Could not write the update'), { code: 640 })],
+    ['native Cocoa message', new Error('NSCocoaErrorDomain Code=640: Could not save the update')],
+    ['native no-space message', new Error('No space left on device')],
+    ['native localized punctuation', new Error('The file could not be saved because there isn’t enough space.')],
+  ])('reports %s during Mac preparation, then retries without closing or reopening', async (_name, error) => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
+    updater.downloadUpdate.mockImplementationOnce(() => new Promise<string[]>((_resolve, reject) => {
+      nativeEvents.once('error', reject);
+      events.emit('update-downloaded', { version: '0.2.38' });
+    }));
+    const api = await start();
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.38', phase: 'preparing' });
+    expect(() => api.prepareUpdate('0.2.38')).toThrow('no longer ready');
+    nativeEvents.emit('error', error);
+    await flush();
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Not enough free space for the update. Free up space and retry.', retryable: true });
+    expect(JSON.stringify(api.getUpdateStatus())).not.toContain('/private');
+    updater.checkForUpdates.mockImplementationOnce(async () => {
+      events.emit('update-available', { version: '0.2.38' });
+      return null;
+    });
+    await api.retryUpdate();
+    await flush();
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(2);
+    events.emit('update-downloaded', { version: '0.2.38' });
+    nativeEvents.emit('update-downloaded', {}, '', '', new Date(), 'http://127.0.0.1:12345/update.zip');
+    expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
+    api.prepareUpdate('0.2.38');
+    expect(api.getUpdateStatus()).toEqual({ state: 'idle' });
+    expect(updater.disableDifferentialDownload).toBe(true);
+    expect(updater.autoInstallOnAppQuit).toBe(true);
+    expect(updater.autoRunAppAfterInstall).toBe(false);
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(nativeUpdater.quitAndInstall).not.toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+    expect(app.relaunch).not.toHaveBeenCalled();
+  });
+
+  it('keeps an out-of-space download retryable and reserves connection guidance for network errors', async () => {
+    const api = await start();
+    updater.downloadUpdate.mockRejectedValueOnce(Object.assign(new Error('write failed'), { code: 'ENOSPC' }));
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Not enough free space for the update. Free up space and retry.', retryable: true });
+    expect(updater.disableDifferentialDownload).toBe(false);
+    updater.checkForUpdates.mockImplementationOnce(async () => {
+      events.emit('update-available', { version: '0.2.38' });
+      return null;
+    });
+    updater.downloadUpdate.mockRejectedValueOnce(new Error('Connection interrupted'));
+    await api.retryUpdate();
+    await flush();
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not download the update. Check your connection and retry.' });
     expect(app.quit).not.toHaveBeenCalled();
   });
 

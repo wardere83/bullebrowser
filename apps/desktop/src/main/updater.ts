@@ -32,6 +32,12 @@ function isCurrentCandidate(version: string): boolean {
   return isNewerVersion(version) && (!highestVersion || compare(version, highestVersion) >= 0);
 }
 
+function isDiskFull(error: Error): boolean {
+  const code = (error as Error & { code?: string | number }).code;
+  return code === 'ENOSPC' || code === 640 || code === '640'
+    || /\bENOSPC\b|\bno space left\b|\b(?:not enough|isn['’]?t enough|is not enough)\s+(?:free\s+|disk\s+)?space\b|\bdisk (?:is )?full\b|\bNSFileWriteOutOfSpace\b|\bNSCocoaErrorDomain\b.{0,24}\b640\b/i.test(error.message);
+}
+
 export function getUpdateStatus(): UpdateStatus {
   if (latest.state !== 'idle' && !isNewerVersion(latest.version)) latest = { state: 'idle' };
   if (highestVersion && !isNewerVersion(highestVersion)) highestVersion = undefined;
@@ -103,6 +109,10 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   autoUpdater.allowDowngrade = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.autoRunAppAfterInstall = false;
+  // MacUpdater otherwise copies the verified ZIP a second time for a future
+  // differential download. Squirrel needs its own ZIP and unpacked bundle too;
+  // keep that disk space available for preparation instead of a spare archive.
+  autoUpdater.disableDifferentialDownload = isMac;
 
   const clearStaging = () => {
     if (stagingTimer) clearTimeout(stagingTimer);
@@ -120,6 +130,10 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     clearStaging();
     downloadVersion = undefined;
     if (isCurrentCandidate(version)) {
+      if (isDiskFull(err)) {
+        send({ state: 'error', version, message: 'Not enough free space for the update. Free up space and retry.', retryable: true });
+        return;
+      }
       const message = phase === 'download'
         ? 'Could not download the update. Check your connection and retry.'
         : phase === 'prepare' ? 'Could not prepare the update. Please retry.' : 'Could not check for the update. Please retry.';
