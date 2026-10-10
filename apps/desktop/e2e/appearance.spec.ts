@@ -39,6 +39,10 @@ async function launch() {
   await win.waitForLoadState('domcontentloaded');
   await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
   await expect.poll(() => app.evaluate(() => Boolean((globalThis as Record<string, unknown>).__bbTest))).toBe(true);
+  // The panel shell appears before settings and the first conversation finish
+  // loading. Its empty-chat view confirms the session exists before tests seed
+  // history or send a task.
+  await expect(win.getByRole('heading', { name: 'What can I help you with?', exact: true })).toBeVisible();
   return { app, win };
 }
 
