@@ -37,10 +37,12 @@ export function DocumentsTab({
   documents,
   canManage,
   focusDocumentId,
+  onReviewProfile,
 }: {
   documents: AsyncResult<KnowledgeDocument[]>;
   canManage: boolean;
   focusDocumentId: string | null;
+  onReviewProfile(): void;
 }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -95,6 +97,17 @@ export function DocumentsTab({
       </Card>
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
       {notice && <InlineAlert tone="success">{notice}</InlineAlert>}
+      {documents.value?.some((document) => document.status === 'ready') && (
+        <Card>
+          <h2 className={text.h2}>Connect your entity to funding</h2>
+          <p className={text.body}>
+            Review and approve your entity’s profile from these documents. The four funding options
+            then use it automatically to find relevant grants, assess alignment, explore funder
+            priorities and guide your proposal.
+          </p>
+          <Button onClick={onReviewProfile}>Review entity profile</Button>
+        </Card>
+      )}
       {documents.state === 'loading' && <LoadingBlock label="Loading documents" />}
       {documents.error && (
         <InlineAlert tone="error" action={<Button onClick={documents.reload}>Try again</Button>}>

@@ -51,7 +51,7 @@ describe('the four workflows', () => {
 
   it('lead to the right screens', () => {
     expect(WORKFLOWS.map(({ route, params }) => ({ route, params }))).toEqual([
-      { route: 'opportunities', params: {} },
+      { route: 'opportunities', params: { tailored: true } },
       { route: 'rfp', params: { view: 'alignment' } },
       { route: 'rfp', params: { view: 'priorities' } },
       { route: 'guide', params: {} },

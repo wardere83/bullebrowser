@@ -47,7 +47,7 @@ export type RfpView = 'analysis' | 'alignment' | 'priorities';
  * key to its own entry here and nowhere else.
  */
 export interface WorkspaceParams {
-  opportunities: { view?: 'search' | 'saved' | 'portals'; opportunityId?: string };
+  opportunities: { view?: 'search' | 'saved' | 'portals'; opportunityId?: string; tailored?: boolean };
   knowledge: { tab?: KnowledgeTab; documentId?: string; field?: ProfileFieldId };
   rfp: { rfpId?: string; view?: RfpView };
   guide: { guideId?: string; rfpId?: string; sectionId?: string };
@@ -111,14 +111,17 @@ export function findJob(
 
 /**
  * The funding document the user has open in the workspace, if any: the one the
- * RFP Analysis screen was opened with. The assistant panel sends it with each
+ * RFP Analysis or Proposal Guide screen was opened with. The assistant sends it with each
  * message so answers can be about that document.
  */
 export function focusedRfpId(
   state: Pick<WorkspaceData, 'identity' | 'route' | 'params'>,
 ): string | undefined {
-  if (state.route !== 'rfp' || !activeOrganization(state.identity)) return undefined;
-  return (state.params as WorkspaceParams['rfp']).rfpId || undefined;
+  if (!activeOrganization(state.identity)) return undefined;
+  if (state.route === 'rfp' || state.route === 'guide') {
+    return (state.params as WorkspaceParams['rfp'] | WorkspaceParams['guide']).rfpId || undefined;
+  }
+  return undefined;
 }
 
 /** Must agree with isStartPage() in the tab manager and the check in App. */

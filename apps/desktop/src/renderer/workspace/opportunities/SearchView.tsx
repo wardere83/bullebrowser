@@ -2,7 +2,7 @@
 // sources returned. The filters and the last result are kept for the visit, so
 // looking at another screen and coming back loses nothing.
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   FundingSourceInfo,
   OpportunityFilters,
@@ -42,6 +42,9 @@ export interface SearchViewProps {
   now: number;
   /** A listing another screen asked to open here. */
   linkedOpportunityId?: string;
+  /** An explicit funding action starts a search using the entity's approved profile. */
+  tailored: boolean;
+  visit: number;
   onDismissLinked(): void;
   onOpenPortals(): void;
 }
@@ -52,12 +55,15 @@ export function SearchView({
   sources,
   now,
   linkedOpportunityId,
+  tailored,
+  visit,
   onDismissLinked,
   onOpenPortals,
 }: SearchViewProps) {
   const { columns } = useWorkspaceLayout();
   const navigate = useWorkspaceStore((state) => state.navigate);
   const setup = useWorkspaceStore((state) => state.setup);
+  const setupStatus = useWorkspaceStore((state) => state.setupStatus);
   const maySuggest = useCan('knowledge.read');
   const alive = useAlive();
 
@@ -80,6 +86,7 @@ export function SearchView({
 
   const [suggestion, setSuggestion] = useScreenState<Suggestion | null>(SUGGESTION_KEY, null);
   const [suggesting, setSuggesting] = useState(false);
+  const suggestingRef = useRef(false);
   const [suggestProblem, setSuggestProblem] = useState<
     { kind: 'empty' } | { kind: 'failed'; message: string } | null
   >(null);
@@ -112,14 +119,17 @@ export function SearchView({
     announce('Filters reset.');
   };
 
-  const suggest = async () => {
-    if (suggesting) return;
+  const suggest = async (searchAutomatically = false) => {
+    if (suggestingRef.current) return;
     const organizationId = currentOrganizationId();
+    const wanted = () => alive.current && currentOrganizationId() === organizationId &&
+      useWorkspaceStore.getState().visit === visit;
+    suggestingRef.current = true;
     setSuggesting(true);
     setSuggestProblem(null);
     try {
       const answer = await unwrap(fundingBridge().opportunities.suggestFilters());
-      if (!alive.current || currentOrganizationId() !== organizationId) return;
+      if (!wanted()) return;
       const basis = readBasis(answer?.basis);
       const suggested = answer?.filters;
       // Filters that come without a reason are not taken: the person must be
@@ -129,13 +139,19 @@ export function SearchView({
         return;
       }
       setSuggestion({ basis, previous: draft });
-      setStored(applySuggestion(draft, suggested));
-      announce('Filters set from your approved profile. Review them before you search.');
+      const next = applySuggestion(draft, suggested);
+      setStored(next);
+      announce(searchAutomatically
+        ? 'Searching official funding sources using your approved profile.'
+        : 'Filters set from your approved profile. Review them before you search.');
+      const reading = readDraft(next);
+      if (searchAutomatically && reading.ok && wanted()) await runSearch(reading.filters);
     } catch (error) {
-      if (!alive.current) return;
+      if (!wanted()) return;
       const failed = toCallError(error);
       if (failed.code !== 'CANCELLED') setSuggestProblem({ kind: 'failed', message: failed.message });
     } finally {
+      suggestingRef.current = false;
       if (alive.current) setSuggesting(false);
     }
   };
@@ -143,6 +159,17 @@ export function SearchView({
   // Suggestions rest on approved statements only; without one there is nothing to draw on.
   const profileReady = setup ? setup.readyForTailoredGuidance : true;
   const openProfile = () => navigate('knowledge', { tab: 'profile' });
+
+  // Ordinary navigation keeps the person's search. Only choosing the grant
+  // workflow launches a new entity search, once per visit after setup loads.
+  const launch = useRef(suggest);
+  launch.current = suggest;
+  const launchedVisit = useRef<number | null>(null);
+  useEffect(() => {
+    if (!tailored || !organization || setupStatus !== 'ready' || !maySuggest || !profileReady || suggesting || launchedVisit.current === visit) return;
+    launchedVisit.current = visit;
+    void launch.current(true);
+  }, [tailored, organization, setupStatus, visit, maySuggest, profileReady, suggesting]);
 
   const actions = (
     <>
@@ -154,7 +181,7 @@ export function SearchView({
           disabled={!profileReady}
           onClick={() => void suggest()}
         >
-          Use our approved profile
+          Use your approved profile
         </Button>
       )}
       <Button size="sm" variant="quiet" onClick={reset}>
@@ -200,7 +227,7 @@ export function SearchView({
       {suggestion && (
         <InlineAlert tone="info" title="Filters set from your approved profile.">
           <span>
-            Each reason below comes from your approved profile. Change anything before you search.
+            Each reason below comes from your approved profile. Adjust the filters to refine your search.
           </span>
           <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
             {suggestion.basis.map((line) => (

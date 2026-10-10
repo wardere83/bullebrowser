@@ -8,11 +8,13 @@ import { useBrowserStore } from '../state/browser-store.js';
 import {
   activeOrganization,
   focusedRfpId,
+  isStartPageUrl,
   openWorkspace,
+  useRouteParams,
   useWorkspaceStore,
 } from '../state/workspace-store.js';
 import { Icon } from '../workspace/ui/icons.js';
-import { WORKFLOWS, workflowForSkill, type Workflow } from '../workspace/workflows.js';
+import { WORKFLOWS, workflowForSkill, workflowLocation, type Workflow } from '../workspace/workflows.js';
 import { AGENT_PROMPT_EVENT } from '../lib/url.js';
 import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
@@ -56,6 +58,15 @@ function browserBridge(): BrowserBridge {
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
   const showSettings = useBrowserStore((s) => s.showSettings);
+  const workspaceVisible = useBrowserStore((state) =>
+    state.tabs.some(
+      (tab) => tab.active && tab.id === state.workspaceTabId && isStartPageUrl(tab.url),
+    ),
+  );
+  const knowledgeOpen = useWorkspaceStore((state) => state.route === 'knowledge');
+  const knowledgeParams = useRouteParams('knowledge');
+  const entityInfoSelected =
+    workspaceVisible && knowledgeOpen && (knowledgeParams.tab ?? 'documents') === 'documents';
   const setCurrent = useAgentStore((s) => s.setCurrent);
   // The history list renders from this; without the selector the identifier is
   // simply undefined and opening History throws.
@@ -518,14 +529,14 @@ export function AiPanel() {
         />
       )}
       <header className="flex items-center justify-end gap-2 px-4 py-3">
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
           <button
             type="button"
             onClick={async () => {
               setConversations(await browserBridge().conversations.list());
               setShowHistory((v) => !v);
             }}
-            className={`rounded-md px-2 py-1 text-xs transition-colors ${
+            className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
               showHistory ? 'text-ink-primary' : 'text-ink-secondary hover:text-ink-primary'
             }`}
           >
@@ -534,9 +545,25 @@ export function AiPanel() {
           <button
             type="button"
             onClick={createConversation}
-            className="rounded-md px-2 py-1 text-xs text-ink-secondary transition-colors hover:text-ink-primary"
+            className="whitespace-nowrap rounded-md px-2 py-1 text-xs text-ink-secondary transition-colors hover:text-ink-primary"
           >
             New chat
+          </button>
+          <button
+            type="button"
+            aria-current={entityInfoSelected ? 'page' : undefined}
+            onClick={() => {
+              setShowHistory(false);
+              void openWorkspace('knowledge', { tab: 'documents' });
+            }}
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs transition-colors ${
+              entityInfoSelected
+                ? 'border-primary/60 bg-primary/10 text-ink-primary'
+                : 'border-line/50 text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
+            }`}
+          >
+            <Icon name="upload" size={13} />
+            Upload Entity’s Info
           </button>
         </div>
       </header>
@@ -571,10 +598,11 @@ export function AiPanel() {
           <EmptyState
             selectedSkillId={skillId}
             onWorkflow={(workflow) => {
-              // Opens the workflow's screen and sets its rules for this chat.
-              // Nothing is sent: the next message is still the user's to write.
+              // Apply this workflow to the chat and open its funding screen.
+              // Discovery also starts the entity's search through its consent gate.
               setSkillId(workflow.skillId);
-              void openWorkspace(workflow.route, workflow.params);
+              const destination = workflowLocation(workflow, useWorkspaceStore.getState());
+              void openWorkspace(destination.route, destination.params);
               textareaRef.current?.focus();
             }}
           />

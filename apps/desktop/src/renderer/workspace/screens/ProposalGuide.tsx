@@ -53,6 +53,15 @@ export function ProposalGuide() {
     [id],
   );
   const [rfpId, setRfpId] = useState(params.rfpId ?? '');
+  useEffect(() => {
+    setRfpId(params.rfpId ?? '');
+  }, [params.rfpId]);
+  useEffect(() => {
+    if (params.rfpId === undefined && guides.state === 'ready' && !guides.refreshing &&
+      guide.state === 'ready' && !guide.refreshing && guide.value?.id === id && guide.value.rfpId) {
+      navigate('guide', { ...params, rfpId: guide.value.rfpId });
+    }
+  }, [params, guides.state, guides.refreshing, guide.state, guide.refreshing, guide.value, id, navigate]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -95,7 +104,10 @@ export function ProposalGuide() {
         <Card>
           <h2 className={text.h2}>Start a guide</h2>
           <Field label="Funding document for this guide">
-            <Select value={rfpId} onChange={(event) => setRfpId(event.target.value)}>
+            <Select value={rfpId} onChange={(event) => {
+              setRfpId(event.target.value);
+              navigate('guide', { rfpId: event.target.value });
+            }}>
               <option value="">General guide — no RFP</option>
               {rfps.value?.map((rfp) => (
                 <option key={rfp.id} value={rfp.id}>
@@ -139,7 +151,10 @@ export function ProposalGuide() {
           <Field label="Saved proposal guide">
             <Select
               value={id}
-              onChange={(event) => navigate('guide', { guideId: event.target.value })}
+              onChange={(event) => navigate('guide', {
+                guideId: event.target.value,
+                rfpId: guides.value?.find((entry) => entry.id === event.target.value)?.rfpId ?? '',
+              })}
             >
               {guides.value.map((entry) => (
                 <option key={entry.id} value={entry.id}>

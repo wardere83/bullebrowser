@@ -12,6 +12,7 @@ import {
 import type { TabState } from '../../shared/ipc.js';
 import { CALL_FAILED_MESSAGE } from '../lib/funding-client.js';
 import { useBrowserStore } from '../state/browser-store.js';
+import { WORKFLOWS, workflowLocation } from './workflows.js';
 import {
   activeOrganization,
   connectWorkspace,
@@ -215,7 +216,7 @@ describe('navigate', () => {
 });
 
 describe('focusedRfpId', () => {
-  it('is the funding document the RFP Analysis screen was opened with', async () => {
+  it('is the funding document open in RFP Analysis or Proposal Guide', async () => {
     installBridge(identityWith([riverbend], RIVERBEND));
     await store().refreshIdentity();
     expect(focusedRfpId(store())).toBeUndefined();
@@ -224,6 +225,8 @@ describe('focusedRfpId', () => {
     store().navigate('rfp', { view: 'priorities' });
     expect(focusedRfpId(store())).toBeUndefined();
     store().navigate('guide', { rfpId: 'rfp-7' });
+    expect(focusedRfpId(store())).toBe('rfp-7');
+    store().navigate('guide', {});
     expect(focusedRfpId(store())).toBeUndefined();
   });
 
@@ -240,6 +243,26 @@ describe('focusedRfpId', () => {
 });
 
 // ─────────────────────────────────── identity ──────────────────────────────────
+
+describe('funding workflow context', () => {
+  it('keeps the selected grant across alignment, funder priorities and proposal guidance', () => {
+    const state = { identity: identityWith([riverbend], RIVERBEND), route: 'rfp' as const, params: { rfpId: 'selected-grant' } };
+    for (const workflow of WORKFLOWS.filter((entry) => entry.route === 'rfp' || entry.route === 'guide')) {
+      expect(workflowLocation(workflow, state).params).toMatchObject({ rfpId: 'selected-grant' });
+    }
+    const alignment = WORKFLOWS.find((entry) => entry.id === 'assess_alignment')!;
+    expect(workflowLocation(alignment, { ...state, route: 'guide', params: { rfpId: 'selected-grant' } })).toEqual({
+      route: 'rfp', params: { view: 'alignment', rfpId: 'selected-grant' },
+    });
+  });
+
+  it('starts a tailored discovery and does not carry a grant without an active entity', () => {
+    const discovery = WORKFLOWS.find((entry) => entry.id === 'find_opportunities')!;
+    expect(workflowLocation(discovery, { identity: null, route: 'rfp', params: { rfpId: 'old-grant' } })).toEqual(discovery);
+    const alignment = WORKFLOWS.find((entry) => entry.id === 'assess_alignment')!;
+    expect(workflowLocation(alignment, { identity: null, route: 'rfp', params: { rfpId: 'old-grant' } })).toEqual(alignment);
+  });
+});
 
 describe('identity', () => {
   it('loads identity, then the setup status and jobs of the active organization', async () => {

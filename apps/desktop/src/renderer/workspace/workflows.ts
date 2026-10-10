@@ -5,7 +5,7 @@
 // `skillId` names the set of rules the assistant follows for that workflow; the
 // panel passes it with the user's next message.
 
-import type { WorkspaceLocation } from '../state/workspace-store.js';
+import { activeOrganization, type WorkspaceData, type WorkspaceLocation, type WorkspaceParams } from '../state/workspace-store.js';
 import type { IconName } from './ui/icons.js';
 
 export type WorkflowId =
@@ -31,7 +31,7 @@ export const WORKFLOWS: readonly Workflow[] = [
     description:
       'Search official funding sources and filter by place, applicant type, amount and deadline.',
     route: 'opportunities',
-    params: {},
+    params: { tailored: true },
     skillId: 'find_opportunities',
     icon: 'search',
   },
@@ -70,4 +70,25 @@ export const WORKFLOWS: readonly Workflow[] = [
 /** The workflow a skill id belongs to, if it is one of the four. */
 export function workflowForSkill(skillId: string | null | undefined): Workflow | undefined {
   return WORKFLOWS.find((workflow) => workflow.skillId === skillId);
+}
+
+/** Keep the grant the person selected when moving between its funding workflows. */
+export function workflowLocation(
+  workflow: Workflow,
+  state: Pick<WorkspaceData, 'identity' | 'route' | 'params'>,
+): WorkspaceLocation {
+  const rfpId = activeOrganization(state.identity)
+    ? state.route === 'rfp'
+      ? (state.params as WorkspaceParams['rfp']).rfpId
+      : state.route === 'guide'
+        ? (state.params as WorkspaceParams['guide']).rfpId
+        : undefined
+    : undefined;
+  if (rfpId && workflow.route === 'rfp') {
+    return { route: 'rfp', params: { ...workflow.params, rfpId } };
+  }
+  if (rfpId && workflow.route === 'guide') {
+    return { route: 'guide', params: { ...workflow.params, rfpId } };
+  }
+  return workflow;
 }

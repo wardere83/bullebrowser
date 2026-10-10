@@ -47,6 +47,7 @@ export function KnowledgeHub() {
               documents={documents}
               canManage={canManage}
               focusDocumentId={request.documentId}
+              onReviewProfile={() => open('profile')}
             />
           )}
           {tab === 'profile' && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ALIGNMENT_FINDING_LABELS,
   RFP_SECTION_LABELS,
@@ -232,6 +232,9 @@ export function RfpAnalysis() {
   const id = params.rfpId ?? documents.value?.[0]?.id ?? '';
   const view: RfpView = params.view ?? 'analysis';
   const document = documents.value?.find((entry) => entry.id === id);
+  useEffect(() => {
+    if (!params.rfpId && id) navigate('rfp', { rfpId: id, view });
+  }, [params.rfpId, id, view, navigate]);
   const analysis = useAsync(
     () => (id ? unwrap(fundingBridge().rfps.analysis(id)) : Promise.resolve(null)),
     [id],

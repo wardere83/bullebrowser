@@ -113,6 +113,8 @@ export function Opportunities() {
                 sources={sources}
                 now={now}
                 linkedOpportunityId={params.opportunityId}
+                tailored={params.tailored === true}
+                visit={visit}
                 onDismissLinked={() => openView('search')}
                 onOpenPortals={() => openView('portals')}
               />

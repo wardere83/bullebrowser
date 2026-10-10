@@ -208,7 +208,9 @@ export function useOpportunitySearch(runWithConsent: RunWithConsent): Opportunit
       setAttempted(filters);
       try {
         const answer = await runWithConsent(() =>
-          unwrap(fundingBridge().opportunities.search(filters)),
+          wanted()
+            ? unwrap(fundingBridge().opportunities.search(filters))
+            : Promise.reject(new FundingCallError('CANCELLED', 'The search was superseded.')),
         );
         if (!wanted()) return 'superseded';
         const read = readSearchResult(answer);
