@@ -30,7 +30,7 @@ export function TopBar() {
 
   useEffect(() => {
     setDraftUrl(active?.url === 'about:blank' ? '' : (active?.url ?? ''));
-  }, [active?.url]);
+  }, [active?.id, active?.url]);
 
   useEffect(() => {
     const handler = () => inputRef.current?.select();
@@ -40,7 +40,7 @@ export function TopBar() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!active) return;
+    if (!active || !draftUrl.trim()) return;
     const action = parseAddressBarInput(draftUrl, searchProvider);
     if (action.type === 'agent') {
       // BulleBrowser address bar → AI agent. Open the panel and hand
@@ -49,7 +49,7 @@ export function TopBar() {
       window.dispatchEvent(
         new CustomEvent<string>(AGENT_PROMPT_EVENT, { detail: action.prompt }),
       );
-      setDraftUrl('');
+      setDraftUrl(active.url === 'about:blank' ? '' : active.url);
       return;
     }
     void window.bullebrowser.tabs.navigate(active.id, action.url);

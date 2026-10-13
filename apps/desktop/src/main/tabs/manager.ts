@@ -25,6 +25,10 @@ interface ManagedTab {
   title: string;
   url: string;
   loading: boolean;
+  loadError?: TabState['loadError'];
+  // Chromium can report the previous about:blank document before a failed
+  // provisional load. Keep the requested main-frame address independently.
+  navigationUrl?: string;
   faviconUrl?: string;
   // The tab whose page opened this one (a target=_blank link, window.open).
   // Closing it goes back there, as in Chrome, instead of to whatever tab
@@ -95,9 +99,8 @@ class TabManager {
     this.win.contentView.addChildView(view);
     this.wireEvents(tab);
     this.activate(id);
-    // Kick off the load but don't let a failed navigation (offline, bad
-    // cert, dead link) reject tab creation — the WebContents renders its
-    // own error page and did-fail-load clears the loading state.
+    // A failed load is published to the chrome, which owns the retry page.
+    // Keep tab creation usable even when the network or target is unavailable.
     void view.webContents.loadURL(tab.url).catch(() => {});
     this.broadcast();
     return this.toState(tab);
@@ -153,12 +156,15 @@ class TabManager {
   async navigate(id: string, url: string): Promise<void> {
     const tab = this.find(id);
     if (!tab) return;
-    // Failed navigations show an error page in the view; don't reject.
+    this.beginNavigation(tab, url);
+    // Failed navigations show the chrome's retry page; don't reject.
     await tab.view.webContents.loadURL(url).catch(() => {});
   }
 
   async reload(id: string): Promise<void> {
-    this.find(id)?.view.webContents.reload();
+    const tab = this.find(id);
+    if (tab?.loadError) await this.navigate(id, tab.url);
+    else tab?.view.webContents.reload();
   }
 
   async back(id: string): Promise<void> {
@@ -243,6 +249,7 @@ class TabManager {
       title: t.title || 'Untitled',
       url: t.url,
       loading: t.loading,
+      ...(t.loadError ? { loadError: t.loadError } : {}),
       canGoBack: wc.navigationHistory.canGoBack(),
       canGoForward: wc.navigationHistory.canGoForward(),
       faviconUrl: t.faviconUrl,
@@ -253,6 +260,12 @@ class TabManager {
   private wireEvents(tab: ManagedTab) {
     const wc = tab.view.webContents;
     wc.on('dom-ready', () => this.refreshBrowsingCloud(tab));
+    wc.on('did-start-navigation', (event) => {
+      if (event.isMainFrame && !event.isSameDocument) this.beginNavigation(tab, event.url);
+    });
+    wc.on('did-redirect-navigation', (event) => {
+      if (event.isMainFrame) this.beginNavigation(tab, event.url);
+    });
     wc.on('did-start-loading', () => {
       tab.loading = true;
       this.broadcast();
@@ -262,10 +275,13 @@ class TabManager {
       this.broadcast();
     });
     // ERR_ABORTED (-3) is normal (redirects, user navigation); ignore it.
-    // Real failures clear the spinner so the chrome doesn't hang on "Loading…".
-    wc.on('did-fail-load', (_e, errorCode, _desc, _url, isMainFrame) => {
-      if (isMainFrame && errorCode !== -3) {
+    // Subframe failures and superseded loads must not replace a working page.
+    wc.on('did-fail-load', (_e, errorCode, _desc, url, isMainFrame) => {
+      if (isMainFrame && errorCode !== -3 && (!tab.navigationUrl || tab.navigationUrl === url)) {
+        if (url) tab.url = url;
         tab.loading = false;
+        tab.loadError = { code: errorCode, message: loadErrorMessage(errorCode) };
+        this.relayout();
         this.broadcast();
       }
     });
@@ -278,15 +294,19 @@ class TabManager {
       this.broadcast();
     });
     wc.on('did-navigate', (_e, url) => {
+      if (isStartPage(url) && tab.navigationUrl && !isStartPage(tab.navigationUrl)) return;
       tab.url = url;
+      tab.navigationUrl = url;
       // Leaving (or landing on) the start page flips whether this view should
       // be visible at all — see isStartPage.
       this.relayout();
       this.broadcast();
       historyStore.record({ url, title: tab.title, visitedAt: Date.now() });
     });
-    wc.on('did-navigate-in-page', (_e, url) => {
+    wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
+      if (!isMainFrame) return;
       tab.url = url;
+      tab.navigationUrl = url;
       this.relayout();
       this.broadcast();
     });
@@ -402,6 +422,15 @@ class TabManager {
     this.win.webContents.send(IPC.UI_ASK_AGENT, prompt);
   }
 
+  private beginNavigation(tab: ManagedTab, url: string) {
+    tab.navigationUrl = url;
+    tab.url = url;
+    tab.loading = true;
+    delete tab.loadError;
+    this.relayout();
+    this.broadcast();
+  }
+
   private relayout() {
     if (!this.win) return;
     const [contentWidth = 0, contentHeight = 0] = this.win.getContentSize();
@@ -415,7 +444,7 @@ class TabManager {
           width: Math.max(0, contentWidth - right),
           height: Math.max(0, contentHeight - top),
         });
-        t.view.setVisible(!isStartPage(t.url));
+        t.view.setVisible(!isStartPage(t.url) && !t.loadError);
       } else {
         t.view.setBounds({ x: 0, y: top, width: 0, height: 0 });
         t.view.setVisible(false);
@@ -427,6 +456,14 @@ class TabManager {
     if (!this.win) return;
     this.win.webContents.send(IPC.TAB_UPDATED, this.list());
   }
+}
+
+function loadErrorMessage(code: number): string {
+  if (code <= -200 && code >= -299) return 'This site’s secure connection could not be verified. Check the address or try again later.';
+  if (code === -105 || code === -137) return 'This site could not be found. Check the address and your internet connection.';
+  if (code === -106) return 'You appear to be offline. Check your internet connection and retry.';
+  if (code === -7 || code === -118) return 'This site took too long to respond. Check your connection and retry.';
+  return 'The connection to this page failed. Check the address and your connection, then retry.';
 }
 
 function truncate(s: string, max: number): string {

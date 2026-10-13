@@ -315,7 +315,7 @@ test('dictation releases permission granted after cancellation', async () => {
 });
 
 
-test('updates show progress, keep browsing open, clear after preparation and return for a later release', async () => {
+test('updates show progress, keep browsing open, clear after acknowledgment and return for a later release', async () => {
   const server = createServer((_request, response) => {
     response.setHeader('Content-Type', 'text/html');
     response.end('<!doctype html><title>Work during update</title><h1>Continue working</h1>');
@@ -359,7 +359,7 @@ test('updates show progress, keep browsing open, clear after preparation and ret
       await window.bullebrowser.tabs.navigate(tabs.find(tab => tab.active)!.id, target);
     }, url);
     const notice = win.getByRole('region', { name: 'App update' });
-    const update = win.getByRole('button', { name: 'Update App', exact: true });
+    const update = win.getByRole('button', { name: 'Keep browsing', exact: true });
     await expect(notice).toBeHidden();
     await app.evaluate(({ BrowserWindow, ipcMain }) => {
       BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 25 });
@@ -389,8 +389,9 @@ test('updates show progress, keep browsing open, clear after preparation and ret
       BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.50' });
     });
     await expect(update).toBeVisible();
+    await expect(notice).toContainText('v0.2.50 ready for next launch');
     await expect(notice).toContainText('Applies after you quit and reopen');
-    await expect(update).toHaveAttribute('title', /without closing the app/);
+    await expect(update).toHaveAttribute('title', /Keep this session open/);
     await update.click();
     await expect(notice).toContainText('Couldn’t prepare. Try again.');
     await expect(update).toBeEnabled();
@@ -421,6 +422,7 @@ test('updates show progress, keep browsing open, clear after preparation and ret
       BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.51' });
     });
     await expect(update).toBeVisible();
+    await expect(notice).toContainText('v0.2.51 ready for next launch');
     await expect(update).toHaveAttribute('title', /0\.2\.51/);
     await win.screenshot({ path: '/tmp/bulle-background-update.png' });
     await app.evaluate(({ BrowserWindow }) => {

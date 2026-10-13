@@ -22,6 +22,8 @@ import { VoiceOverlay } from './VoiceOverlay.js';
 import { RealtimeVoice } from './RealtimeVoice.js';
 import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
+import { TaskActivity } from './TaskActivity.js';
+import { liveAssistantText } from './task-activity.js';
 import type {
   AppSettings,
   BrowserBridge,
@@ -50,6 +52,7 @@ function toRunAttachments(list: UiAttachment[]): RunAttachment[] {
 }
 
 export const FOCUS_AI_PANEL_EVENT = 'bullebrowser:focus-ai-panel';
+const NO_STEPS: AgentStepEvent[] = [];
 
 function browserBridge(): BrowserBridge {
   return window.bullebrowser;
@@ -73,9 +76,13 @@ export function AiPanel() {
   const conversations = useAgentStore((s) => s.conversations);
   const setConversations = useAgentStore((s) => s.setConversations);
   const startRun = useAgentStore((s) => s.startRun);
+  const prepareRun = useAgentStore((s) => s.prepareRun);
   const status = useAgentStore((s) => s.status);
-  const steps = useAgentStore((s) => s.steps);
-  const currentStep = useAgentStore((s) => s.currentStep);
+  const activity = useAgentStore((s) => s.current ? s.activities[s.current.id] : undefined);
+  const steps = activity?.steps ?? NO_STEPS;
+  const activityStatus = activity?.status ?? 'idle';
+  const currentStep = activity?.currentStep ?? '';
+  const liveReply = activityStatus === 'running' ? liveAssistantText(steps) : '';
   const runId = useAgentStore((s) => s.runId);
   const [draft, setDraft] = useState('');
   // Tasks the user submitted while a run was already going. They run one after
@@ -196,6 +203,7 @@ export function AiPanel() {
       const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
       // The funding document open in the workspace, so the answer can be about it.
       const focusRfpId = focusedRfpId(useWorkspaceStore.getState());
+      prepareRun(current.id);
       // Product answers can finish before IPC returns their handle. Track
       // terminal events first so a completed reply cannot leave Stop stuck on.
       const finished = new Set<string>();
@@ -212,7 +220,9 @@ export function AiPanel() {
           ...(budget ? { budget } : {}),
           ...(focusRfpId ? { focusRfpId } : {}),
         });
-        if (!finished.has(runId)) startRun(runId);
+        if (!finished.has(runId)) startRun(runId, current.id);
+      } catch (error) {
+        useAgentStore.getState().setError(error instanceof Error ? error.message : 'The task could not start. Try again.');
       } finally {
         detach();
       }
@@ -255,10 +265,8 @@ export function AiPanel() {
   // start the next task. sendMessage flips status back to running, so this
   // won't double-fire until the next task finishes.
   useEffect(() => {
-    // `status` only flips to 'running' once agent.run() resolves. Without a
-    // synchronous guard this effect re-fires the moment setQueued changes the
-    // list — status is still 'idle' — and dispatches the whole queue at once
-    // instead of one task after another.
+    // Keep a synchronous dispatch guard as well as the running state, so an
+    // immediate terminal event cannot dispatch the queue before IPC returns.
     if (status !== 'idle' || queued.length === 0 || !current || drainingRef.current || dispatchingRef.current) return;
     const [next, ...rest] = queuedRef.current;
     if (!next) return;
@@ -310,6 +318,7 @@ export function AiPanel() {
     });
     setDraft('');
     setAttachments([]);
+    prepareRun(conversation.id);
     try {
       const result = await runVoiceBrowserTask(window.bullebrowser, {
         conversationId: conversation.id,
@@ -319,13 +328,16 @@ export function AiPanel() {
         ...(context.attachments.length > 0 ? { attachments: toRunAttachments(context.attachments) } : {}),
         ...(focusRfpId ? { focusRfpId } : {}),
       }, signal, (id) => {
-        startRun(id);
+        startRun(id, conversation.id);
         dispatchingRef.current = false;
       });
       await refreshVoiceConversation(window.bullebrowser, conversation.id, {
         current: () => useAgentStore.getState().current,
         refresh: (saved) => useAgentStore.getState().refreshCurrent(saved),
       });
+      if (result.status === 'failed' && useAgentStore.getState().status === 'running') {
+        useAgentStore.getState().setError(result.error ?? result.text);
+      }
       return result;
     } finally {
       dispatchingRef.current = false;
@@ -610,9 +622,10 @@ export function AiPanel() {
         {current?.messages.map((m, i) => (
           <Bubble key={i} role={m.role} content={m.content} />
         ))}
-        {(status === 'running' || status === 'error') && (
-          <ActivityFeed steps={steps} status={status} currentStep={currentStep} />
+        {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call')) && (
+          <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} />
         )}
+        {liveReply && <Bubble role="assistant" content={liveReply} live />}
         {status !== 'running' && <BudgetSpent steps={steps} onContinue={(b) => void sendMessage('Continue the task from where you stopped.', [], b)} />}
       </div>
 
@@ -914,81 +927,6 @@ function HistoryList({
   );
 }
 
-// What the agent is doing, as one quiet line you can open. The raw tool calls
-// are still there — they're just not the default view, because a wall of
-// navigate({"url":…}) is noise to everyone except the person debugging it.
-function ActivityFeed({
-  steps,
-  status,
-  currentStep,
-}: {
-  steps: AgentStepEvent[];
-  status: 'idle' | 'running' | 'error';
-  currentStep: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const actions = steps.filter((s) => s.kind === 'tool_call');
-  const failed = status === 'error';
-  const summary = failed
-    ? currentStep || 'The task stopped.'
-    : (humanStep(steps[steps.length - 1]) ?? 'Working…');
-
-  return (
-    <div
-      className={`mb-5 overflow-hidden rounded-lg border text-[12px] ${
-        failed ? 'border-danger/30 bg-danger/5' : 'border-line/50 bg-surface-muted/30'
-      }`}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left"
-        aria-expanded={open}
-      >
-        {!failed && status === 'running' && (
-          <span className="activity-pulse h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-        )}
-        <span className={`flex-1 truncate ${failed ? 'text-danger' : 'text-ink-primary'}`}>
-          {summary}
-        </span>
-        {actions.length > 0 && (
-          <span className="shrink-0 text-[11px] text-ink-secondary">
-            {actions.length} {actions.length === 1 ? 'step' : 'steps'}
-          </span>
-        )}
-        <span className={`shrink-0 text-ink-secondary transition-transform ${open ? 'rotate-90' : ''}`}>
-          ›
-        </span>
-      </button>
-
-      {open && (
-        <div className="max-h-56 overflow-y-auto border-t border-line/40 px-3 py-2">
-          {steps.length === 0 ? (
-            <div className="text-ink-secondary">Nothing recorded yet.</div>
-          ) : (
-            <ol className="space-y-1.5">
-              {steps.map((s, i) => {
-                const line = humanStep(s);
-                if (!line) return null;
-                return (
-                  <li key={i} className={s.kind === 'error' ? 'text-danger' : 'text-ink-secondary'}>
-                    <div>{line}</div>
-                    {s.kind === 'tool_call' && s.detail && (
-                      <div className="mt-0.5 truncate font-mono text-[10.5px] text-ink-secondary/70">
-                        {s.detail}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // The once-per-task browsing consent, answered in the chat next to the task it
 // belongs to rather than in a modal over the page.
 function AllowAccess({ task }: { task: string }) {
@@ -1086,7 +1024,19 @@ function EmptyState({
   );
 }
 
-function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string }) {
+function MarkdownLink({ href, title, children }: React.ComponentProps<'a'>) {
+  return (
+    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
+// Keep link component identities stable across task events and saved-answer
+// refreshes, so an update cannot replace the anchor the keyboard user focused.
+const CHAT_MARKDOWN_COMPONENTS = { a: MarkdownLink };
+
+function Bubble({ role, content, live = false }: { role: 'user' | 'assistant'; content: string; live?: boolean }) {
   const prose = useRef<HTMLDivElement>(null);
   if (role === 'user') {
     return (
@@ -1100,20 +1050,15 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   // Assistant replies read as plain prose — no card, no border — for a calm,
   // document-like feel. Selectable, with a one-click copy of the whole reply.
   return (
-    <div className="group mb-6">
+    <div className="group mb-6" aria-label={live ? 'Assistant response in progress' : undefined} aria-live={live ? 'polite' : undefined}>
+      {live && <p className="mb-2 text-xs text-ink-secondary">Response in progress</p>}
       <div ref={prose} className="md-prose selectable">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          components={{
-            a: ({ href, title, children }) => (
-              <a href={href} title={title} target="_blank" rel="noopener noreferrer">
-                {children}
-              </a>
-            ),
-          }}
+          components={CHAT_MARKDOWN_COMPONENTS}
         >{content}</ReactMarkdown>
       </div>
-      <CopyButton source={prose} />
+      {!live && <CopyButton source={prose} />}
     </div>
   );
 }
@@ -1179,74 +1124,6 @@ function slashHelpText(): string {
     '',
     'You can always type a task in plain English instead.',
   ].join('\n');
-}
-
-// Plain-English name for each browser action. The tool name and its raw
-// arguments are still shown underneath when the feed is expanded; this is the
-// line a person reads.
-const ACTION_VERB: Record<string, string> = {
-  navigate: 'Opening',
-  read_page: 'Reading the page',
-  getPageMetadata: 'Checking the page',
-  extract: 'Pulling data off the page',
-  listLinks: 'Looking at the links',
-  getSelection: 'Reading the selection',
-  click: 'Clicking',
-  type: 'Typing',
-  press_key: 'Pressing a key',
-  scroll: 'Scrolling',
-  wait_for: 'Waiting for the page',
-  screenshot: 'Taking a screenshot',
-  new_tab: 'Opening a new tab',
-  switch_tab: 'Switching tabs',
-  close_tab: 'Closing a tab',
-  list_tabs: 'Checking open tabs',
-  go_back: 'Going back',
-  go_forward: 'Going forward',
-  reload: 'Reloading',
-  find_elements: 'Finding the controls',
-  select_option: 'Choosing an option',
-};
-
-// Pull the interesting argument out of the raw call so the summary can name
-// what it acted on ("Opening example.com") instead of just the verb.
-function describeTarget(step: AgentStepEvent): string {
-  if (step.kind !== 'tool_call') return '';
-  const input = step.input as Record<string, unknown> | undefined;
-  const url = typeof input?.url === 'string' ? input.url : '';
-  if (url) {
-    try {
-      return new URL(url).hostname.replace(/^www\./, '');
-    } catch {
-      return url;
-    }
-  }
-  const target = typeof input?.target === 'string' ? input.target : '';
-  return target ? `“${target}”` : '';
-}
-
-function humanStep(step: AgentStepEvent | undefined): string | null {
-  if (!step) return null;
-  switch (step.kind) {
-    case 'thinking':
-      return 'Thinking…';
-    case 'tool_call': {
-      const verb = ACTION_VERB[step.toolName] ?? step.toolName;
-      const target = describeTarget(step);
-      return target ? `${verb} ${target}` : verb;
-    }
-    // Results and the final text are not their own line: the action already
-    // said what was happening, and the answer renders as a message.
-    case 'tool_result':
-    case 'text':
-      return null;
-    case 'error':
-      return step.message;
-    case 'budget':
-      return step.detail;
-    case 'done':
-      return 'Done';
-  }
 }
 
 // A task that used its whole step budget stops with a partial answer. Offer to

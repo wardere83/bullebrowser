@@ -213,7 +213,7 @@ describe('background app updates', () => {
     updater.downloadUpdate.mockRejectedValueOnce(new Error('Connection interrupted'));
     events.emit('update-available', { version: '0.2.38' });
     await flush();
-    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not download the update. Check your connection and retry.' });
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Connection interrupted. Retrying automatically; you can keep browsing.' });
     updater.checkForUpdates.mockImplementationOnce(async () => {
       events.emit('update-available', { version: '0.2.38' });
       return null;
@@ -224,6 +224,59 @@ describe('background app updates', () => {
     expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.38' });
     events.emit('update-downloaded', { version: '0.2.38' });
     expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
+    expect(app.quit).not.toHaveBeenCalled();
+  });
+
+  it('automatically recovers a connection reset and keeps the session open', async () => {
+    const api = await start();
+    updater.downloadUpdate.mockRejectedValueOnce(Object.assign(new Error('socket failed'), { code: 'ECONNRESET' }));
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    updater.checkForUpdates.mockImplementationOnce(async () => {
+      events.emit('update-available', { version: '0.2.38' });
+      return null;
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(2);
+    events.emit('update-downloaded', { version: '0.2.38' });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(2);
+    expect(app.quit).not.toHaveBeenCalled();
+    expect(app.relaunch).not.toHaveBeenCalled();
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it('bounds automatic network retries and lets a manual retry start a new attempt', async () => {
+    updater.checkForUpdates.mockImplementation(async () => {
+      events.emit('update-available', { version: '0.2.38' });
+      return null;
+    });
+    updater.downloadUpdate.mockRejectedValue(Object.assign(new Error('socket failed'), { code: 'ECONNRESET' }));
+    const api = await start();
+    for (const delay of [10_000, 20_000, 40_000]) await vi.advanceTimersByTimeAsync(delay);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(4);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(4);
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not download the update. Check your connection and retry.' });
+    await api.retryUpdate();
+    await flush();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(6);
+    expect(app.quit).not.toHaveBeenCalled();
+  });
+
+  it('does not automatically retry a native preparation error even when its cause is a connection reset', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
+    const api = await start();
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    nativeEvents.emit('error', Object.assign(new Error('socket failed'), { code: 'ECONNRESET' }));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not prepare the update. Please retry.' });
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(1);
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(app.quit).not.toHaveBeenCalled();
   });
 
@@ -396,7 +449,7 @@ describe('background app updates', () => {
     updater.downloadUpdate.mockRejectedValueOnce(new Error('Connection interrupted'));
     await api.retryUpdate();
     await flush();
-    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not download the update. Check your connection and retry.' });
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Connection interrupted. Retrying automatically; you can keep browsing.' });
     expect(app.quit).not.toHaveBeenCalled();
   });
 

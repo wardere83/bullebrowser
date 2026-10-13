@@ -117,7 +117,7 @@ export function UpdateBanner() {
           {status.state === 'downloading' && (status.phase === 'preparing'
             ? `Preparing v${status.version}…`
             : `Downloading v${status.version}${progress === null ? '…' : ` · ${progress}%`}`)}
-          {status.state === 'ready' && `v${status.version} ready`}
+          {status.state === 'ready' && `v${status.version} ready for next launch`}
           {status.state === 'deferred' && `v${status.version} available`}
           {status.state === 'error' && `v${status.version} update interrupted`}
         </div>
@@ -145,10 +145,10 @@ export function UpdateBanner() {
           type="button"
           onClick={() => void prepare()}
           disabled={busy}
-          title={`Prepare BulleBrowser ${status.version} without closing the app. Applies after you quit and reopen.`}
+          title={`BulleBrowser ${status.version} is prepared. Keep this session open; the update applies after a normal quit and reopen.`}
           className={actionClass}
         >
-          {busy ? 'Preparing…' : 'Update App'}
+          {busy ? 'Saving…' : 'Keep browsing'}
         </button>
       )}
       {status.state === 'error' && status.retryable !== false && (

@@ -7,6 +7,7 @@ import { SettingsModal } from './components/SettingsModal.js';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { AboutModal } from './components/AboutModal.js';
 import { Splash } from './components/Splash.js';
+import { BrowserPane } from './components/BrowserPane.js';
 import { Workspace } from './workspace/Workspace.js';
 import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
@@ -69,9 +70,8 @@ export function App() {
   // Subscribe to agent steps.
   useEffect(() => {
     return window.bullebrowser.agent.onStep(({ runId, step }) => {
-      const activeRunId = useAgentStore.getState().runId;
-      if (activeRunId && activeRunId !== runId) return;
-      appendStep(step);
+      if (!appendStep(step, runId)) return;
+      const conversationId = useAgentStore.getState().runConversationId;
       // Only a run-level error (no toolName) ends the run. A tool error — a
       // click that matched nothing, a declined confirmation — is reported back
       // to the model, which carries on and usually recovers; treating it as
@@ -88,9 +88,8 @@ export function App() {
         if (useAgentStore.getState().pendingConfirm?.runId === runId) {
           setPendingConfirm(null);
         }
-        const cur = useAgentStore.getState().current;
-        if (cur?.id) {
-          void refreshVoiceConversation(window.bullebrowser, cur.id, {
+        if (conversationId) {
+          void refreshVoiceConversation(window.bullebrowser, conversationId, {
             current: () => useAgentStore.getState().current,
             // Retain progress and errors, and preserve a newer prompt or chat
             // selected while this saved answer is being read.
@@ -152,6 +151,7 @@ export function App() {
           )}
           <div className="min-h-0 flex-1">
             {showIntro && <Splash />}
+            <BrowserPane tab={activeTab} />
             <Workspace visible={showWorkspace} />
           </div>
         </div>

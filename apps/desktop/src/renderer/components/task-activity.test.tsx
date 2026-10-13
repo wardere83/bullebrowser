@@ -1,0 +1,92 @@
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import type { AgentStepEvent } from '../../shared/agent-events.js';
+import { TaskActivity } from './TaskActivity.js';
+import { activityActions, liveAssistantText } from './task-activity.js';
+
+const call = (toolName: string, input: unknown = {}): AgentStepEvent => ({ kind: 'tool_call', toolName, input, detail: 'Raw arguments must stay out of the feed', ts: 1 });
+const result = (toolName: string, output: unknown = {}): AgentStepEvent => ({ kind: 'tool_result', toolName, output, ts: 2 });
+
+describe('real browser task activity', () => {
+  it('marks a step complete only after its matching tool result', () => {
+    const steps = [call('navigate', { url: 'https://www.example.org/funding?private=secret' })];
+    expect(activityActions(steps, 'running')).toMatchObject([{ label: 'Opening example.org', state: 'running' }]);
+    expect(activityActions([...steps, result('read_page')], 'running')[0]?.state).toBe('running');
+    expect(activityActions([...steps, result('navigate')], 'running')[0]?.state).toBe('completed');
+  });
+
+  it('keeps failed attempts visible when a retry succeeds', () => {
+    const steps: AgentStepEvent[] = [
+      call('click', { target: 'Funding options' }),
+      { kind: 'error', toolName: 'click', message: 'The control was not found.', ts: 2 },
+      call('click', { target: 'Open funding' }),
+      result('click'),
+    ];
+    expect(activityActions(steps, 'running')).toMatchObject([
+      { state: 'error', message: 'The control was not found.' }, { state: 'completed' },
+    ]);
+  });
+
+  it('never reports unfinished actions as successful when a run ends or fails', () => {
+    for (const status of ['idle', 'error'] as const) {
+      expect(activityActions([call('read_page'), { kind: 'done', ts: 2 }], status)[0]?.state).toBe('stopped');
+    }
+  });
+
+  it('can identify a source reported by a real page result', () => {
+    expect(activityActions([call('read_page', { tabId: 'tab-1' }), result('read_page', { url: 'https://www.funder.org/grants?token=secret', text: 'Private page excerpt' })], 'running'))
+      .toMatchObject([{ label: 'Reading the page · funder.org', state: 'completed' }]);
+  });
+
+  it('does not expose typed data, raw arguments, page contents or private URL parts', () => {
+    const actions = activityActions([
+      call('type', { target: 'Password', text: 'private-password' }),
+      result('type', 'Private page excerpt'),
+      call('navigate', { url: 'https://private-user:private-password@funder.org/private-path?token=private-token#private-fragment' }),
+      call('navigate', { url: 'malformed-private-url' }),
+    ], 'running');
+    const rendered = JSON.stringify(actions);
+    expect(rendered).toContain('Opening funder.org');
+    expect(rendered).not.toMatch(/private-|Private page|Raw arguments|Password/);
+  });
+
+  it('takes interim replies only from public assistant text events', () => {
+    const steps: AgentStepEvent[] = [
+      { kind: 'thinking', detail: 'Internal model content', ts: 1 },
+      { kind: 'text', text: 'One official source was checked.', ts: 2 },
+      call('read_page'),
+      { kind: 'text', text: 'Two official sources were checked.', ts: 3 },
+      { kind: 'text', text: '  ', ts: 4 },
+    ];
+    expect(liveAssistantText(steps)).toBe('Two official sources were checked.');
+    expect(liveAssistantText([steps[0]!])).toBe('');
+  });
+
+  it('shows the live steps without a click and makes updates accessible', () => {
+    const html = renderToStaticMarkup(<TaskActivity steps={[call('navigate', { url: 'https://funder.org' })]} status="running" currentStep="raw details" />);
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('role="log"');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain('Opening funder.org');
+    expect(html).toContain('In progress');
+    expect(html).not.toContain('raw details');
+    expect(html).not.toContain('Raw arguments');
+  });
+
+  it('keeps completed activity available in a collapsed record', () => {
+    const html = renderToStaticMarkup(<TaskActivity steps={[call('read_page'), result('read_page')]} status="idle" currentStep="" />);
+    expect(html).toContain('Task activity');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('1 step');
+    expect(html).not.toContain('role="log"');
+  });
+
+  it('shows run-level errors openly without inventing a completed step', () => {
+    const html = renderToStaticMarkup(<TaskActivity steps={[call('read_page')]} status="error" currentStep="The connection was interrupted." />);
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('The connection was interrupted.');
+    expect(html).toContain('Stopped');
+    expect(html).not.toContain('>Done<');
+  });
+});

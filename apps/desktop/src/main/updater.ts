@@ -12,6 +12,8 @@ const { autoUpdater } = electronUpdater;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const FOCUS_CHECK_INTERVAL_MS = 60 * 1000;
 const NATIVE_STAGING_TIMEOUT_MS = 5 * 60 * 1000;
+const MAX_CONNECTION_RETRIES = 3;
+const CONNECTION_RETRY_BASE_MS = 10_000;
 
 let latest: UpdateStatus = { state: 'idle' };
 let highestVersion: string | undefined;
@@ -36,6 +38,12 @@ function isDiskFull(error: Error): boolean {
   const code = (error as Error & { code?: string | number }).code;
   return code === 'ENOSPC' || code === 640 || code === '640'
     || /\bENOSPC\b|\bno space left\b|\b(?:not enough|isn['’]?t enough|is not enough)\s+(?:free\s+|disk\s+)?space\b|\bdisk (?:is )?full\b|\bNSFileWriteOutOfSpace\b|\bNSCocoaErrorDomain\b.{0,24}\b640\b/i.test(error.message);
+}
+
+function isConnectionInterrupted(error: Error): boolean {
+  const code = (error as Error & { code?: string | number }).code;
+  return ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH', 'ECONNREFUSED'].includes(String(code))
+    || /\b(?:ERR_(?:CONNECTION_RESET|CONNECTION_CLOSED|CONNECTION_TIMED_OUT|NETWORK_CHANGED|INTERNET_DISCONNECTED)|ECONNRESET|ETIMEDOUT|EAI_AGAIN)\b|\b(?:network|connection)\s+(?:timeout|timed out|interrupted|reset)|\b(?:HTTP|status(?: code)?)\s*[:=]?\s*(?:408|429|50[234])\b/i.test(error.message);
 }
 
 export function getUpdateStatus(): UpdateStatus {
@@ -90,6 +98,9 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   let stagingFeedUrl: string | undefined;
   let nativePreparedVersion: string | undefined;
   let stagingTimer: ReturnType<typeof setTimeout> | undefined;
+  let connectionRetryTimer: ReturnType<typeof setTimeout> | undefined;
+  let connectionRetryVersion: string | undefined;
+  let connectionRetryAttempts = 0;
   let lastCheckTime = -Infinity;
   const isMac = process.platform === 'darwin';
 
@@ -121,6 +132,29 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     stagingFeedUrl = undefined;
   };
 
+  const clearConnectionRetry = () => {
+    if (connectionRetryTimer) clearTimeout(connectionRetryTimer);
+    connectionRetryTimer = undefined;
+  };
+
+  const scheduleConnectionRetry = (version: string): boolean => {
+    if (connectionRetryVersion !== version) {
+      connectionRetryVersion = version;
+      connectionRetryAttempts = 0;
+    }
+    if (connectionRetryAttempts >= MAX_CONNECTION_RETRIES) return false;
+    clearConnectionRetry();
+    const delay = CONNECTION_RETRY_BASE_MS * (2 ** connectionRetryAttempts);
+    connectionRetryAttempts += 1;
+    connectionRetryTimer = setTimeout(() => {
+      connectionRetryTimer = undefined;
+      if (!disposed && latest.state === 'error' && latest.version === version && isCurrentCandidate(version)) {
+        void check();
+      }
+    }, delay);
+    return true;
+  };
+
   const failed = (err: Error) => {
     if (disposed) return;
     console.warn('[updater] error:', err?.message ?? err);
@@ -137,7 +171,10 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       const message = phase === 'download'
         ? 'Could not download the update. Check your connection and retry.'
         : phase === 'prepare' ? 'Could not prepare the update. Please retry.' : 'Could not check for the update. Please retry.';
-      send({ state: 'error', version, message });
+      // Retry verified network failures promptly. Native preparation failures
+      // stay explicit: retrying a live Squirrel attempt would race its installer.
+      const automaticRetry = phase !== 'prepare' && isConnectionInterrupted(err) && scheduleConnectionRetry(version);
+      send({ state: 'error', version, message: automaticRetry ? 'Connection interrupted. Retrying automatically; you can keep browsing.' : message });
     }
   };
 
@@ -166,6 +203,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       return;
     }
     highestVersion = info.version;
+    clearConnectionRetry();
     downloadVersion = info.version;
     send({ state: 'downloading', version: info.version });
     // updateInfoAndProvider is set before update-available, so this uses the
@@ -212,6 +250,8 @@ export function setupAutoUpdate(win: BrowserWindow): void {
         nativePreparationFailed('Native update preparation timed out');
       }, NATIVE_STAGING_TIMEOUT_MS);
     } else {
+      clearConnectionRetry();
+      connectionRetryAttempts = 0;
       downloadVersion = undefined;
       send({ state: 'ready', version: info.version });
     }
@@ -235,6 +275,8 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     clearStaging();
     downloadVersion = undefined;
     if (isCurrentCandidate(version)) {
+      clearConnectionRetry();
+      connectionRetryAttempts = 0;
       nativePreparedVersion = version;
       send({ state: 'ready', version });
     }
@@ -265,6 +307,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   const check = (): Promise<void> => {
     if (disposed || downloadPromise || stagingVersion) return Promise.resolve();
     if (checkPromise) return checkPromise;
+    clearConnectionRetry();
     lastCheckTime = Date.now();
     const task = Promise.resolve()
       .then(() => disposed ? null : autoUpdater.checkForUpdates())
@@ -276,7 +319,12 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     checkPromise = task;
     return task;
   };
-  requestCheck = check;
+  const requestedCheck = () => {
+    clearConnectionRetry();
+    connectionRetryAttempts = 0;
+    return check();
+  };
+  requestCheck = requestedCheck;
   const focused = () => {
     if (Date.now() - lastCheckTime >= FOCUS_CHECK_INTERVAL_MS) void check();
   };
@@ -302,6 +350,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     disposed = true;
     clearInterval(timer);
     clearStaging();
+    clearConnectionRetry();
     targetWindow?.removeListener('focus', focused);
     targetWindow = undefined;
     autoUpdater.removeListener('update-available', available);
@@ -313,7 +362,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       nativeAutoUpdater.removeListener('update-downloaded', nativeDownloaded);
       nativeAutoUpdater.removeListener('update-not-available', nativeUnavailable);
     }
-    if (requestCheck === check) requestCheck = undefined;
+    if (requestCheck === requestedCheck) requestCheck = undefined;
     if (notifyStatus === publish) notifyStatus = undefined;
     if (bindWindow === bind) bindWindow = undefined;
   });

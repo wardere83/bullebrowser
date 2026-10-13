@@ -113,6 +113,7 @@ export interface TabState {
   title: string;
   url: string;
   loading: boolean;
+  loadError?: { code: number; message: string };
   canGoBack: boolean;
   canGoForward: boolean;
   faviconUrl?: string;
