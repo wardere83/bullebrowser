@@ -345,6 +345,26 @@ describe('asking before anything leaves the device', () => {
 });
 
 describe('profile reading', () => {
+  it.each(['ASSISTANT_ERROR', 'NO_ASSISTANT'] as const)('keeps entity profile setup working locally after %s', async (code) => {
+    const { handlers, pipelines, knowledge, complete, finished } = setup({ connected: true });
+    pipelines.extractProfile.mockRejectedValueOnce(new FundingError(code, 'The assistant could not be reached.'));
+    const { jobId } = await handlers.knowledge.extractProfile(context(organization(ORG_A, { documentAnalysisAt: 50 })));
+    expect((await finished(jobId))?.state).toBe('completed');
+    expect(pipelines.extractProfile).toHaveBeenNthCalledWith(1, expect.objectContaining({ complete }));
+    expect(pipelines.extractProfile).toHaveBeenNthCalledWith(2, expect.objectContaining({ complete: null }));
+    expect(knowledge.applyExtraction).toHaveBeenCalledWith(ORG_A, expect.objectContaining({ method: 'verbatim' }));
+    expect(knowledge.endExtraction).not.toHaveBeenCalled();
+  });
+
+  it('does not bypass validation failures from a connected assistant', async () => {
+    const { handlers, pipelines, knowledge, finished } = setup({ connected: true });
+    pipelines.extractProfile.mockRejectedValueOnce(new FundingError('INVALID_INPUT', 'Unreadable documents.'));
+    const { jobId } = await handlers.knowledge.extractProfile(context(organization(ORG_A, { documentAnalysisAt: 50 })));
+    expect((await finished(jobId))?.state).toBe('failed');
+    expect(pipelines.extractProfile).toHaveBeenCalledTimes(1);
+    expect(knowledge.applyExtraction).not.toHaveBeenCalled();
+  });
+
   it('records why a reading failed and leaves no proposals behind', async () => {
     const { handlers, pipelines, knowledge, finished } = setup();
     pipelines.extractProfile.mockRejectedValueOnce(new FundingError('ASSISTANT_ERROR', 'The assistant could not be reached.'));

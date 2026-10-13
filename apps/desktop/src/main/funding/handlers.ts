@@ -345,7 +345,7 @@ export function createFundingHandlers(parts: HandlerParts): FundingHandlers {
         return startJob(organization, 'profile_extraction', '', 'Reading your documents', async (job) => {
           await knowledge.beginExtraction(organization.id);
           try {
-            const outcome = await pipelines.extractProfile({
+            const input = {
               organization: { name: organization.name, kind: organization.kind },
               documents,
               approved,
@@ -353,7 +353,19 @@ export function createFundingHandlers(parts: HandlerParts): FundingHandlers {
               search: searchIn(organization.id),
               signal: job.signal,
               progress: job.progress,
-            });
+            };
+            let outcome;
+            try {
+              outcome = await pipelines.extractProfile(input);
+            } catch (error) {
+              // A connected service may fail after setup. Keep entity onboarding
+              // usable through the existing, cited on-device extraction path.
+              // Never recover cancellation, consent or document validation errors.
+              if (!complete || job.signal.aborted || !(error instanceof FundingError) ||
+                (error.code !== 'ASSISTANT_ERROR' && error.code !== 'NO_ASSISTANT')) throw error;
+              job.progress('AI analysis is unavailable. Preparing exact document passages on this device.', 5);
+              outcome = await pipelines.extractProfile({ ...input, complete: null });
+            }
             if (job.signal.aborted) throw new FundingError('CANCELLED', 'Cancelled.');
             await knowledge.applyExtraction(organization.id, outcome);
             const count = outcome.claims.length;
