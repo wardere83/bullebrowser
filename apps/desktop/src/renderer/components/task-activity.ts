@@ -106,3 +106,20 @@ export function liveAssistantText(steps: readonly AgentStepEvent[]): string {
   }
   return '';
 }
+
+/** Source counts come only from actual page reads, never from a timer or a plan. */
+export function pagesRead(steps: readonly AgentStepEvent[]): number {
+  const pages = new Set<string>();
+  for (const step of steps) {
+    if (step.kind !== 'tool_result' || step.toolName !== 'read_page') continue;
+    const output = record(step.output);
+    if (typeof output?.url !== 'string' || typeof output.text !== 'string' || !output.text.trim()) continue;
+    try {
+      const url = new URL(output.url);
+      if (!['http:', 'https:'].includes(url.protocol)) continue;
+      url.hash = '';
+      pages.add(url.href);
+    } catch { /* A malformed URL is not a read page. */ }
+  }
+  return pages.size;
+}

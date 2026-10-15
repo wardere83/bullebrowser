@@ -395,3 +395,40 @@ test('settings and about stay above browsing and restore the page when closed', 
     }
   } finally { await close(); await source.close(); }
 });
+
+test('a research prompt browses multiple real pages and shows live page counts', async () => {
+  const server = createServer((req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.end(`<html><head><title>Grant research fixture</title></head><body><h1>Official grant source</h1><p>Program ${req.url}: school grants support accessible classrooms. Verify eligibility before applying.</p><a href="/program-1">Program one</a><a href="/program-2">Program two</a><a href="/program-3">Program three</a></body></html>`);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const { app, win, close } = await launch();
+  try {
+    await app.evaluate((_electron, fixtureUrl) => {
+      const runtime = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.runtime;
+      const prototype = Object.getPrototypeOf(runtime);
+      const navigate = prototype.navigate;
+      prototype.navigate = function (tabId: string, url: string, options: unknown) {
+        return navigate.call(this, tabId, url.startsWith('https://duckduckgo.com/') ? fixtureUrl : url, options);
+      };
+    }, base);
+    await win.locator('aside textarea').fill('Find grants for California schools');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
+    await expect(win.getByRole('status', { name: 'Browser progress' })).toContainText('Waiting for browsing access');
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+    const activity = win.getByRole('region', { name: 'Task activity' });
+    await expect(activity).toBeVisible();
+    await expect(activity.getByText(/pages read/)).toBeVisible();
+    await expect(win.locator('.md-prose')).toContainText('3 source pages');
+    await expect(activity.getByText('4 pages read', { exact: true })).toBeVisible();
+    await activity.getByRole('button').click();
+    await expect(activity.getByRole('log')).toContainText('Reading the page');
+    await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-3');
+    await win.screenshot({ path: '/tmp/bullebrowser-research-progress.png' });
+  } finally {
+    await close();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});

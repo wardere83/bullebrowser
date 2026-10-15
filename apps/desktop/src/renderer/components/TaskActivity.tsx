@@ -1,7 +1,7 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
-import { activityActions, type ActivityStatus } from './task-activity.js';
+import { activityActions, pagesRead, type ActivityStatus } from './task-activity.js';
 
 export function TaskActivity({
   steps,
@@ -15,11 +15,18 @@ export function TaskActivity({
   const [chosenOpen, setChosenOpen] = useState<boolean | null>(null);
   const listId = useId();
   const actions = activityActions(steps, status);
+  const readCount = pagesRead(steps);
+  const logRef = useRef<HTMLDivElement>(null);
+  const followLog = useRef(true);
+  useEffect(() => {
+    const log = logRef.current;
+    if (log && followLog.current) log.scrollTop = log.scrollHeight;
+  }, [steps.length]);
   const running = status === 'running';
   const failed = status === 'error';
   const open = chosenOpen ?? (running || failed);
   const active = [...actions].reverse().find((action) => action.state === 'running');
-  const summary = failed ? 'Task stopped' : running ? active?.label ?? 'Working…' : 'Task activity';
+  const summary = failed ? 'Task stopped' : running ? active?.label ?? (readCount ? 'Reviewing sources…' : actions.length ? 'Working…' : 'Preparing your task…') : 'Task activity';
   return (
     <section
       aria-label="Task activity"
@@ -42,12 +49,16 @@ export function TaskActivity({
         <span role="status" className={`min-w-0 flex-1 ${failed ? 'text-danger' : 'text-ink-primary'}`}>
           {summary}
         </span>
+        {readCount > 0 && <span className="shrink-0 text-[11px] text-ink-secondary">{readCount} {readCount === 1 ? 'page read' : 'pages read'}</span>}
         {actions.length > 0 && <span className="shrink-0 text-[11px] text-ink-secondary">{actions.length} {actions.length === 1 ? 'step' : 'steps'}</span>}
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={13} className="text-ink-secondary" />
       </button>
       {open && (
-        <div id={listId} className="max-h-64 overflow-y-auto border-t border-line/40 px-3 py-3">
-          {actions.length === 0 && !failed && <p className="text-ink-secondary">Waiting for the next task update.</p>}
+        <div id={listId} ref={logRef} onScroll={(event) => {
+          const log = event.currentTarget;
+          followLog.current = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+        }} className="max-h-64 overflow-y-auto border-t border-line/40 px-3 py-3">
+          {actions.length === 0 && !failed && <p className="text-ink-secondary">Preparing the task. Browser actions will appear here as they happen.</p>}
           <ol role="log" aria-label="Browser task steps" aria-live="polite" aria-relevant="additions text" className="space-y-3">
             {actions.map((action) => (
               <li key={action.id} className="flex items-start gap-2">
@@ -70,5 +81,20 @@ export function TaskActivity({
         </div>
       )}
     </section>
+  );
+}
+
+/** Outside the message scroller so live browsing stays visible while reading chat. */
+export function BrowserProgress({ steps, awaitingAccess = false }: { steps: readonly AgentStepEvent[]; awaitingAccess?: boolean }) {
+  const actions = activityActions(steps, 'running');
+  const active = [...actions].reverse().find((action) => action.state === 'running');
+  const count = pagesRead(steps);
+  const label = awaitingAccess ? 'Waiting for browsing access' : active?.label ?? (count ? 'Reviewing sources…' : 'Preparing your task…');
+  return (
+    <div role="status" aria-label="Browser progress" className="flex shrink-0 items-center gap-2 border-y border-line/40 bg-primary/10 px-4 py-2 text-xs text-ink-primary">
+      <Icon name="progress" size={14} className="shrink-0 text-primary motion-safe:animate-spin" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {count > 0 && <span className="shrink-0 text-ink-secondary">{count} {count === 1 ? 'page read' : 'pages read'}</span>}
+    </div>
   );
 }

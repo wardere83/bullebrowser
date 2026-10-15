@@ -1,3 +1,4 @@
+import { ResearchProgress, isResearchRequest } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 // The BulleBrowser agent loop.
 //
@@ -494,7 +495,11 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 }
 
 export async function runAgent(input: AgentInput): Promise<string> {
-  const { context, onStep } = input;
+  const context = input.context;
+  const research = new ResearchProgress(Boolean(input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage)));
+  const originalOnStep = input.onStep;
+  const onStep: AgentStepHandler = (step) => { research.observe(step); originalOnStep(step); };
+  input = { ...input, onStep };
 
   if (context.signal.aborted) {
     onStep({ type: 'error', detail: 'Cancelled by user.' });
@@ -567,7 +572,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   const referenceNote = referenceBlocks.length > 0 ? `\n\n${REFERENCE_NOTE}` : '';
 
   const system =
-    `${input.systemPrompt}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
+    `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
   const budget = new StepBudget(input.budget);
   const sealedContext = [pageContext, ...referenceBlocks].filter(Boolean).join('\n\n');
@@ -586,7 +591,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   ];
 
   if (provider === 'openai') {
-    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText });
+    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research });
   }
 
   const client = new Anthropic({ apiKey: input.apiKey });
@@ -650,12 +655,11 @@ export async function runAgent(input: AgentInput): Promise<string> {
       onStep({ type: 'done' });
       return replacement;
     }
-    if (turnText) onStep({ type: 'text', detail: turnText });
-
     // The model hit the per-turn token cap mid-answer. Preserve what it wrote,
     // ask it to continue, and accumulate — otherwise the reply is silently
     // truncated. (Bounded by the outer turn limit.)
     if (response.stop_reason === 'max_tokens') {
+      if (turnText) onStep({ type: 'text', detail: turnText });
       finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
       messages.push({ role: 'assistant', content: response.content });
       messages.push({
@@ -668,10 +672,20 @@ export async function runAgent(input: AgentInput): Promise<string> {
     }
 
     if (response.stop_reason !== 'tool_use') {
+      const followUp = research.followUp(turnText, budget);
+      if (followUp) {
+        messages.push({ role: 'assistant', content: response.content });
+        messages.push({ role: 'user', content: followUp });
+        onStep({ type: 'thinking', detail: 'Continuing source research…' });
+        continue;
+      }
       // Terminal turn (end_turn / stop_sequence): this is the final answer.
-      finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
+      finalText = research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText);
+      if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
+
+    if (turnText) onStep({ type: 'text', detail: turnText });
 
     // Preserve the full assistant turn (text + tool_use blocks) so the next
     // request carries the model's own reasoning and tool calls.
@@ -803,8 +817,9 @@ async function runOpenAiTurns(args: {
   extraTools: Map<string, ApiTool>;
   budget: StepBudget;
   userTurnText: string;
+  research: ResearchProgress;
 }): Promise<string> {
-  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText } = args;
+  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research } = args;
   const { context, onStep } = input;
 
   const tools = toOpenAiTools(
@@ -843,13 +858,20 @@ async function runOpenAiTurns(args: {
       onStep({ type: 'done' });
       return replacement;
     }
-    if (turnText) onStep({ type: 'text', detail: turnText });
-
     const calls = choice.message.tool_calls ?? [];
     if (calls.length === 0) {
-      finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
+      const followUp = research.followUp(turnText, budget);
+      if (followUp) {
+        messages.push({ role: 'assistant', content: turnText });
+        messages.push({ role: 'user', content: followUp });
+        onStep({ type: 'thinking', detail: 'Continuing source research…' });
+        continue;
+      }
+      finalText = research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText);
+      if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
+    if (turnText) onStep({ type: 'text', detail: turnText });
 
     // Echo the assistant turn back verbatim; OpenAI requires the tool_calls it
     // issued to be present before their results.

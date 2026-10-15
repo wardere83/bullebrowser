@@ -18,7 +18,7 @@ import { VoiceOverlay } from './VoiceOverlay.js';
 import { RealtimeVoice } from './RealtimeVoice.js';
 import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
-import { TaskActivity } from './TaskActivity.js';
+import { BrowserProgress, TaskActivity } from './TaskActivity.js';
 import { liveAssistantText } from './task-activity.js';
 import type {
   AppSettings,
@@ -56,6 +56,7 @@ function browserBridge(): BrowserBridge {
 
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
+  const awaitingBrowseAccess = useAgentStore((s) => s.pendingConfirm?.kind === 'browse_access');
   const showSettings = useBrowserStore((s) => s.showSettings);
   const setCurrent = useAgentStore((s) => s.setCurrent);
   // The history list renders from this; without the selector the identifier is
@@ -550,6 +551,7 @@ export function AiPanel() {
           </button>
         </div>
       </header>
+      {activityStatus === 'running' && <BrowserProgress steps={steps} awaitingAccess={awaitingBrowseAccess} />}
 
       {voiceMode === 'continuous' && (
         <RealtimeVoice

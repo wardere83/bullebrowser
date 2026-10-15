@@ -1,13 +1,30 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
-import { TaskActivity } from './TaskActivity.js';
-import { activityActions, liveAssistantText } from './task-activity.js';
+import { BrowserProgress, TaskActivity } from './TaskActivity.js';
+import { activityActions, liveAssistantText, pagesRead } from './task-activity.js';
 
 const call = (toolName: string, input: unknown = {}): AgentStepEvent => ({ kind: 'tool_call', toolName, input, detail: 'Raw arguments must stay out of the feed', ts: 1 });
 const result = (toolName: string, output: unknown = {}): AgentStepEvent => ({ kind: 'tool_result', toolName, output, ts: 2 });
 
 describe('real browser task activity', () => {
+  it('shows only pages that were actually read and deduplicates repeated reads', () => {
+    const steps = [call('navigate', { url: 'https://agency.gov/one' }), result('navigate'), result('read_page', { url: 'https://agency.gov/one', text: 'Requirements' }), result('read_page', { url: 'https://agency.gov/one#deadline', text: 'Deadline' })];
+    expect(pagesRead(steps)).toBe(1);
+    const html = renderToStaticMarkup(<TaskActivity steps={steps} status="running" currentStep="" />);
+    expect(html).toContain('1 page read');
+    expect(html).toContain('Reviewing sources');
+  });
+
+  it('keeps a compact truthful browser status outside the conversation log', () => {
+    const waiting = renderToStaticMarkup(<BrowserProgress steps={[]} awaitingAccess />);
+    expect(waiting).toContain('Waiting for browsing access');
+    expect(waiting).not.toContain('pages read');
+    const active = renderToStaticMarkup(<BrowserProgress steps={[call('navigate', { url: 'https://agency.gov' })]} />);
+    expect(active).toContain('Opening agency.gov');
+    expect(active).toContain('aria-label="Browser progress"');
+  });
+
   it('marks a step complete only after its matching tool result', () => {
     const steps = [call('navigate', { url: 'https://www.example.org/funding?private=secret' })];
     expect(activityActions(steps, 'running')).toMatchObject([{ label: 'Opening example.org', state: 'running' }]);

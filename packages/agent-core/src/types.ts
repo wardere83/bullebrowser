@@ -250,6 +250,8 @@ export interface ReferenceContextItem {
 }
 
 export interface AgentInput {
+  /** Require live multi-source research for research prompts. */
+  researchMode?: boolean;
   apiKey?: string;
   model: ModelId;
   systemPrompt: string;

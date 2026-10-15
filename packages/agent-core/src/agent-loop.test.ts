@@ -59,6 +59,22 @@ function toolUseBlock(id: string, name: string, input: Record<string, unknown>) 
 describe('runAgent Claude tool-use loop', () => {
   beforeEach(() => createMock.mockReset());
 
+  it('continues premature research answers until three actual source pages have been read', async () => {
+    createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Unverified findings.')] });
+    for (let index = 1; index <= 3; index++) {
+      createMock.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [toolUseBlock(`read-${index}`, 'read_page', {})] });
+    }
+    createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Verified grant findings.')] });
+    let reads = 0;
+    const context = makeContext({ readPage: vi.fn(async () => ({ title: 'Source', url: `https://agency.gov/program-${reads++}`, text: 'Grant requirements and deadline.' })) });
+    const steps: AgentStep[] = [];
+    const result = await runAgent({ apiKey: 'test-key', model: DEFAULT_MODEL, researchMode: true, systemPrompt: '', history: [], userMessage: 'Find grants for schools in California', context, onStep: (step) => steps.push(step) });
+    expect(result).toBe('Verified grant findings.');
+    expect(createMock).toHaveBeenCalledTimes(5);
+    expect(steps.filter((step) => step.type === 'text').map((step) => step.detail)).not.toContain('Unverified findings.');
+    expect(steps.filter((step) => step.type === 'tool_result')).toHaveLength(3);
+  });
+
   it.each([
     [undefined, DEFAULT_MODEL], ['configured-key', DEFAULT_MODEL], ['configured-key', 'gpt-4o'],
   ] as const)('answers product updates without a provider or page read (%s, %s)', async (apiKey, model) => {

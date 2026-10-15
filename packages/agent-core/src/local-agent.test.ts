@@ -79,6 +79,21 @@ async function ask(userMessage: string, overrides: Partial<AgentInput> = {}): Pr
 }
 
 describe('the keyless assistant', () => {
+  it('searches and reads multiple linked sources for research prompts without a key', async () => {
+    let currentUrl = '';
+    const context = makeContext({
+      navigate: vi.fn(async (_id, url) => { currentUrl = url; return { url, title: 'Source' }; }),
+      readPage: vi.fn(async () => ({ title: 'Source', url: currentUrl, text: 'Official grant requirements.' })),
+      listLinks: vi.fn(async () => [1, 2, 3].map((id) => ({ text: `Program ${id}`, href: `https://agency.gov/program-${id}` }))),
+    });
+    const result = await ask('Find grants for California schools', { researchMode: true, context });
+    expect(result.requestBrowseAccess).toHaveBeenCalledTimes(1);
+    expect(context.runtime.navigate).toHaveBeenCalledTimes(4);
+    expect(result.reply).toContain('3 source pages');
+    expect(result.reply).toContain('https://agency.gov/program-3');
+    expect(result.steps.filter((step) => step.type === 'tool_result' && step.toolName === 'read_page')).toHaveLength(4);
+  });
+
   const fetchMock = vi.fn();
   beforeEach(() => {
     createMock.mockReset();

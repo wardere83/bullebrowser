@@ -74,7 +74,7 @@ const BASE_SYSTEM = [
   '   page are provided below — answer questions about "this page" from that',
   '   directly, and read_page only when you need more of it. Do not assume page',
   '   contents — read them.',
-  '2. Plan the smallest sequence of real browser actions that satisfies the task.',
+  '2. Plan a thorough sequence of real browser actions that satisfies the task.',
   '3. Act one step at a time, then observe the tool result before the next step.',
   '4. Adapt: if a page differs from what you expected, re-read and re-plan.',
   '',
@@ -268,6 +268,7 @@ export async function startAgentRun(
     try {
       assistantText = await runAgent({
         apiKey: apiKey ?? undefined,
+        researchMode: true,
         model,
         systemPrompt,
         history: conversation.messages

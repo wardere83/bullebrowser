@@ -1,3 +1,4 @@
+import { isResearchRequest } from './research.js';
 import type { ToolCallOutcome } from './agent-loop.js';
 import { StepBudget } from './budget.js';
 import type { AgentInput } from './types.js';
@@ -190,6 +191,44 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     const page = await run('read_page');
     const result = await run('summarizePage', { text: String(page.text ?? ''), sourceUrl: String(page.url ?? '') });
     report = result.summary ? `${String(result.summary)}\n\nSource: ${String(page.url ?? '')}` : 'This page has no readable text to summarize.';
+  } else if (input.researchMode && isResearchRequest(message)) {
+    input.onStep({ type: 'thinking', detail: 'Searching the web and opening source pages…' });
+    const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(message)}`;
+    await run('navigate', { url: searchUrl });
+    await run('read_page');
+    const found = await run('listLinks');
+    const links = Array.isArray(found.links) ? found.links as Array<{ text?: string; href?: string }> : [];
+    const candidates = new Set<string>();
+    for (const link of links) {
+      try {
+        let url = new URL(link.href ?? '', searchUrl);
+        if (/(^|\.)duckduckgo\.com$/.test(url.hostname) && url.searchParams.has('uddg')) url = new URL(url.searchParams.get('uddg')!);
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || /(^|\.)(?:duckduckgo\.com|google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
+        url.hash = '';
+        candidates.add(url.href);
+      } catch { /* Ignore unusable links. */ }
+    }
+    const excerpts: string[] = [];
+    const readUrls = new Set<string>();
+    for (const url of [...candidates].slice(0, 6)) {
+      if (excerpts.length >= 3 || budget.used + 3 > budget.total) break;
+      try {
+        await run('navigate', { url });
+        const page = await run('read_page');
+        const text = String(page.text ?? '').trim();
+        const sourceUrl = String(page.url ?? url).replace(/#.*$/, '');
+        if (text && !readUrls.has(sourceUrl)) {
+          readUrls.add(sourceUrl);
+          excerpts.push(`Source: ${sourceUrl}\n\n> ${text.slice(0, 1000).replace(/\n/g, '\n> ')}`);
+        }
+      } catch (error) {
+        if (input.context.signal.aborted || /USER_DECLINED|cancelled|budget/i.test(String(error))) throw error;
+        // A blocked source must not prevent checking the remaining results.
+      }
+    }
+    report = excerpts.length
+      ? `I opened and read ${excerpts.length} source pages. These are source excerpts, not a verified eligibility assessment. Connect an assistant in Settings for tailored analysis and cross-checking.\n\n${excerpts.join('\n\n')}`
+      : 'I searched the web, but could not read relevant source pages. Try a more specific search or provide an official source URL. Connect an assistant in Settings for broader research.';
   } else if (funding) {
     report = FUNDING_REPLIES[funding] + (summaryRequested ? PAGE_SUMMARY_HINT : '');
   } else {
