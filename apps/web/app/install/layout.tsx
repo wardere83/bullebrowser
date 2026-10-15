@@ -2,8 +2,8 @@ import { product } from '@bullebrowser/brand-tokens';
 import { pageMetadata } from '@/lib/metadata';
 
 export const metadata = pageMetadata({
-  title: 'Install and set up',
-  description: `Install ${product.name}, create your organization, add documents to the Organization Knowledge Hub and run your first funding search.`,
+  title: 'Install and start browsing',
+  description: `Install ${product.name} on macOS, Windows or Linux, choose a browsing option and follow your first visible research task.`,
   path: '/install/',
 });
 

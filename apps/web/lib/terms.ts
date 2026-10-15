@@ -4,12 +4,12 @@
 // dictionaries for that reason: a translated name would point visitors at a
 // button that does not exist.
 
-/** The four options under "What can I help you with?", in the app's order. */
+/** The four options under "Where should we browse?", in the app's order. */
 export const WORKFLOWS = [
-  { id: 'find', label: 'Find Relevant Grant Opportunities' },
-  { id: 'align', label: 'Assess Your Funding Alignment' },
-  { id: 'priorities', label: 'Explore Funder Priorities' },
-  { id: 'guide', label: 'Ethical Strengths-Based Proposal Guide' },
+  { id: 'find', label: 'Find grants for me' },
+  { id: 'align', label: 'Research a funder' },
+  { id: 'priorities', label: 'Compare grant opportunities' },
+  { id: 'guide', label: 'Explore this page' },
 ] as const;
 
 export type WorkflowId = (typeof WORKFLOWS)[number]['id'];

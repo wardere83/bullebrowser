@@ -6,20 +6,18 @@ BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.
 
 **Website:** [bullebrowser.com](https://bullebrowser.com)
 
-## Funding workflows
+## Visible browser research
 
-Blank tabs show the funding video introduction; navigating opens the webpage in the browsing area. The assistant offers four actions, and funding tools open on request:
+Blank tabs show the shared product video introduction. The browser stays on the left and Your Assistant on the right, with four browsing options:
 
-- **Find Relevant Grant Opportunities** — filter official listings by jurisdiction, recipient geography, eligibility, category, award amount, deadline and verified status.
-- **Assess Our Funding Alignment** — compare funder requirements with approved organization statements and cited document evidence.
-- **Explore Funder Priorities** — read the funder’s stated priorities, expected outcomes and evaluation criteria, with interpretation labelled separately.
-- **Ethical Strengths-Based Proposal Guide** — reflective questions, evidence checklists, outlines and comments on your own writing; restricted AI policies disable tailored outlines and draft feedback.
+- **Find grants for me** — explore relevant funding sources for your location and goal.
+- **Research a funder** — read the funder’s own priorities and guidance.
+- **Compare grant opportunities** — inspect sources across retained tabs.
+- **Explore this page** — investigate the page you are viewing.
 
-The **Organization Knowledge Hub** reads PDF, DOCX, TXT and Markdown files, lets you inspect, replace and delete them, and searches extracted passages. Profile statements and priorities require explicit approval before they guide funding work. Replaced or deleted evidence triggers review. Funding notices stay in RFP Analysis rather than becoming organization memory.
+Selecting an option asks one short clarifying question. Answer to start browsing, or type your request directly. Follow the visible cursor, navigation and reading activity; use Stop to interrupt. Basic source discovery works without a provider key. Connect your own AI provider in Settings for model-powered research and analysis. Relevant page content, conversation history and attachments may be sent directly to that provider.
 
-Each organization has its own stored documents, searchable index, approved profile, saved listings, RFPs and guides. Access uses the existing device-local identity and organization roles. This is not a hosted account or team synchronization service.
-
-Without an assistant key, document extraction, search, verbatim profile proposals, literal RFP findings and reflective guides work locally. A connected assistant adds cited educational analysis, alignment interpretation and draft feedback after organization consent. Live discovery queries the six connected official sources; unsupported portals remain explicitly marked as links to visit.
+The marketing site and desktop introduction share a generated, clearly labeled illustrated walkthrough. Its source and renderer live in `packages/brand-tokens/film`; no sample page is presented as a verified grant result.
 
 ### Control & Trust
 

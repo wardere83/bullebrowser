@@ -6,21 +6,31 @@
 import type { Messages } from './en';
 
 const text: Messages = {
+  'home.platforms': 'Disponible pour macOS, Windows et Linux',
+  'company.cta': 'Découvrez l’entreprise',
+  'company.body':
+    'Notre objectif est concret : placer un assistant à côté des pages web, rendre son travail visible et aider les entreprises et les CBOs à rechercher des financements avec plus de contexte. Découvrez le produit, téléchargez l’application ou parlons de la suite.',
+  'company.h2': 'C’est sur le web que les opportunités deviennent concrètes.',
+  'company.eyebrow': 'Développé par Bulle Consulting',
+  'preview.body':
+    'Essayez cette présentation illustrée. Choisissez une option pour voir sa question, puis explorez les onglets d’exemple. L’interface de l’application est en anglais.',
+  'preview.h2': 'Une conversation qui fait avancer le navigateur.',
+  'preview.eyebrow': 'Dans le navigateur',
   'app.eyebrow': 'À propos de l’application',
-  'app.value.h2': 'Réunissez vos recherches et vos éléments probants.',
+  'app.value.h2': 'D’une question aux sources qui comptent.',
   'app.value.body':
-    'Une stratégie de financement commence par comprendre les objectifs de votre organisation et les opportunités qui les soutiennent. Gardez vos sources et vos priorités à portée de main pour envisager la suite.',
+    'Choisissez une option guidée ou saisissez votre demande. La recherche se déroule sur des pages visibles, avec des onglets à consulter à nouveau et une conversation qui précise la suite.',
   'app.overview':
-    'BulleBrowser est une application de bureau pour macOS, Windows et Linux. Elle réunit navigation, documents de votre organisation et assistant connecté facultatif pour rechercher des financements en gardant vos objectifs en vue.',
-  'app.benefit.context.t': 'Replacez le financement dans son contexte',
+    'BulleBrowser est un navigateur de bureau pour macOS, Windows et Linux. La navigation reste à gauche et Your Assistant à droite. Depuis l’introduction, choisissez une des quatre options ou saisissez une demande, puis suivez le travail sur les pages web.',
+  'app.benefit.context.t': 'Suivez la recherche en direct',
   'app.benefit.context.d':
-    'Lisez les pages officielles de financement aux côtés de votre mission, de vos plans et de vos résultats documentés. Reliez les attentes d’un bailleur de fonds à ce que votre organisation réalise réellement.',
-  'app.benefit.focus.t': 'Choisissez où concentrer vos efforts',
+    'Suivez le curseur visible, la navigation et la lecture. L’assistant travaille dans le volet du navigateur pour que vous voyiez les sources explorées.',
+  'app.benefit.focus.t': 'Explorez plusieurs pistes',
   'app.benefit.focus.d':
-    'Comparez les priorités, les exigences et les échéances à vos objectifs. Repérez les questions et les preuves manquantes avant de consacrer du temps à une candidature.',
-  'app.benefit.strengths.t': 'Préparez-vous à partir de vos forces réelles',
+    'Explorez les sources pertinentes dans plusieurs onglets. Vérifiez les critères, les échéances et les priorités sur les pages originales avant de choisir les opportunités à approfondir.',
+  'app.benefit.strengths.t': 'Gardez la maîtrise de la suite',
   'app.benefit.strengths.d':
-    'Utilisez les preuves approuvées de votre organisation, les constats cités et les questions de réflexion pour préparer une proposition avec vos propres mots.',
+    'Interrompez une tâche avec Stop, consultez les sources et examinez les résultats. L’assistant demande votre accord avant les actions importantes ; vous décidez des démarches et des envois.',
   'app.audiences.eyebrow': 'Pour les entreprises et les CBOs',
   'app.audiences.h2': 'Des objectifs différents. Une stratégie ancrée dans votre travail.',
   'app.audiences.body':
@@ -34,9 +44,9 @@ const text: Messages = {
   'app.control.eyebrow': 'Vous gardez le contrôle',
   'app.control.h2': 'Vos preuves. Votre jugement.',
   'app.control.body':
-    'Examinez les preuves derrière chaque constat et approuvez les énoncés sur votre organisation. Vous choisissez les opportunités et rédigez vos propositions ; BulleBrowser apporte structure et retours, tandis que vous restez responsable des décisions et des dépôts.',
+    'L’activité visible et le journal des tâches vous aident à suivre le travail. Arrêtez une tâche, consultez les sources originales et approuvez les actions importantes. Les décisions et les envois restent sous votre contrôle.',
   'app.assistant':
-    'Les analyses rédigées par l’IA nécessitent votre propre clé de fournisseur. Sans clé, vous pouvez toujours naviguer, rechercher dans les sources de financement et retrouver du texte dans vos documents.',
+    'La navigation de base et la recherche de sources fonctionnent sans clé. Connectez votre fournisseur d’IA dans Settings pour la recherche et l’analyse par modèle. Les demandes, pages et pièces jointes pertinentes peuvent lui être envoyées.',
 
   'nav.home': 'Accueil',
   'nav.app': 'À propos de l’application',
@@ -78,10 +88,10 @@ const text: Messages = {
   'finding.partial': 'Partiellement documenté',
   'finding.missing': 'Absent des documents',
 
-  'home.badge': 'Stratégie de financement · Par Bulle Consulting',
-  'home.h1': 'La plateforme stratégique de financement pour les entreprises et les CBOs.',
+  'home.badge': 'Navigation visible · Par Bulle Consulting',
+  'home.h1': 'Vos objectifs de financement. Un navigateur qui passe à l’action.',
   'home.sub':
-    'Passez de recherches de financement dispersées à une stratégie ancrée dans votre organisation. BulleBrowser réunit sources officielles, documents et assistant intégré pour aider les entreprises et les CBOs à prendre des décisions de financement mieux informées.',
+    'Expliquez votre besoin à BulleBrowser. Suivez votre assistant qui ouvre des sources, lit des pages et explore les possibilités de financement dans le navigateur à côté de votre conversation. Pour les entreprises et les CBOs.',
   'home.cta.app': 'Découvrir l’application',
   'home.pill.sources': 'Sources officielles',
   'home.pill.status': 'Active, expirée ou non vérifiée',
@@ -91,15 +101,15 @@ const text: Messages = {
   'marquee.pause': 'Mettre en pause la liste défilante',
   'marquee.play': 'Reprendre la liste défilante',
 
-  'film.title': 'Voyez votre stratégie de financement prendre forme.',
-  'film.label': 'Présentation animée',
+  'film.title': 'Voyez le navigateur passer à l’action.',
+  'film.label': 'Présentation illustrée du produit',
   'film.caption':
-    'Réunissez vos priorités, vos recherches de financement et vos preuves. Une présentation animée pour les entreprises et les CBOs.',
+    'Un objectif. Une courte question. Une navigation visible entre les sources. Une présentation illustrée de l’application actuelle, avec des exemples de demandes plutôt que des résultats de financement en direct.',
   'film.play': 'Lire le film BulleBrowser',
   'film.pause': 'Mettre le film en pause',
   'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
   'film.description':
-    'Une présentation animée et muette de BulleBrowser. Mettez le financement en contexte avec vos priorités, les sources officielles et vos preuves. Choisissez où concentrer vos efforts en examinant les objectifs, les exigences et le calendrier. Appuyez-vous sur votre travail documenté et votre propre jugement. Reliez la stratégie de financement aux objectifs des entreprises et aux priorités des communautés, pour les entreprises et les CBOs.',
+    'Une présentation illustrée et silencieuse de BulleBrowser. Quatre options sont proposées à côté du navigateur. Une option mène à une courte question. Une réponse d’exemple lance le curseur visible sur les sources officielles, puis les onglets permettent de comparer les pistes. Stop garde le contrôle à l’utilisateur.',
 
   'ask.eyebrow': 'Quatre façons de commencer',
   'ask.h2': 'Comment puis-je vous aider ?',
@@ -345,7 +355,7 @@ const text: Messages = {
   'privacy.eyebrow': 'Confidentialité',
   'privacy.h2': 'Stocké sur votre appareil. Envoyé uniquement là où vous le décidez.',
   'privacy.body':
-    'Les documents, le texte extrait, votre profil et vos analyses sont stockés sur votre appareil. Lorsque vous connectez votre propre fournisseur d’IA et demandez une analyse, les extraits de documents pertinents sont envoyés directement à ce fournisseur, avec votre propre clé. Les recherches de financement envoient des termes de recherche et des filtres, jamais de documents, directement aux sources officielles. Rien ne transite par Bulle Consulting, et il n’y a ni mesure d’audience ni télémétrie.',
+    'Vos données de navigation et conversations sont conservées sur votre appareil. La navigation contacte les sites et moteurs de recherche ; les fournisseurs d’IA connectés reçoivent les informations nécessaires à vos demandes. Bulle Consulting ne sert pas de relais à ces requêtes.',
   'privacy.1':
     'Les documents, le texte extrait, votre profil et vos analyses sont stockés sur votre appareil.',
   'privacy.2':
@@ -391,7 +401,7 @@ const text: Messages = {
   'download.checksums': 'Sommes de contrôle SHA-256',
   'download.releases': 'Toutes les versions sur GitHub',
 
-  'install.h1': 'Installer BulleBrowser et configurer votre organisation',
+  'install.h1': 'Du téléchargement à la navigation visible',
   'install.sub':
     'Du téléchargement à votre première recherche de financement en quelques minutes. Aucune compétence technique n’est nécessaire.',
   'install.s1.t': 'Installer l’application',
@@ -400,43 +410,44 @@ const text: Messages = {
   'install.s1.win':
     'Lancez le programme d’installation .exe. Si SmartScreen apparaît, choisissez « Informations complémentaires », puis « Exécuter quand même ».',
   'install.s1.linux': 'Rendez l’AppImage exécutable, puis lancez-la :',
-  'install.s2.t': 'Créer votre organisation',
+  'install.s2.t': 'Commencez par l’introduction',
   'install.s2.d':
-    'Au premier lancement, BulleBrowser demande le nom de votre organisation, s’il s’agit d’une entreprise ou d’un CBO, et où elle est établie. Le lieu sert à trouver pour vous des financements à l’échelle de la ville, du comté et de l’État, et il est stocké sur votre appareil. Vous pourrez ajouter d’autres organisations plus tard ; chacune reste séparée.',
-  'install.s3.t': 'Ajouter des documents à l’Organization Knowledge Hub',
+    'Ouvrez BulleBrowser. L’introduction apparaît à gauche et Your Assistant à droite. Aucun tableau de bord de financement à configurer avant de naviguer.',
+  'install.s3.t': 'Choisissez une option ou saisissez une demande',
   'install.s3.d':
-    'Ajoutez des fichiers PDF, DOCX, TXT ou Markdown de 40 Mo au maximum chacun : plans stratégiques, profils de l’organisation, descriptions de programmes, rapports d’impact, budgets et propositions antérieures. BulleBrowser les lit sur votre appareil.',
-  'install.s4.t': 'Relire et approuver votre profil',
+    'Cliquez sur une option : l’application pose une courte question. Répondez pour commencer. Vous pouvez aussi saisir directement votre objectif sans choisir d’option.',
+  'install.s4.t': 'Suivez le travail à gauche',
   'install.s4.d':
-    'BulleBrowser propose des énoncés sur votre organisation, chacun accompagné du passage dont il provient, et signale ce qui manque ou se contredit. Approuvez, modifiez ou rejetez chacun d’eux. Seuls les énoncés approuvés servent aux conseils.',
+    'Suivez le curseur, l’ouverture des pages et la lecture dans le navigateur. Les onglets pertinents restent disponibles. Stop interrompt la tâche. Certains sites nécessitent une connexion ou une vérification manuelle.',
   'install.s5.t': 'Connecter un assistant (facultatif)',
   'install.s5.d':
-    'L’analyse rédigée — énoncés de profil proposés, résumés de documents de financement, évaluations de l’adéquation et guides de proposition — nécessite votre propre clé de fournisseur d’IA. Ouvrez le menu du profil, choisissez « Settings », puis « Connect an assistant (optional) », collez votre clé et enregistrez. Les clés sont chiffrées et stockées sur cet appareil. Sans clé, la recherche de financements, la recherche dans vos documents et les correspondances de texte dans les documents de financement fonctionnent toujours.',
-  'install.s6.t': 'Choisir par où commencer',
+    'Ouvrez Settings depuis le menu du profil pour connecter votre fournisseur d’IA. Settings apparaît au-dessus du navigateur. Les clés sont chiffrées sur cet appareil. La navigation de base fonctionne sans clé ; joignez des fichiers utiles à une conversation si nécessaire.',
+  'install.s6.t': 'Quatre façons de lancer la recherche',
   'install.s6.d':
-    'Ouvrez « Your Assistant » et choisissez l’une des quatre options sous « What can I help you with? », ou posez votre question avec vos propres mots.',
+    'Voici les quatre options de navigation dans Your Assistant. Chacune commence par une courte question après votre choix.',
   'install.note.t': 'À propos des avertissements de sécurité',
   'install.note.d':
     'Les versions macOS sont signées avec un Developer ID et notariées par Apple. Sous Windows, SmartScreen peut afficher un avertissement avant le lancement d’un programme d’installation récemment publié. Chaque version comprend un fichier de sommes de contrôle SHA-256, accessible depuis la page de téléchargement.',
   'install.updates.t': 'Mises à jour',
   'install.updates.d':
-    'BulleBrowser recherche les versions publiées au démarrage et toutes les cinq minutes, puis télécharge les mises à jour en arrière-plan. Choisissez « Update App » pour continuer à travailler et masquer l’avis pour cette version. La mise à jour prend effet après avoir quitté normalement puis rouvert l’application. Une nouvelle version fait réapparaître l’avis. Sur macOS, une seule mise à jour est préparée à la fois ; le téléchargement suivant attend que cette version prenne effet.',
+    'Le bouton Update apparaît seulement lorsqu’une mise à jour vérifiée est prête. Cliquez une fois pour l’installer. L’application redémarre brièvement et restaure vos onglets et votre conversation, sans fermeture manuelle. Les téléchargements en arrière-plan ne vous interrompent pas.',
   'install.next': 'Découvrir l’application',
 
   'about.h1': 'À propos de Bulle Consulting',
   'about.lead':
-    'Bulle Consulting a conçu BulleBrowser comme une plateforme stratégique de financement pour les entreprises et les CBOs. Elle les aide à repérer les opportunités de financement, à comprendre les priorités des bailleurs de fonds, à évaluer leur adéquation et à élaborer leurs propositions de manière éthique.',
+    'Bulle Consulting développe BulleBrowser pour mener la recherche de financements là où le travail se passe : dans le navigateur. Notre application aide les entreprises et les CBOs à explorer des sources, comparer des opportunités et préciser leur prochaine étape.',
   'about.why.h2': 'Pourquoi un navigateur ?',
   'about.why.p':
     'Le travail de financement se fait sur le web : portails officiels, sites des bailleurs de fonds, avis et systèmes de dépôt. Un navigateur doté d’un assistant intégré peut lire directement ces sources officielles et garder à leurs côtés les documents de votre organisation, sur votre appareil.',
-  'about.limits.h2': 'Ce que BulleBrowser ne fera pas',
+  'about.limits.h2': 'Une assistance sous votre contrôle',
   'about.limits.p':
-    'Il ne rédige pas vos propositions à votre place, il n’invente pas de faits sur votre organisation, et il ne qualifie une annonce d’active que si une source officielle la déclare ouverte et que sa date limite n’est pas dépassée. Il apporte une structure, des citations et des mentions honnêtes, et vous laisse le jugement et la rédaction.',
+    'Nous rendons le travail visible : pages, curseur et onglets, avec Stop pendant la tâche. Les utilisateurs examinent les preuves et approuvent les actions importantes. L’accès aux sites, les sources disponibles et le modèle connecté influencent le résultat ; aucun financement n’est garanti.',
   'about.key.h2': 'Pourquoi votre propre clé ?',
   'about.key.p':
     'Les organisations manipulent des éléments sensibles : plans, budgets et brouillons. Nous ne voulons pas qu’ils se trouvent sur nos serveurs. BulleBrowser stocke vos documents sur votre appareil et, lorsque vous demandez une analyse rédigée, envoie les extraits pertinents directement au fournisseur d’IA que vous connectez, avec votre propre clé. Rien ne transite par Bulle Consulting.',
-  'about.contact.h2': 'Contact',
-  'about.contact.p': 'Presse, partenariats ou retours sur le produit :',
+  'about.contact.h2': 'Construisez avec nous',
+  'about.contact.p':
+    'Pour les questions produit, partenariats, presse et échanges avec les investisseurs :',
 };
 
 // French sets a space before ; : ? ! and inside « », and a line must never

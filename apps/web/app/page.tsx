@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { product } from '@bullebrowser/brand-tokens';
+import { BrowserWalkthrough } from '@/components/BrowserWalkthrough';
 import { AppBenefits, AppAudiences } from '@/components/AppBenefits';
 import { ArrowLink } from '@/components/ArrowLink';
 import { BrandFilm } from '@/components/BrandFilm';
@@ -38,7 +40,7 @@ export default function HomePage() {
             </p>
           </Reveal>
           <Reveal delay={80}>
-            <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-bold tracking-tighter sm:text-5xl lg:text-6xl">
+            <h1 className="mx-auto mt-6 max-w-5xl text-5xl font-semibold leading-[1.08] tracking-tighter sm:text-6xl lg:text-7xl">
               {t('home.h1')}
             </h1>
           </Reveal>
@@ -57,15 +59,18 @@ export default function HomePage() {
               </Link>
             </div>
           </Reveal>
+          <p className="mt-6 text-xs tracking-wide text-ink-inverse/60">{t('home.platforms')}</p>
         </div>
-        <div className="relative mx-auto max-w-[1680px] px-4 pb-20 sm:px-6 md:pb-28">
+        <div className="relative mx-auto max-w-[1280px] px-4 pb-20 sm:px-6 md:pb-28">
           <Reveal delay={360}>
             <BrandFilm />
           </Reveal>
         </div>
       </section>
 
-      <section className="bg-surface-light py-20 md:py-24">
+      <BrowserWalkthrough />
+
+      <section className="border-y border-line bg-surface-muted py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
             <Eyebrow>{t('app.eyebrow')}</Eyebrow>
@@ -82,6 +87,33 @@ export default function HomePage() {
       </section>
 
       <AppAudiences />
+
+      <section className="bg-surface-dark text-white">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-[1.2fr_1fr] md:py-28">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              {t('company.eyebrow')}
+            </p>
+            <h2 className="mt-5 text-3xl font-semibold tracking-tight md:text-4xl">
+              {t('company.h2')}
+            </h2>
+          </div>
+          <div>
+            <p className="text-base leading-relaxed text-white/75">{t('company.body')}</p>
+            <div className="mt-7 flex flex-wrap gap-6">
+              <ArrowLink href="/about" tone="dark">
+                {t('company.cta')}
+              </ArrowLink>
+              <a
+                className="text-sm font-semibold text-white underline underline-offset-4"
+                href={`mailto:${product.contactEmail}`}
+              >
+                {product.contactEmail}
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Privacy — a clean white statement card. */}
       <section className="bg-surface-light py-20 md:py-24">

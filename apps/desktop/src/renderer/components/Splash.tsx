@@ -4,7 +4,7 @@ import wordmarkLight from '@bullebrowser/brand-tokens/wordmark-light.png';
 import filmUrl from '../assets/bullebrowser-film.mp4';
 import posterUrl from '../assets/bullebrowser-film-poster.jpg';
 
-/** The previous video intro, with the current funding strategy and film. */
+/** The shared browser-first product walkthrough. */
 export function Splash() {
   const video = useRef<HTMLVideoElement>(null);
   const descriptionId = useId();
@@ -56,7 +56,7 @@ export function Splash() {
             {failed ? (
               <img
                 src={posterUrl}
-                alt="BulleBrowser funding strategy for businesses and CBOs"
+                alt="BulleBrowser illustrated browsing walkthrough"
                 className="block aspect-video w-full"
               />
             ) : (
@@ -73,7 +73,7 @@ export function Splash() {
                   controls={false}
                   disablePictureInPicture
                   preload="auto"
-                  aria-label="BulleBrowser funding strategy video"
+                  aria-label="BulleBrowser visible browsing video"
                   aria-describedby={descriptionId}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
@@ -91,12 +91,12 @@ export function Splash() {
             )}
           </div>
           <p id={descriptionId} className="mt-3 text-center text-xs leading-relaxed text-ink-inverse/60">
-            Bring your priorities, funding research and evidence together.
-            <span className="block">Animated overview · funding strategy for businesses and CBOs.</span>
+            Choose a browsing option or type your goal in Your Assistant.
+            <span className="block">Illustrated walkthrough · follow the cursor and review the source tabs.</span>
           </p>
           {failed && (
             <p role="status" className="mt-2 text-center text-xs text-ink-inverse/70">
-              The video couldn’t load. Use the chat to explore your funding priorities.
+              The video couldn’t load. Choose a browsing option in Your Assistant to get started.
             </p>
           )}
         </div>

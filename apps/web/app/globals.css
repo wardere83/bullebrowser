@@ -4,6 +4,7 @@
 
 :root {
   --color-primary: #20bad1;
+  --font-jetbrains: ui-monospace, SFMono-Regular, Menlo, monospace;
   --color-accent: #20bad1;
   --color-ink: #142127;
 }
@@ -80,7 +81,7 @@ html {
 }
 .halo.is-active::before {
   opacity: 1;
-  animation: halo-spin 4s linear infinite;
+  animation: halo-spin 10s linear infinite;
 }
 @keyframes halo-spin {
   to {
@@ -155,13 +156,21 @@ html {
 /* Motion: an infinite marquee, a fade-in-up scroll reveal, and slow drifting
    hero blobs. */
 @keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 /* In a right-to-left page the row starts at the right and must leave that way. */
 @keyframes marquee-scroll-rtl {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(50%);
+  }
 }
 .animate-scroll {
   animation: marquee-scroll 40s linear infinite;
@@ -179,16 +188,27 @@ html {
 }
 
 @keyframes fade-in-up {
-  0% { opacity: 0; transform: translateY(18px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-fade-in-up {
   animation: fade-in-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes blob-drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(14px, -18px) scale(1.08); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(14px, -18px) scale(1.08);
+  }
 }
 .animate-blob {
   animation: blob-drift 16s ease-in-out infinite;
@@ -232,5 +252,28 @@ html {
   }
   .marquee-row {
     padding-inline: 0;
+  }
+}
+
+/* The illustration follows the deliberate pace of the desktop cursor. */
+@keyframes preview-cursor-travel {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  35% {
+    transform: translate(-80px, -60px);
+  }
+  70% {
+    transform: translate(-30px, 20px);
+  }
+}
+.preview-cursor {
+  animation: preview-cursor-travel 12s ease-in-out infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-cursor {
+    animation: none;
   }
 }

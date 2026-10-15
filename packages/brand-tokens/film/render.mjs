@@ -10,7 +10,7 @@
 
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
-import { mkdirSync, copyFileSync } from 'node:fs';
+import { mkdirSync, copyFileSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -29,8 +29,18 @@ const args = process.argv.slice(2);
 const previewIdx = args.indexOf('--preview');
 
 const browser = await chromium.launch({ channel: 'chrome' });
-const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({
+  viewport: { width: 1920, height: 1080 },
+  deviceScaleFactor: 1,
+});
 await page.goto(pathToFileURL(resolve(here, 'film.html')).href + '?frames');
+// Embed the shipped Inter font; rendering never relies on a remote font host.
+const font = readFileSync(
+  require.resolve('@fontsource/inter/files/inter-latin-400-normal.woff2'),
+).toString('base64');
+await page.addStyleTag({
+  content: `@font-face { font-family: Inter; font-style: normal; font-weight: 100 900; src: url(data:font/woff2;base64,${font}) format('woff2'); }`,
+});
 await page.evaluate(() => document.fonts.ready);
 await page.waitForTimeout(300);
 const duration = await page.evaluate(() => window.DURATION);
@@ -54,11 +64,35 @@ if (previewIdx !== -1) {
 const tmp = resolve(here, '.out');
 mkdirSync(tmp, { recursive: true });
 const mp4 = resolve(tmp, 'bullebrowser-film.mp4');
-const ff = spawn(process.env.FFMPEG || 'ffmpeg', [
-  '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p',
-  '-profile:v', 'high', '-movflags', '+faststart', '-an', mp4,
-], { stdio: ['pipe', 'inherit', 'inherit'] });
+const ff = spawn(
+  process.env.FFMPEG || 'ffmpeg',
+  [
+    '-y',
+    '-loglevel',
+    'error',
+    '-f',
+    'image2pipe',
+    '-framerate',
+    String(FPS),
+    '-i',
+    '-',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'slow',
+    '-crf',
+    '24',
+    '-pix_fmt',
+    'yuv420p',
+    '-profile:v',
+    'high',
+    '-movflags',
+    '+faststart',
+    '-an',
+    mp4,
+  ],
+  { stdio: ['pipe', 'inherit', 'inherit'] },
+);
 
 const frames = Math.round(duration * FPS);
 for (let i = 0; i < frames; i++) {
@@ -67,7 +101,9 @@ for (let i = 0; i < frames; i++) {
   if (i % 60 === 0) process.stdout.write(`\rframe ${i}/${frames}`);
 }
 ff.stdin.end();
-await new Promise((r, j) => ff.on('close', (c) => (c === 0 ? r() : j(new Error(`ffmpeg exited ${c}`)))));
+await new Promise((r, j) =>
+  ff.on('close', (c) => (c === 0 ? r() : j(new Error(`ffmpeg exited ${c}`)))),
+);
 
 const poster = resolve(tmp, 'bullebrowser-film-poster.jpg');
 await shot(POSTER_AT, { type: 'jpeg', quality: 82, path: poster });

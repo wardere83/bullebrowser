@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 
 // Change the public media URL when the film changes so visitors receive the
 // current overview even while their previous static assets are still cached.
-const filmRevision = 'funding-overview-2026-10-07';
+const filmRevision = 'visible-browsing-2026-10-15';
 
 // The BulleBrowser film: a muted, looping product film in a rounded "cinema"
 // frame. It autoplays like a hero video, except for visitors who ask for
@@ -16,7 +16,7 @@ const filmRevision = 'funding-overview-2026-10-07';
 //
 // This is an animated overview of the app's benefits for businesses and CBOs.
 // Its label and accessible description introduce that story without presenting
-// sample organizations, funding listings or app interface screens.
+// live results. The illustrated interface reflects the current browser-first app.
 export function BrandFilm() {
   const t = useT();
   const video = useRef<HTMLVideoElement>(null);

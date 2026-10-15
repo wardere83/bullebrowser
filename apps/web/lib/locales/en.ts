@@ -10,21 +10,31 @@
 // "CBO"), which is always written as the acronym.
 
 export const en = {
+  'home.platforms': 'Available for macOS, Windows and Linux',
+  'company.cta': 'Meet the company',
+  'company.body':
+    'Our focus is practical: put an assistant beside real web pages, make its work visible and help businesses and CBOs research funding with more context. Explore the product, download the desktop app or talk with us about what comes next.',
+  'company.h2': 'The web is where opportunity becomes action.',
+  'company.eyebrow': 'Built by Bulle Consulting',
+  'preview.body':
+    'Try this illustrated walkthrough. Choose an option to see its question, then explore the sample source tabs. The app interface is in English.',
+  'preview.h2': 'A conversation that moves the browser forward.',
+  'preview.eyebrow': 'Inside the browser',
   'app.eyebrow': 'About the app',
-  'app.value.h2': 'Bring your research and your evidence together.',
+  'app.value.h2': 'From a question to the sources that matter.',
   'app.value.body':
-    'Funding strategy starts with understanding what your organization wants to achieve and which opportunities support it. Keep your sources and your priorities close as you explore the next step.',
+    'Choose a guided option or type your request. Research happens on visible pages, with source tabs you can revisit and a conversation that keeps the next step clear.',
   'app.overview':
-    'BulleBrowser is a desktop app for macOS, Windows and Linux. It brings browsing, your organization’s documents and an optional connected assistant into one place, so you can research funding with your own goals in view.',
-  'app.benefit.context.t': 'Put funding in context',
+    'BulleBrowser is a desktop browser for macOS, Windows and Linux. The browsing area stays on the left and Your Assistant on the right. Start from the introduction, choose one of four browsing options or type a request, then follow the work on actual web pages.',
+  'app.benefit.context.t': 'Watch the research happen',
   'app.benefit.context.d':
-    'Read official funding pages alongside your mission, plans and documented results. Connect what a funder is asking for with what your organization actually does.',
-  'app.benefit.focus.t': 'Decide where to focus',
+    'Follow the visible cursor, page navigation and reading activity. The assistant works in the browser pane so you can see which sources it is exploring.',
+  'app.benefit.focus.t': 'Explore more than one option',
   'app.benefit.focus.d':
-    'Compare priorities, requirements and deadlines with your own goals. Identify questions and evidence gaps before committing time to an application.',
-  'app.benefit.strengths.t': 'Prepare from your real strengths',
+    'Explore relevant sources across tabs. Check eligibility, deadlines and funder priorities on the original pages before deciding which opportunities deserve your time.',
+  'app.benefit.strengths.t': 'Keep the next move yours',
   'app.benefit.strengths.d':
-    'Use approved organization evidence, cited findings and reflective guidance to plan a proposal in your own words.',
+    'Pause a task with Stop, revisit the source tabs and review the findings. The assistant asks before consequential actions; you decide what to pursue and submit.',
   'app.audiences.eyebrow': 'For businesses and CBOs',
   'app.audiences.h2': 'Different goals. A strategy rooted in your work.',
   'app.audiences.body':
@@ -38,9 +48,9 @@ export const en = {
   'app.control.eyebrow': 'You stay in control',
   'app.control.h2': 'Your evidence. Your judgment.',
   'app.control.body':
-    'Review the evidence behind each finding and approve statements about your organization. You choose what to pursue and write your own proposals; BulleBrowser provides structure and feedback while you remain responsible for decisions and submissions.',
+    'Visible browser activity and a task log help you follow the work. Stop a task when you need to, review the original sources and approve consequential actions. Funding decisions and submissions stay with you.',
   'app.assistant':
-    'Written AI analysis requires your own provider key. Without one, you can still browse, search funding sources and find text in your documents.',
+    'Basic browsing and source discovery work without a provider key. Connect your own AI provider in Settings for model-powered research and analysis. Relevant requests, page content and attachments may be sent to that provider.',
 
   // Navigation. The section names are used only when components/sections.ts
   // says to translate them; the rest of this block is always in use.
@@ -89,10 +99,10 @@ export const en = {
   'finding.missing': 'Not in the documents',
 
   // Home: hero
-  'home.badge': 'Funding strategy · By Bulle Consulting',
-  'home.h1': 'The strategic funding platform for businesses and CBOs.',
+  'home.badge': 'Visible browsing · By Bulle Consulting',
+  'home.h1': 'Your funding goals. A browser that gets to work.',
   'home.sub':
-    'Move from scattered funding research to a strategy grounded in your organization. BulleBrowser keeps official sources, your documents and a built-in assistant together, so businesses and CBOs can make more informed funding decisions.',
+    'Tell BulleBrowser what you need. Follow your assistant as it opens sources, reads pages and explores grant opportunities in the browser beside your conversation. Built for businesses and CBOs.',
   'home.cta.app': 'Explore the app',
   'home.pill.sources': 'Official sources',
   'home.pill.status': 'Active, Expired or Unverified',
@@ -103,15 +113,15 @@ export const en = {
   'marquee.play': 'Resume the moving list',
 
   // The film. The description is what a screen reader hears in place of it.
-  'film.title': 'See your funding strategy take shape.',
-  'film.label': 'Animated overview',
+  'film.title': 'See the browser get to work.',
+  'film.label': 'Illustrated product walkthrough',
   'film.caption':
-    'Bring your priorities, funding research and evidence together. An animated overview for businesses and CBOs.',
+    'One goal. A short question. Visible browsing across source pages. An illustrated walkthrough of the current app, with sample prompts rather than live grant results.',
   'film.play': 'Play the BulleBrowser film',
   'film.pause': 'Pause the film',
   'film.fallback': 'The film could not load. Try refreshing the page.',
   'film.description':
-    'A silent animated overview of BulleBrowser. Put funding in context with your priorities, official sources and evidence. Choose where to focus by considering purpose, requirements and timing. Build on your documented work and your own judgment. Connect funding strategy with business goals and community priorities for businesses and CBOs.',
+    'A silent illustrated walkthrough of BulleBrowser. Four browsing options sit beside the browser. Choosing an option leads to a short clarifying question. A sample answer starts visible cursor movement through official source pages, then open tabs support reviewing and comparing options. Stop keeps the user in control.',
 
   // The four options. Their names are in lib/terms.ts.
   'ask.eyebrow': 'Four ways to start',
@@ -359,7 +369,7 @@ export const en = {
   'privacy.eyebrow': 'Privacy',
   'privacy.h2': 'Stored on your device. Sent only where you direct it.',
   'privacy.body':
-    'Documents, extracted text, your profile and your analyses are stored on your device. When you connect your own AI provider and ask for analysis, relevant document excerpts go directly to that provider under your own key. Funding searches send search terms and filters, never documents, directly to the official sources. Nothing is routed through Bulle Consulting, and there is no analytics or telemetry.',
+    'Your browsing data and conversations are stored on your device. Browsing connects to websites and search services; connected AI providers receive the information needed for your requests. Bulle Consulting does not operate a proxy for your browsing or AI requests.',
   'privacy.1':
     'Documents, extracted text, your profile and your analyses are stored on your device.',
   'privacy.2':
@@ -408,7 +418,7 @@ export const en = {
   'download.releases': 'All releases on GitHub',
 
   // Guides page. Names in quotation marks are the app's own labels.
-  'install.h1': 'Install BulleBrowser and set up your organization',
+  'install.h1': 'From download to visible browsing',
   'install.sub':
     'From download to your first funding search in a few minutes. No technical background needed.',
   'install.s1.t': 'Install the app',
@@ -417,44 +427,44 @@ export const en = {
   'install.s1.win':
     'Run the .exe installer. If SmartScreen appears, choose “More info”, then “Run anyway”.',
   'install.s1.linux': 'Make the AppImage executable, then run it:',
-  'install.s2.t': 'Create your organization',
+  'install.s2.t': 'Start with the introduction',
   'install.s2.d':
-    'On first launch, BulleBrowser asks for your organization’s name, whether it is a business or a CBO, and where it is based. The location is used to find citywide, countywide and statewide funding for you, and it is stored on your device. You can add more organizations later; each one is kept separate.',
-  'install.s3.t': 'Add documents to the Organization Knowledge Hub',
+    'Open BulleBrowser. The introduction appears on the left and Your Assistant on the right. There is no funding dashboard to configure before browsing.',
+  'install.s3.t': 'Choose an option or type a request',
   'install.s3.d':
-    'Add PDF, DOCX, TXT or Markdown files of up to 40 MB each: strategic plans, organizational profiles, program descriptions, impact reports, budgets and previous proposals. BulleBrowser reads them on your device.',
-  'install.s4.t': 'Review and approve your profile',
+    'Click a browsing option and the app asks one short clarifying question. Answer it to start. If you type your own prompt instead, describe your goal directly; you do not need to choose an option first.',
+  'install.s4.t': 'Follow the work on the left',
   'install.s4.d':
-    'BulleBrowser proposes statements about your organization, each with the passage it came from, and flags anything missing or conflicting. Approve, edit or reject each one. Only approved statements are used for guidance.',
+    'Watch the cursor move, pages open and reading activity progress in the browser pane. Relevant source tabs remain available for review. Use Stop to interrupt a task. Some websites require you to sign in or complete a challenge yourself.',
   'install.s5.t': 'Connect an assistant (optional)',
   'install.s5.d':
-    'Written analysis — proposed profile statements, summaries of funding documents, alignment assessments and proposal guides — needs your own AI provider key. Open the profile menu, choose “Settings”, then “Connect an assistant (optional)”, paste your key and save. Keys are encrypted and stored on this device. Without a key, the funding finder, document search and text matches in funding documents still work.',
-  'install.s6.t': 'Choose where to start',
+    'Open Settings from the profile menu to connect your own AI provider. Settings opens above the browsing pane. Keys are encrypted and stored on this device. Basic browsing remains available without a key; attach relevant files to a conversation when needed.',
+  'install.s6.t': 'Four ways to put the browser to work',
   'install.s6.d':
-    'Open “Your Assistant” and pick one of the four options under “What can I help you with?”, or ask in your own words.',
+    'These are the four browsing options in Your Assistant. Each starts with a short question after you select it.',
   'install.note.t': 'About the security prompts',
   'install.note.d':
     'macOS releases are signed with a Developer ID and notarized by Apple. On Windows, SmartScreen can show a prompt before a newly published installer runs. Each release includes a SHA-256 checksum file, linked from the download page.',
   'install.updates.t': 'Updates',
   'install.updates.d':
-    'BulleBrowser checks for published releases when it starts and every five minutes, then downloads updates in the background. Choose “Update App” to keep working and hide the notice for that version. The update takes effect after you quit normally and open the app again. A newer release brings the notice back. On macOS, one update is prepared at a time; a newer download waits until the prepared version takes effect.',
+    'The Update button appears only when a verified update is ready. Click it once to install. The desktop app briefly restarts automatically and restores your tabs and current conversation; you do not need to close and reopen it yourself. Background downloads do not interrupt your work.',
   'install.next': 'Explore the app',
 
   // About page
   'about.h1': 'About Bulle Consulting',
   'about.lead':
-    'Bulle Consulting built BulleBrowser as a strategic funding platform for businesses and CBOs. It helps them discover funding opportunities, understand funder priorities, assess their alignment and develop proposals ethically.',
+    'Bulle Consulting is building BulleBrowser to bring funding research into the browser where the work happens. Our desktop app helps businesses and CBOs explore sources, compare opportunities and move from a broad goal to a more informed next step.',
   'about.why.h2': 'Why a browser?',
   'about.why.p':
     'Funding work happens on the web: official portals, funder sites, notices and application systems. A browser with a built-in assistant can read those official sources directly and keep your organization’s documents beside them, on your device.',
-  'about.limits.h2': 'What BulleBrowser will not do',
+  'about.limits.h2': 'Designed for accountable assistance',
   'about.limits.p':
-    'It does not write proposals for you, it does not invent facts about your organization, and it does not call a listing active unless an official source says it is open and its deadline has not passed. It gives structure, citations and honest labels, and leaves the judgment and the writing to you.',
+    'We make the work visible: pages, cursor activity and source tabs, with Stop available during a task. People review evidence and approve consequential actions. Website access, source availability and the connected model affect what the assistant can complete; funding is never guaranteed.',
   'about.key.h2': 'Why your own key?',
   'about.key.p':
     'Organizations work with sensitive material: plans, budgets and drafts. We do not want it on our servers. BulleBrowser stores your documents on your device and, when you ask for written analysis, sends the relevant excerpts directly to the AI provider you connect, under your own key. Nothing is routed through Bulle Consulting.',
-  'about.contact.h2': 'Contact',
-  'about.contact.p': 'Press, partnerships or product feedback:',
+  'about.contact.h2': 'Build with us',
+  'about.contact.p': 'For product questions, partnerships, press and investor conversations:',
 } as const;
 
 export type MessageKey = keyof typeof en;

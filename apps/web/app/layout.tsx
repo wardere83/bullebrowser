@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { JetBrains_Mono } from 'next/font/google';
 // Self-hosted rather than fetched from Google at build time: next/font/google
 // downloads the family during `next build`, which makes the build depend on
 // reaching fonts.googleapis.com. @fontsource ships the files in the package.
@@ -13,12 +12,6 @@ import { SHARE_IMAGE, SITE_URL } from '@/lib/metadata';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import './globals.css';
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains',
-  display: 'swap',
-});
 
 // Content-Security-Policy enforced in the browser via <meta http-equiv>.
 // (GitHub Pages can't set HTTP response headers, and only CSP is widely
@@ -78,7 +71,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${jetbrains.variable}`}>
+    <html lang="en">
       <head>
         {/* http-equiv (not name), this is what browsers actually enforce. */}
         <meta httpEquiv="Content-Security-Policy" content={CSP} />

@@ -1,213 +1,43 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>BulleBrowser funding strategy overview</title>
-<!-- A conceptual overview of the app's value for businesses and CBOs.
-     These animated words and diagrams explain the strategy; they are not
-     product screens. render.mjs seeks window.render(t) frame by frame and
-     ships the same video and poster in the website and desktop app. -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet" />
+<head><meta charset="utf-8"><title>BulleBrowser visible browsing walkthrough</title>
 <style>
-  :root { --navy: #071422; --teal: #20BAD1; --ice: #dbe8ec; --muted: #b9ccd3; --line: #507888; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
-  body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  #stage { position: absolute; inset: 0; overflow: hidden;
-    background: radial-gradient(1200px 900px at 72% 50%, #0e2a3c 0%, var(--navy) 62%, #050e18 100%); }
-  #globe { position: absolute; inset: 0; }
-  .abs { position: absolute; }
-  #brand { left: 84px; top: 50px; height: 80px; }
-  #tag { left: 338px; top: 72px; padding-left: 26px; border-left: 1.5px solid rgba(255,255,255,.26);
-    font-size: 26px; line-height: 36px; font-weight: 500; color: #d5e3e8; white-space: nowrap; }
-  #label { right: 88px; top: 64px; height: 52px; padding: 0 24px; border-radius: 26px;
-    display: flex; align-items: center; font-size: 24px; font-weight: 600; color: #fff;
-    background: rgba(7,20,34,.92); border: 1.5px solid rgba(32,186,209,.7); }
-  #foot { left: 92px; bottom: 64px; font-size: 22px; font-weight: 600; letter-spacing: .08em; color: #a7c7d1; }
-  .scene { position: absolute; left: 132px; top: 302px; width: 750px; opacity: 0; }
-  .eyebrow { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: .04em; color: #a7c7d1; }
-  .scene h1 { font-size: 100px; line-height: 1.09; font-weight: 400; letter-spacing: -.045em; color: #fff; margin: 30px 0 34px; }
-  .scene h1 span { display: block; color: var(--teal); }
-  .scene p { font-size: 30px; line-height: 1.45; color: var(--muted); max-width: 680px; letter-spacing: -.01em; }
-  #visual { position: absolute; left: 944px; top: 214px; width: 874px; height: 640px; }
-  .diagram { position: absolute; inset: 0; opacity: 0; }
-  .arrive { opacity: 0; }
-
-  /* Abstract relationships, with no application chrome or interactive UI. */
-  #connections { position: absolute; inset: 0; width: 874px; height: 640px; }
-  #connections path { fill: none; stroke: var(--line); stroke-width: 2.5; stroke-dasharray: 1; }
-  .node { position: absolute; display: flex; align-items: center; justify-content: center;
-    font-size: 30px; line-height: 40px; font-weight: 600; color: #fff; gap: 15px; }
-  .node::before { content: ''; width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--teal);
-    box-shadow: 0 0 22px rgba(32,186,209,.45); }
-  #priorities { left: 10px; top: 92px; width: 344px; }
-  #sources { right: 0; top: 92px; width: 364px; }
-  #evidence { left: 236px; top: 541px; width: 400px; }
-  #strategy { position: absolute; left: 236px; top: 214px; width: 400px; height: 252px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: #fff; font-size: 42px; line-height: 51px; font-weight: 600; letter-spacing: -.02em; }
-  #strategy::before { content: ''; position: absolute; inset: -14px 48px; border: 1.5px solid rgba(32,186,209,.5);
-    border-radius: 50%; background: radial-gradient(circle, rgba(32,186,209,.12), rgba(7,20,34,.2) 72%); }
-  #strategy img { position: relative; width: 74px; height: 74px; margin-bottom: 20px; }
-  #strategy span { position: relative; }
-
-  .focus-item { position: absolute; left: 60px; right: 18px; display: grid; grid-template-columns: 82px 1fr;
-    gap: 26px; align-items: start; padding-bottom: 29px; border-bottom: 1.5px solid rgba(167,199,209,.28); }
-  .focus-item:nth-child(1) { top: 78px; }
-  .focus-item:nth-child(2) { top: 258px; }
-  .focus-item:nth-child(3) { top: 438px; }
-  .number { font-size: 30px; line-height: 54px; font-weight: 500; color: var(--teal); }
-  .focus-item h2 { font-size: 43px; line-height: 54px; font-weight: 600; color: #fff; letter-spacing: -.02em; }
-  .focus-item p { margin-top: 8px; font-size: 27px; line-height: 38px; color: var(--muted); }
-
-  #strengths { padding: 90px 32px 0 58px; }
-  .strength { display: flex; align-items: center; gap: 24px; margin-bottom: 48px;
-    font-size: 42px; line-height: 57px; font-weight: 500; color: #fff; letter-spacing: -.025em; }
-  .strength::before { content: ''; width: 10px; height: 52px; flex: none; border-radius: 5px; background: var(--teal); }
-  #ownership { margin: 62px 0 0 34px; color: var(--muted); font-size: 29px; line-height: 42px; }
-
-  #audiences { padding: 70px 24px 0 58px; }
-  .audience { padding-left: 28px; border-left: 4px solid var(--teal); }
-  .audience + .audience { margin-top: 85px; }
-  .audience h2 { font-size: 43px; line-height: 56px; font-weight: 600; color: #fff; letter-spacing: -.02em; }
-  .audience p { margin-top: 18px; color: var(--muted); font-size: 30px; line-height: 45px; max-width: 670px; }
-
-  .full { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-    justify-content: center; background: radial-gradient(900px 600px at 50% 50%, #0c2233, #050e18); opacity: 0; }
-  .full div { color: var(--ice); letter-spacing: -.015em; white-space: nowrap; }
-  #open img { height: 230px; }
-  #open div { font-size: 46px; margin-top: 6px; }
-  #end img { height: 170px; }
-  #end div { font-size: 40px; margin-top: 4px; }
-  #end small { font-size: 30px; font-weight: 600; letter-spacing: .06em; color: var(--teal); margin-top: 40px; }
-  #black { position: absolute; inset: 0; background: #000; }
-</style>
-</head>
-<body>
-<div id="stage">
-  <canvas id="globe" width="1920" height="1080"></canvas>
-  <img id="brand" class="abs" src="../assets/wordmark-light.png" alt="BulleBrowser" />
-  <div id="tag" class="abs">The strategic funding platform for businesses and CBOs</div>
-  <div id="label" class="abs">Animated overview</div>
-  <div id="foot" class="abs">By Bulle Consulting</div>
-
-  <div class="scene" id="s-context"><div class="eyebrow">Put funding in context</div><h1>Your goals.<span>Clearer context.</span></h1><p>Bring your priorities, official sources and evidence into the same conversation.</p></div>
-  <div class="scene" id="s-focus"><div class="eyebrow">Choose where to focus</div><h1>Research with<span>purpose.</span></h1><p>Understand what deserves your time before committing to an application.</p></div>
-  <div class="scene" id="s-strengths"><div class="eyebrow">Build on real strengths</div><h1>Your work.<span>Your evidence.</span></h1><p>Ground your preparation in what your organization actually does.</p></div>
-  <div class="scene" id="s-audiences"><div class="eyebrow">For businesses and CBOs</div><h1>Different goals.<span>Shared clarity.</span></h1><p>Keep funding decisions connected to your priorities and the work ahead.</p></div>
-
-  <div id="visual">
-    <div class="diagram" id="context">
-      <svg id="connections" viewBox="0 0 874 640" aria-hidden="true">
-        <path pathLength="1" d="M182 150C182 240 274 220 335 260"/>
-        <path pathLength="1" d="M690 150C690 240 598 220 537 260"/>
-        <path pathLength="1" d="M436 486V522"/>
-      </svg>
-      <div class="node arrive" id="priorities">Your priorities</div>
-      <div class="node arrive" id="sources">Official sources</div>
-      <div class="arrive" id="strategy"><img src="../assets/logo.svg" alt="" /><span>Funding strategy</span></div>
-      <div class="node arrive" id="evidence">Your evidence</div>
-    </div>
-    <div class="diagram" id="focus">
-      <div class="focus-item arrive"><span class="number">01</span><div><h2>Purpose</h2><p>How does this support your goals?</p></div></div>
-      <div class="focus-item arrive"><span class="number">02</span><div><h2>Requirements</h2><p>What do you need to understand?</p></div></div>
-      <div class="focus-item arrive"><span class="number">03</span><div><h2>Timing</h2><p>What can your team prepare?</p></div></div>
-    </div>
-    <div class="diagram" id="strengths">
-      <div class="strength arrive">What you do.</div>
-      <div class="strength arrive">What your evidence shows.</div>
-      <div class="strength arrive">What you decide.</div>
-      <p class="arrive" id="ownership">Your judgment. Your own words.</p>
-    </div>
-    <div class="diagram" id="audiences">
-      <div class="audience arrive"><h2>For businesses</h2><p>Growth plans, capabilities and the evidence behind your next step.</p></div>
-      <div class="audience arrive"><h2>For CBOs</h2><p>Community priorities, programs and the impact you can document.</p></div>
-    </div>
-  </div>
-
-  <div class="full" id="open"><img src="../assets/wordmark-light.png" alt="BulleBrowser" /><div>The strategic funding platform for businesses and CBOs</div></div>
-  <div class="full" id="end"><img src="../assets/wordmark-light.png" alt="BulleBrowser" /><div>The strategic funding platform for businesses and CBOs</div><small>bullebrowser.com</small></div>
-  <div id="black"></div>
-</div>
-<script>
-const DURATION = 29.5;
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => [...document.querySelectorAll(selector)];
-const clamp = (value) => Math.min(1, Math.max(0, value));
-const seg = (time, from, to) => clamp((time - from) / (to - from));
-const easeOut = (value) => 1 - Math.pow(1 - value, 3);
-const easeInOut = (value) => value < 0.5 ? 4 * value ** 3 : 1 - Math.pow(-2 * value + 2, 3) / 2;
-const OPEN_UNTIL = 2.5;
-const END_FROM = 26.3;
-const SCENES = [
-  { id: 'context', from: 3, to: 8.8 },
-  { id: 'focus', from: 8.8, to: 14.5 },
-  { id: 'strengths', from: 14.5, to: 20.5 },
-  { id: 'audiences', from: 20.5, to: 27.4 },
+/* A deterministic, illustrated walkthrough of the shipped browser-first UI.
+   No sample text represents a verified opportunity or a live search result. */
+*{box-sizing:border-box}html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#071422;color:#fff;font-family:Inter,system-ui,sans-serif}#stage{position:relative;width:100%;height:100%;background:radial-gradient(ellipse at 80% 30%,#12384a,#071422 65%)}header{position:absolute;top:40px;left:80px;right:80px;display:flex;align-items:center;justify-content:space-between}header img{width:225px}header span{font-size:19px;color:#bad0d8;border:1px solid #365260;border-radius:30px;padding:12px 22px}.headline{position:absolute;left:96px;top:156px}#kicker{font-size:20px;color:#20bad1;text-transform:uppercase;letter-spacing:3px}#title{font-size:64px;font-weight:600;letter-spacing:-2px;margin:18px 0}#subtitle{font-size:25px;color:#b7cbd4;margin:0}#app{position:absolute;left:96px;right:96px;top:370px;height:590px;border:1px solid #48606c;border-radius:22px;background:#eff7f8;overflow:hidden;box-shadow:0 40px 100px #0006;color:#192630}.chrome{height:45px;background:#152b3a;display:flex;align-items:center;gap:10px;padding:0 20px;color:#d4e0e7;font-size:16px}.dot{width:8px;height:8px;border-radius:50%;background:#64808e}.chrome b{margin-left:15px;font-weight:500}.layout{display:grid;grid-template-columns:1.65fr 1fr;height:545px}.browser{position:relative;border-right:1px solid #d6e4e8}.tabs{height:46px;display:flex;gap:6px;align-items:end;padding:7px 14px 0;border-bottom:1px solid #d6e4e8}.tab{padding:10px 16px;border-radius:9px 9px 0 0;color:#5b727d;font-size:16px;white-space:nowrap}.tab.active{background:#fff;color:#142431}.address{margin:12px 20px;background:#fff;border:1px solid #d6e4e8;border-radius:8px;padding:9px 16px;color:#56707c;font-size:16px}.page{margin:18px 20px;border-radius:12px;background:#fff;height:377px;padding:32px 42px;overflow:hidden}.page small{font-size:14px;letter-spacing:2px;color:#56707c;text-transform:uppercase}.page h2{font-size:40px;line-height:1.1;letter-spacing:-1px;max-width:630px;margin:22px 0 18px}.page p{font-size:21px;line-height:1.5;color:#5a6c77;max-width:630px;margin:0}.details{margin-top:30px;border-top:1px solid #d6e4e8;padding-top:22px;display:flex;gap:12px}.details span{font-size:16px;background:#eff7f8;padding:10px 14px;border-radius:8px}.chat{padding:24px 28px;background:#fbfcfc;position:relative}.chathead{display:flex;justify-content:space-between;font-size:18px;font-weight:600}.chat h2{font-size:27px;letter-spacing:-.7px;margin:30px 0 18px}.options{display:grid;grid-template-columns:1fr 1fr;gap:10px}.option{background:#fff;border:1px solid #d6e4e8;border-radius:12px;padding:15px;font-size:18px;line-height:1.4;height:82px}.option.selected{border-color:#20bad1;background:#e7f8fb}.message{font-size:22px;line-height:1.45;margin-top:22px}.answer{border-radius:12px;background:#eaf3f5;font-size:19px;padding:12px 16px;margin-top:16px}.activity{font-size:17px;color:#42616e;margin-top:17px;display:flex;gap:10px;align-items:center}.activity i{width:8px;height:8px;background:#20bad1;border-radius:50%}.composer{position:absolute;bottom:23px;left:28px;right:28px;border-radius:14px;background:#fff;border:1.5px solid #20bad1;padding:19px;color:#687f89;font-size:18px;box-shadow:0 0 18px #20bad112}.stop{float:right;color:#142431;font-weight:600}#cursor{position:absolute;left:0;top:0;z-index:5;pointer-events:none;filter:drop-shadow(0 3px 3px #0004)}#cursor svg{display:block;width:30px;height:36px}#cursor span{display:block;background:#152b3a;color:white;font-size:12px;border-radius:5px;padding:5px 9px;margin:3px 0 0 15px}footer{position:absolute;left:96px;right:96px;bottom:43px;display:flex;justify-content:space-between;color:#9cb7c4;font-size:17px}#end{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,#12384a,#071422 65%);display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:0;pointer-events:none}#end img{width:560px}#end h2{font-size:64px;font-weight:500;letter-spacing:-2px;max-width:1100px;text-align:center;line-height:1.15;margin:34px 0 24px}#end p{font-size:28px;color:#b7cbd4}#end small{font-size:23px;color:#20bad1;margin-top:32px}
+</style></head><body><div id="stage">
+<header><img src="../assets/wordmark-light.png" alt="BulleBrowser"><span>Illustrated product walkthrough · Sample content</span></header>
+<div class="headline"><div id="kicker"></div><h1 id="title"></h1><p id="subtitle"></p></div>
+<div id="app"><div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i><b>BulleBrowser</b></div><div class="layout"><div class="browser"><div class="tabs"><div class="tab">Introduction</div><div class="tab">Grants.gov</div><div class="tab">California Grants Portal</div><div class="tab">Funder website</div></div><div class="address" id="address"></div><div class="page" id="page"><small id="pageLabel"></small><h2 id="pageTitle"></h2><p id="pageBody"></p><div class="details" id="details"></div></div></div><div class="chat"><div class="chathead">Your Assistant <span>···</span></div><div id="choose"><h2>Where should we browse?</h2><div class="options"><div class="option">Find grants for me</div><div class="option">Research a funder</div><div class="option">Compare grant opportunities</div><div class="option">Explore this page</div></div></div><div class="message" id="question">Where are you based, and what needs funding?</div><div class="answer" id="answer">California — funding for a youth skills program.</div><div class="activity" id="activity"><i></i><span id="activityText"></span></div><div class="composer"><span id="prompt">Ask BulleBrowser to browse…</span><span class="stop" id="stop">Stop</span></div></div></div><div id="cursor"><svg viewBox="0 0 25 30"><path d="M2 2v24l6-7 5 10 5-3-5-9h10Z" fill="#152b3a" stroke="white" stroke-width="2"/></svg><span>BulleBrowser</span></div></div>
+<footer><span>For businesses and CBOs · By Bulle Consulting</span><span>macOS · Windows · Linux</span></footer>
+<div id="end"><img src="../assets/wordmark-light.png" alt="BulleBrowser"><h2>Your funding goals.<br>A browser that gets to work.</h2><p>Visible research. Open sources. Your next move.</p><small>bullebrowser.com</small></div>
+</div><script>
+window.DURATION=32;
+const el=id=>document.getElementById(id);
+const clamp=x=>Math.max(0,Math.min(1,x));
+const smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
+const scenes=[
+['START WITH YOUR GOAL','Give your research a place to start.','Choose a browsing option — or type your request directly.'],
+['ONE SHORT QUESTION','A little context. A clearer direction.','The app asks its question after you choose an option.'],
+['VISIBLE BROWSING','Follow the work on the actual pages.','Watch the cursor move as the assistant opens and reads sources.'],
+['EXPLORE THE OPTIONS','More sources. A better-informed next step.','Review eligibility, deadlines and priorities on the original websites.'],
+['YOU STAY IN CONTROL','Keep the sources. Choose your next move.','Revisit open tabs, review the findings and stop a task when you need to.']
 ];
-
-const points = [];
-for (let latitude = -80; latitude <= 80; latitude += 6.5) {
-  const radius = Math.cos(latitude * Math.PI / 180);
-  const count = Math.max(6, Math.round(58 * radius));
-  for (let index = 0; index < count; index++) points.push([latitude * Math.PI / 180, index / count * Math.PI * 2]);
-}
-const context = $('#globe').getContext('2d');
-function drawGlobe(time) {
-  context.clearRect(0, 0, 1920, 1080);
-  const cx = 1390, cy = 545, radius = 470, rotation = time * .12, tilt = -.32;
-  for (const [latitude, longitude] of points) {
-    const x = Math.cos(latitude) * Math.sin(longitude + rotation);
-    const y = Math.sin(latitude), z = Math.cos(latitude) * Math.cos(longitude + rotation);
-    const y2 = y * Math.cos(tilt) - z * Math.sin(tilt), z2 = y * Math.sin(tilt) + z * Math.cos(tilt);
-    if (z2 < -.15) continue;
-    const alpha = .06 + .22 * clamp((z2 + .15) / 1.15);
-    context.fillStyle = `rgba(32,186,209,${alpha})`;
-    context.beginPath(); context.arc(cx + x * radius, cy - y2 * radius, 1.3 + z2 * 1.1, 0, Math.PI * 2); context.fill();
-  }
-}
-function rise(element, time, from, duration = .5, distance = 20) {
-  const progress = easeOut(seg(time, from, from + duration));
-  element.style.opacity = progress;
-  element.style.transform = `translateY(${(1 - progress) * distance}px)`;
-}
-window.render = function render(time) {
-  drawGlobe(time);
-  $('#black').style.opacity = 1 - easeOut(seg(time, 0, .8)) + easeInOut(seg(time, DURATION - .7, DURATION));
-  $('#open').style.opacity = 1 - easeInOut(seg(time, OPEN_UNTIL, OPEN_UNTIL + .6));
-  rise($('#open img'), time, .2, .8, 18);
-  rise($('#open div'), time, .95, .7, 18);
-
-  for (const scene of SCENES) {
-    const incoming = easeOut(seg(time, scene.from, scene.from + .8));
-    const outgoing = easeInOut(seg(time, scene.to - .6, scene.to));
-    const text = $(`#s-${scene.id}`);
-    text.style.opacity = incoming * (1 - outgoing);
-    text.style.transform = `translateY(${(1 - incoming) * 30 - outgoing * 18}px)`;
-    rise(text.querySelector('h1 span'), time, scene.from + .2, .7, 14);
-    const diagram = $(`#${scene.id}`);
-    diagram.style.opacity = incoming * (1 - outgoing);
-    diagram.style.transform = `translateY(${(1 - incoming) * 24 - outgoing * 18}px)`;
-    diagram.querySelectorAll('.arrive').forEach((element, index) => rise(element, time, scene.from + .45 + index * .35));
-  }
-  $$('#connections path').forEach((line, index) => {
-    line.style.strokeDashoffset = 1 - easeInOut(seg(time, 3.65 + index * .35, 4.8 + index * .35));
-  });
-
-  const closing = easeOut(seg(time, END_FROM, END_FROM + .8));
-  $('#end').style.opacity = closing;
-  $('#end').style.transform = `scale(${1.04 - closing * .04})`;
-  rise($('#end div'), time, END_FROM + .6, .6, 14);
-  rise($('#end small'), time, END_FROM + 1.2, .5, 12);
+const pages=[
+['BulleBrowser introduction','A browser built around your next step.','Your assistant works beside the pages you are exploring. Start with a goal, then follow the research.','Choose an option','Type a request','Follow the browser'],
+['Official source · Grants.gov','Read the original funding notice.','Explore the published requirements and confirm the current deadline on the official source.','Eligibility','Deadline','Application details'],
+['Official source · California Grants Portal','Explore relevant state programs.','Read the program purpose and guidance. Check whether the opportunity supports your location and activities.','Location','Program purpose','Guidelines'],
+['Official source · Funder website','Understand the funder’s priorities.','Compare the funder’s own guidance with your goal before deciding which opportunity to pursue.','Priorities','Requirements','Next steps']
+];
+window.render=function(t){
+const phase=t<5?0:t<11?1:t<17?2:t<23?3:4;
+const s=scenes[phase];el('kicker').textContent=s[0];el('title').textContent=s[1];el('subtitle').textContent=s[2];
+el('choose').style.display=t<6.5?'block':'none';el('question').style.display=t>=6.5?'block':'none';el('question').style.marginTop='40px';el('answer').style.display=t>=9?'block':'none';el('activity').style.display=t>=11?'flex':'none';el('stop').style.display=t>=11?'inline':'none';document.querySelector('.option').classList.toggle('selected',t>=4);
+const source=t<11?0:t<17?1:t<21?2:3;const p=pages[source];el('address').textContent=['New tab','grants.gov','grants.ca.gov','Official funder website'][source];el('pageLabel').textContent=p[0];el('pageTitle').textContent=p[1];el('pageBody').textContent=p[2];el('details').innerHTML=p.slice(3).map(v=>'<span>'+v+'</span>').join('');document.querySelectorAll('.tab').forEach((tab,i)=>{tab.classList.toggle('active',i===source);tab.style.display=i<=source?'block':'none'});
+el('activityText').textContent=t<17?'Reading the official source…':t<23?'Exploring another source…':'Source tabs stay open for review.';
+let x=1450,y=250;if(t<6.5){const u=smooth((t-1)/3);x=1520-300*u;y=310-95*u}else if(t<11){x=1340;y=390}else{const waypoints=[[80,60],[330,180],[530,295],[200,365],[500,210]];const a=Math.min(3,Math.floor((t-11)/4)),u=smooth(((t-11)%4)/4);x=waypoints[a][0]+(waypoints[a+1][0]-waypoints[a][0])*u;y=waypoints[a][1]+(waypoints[a+1][1]-waypoints[a][1])*u;}el('cursor').style.transform=`translate(${x}px,${y}px)`;el('cursor').style.opacity=t>=27?0:1;
+const scroll=t>=13&&t<17?smooth((t-13)/3)*38:0;el('pageLabel').style.display='block';el('pageLabel').style.transform=`translateY(${-scroll}px)`;el('pageTitle').style.transform=`translateY(${-scroll}px)`;el('pageBody').style.transform=`translateY(${-scroll}px)`;el('details').style.transform=`translateY(${-scroll}px)`;
+el('end').style.opacity=smooth((t-27.5)/1.2);el('stage').style.opacity=smooth(t/.7)*(1-smooth((t-31.2)/.8));
 };
-window.DURATION = DURATION;
-window.render(0);
-if (!location.search.includes('frames')) {
-  const started = performance.now();
-  const tick = () => { window.render((performance.now() - started) / 1000 % DURATION); requestAnimationFrame(tick); };
-  requestAnimationFrame(tick);
-}
-</script>
-</body>
-</html>
+if(!location.search.includes('frames')){let start=performance.now();const tick=now=>{window.render(((now-start)/1000)%window.DURATION);requestAnimationFrame(tick)};requestAnimationFrame(tick)}else window.render(0);
+</script></body></html>

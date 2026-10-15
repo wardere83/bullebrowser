@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BrowserWalkthrough } from '@/components/BrowserWalkthrough';
 import { AppBenefits, AppAudiences } from '@/components/AppBenefits';
 import { ArrowLink } from '@/components/ArrowLink';
 import { Eyebrow } from '@/components/Eyebrow';
@@ -31,6 +32,7 @@ export default function FeaturesPage() {
         </div>
       </section>
 
+      <BrowserWalkthrough />
       <AppAudiences />
 
       <section className="bg-surface-light py-20 md:py-24">

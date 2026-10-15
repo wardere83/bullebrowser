@@ -12,10 +12,10 @@ const CHARCOAL = '#142127';
 const TEAL = '#20BAD1';
 
 const HELPS_WITH = [
-  'Discover opportunities',
-  'Understand funder priorities',
-  'Assess alignment',
-  'Develop proposals ethically',
+  'Find grants for me',
+  'Research a funder',
+  'Compare grant opportunities',
+  'Explore this page',
 ];
 
 export function GET() {
@@ -54,7 +54,7 @@ export function GET() {
           </div>
           <div style={{ fontSize: '64px', fontWeight: 800, letterSpacing: -2 }}>{product.name}</div>
         </div>
-        <div style={{ fontSize: '52px', fontWeight: 700, lineHeight: 1.12, maxWidth: 1000 }}>{product.tagline}</div>
+        <div style={{ fontSize: '52px', fontWeight: 700, lineHeight: 1.12, maxWidth: 1000 }}>Your funding goals. A browser that gets to work.</div>
         <div
           style={{
             marginTop: '36px',

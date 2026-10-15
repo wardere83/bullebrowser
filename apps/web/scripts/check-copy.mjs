@@ -49,6 +49,33 @@ const dictionaries = {
 const english = dictionaries.en;
 const keys = Object.keys(english);
 
+// Marketing examples must track the shipped app, including its short questions.
+const taskSource = readFileSync(
+  path.join(REPO, 'packages/agent-core/src/browser-tasks.ts'),
+  'utf8',
+);
+const taskLabels = [...taskSource.matchAll(/label: '([^']+)'/g)].map((match) => match[1]);
+const taskQuestions = [...taskSource.matchAll(/question: '([^']+)'/g)].map((match) => match[1]);
+const terms = readFileSync(path.join(WEB, 'lib/terms.ts'), 'utf8');
+const preview = readFileSync(path.join(WEB, 'components/BrowserWalkthrough.tsx'), 'utf8');
+const film = readFileSync(path.join(REPO, 'packages/brand-tokens/film/film.html'), 'utf8');
+if (taskLabels.length !== 4 || taskQuestions.length !== 4)
+  fail('browser tasks', 'expected four shipped browsing options and questions');
+for (const label of taskLabels) {
+  if (!terms.includes(`label: '${label}'`))
+    fail('lib/terms.ts', `missing current action “${label}”`);
+  if (!film.includes(label)) fail('film.html', `missing current action “${label}”`);
+}
+for (const question of taskQuestions) {
+  if (!preview.includes(question))
+    fail('BrowserWalkthrough.tsx', `missing current question “${question}”`);
+}
+for (const name of ['bullebrowser-film.mp4', 'bullebrowser-film-poster.jpg']) {
+  const webMedia = readFileSync(path.join(WEB, 'public/media', name));
+  const appMedia = readFileSync(path.join(REPO, 'apps/desktop/src/renderer/assets', name));
+  if (!webMedia.equals(appMedia)) fail(name, 'website and app must ship the same walkthrough');
+}
+
 // The acronym's long form in each language, hyphenated or not.
 const SPELLED_OUT = [
   new RegExp(join('commu', 'nity[\\s-]*ba', 'sed'), 'i'),
@@ -302,6 +329,11 @@ if (pages.length) {
   const guide = strip(readFileSync(path.join(OUT, 'install/index.html'), 'utf8'));
   if (!guide.includes(english['install.updates.d']))
     fail('/install/', 'missing the current update behavior');
+  for (const label of taskLabels) {
+    if (!guide.includes(label)) fail('/install/', `missing current action “${label}”`);
+  }
+  if (/Organization Knowledge Hub|Update App|What can I help you with\?/.test(guide))
+    fail('/install/', 'retired setup or update controls are still presented to users');
 }
 
 console.log(

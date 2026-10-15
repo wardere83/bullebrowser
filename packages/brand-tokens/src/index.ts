@@ -4,7 +4,7 @@ export const product = {
   // "CBOs" is always the acronym, here and wherever these two lines are shown.
   tagline: 'The strategic funding platform for businesses and CBOs',
   description:
-    'BulleBrowser is a strategic funding platform that helps businesses and CBOs discover funding opportunities, understand funder priorities, assess alignment, and navigate proposal development ethically.',
+    'BulleBrowser helps businesses and CBOs research grants through visible browser actions, official source pages and a built-in assistant. Available for macOS, Windows and Linux.',
   domain: 'bullebrowser.com',
   bundleId: 'com.bulleconsulting.bullebrowser',
   // Must match electron-builder.yml's `appId` exactly (case-sensitive) so the
