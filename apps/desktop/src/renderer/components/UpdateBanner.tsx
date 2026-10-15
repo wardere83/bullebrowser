@@ -7,7 +7,6 @@ export function UpdateBanner() {
   const [status, setStatus] = useState<UpdateStatus>({ state: 'idle' });
   const current = useRef<UpdateStatus>(status);
   const [busy, setBusy] = useState(false);
-  const [prepared, setPrepared] = useState<string | null>(null);
   const [actionError, setActionError] = useState(false);
 
   useEffect(() => {
@@ -17,7 +16,6 @@ export function UpdateBanner() {
       current.current = next;
       setStatus(next);
       setActionError(false);
-      if (next.state !== 'idle') setPrepared(null);
     };
     const unsubscribe = window.bullebrowser.updates.onStatus((next) => {
       if (!active) return;
@@ -33,12 +31,6 @@ export function UpdateBanner() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!prepared) return;
-    const timeout = setTimeout(() => setPrepared(null), 8000);
-    return () => clearTimeout(timeout);
-  }, [prepared]);
-
   const prepare = async () => {
     if (status.state !== 'ready' || busy) return;
     const version = status.version;
@@ -50,11 +42,11 @@ export function UpdateBanner() {
       if (current.current.state === 'idle' || (current.current.state === 'ready' && current.current.version === version)) {
         current.current = { state: 'idle' };
         setStatus({ state: 'idle' });
-        setPrepared(version);
       }
     } catch {
-      // Keep the ready action available if preparation did not succeed.
-      if (current.current.state === 'idle' || (current.current.state === 'ready' && current.current.version === version)) {
+      // An idle event is authoritative: a rejected/late IPC response must not
+      // resurrect an acknowledged notice.
+      if (current.current.state === 'ready' && current.current.version === version) {
         const ready: UpdateStatus = { state: 'ready', version };
         current.current = ready;
         setStatus(ready);
@@ -94,13 +86,7 @@ export function UpdateBanner() {
     }
   };
 
-  if (status.state === 'idle') {
-    return prepared ? (
-      <div role="status" className="no-drag max-w-52 text-[11px] leading-tight text-emerald-300">
-        v{prepared} prepared. Applies after you quit and reopen.
-      </div>
-    ) : null;
-  }
+  if (status.state === 'idle') return null;
 
   const progress = status.state === 'downloading' && status.percent !== undefined
     ? Math.round(status.percent)

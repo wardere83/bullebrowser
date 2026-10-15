@@ -8,7 +8,6 @@ import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { AboutModal } from './components/AboutModal.js';
 import { Splash } from './components/Splash.js';
 import { BrowserPane } from './components/BrowserPane.js';
-import { Workspace } from './workspace/Workspace.js';
 import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
 import { isStartPageUrl, useWorkspaceConnection } from './state/workspace-store.js';
@@ -24,8 +23,6 @@ export function App() {
   const setSearchProvider = useBrowserStore((s) => s.setSearchProvider);
   const showSettings = useBrowserStore((s) => s.showSettings);
   const showAbout = useBrowserStore((s) => s.showAbout);
-  const workspaceTabId = useBrowserStore((s) => s.workspaceTabId);
-  const setWorkspaceTab = useBrowserStore((s) => s.setWorkspaceTab);
   const appendStep = useAgentStore((s) => s.appendStep);
   const finishRun = useAgentStore((s) => s.finishRun);
   const setError = useAgentStore((s) => s.setError);
@@ -33,17 +30,13 @@ export function App() {
   const initialized = useRef(false);
 
   useKeyboardShortcuts();
-  // Identity, setup status and funding events for the workspace and for the
-  // assistant panel's grounding line, which shows on every tab.
+  // Keep organization context available to the assistant.
   useWorkspaceConnection();
 
-  // Only an explicitly opened funding tab shows tools in the page slot.
-  // Main hides the native page view on about:blank to let those tools show.
   const activeTab = tabs.find((t) => t.active);
-  const showWorkspace = Boolean(
-    activeTab && activeTab.id === workspaceTabId && isStartPageUrl(activeTab.url),
-  );
-  const showIntro = !showWorkspace && (!activeTab || isStartPageUrl(activeTab.url));
+  const showIntro = !activeTab || isStartPageUrl(activeTab.url);
+  const pendingConfirm = useAgentStore((s) => s.pendingConfirm);
+  const modalOpen = showSettings || showAbout || pendingConfirm?.kind === 'destructive';
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -126,7 +119,10 @@ export function App() {
   useEffect(() => {
     const top = spacing.topBarHeight + spacing.tabStripHeight;
     const right = aiPanelOpen ? spacing.aiPanelWidth : 0;
-    void window.bullebrowser.layout.setBounds({ topInset: top, rightInset: right });
+    void window.bullebrowser.layout.setBounds({ topInset: top, rightInset: right, modalOpen });
+  }, [aiPanelOpen, modalOpen]);
+
+  useEffect(() => {
     void window.bullebrowser.settings.set({ aiPanelOpen });
   }, [aiPanelOpen]);
 
@@ -135,24 +131,11 @@ export function App() {
       <TopBar />
       <TabStrip />
       <div className="flex flex-1 overflow-hidden">
-        {/* Blank tabs show the video intro. Funding tools open only on request;
-            navigating to a web page gives the slot to its native page view. */}
+        {/* The left pane is the intro until a browsing task opens a page. */}
         <div className="flex min-w-0 flex-1 flex-col bg-surface-light">
-          {showWorkspace && (
-            <div className="flex shrink-0 justify-end bg-surface-dark px-4 py-2">
-              <button
-                type="button"
-                onClick={() => setWorkspaceTab(null)}
-                className="rounded px-2 py-1 text-xs text-ink-inverse hover:bg-white/10"
-              >
-                Back to browsing
-              </button>
-            </div>
-          )}
           <div className="min-h-0 flex-1">
             {showIntro && <Splash />}
             <BrowserPane tab={activeTab} />
-            <Workspace visible={showWorkspace} />
           </div>
         </div>
         {aiPanelOpen && <AiPanel />}

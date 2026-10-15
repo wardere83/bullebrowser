@@ -73,6 +73,22 @@ describe('native browsing navigation recovery', () => {
     expect(view.setVisible).toHaveBeenLastCalledWith(true);
   });
 
+  it('keeps pages hidden through navigation and tab switches while a dialog is open', async () => {
+    const { manager, id, view, win } = await createManager();
+    await manager.navigate(id, 'https://example.com/');
+    manager.setBounds({ topInset: 80, rightInset: 440, modalOpen: true });
+    expect(view.setVisible).toHaveBeenLastCalledWith(false);
+    start(view, 'https://example.com/next');
+    win.emit('resize');
+    expect(view.setVisible).toHaveBeenLastCalledWith(false);
+    await manager.create('https://example.org/');
+    const other = mocks.views[1]!;
+    expect(other.setVisible).toHaveBeenLastCalledWith(false);
+    manager.setBounds({ topInset: 80, rightInset: 440, modalOpen: false });
+    expect(other.setVisible).toHaveBeenLastCalledWith(true);
+    expect(view.setVisible).toHaveBeenLastCalledWith(false);
+  });
+
   it('retains a failed first address across Chromium’s old blank commit and recovers through Reload', async () => {
     const { manager, id, view } = await createManager();
     const url = 'http://127.0.0.1:12345/missing';

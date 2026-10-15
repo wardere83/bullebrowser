@@ -8,13 +8,9 @@ import { useBrowserStore } from '../state/browser-store.js';
 import {
   activeOrganization,
   focusedRfpId,
-  isStartPageUrl,
-  openWorkspace,
-  useRouteParams,
   useWorkspaceStore,
 } from '../state/workspace-store.js';
 import { Icon } from '../workspace/ui/icons.js';
-import { WORKFLOWS, workflowForSkill, workflowLocation, type Workflow } from '../workspace/workflows.js';
 import { AGENT_PROMPT_EVENT } from '../lib/url.js';
 import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
@@ -61,15 +57,6 @@ function browserBridge(): BrowserBridge {
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
   const showSettings = useBrowserStore((s) => s.showSettings);
-  const workspaceVisible = useBrowserStore((state) =>
-    state.tabs.some(
-      (tab) => tab.active && tab.id === state.workspaceTabId && isStartPageUrl(tab.url),
-    ),
-  );
-  const knowledgeOpen = useWorkspaceStore((state) => state.route === 'knowledge');
-  const knowledgeParams = useRouteParams('knowledge');
-  const entityInfoSelected =
-    workspaceVisible && knowledgeOpen && (knowledgeParams.tab ?? 'documents') === 'documents';
   const setCurrent = useAgentStore((s) => s.setCurrent);
   // The history list renders from this; without the selector the identifier is
   // simply undefined and opening History throws.
@@ -561,22 +548,6 @@ export function AiPanel() {
           >
             New chat
           </button>
-          <button
-            type="button"
-            aria-current={entityInfoSelected ? 'page' : undefined}
-            onClick={() => {
-              setShowHistory(false);
-              void openWorkspace('knowledge', { tab: 'documents' });
-            }}
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs transition-colors ${
-              entityInfoSelected
-                ? 'border-primary/60 bg-primary/10 text-ink-primary'
-                : 'border-line/50 text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
-            }`}
-          >
-            <Icon name="upload" size={13} />
-            Upload Entity’s Info
-          </button>
         </div>
       </header>
 
@@ -607,17 +578,10 @@ export function AiPanel() {
         className="selectable flex-1 overflow-y-auto px-5 py-5"
       >
         {current && current.messages.length === 0 && (
-          <EmptyState
-            selectedSkillId={skillId}
-            onWorkflow={(workflow) => {
-              // Apply this workflow to the chat and open its funding screen.
-              // Discovery also starts the entity's search through its consent gate.
-              setSkillId(workflow.skillId);
-              const destination = workflowLocation(workflow, useWorkspaceStore.getState());
-              void openWorkspace(destination.route, destination.params);
-              textareaRef.current?.focus();
-            }}
-          />
+          <EmptyState onBrowse={(prompt) => {
+            setDraft(prompt);
+            textareaRef.current?.focus();
+          }} />
         )}
         {current?.messages.map((m, i) => (
           <Bubble key={i} role={m.role} content={m.content} />
@@ -968,58 +932,33 @@ function AllowAccess({ task }: { task: string }) {
   );
 }
 
-// The four workflows offered by the assistant before the first message.
-// Choosing one opens its screen in the workspace and selects its rules for
-// this chat; it sends nothing. Voice is still one click away on the microphone
-// and Voice Mode controls under the composer.
-function EmptyState({
-  selectedSkillId,
-  onWorkflow,
-}: {
-  selectedSkillId: string;
-  onWorkflow: (workflow: Workflow) => void;
-}) {
-  const selected = workflowForSkill(selectedSkillId);
-  const chip =
-    'flex w-full items-start gap-2.5 rounded-lg border px-3 py-2 text-left text-[13px] text-ink-primary transition-colors';
+// Browser tasks go through the ordinary composer so users can add their criteria.
+const BROWSER_TASKS = [
+  { label: 'Find grants for me', icon: 'search', prompt: 'Browse official funding sources to find open grants for me. First ask for any missing location, organization type, focus area and funding needs. Verify eligibility and deadlines, and link to each official source.' },
+  { label: 'Research a funder', icon: 'compass', prompt: 'Browse a funder’s official website to research its priorities, current grant programs and application requirements. Ask which funder I want to research, then provide findings with source links.' },
+  { label: 'Compare grant opportunities', icon: 'scale', prompt: 'Browse and compare grant opportunities by eligibility, funding amount, deadline and application requirements. Ask which grants or search criteria to use, verify the official sources and recommend the strongest matches.' },
+  { label: 'Explore this page', icon: 'external', prompt: 'Read the current browser page and follow relevant links to find funding opportunities, eligibility rules and application steps. Summarize what you verify with source links. If no page is open, ask me for a website.' },
+] as const;
+
+function EmptyState({ onBrowse }: { onBrowse: (prompt: string) => void }) {
   return (
     <div className="space-y-5 pt-1 text-sm">
       <h2 className="text-[15px] font-semibold tracking-tight text-ink-primary">
-        What can I help you with?
+        Where should we browse?
       </h2>
       <p className="leading-relaxed text-ink-secondary">
-        Guidance here is grounded in your organization’s approved profile and the
-        funding documents you add. Pick a workflow to open it in the workspace,
-        or ask in your own words.
+        Let your assistant browse websites, research funders and find grants.
+        Choose a task, add your criteria, then send it to get started.
       </p>
       <div className="grid gap-2">
-        {WORKFLOWS.map((workflow) => {
-          const isSelected = workflow.id === selected?.id;
-          return (
-            <button
-              key={workflow.id}
-              type="button"
-              onClick={() => onWorkflow(workflow)}
-              aria-current={isSelected ? 'true' : undefined}
-              className={`${chip} ${
-                isSelected
-                  ? 'border-primary bg-primary/10'
-                  : 'border-line hover:border-primary/40 hover:bg-surface-muted'
-              }`}
-            >
-              <Icon name={workflow.icon} className="mt-0.5 text-primary" />
-              <span className="min-w-0 flex-1">{workflow.label}</span>
-              {isSelected && <Icon name="check" className="mt-0.5 text-primary" />}
-            </button>
-          );
-        })}
+        {BROWSER_TASKS.map((task) => (
+          <button key={task.label} type="button" onClick={() => onBrowse(task.prompt)}
+            className="flex w-full items-start gap-2.5 rounded-lg border border-line px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-primary/40 hover:bg-surface-muted">
+            <Icon name={task.icon} className="mt-0.5 text-primary" />
+            <span>{task.label}</span>
+          </button>
+        ))}
       </div>
-      {/* Always present, so the change is read out when a workflow is chosen. */}
-      <p role="status" className="min-h-4 text-xs leading-relaxed text-ink-secondary">
-        {selected
-          ? `${selected.label} is open in the workspace. Messages in this chat follow that workflow.`
-          : ''}
-      </p>
     </div>
   );
 }

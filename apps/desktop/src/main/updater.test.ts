@@ -280,6 +280,20 @@ describe('background app updates', () => {
     expect(app.quit).not.toHaveBeenCalled();
   });
 
+  it('honors a retry clicked before the failed download promise settles', async () => {
+    const transfer = deferred<string[]>();
+    updater.downloadUpdate.mockReturnValueOnce(transfer.promise);
+    const api = await start();
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    events.emit('error', new Error('Download interrupted'));
+    const retry = api.retryUpdate();
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
+    transfer.reject(new Error('Download interrupted'));
+    await retry;
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(2);
+  });
+
   it('reports a new retry failure instead of hiding the notice or returning a stale ready state', async () => {
     const api = await start();
     updater.downloadUpdate.mockRejectedValueOnce(new Error('Download interrupted'));

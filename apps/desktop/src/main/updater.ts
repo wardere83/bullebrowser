@@ -319,9 +319,13 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     checkPromise = task;
     return task;
   };
-  const requestedCheck = () => {
+  const requestedCheck = async () => {
     clearConnectionRetry();
     connectionRetryAttempts = 0;
+    // The error event arrives before the download promise settles. A click
+    // during that gap must wait for cleanup instead of silently doing nothing.
+    if (downloadPromise) await downloadPromise;
+    if (getUpdateStatus().state !== 'error') return;
     return check();
   };
   requestCheck = requestedCheck;

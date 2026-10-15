@@ -398,7 +398,7 @@ test('updates show progress, keep browsing open, clear after acknowledgment and 
     await update.click();
     await expect(update).toBeHidden();
     await expect(notice).toBeHidden();
-    await expect(win.getByRole('status').filter({ hasText: 'v0.2.50 prepared.' })).toBeVisible();
+    await expect(win.getByRole('status').filter({ hasText: 'v0.2.50 prepared.' })).toBeHidden();
     await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updatePrepare))
       .toEqual({ attempts: 2, version: '0.2.50' });
     expect(await app.evaluate(() => process.pid)).toBe(processId);
@@ -449,8 +449,8 @@ test('updates show progress, keep browsing open, clear after acknowledgment and 
       const next = await reopened;
       await expect(next.locator('aside textarea')).toBeEnabled();
       await expect(next.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
-      await next.getByRole('button', { name: 'Organization Knowledge Hub', exact: true }).click();
-      await expect(next.getByRole('region', { name: 'Funding workspace' })).toBeVisible();
+      await expect(next.getByRole('button', { name: 'Organization Knowledge Hub', exact: true })).toBeHidden();
+      await expect(next.getByRole('region', { name: 'Funding workspace' })).toBeHidden();
       expect(await app.evaluate(() => process.pid)).toBe(processId);
     }
   } finally {

@@ -121,6 +121,7 @@ export interface TabState {
 }
 
 export interface LayoutBounds {
+  modalOpen?: boolean; // hide native pages while a renderer dialog is open
   topInset: number; // pixels reserved at the top for chrome
   rightInset: number; // pixels reserved on the right for the AI panel (0 when closed)
 }

@@ -444,7 +444,7 @@ class TabManager {
           width: Math.max(0, contentWidth - right),
           height: Math.max(0, contentHeight - top),
         });
-        t.view.setVisible(!isStartPage(t.url) && !t.loadError);
+        t.view.setVisible(!this.bounds.modalOpen && !isStartPage(t.url) && !t.loadError);
       } else {
         t.view.setBounds({ x: 0, y: top, width: 0, height: 0 });
         t.view.setVisible(false);

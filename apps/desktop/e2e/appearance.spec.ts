@@ -42,7 +42,7 @@ async function launch() {
   // The panel shell appears before settings and the first conversation finish
   // loading. Its empty-chat view confirms the session exists before tests seed
   // history or send a task.
-  await expect(win.getByRole('heading', { name: 'What can I help you with?', exact: true })).toBeVisible();
+  await expect(win.getByRole('heading', { name: 'Where should we browse?', exact: true })).toBeVisible();
   return { app, win };
 }
 

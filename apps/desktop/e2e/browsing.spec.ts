@@ -35,7 +35,7 @@ async function launch() {
       env,
     });
     const win = await app.firstWindow({ timeout: 20_000 });
-    await expect(win.getByRole('heading', { name: 'What can I help you with?', exact: true })).toBeVisible();
+    await expect(win.getByRole('heading', { name: 'Where should we browse?', exact: true })).toBeVisible();
     await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.tabs.list()).filter((tab) => tab.active).length)).toBe(1);
     const testApp = app;
     await expect.poll(() => testApp.evaluate(() => Boolean((globalThis as Record<string, unknown>).__bbTest))).toBe(true);
@@ -359,4 +359,39 @@ test('failed first navigation keeps the attempted address and can recover with R
     await close();
     await recovered?.close();
   }
+});
+
+
+test('browser starters keep the intro open and put actionable research prompts in chat', async () => {
+  const { app, win, close } = await launch();
+  try {
+    await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
+    await expect(win.getByRole('region', { name: 'Funding workspace' })).toBeHidden();
+    await expect(win.getByRole('button', { name: 'Upload Entity’s Info', exact: true })).toBeHidden();
+    await expect(win.getByRole('button', { name: 'Organization Knowledge Hub', exact: true })).toBeHidden();
+    for (const label of ['Find grants for me', 'Research a funder', 'Compare grant opportunities', 'Explore this page']) {
+      await win.getByRole('button', { name: label, exact: true }).click();
+      await expect(win.locator('aside textarea')).toHaveValue(/official|current browser page/);
+      await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
+    }
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
+  } finally { await close(); }
+});
+
+test('settings and about stay above browsing and restore the page when closed', async () => {
+  const source = await fixture();
+  const { app, win, close } = await launch();
+  try {
+    await enterAddress(win, source.url + '/one');
+    await expectPage(app, win, source.url + '/one', 'Community funding source');
+    for (const title of ['Settings', 'About BulleBrowser']) {
+      await win.getByRole('button', { name: 'Profile menu', exact: true }).click();
+      await win.getByRole('button', { name: title, exact: true }).click();
+      await expect(win.getByRole('dialog')).toBeVisible();
+      await expect.poll(async () => (await pageState(app)).visible).toBe(false);
+      await win.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(win.getByRole('dialog')).toBeHidden();
+      await expect.poll(async () => (await pageState(app)).visible).toBe(true);
+    }
+  } finally { await close(); await source.close(); }
 });

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBrowserStore, activeTabSelector } from '../state/browser-store.js';
 import { useAgentStore } from '../state/agent-store.js';
-import { openWorkspace } from '../state/workspace-store.js';
 import { AGENT_PROMPT_EVENT, parseAddressBarInput } from '../lib/url.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { FOCUS_AI_PANEL_EVENT } from './AiPanel.js';
@@ -71,30 +70,6 @@ export function TopBar() {
     >
       <img src={brandIcon} alt="" width={20} height={20} className="no-drag shrink-0" />
       <div className="no-drag flex items-center gap-1">
-        {/* Organization documents and funding tools open only on request. */}
-        <button
-          type="button"
-          aria-label="Organization Knowledge Hub"
-          title="Organization Knowledge Hub"
-          onClick={() => void openWorkspace('knowledge')}
-          className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-ink-inverse transition-colors hover:bg-white/10"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M4 11.5 12 5l8 6.5" />
-            <path d="M6.5 10v9.5h11V10" />
-          </svg>
-          <span className="hidden min-[1100px]:inline">Knowledge Hub</span>
-        </button>
         <NavBtn
           label="Back"
           disabled={!active?.canGoBack}
