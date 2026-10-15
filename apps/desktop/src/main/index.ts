@@ -1,3 +1,4 @@
+import { takeUpdateTabs } from './storage/update-session.js';
 import { app, BrowserWindow, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -61,6 +62,13 @@ async function createWindow() {
     if (mainWindow === win) mainWindow = null;
   });
   tabManager.attachWindow(win);
+  const updateSession = takeUpdateTabs();
+  if (updateSession) {
+    const restored = [];
+    for (const url of updateSession.urls) restored.push(await tabManager.create(url));
+    const active = restored[updateSession.activeIndex];
+    if (active) tabManager.activate(active.id);
+  }
   registerIpc(win, () => mainWindow);
   setupAppMenu(win);
   // Deny capability requests to everything except this window's own chrome —

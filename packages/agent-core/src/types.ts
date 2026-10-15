@@ -1,3 +1,4 @@
+import type { BrowserTaskId } from './browser-tasks.js';
 import type { z } from 'zod';
 import type { ToolCallRecord } from './agent-loop.js';
 
@@ -89,6 +90,8 @@ export interface TabSummary {
 }
 
 export interface ToolContext {
+  /** Host presentation after consent and policy checks, before a real browser action. */
+  beforeBrowserAction?: (name: string, input: Record<string, unknown>) => Promise<void>;
   activeTabId: string;
   signal: AbortSignal;
   runtime: ToolRuntime;
@@ -250,6 +253,7 @@ export interface ReferenceContextItem {
 }
 
 export interface AgentInput {
+  browserTask?: BrowserTaskId;
   /** Require live multi-source research for research prompts. */
   researchMode?: boolean;
   apiKey?: string;

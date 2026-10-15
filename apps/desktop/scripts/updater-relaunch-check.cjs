@@ -179,3 +179,26 @@ describe('installed platform updater keeps the current session open', { concurre
     }
   });
 });
+
+describe('explicit one-click updates reopen automatically', { concurrency: false }, () => {
+  test('Mac applies its prepared signed bundle and reopens only after the click', () => {
+    const { updater, nativeUpdater, actions } = createFixture(MacUpdater);
+    nativeUpdater.emit('update-downloaded');
+    assert.deepEqual(actions, []);
+    updater.autoRunAppAfterInstall = true;
+    updater.quitAndInstall(true, true);
+    assert.deepEqual(actions.map(action => action.type), ['native-install-and-reopen']);
+  });
+  test('Windows installs silently and requests an automatic reopen after the click', async () => {
+    const { updater, actions } = createFixture(NsisUpdater);
+    updater.downloadedUpdateHelper = { file: 'downloaded-update.exe', downloadedFileInfo: { isAdminRightsRequired: false } };
+    updater.autoRunAppAfterInstall = true;
+    updater.quitAndInstall(true, true);
+    await nextImmediate();
+    const install = actions.find(action => action.type === 'spawn');
+    assert.ok(install);
+    assert.ok(install.args.includes('/S'));
+    assert.ok(install.args.includes('--force-run'));
+    assert.ok(actions.some(action => action.type === 'quit'));
+  });
+});

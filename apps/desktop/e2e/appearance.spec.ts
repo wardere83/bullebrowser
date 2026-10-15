@@ -194,7 +194,7 @@ test('the browsing cloud follows real keyless consent, completion and Stop witho
     // Native mouse input hits the webpage through the decorative cloud.
     await app.evaluate(async (_electron, id) => {
       const wc = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager.getView(id).webContents;
-      const point = await wc.executeJavaScript("(()=>{const r=document.querySelector('button').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};})()");
+      const point = await wc.executeJavaScript("(()=>{const button=document.querySelector('button');button.scrollIntoView({block:'center'});const r=button.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};})()");
       wc.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
       wc.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
     }, tabId);

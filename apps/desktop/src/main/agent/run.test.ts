@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   appendMessage: vi.fn(),
   conversation: { id: 'conversation-1', messages: [] },
   setBrowsingActivity: vi.fn(),
+  activate: vi.fn(),
   clearBrowsingActivity: vi.fn(),
   pageActivity: vi.fn<(tabId: string) => void>(),
 }));
@@ -39,6 +40,7 @@ vi.mock('../storage/secrets.js', () => ({ getApiKey: () => 'test-api-key' }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ defaultModel: 'gpt-4o', stepBudget: 40 }) }));
 vi.mock('../tabs/manager.js', () => ({ tabManager: {
   getActiveId: () => 'tab-1',
+  activate: mocks.activate,
   setBrowsingActivity: mocks.setBrowsingActivity,
   clearBrowsingActivity: mocks.clearBrowsingActivity,
 } }));
@@ -72,6 +74,15 @@ async function runTask() {
 }
 
 describe('agent task results for live voice', () => {
+  it('brings a targeted source tab to the foreground while the agent reads it', async () => {
+    mocks.runAgent.mockImplementation(async () => {
+      mocks.pageActivity('tab-2');
+      return 'Opened the source.';
+    });
+    await runTask();
+    expect(mocks.activate).toHaveBeenCalledWith('tab-2');
+  });
+
   it('publishes the complete saved answer before signaling terminal completion', async () => {
     mocks.runAgent.mockImplementation(async (input) => {
       mocks.pageActivity('tab-1');

@@ -1,8 +1,9 @@
+import { clearUpdateChat, SAVE_UPDATE_CHAT_EVENT, takeUpdateChat, type UpdateChatSnapshot } from '../lib/update-session.js';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { product } from '@bullebrowser/brand-tokens';
-import { providerFor, type ModelId } from '@bullebrowser/agent-core';
+import { BROWSER_TASKS, providerFor, type BrowserTaskId, type ModelId } from '@bullebrowser/agent-core';
 import { useAgentStore } from '../state/agent-store.js';
 import { useBrowserStore } from '../state/browser-store.js';
 import {
@@ -34,6 +35,7 @@ import type { AgentStepEvent } from '../../shared/agent-events.js';
 interface QueuedTask {
   text: string;
   attachments: UiAttachment[];
+  browserTask?: BrowserTaskId;
 }
 
 // UI attachment references → the wire shape the agent run accepts.
@@ -72,7 +74,23 @@ export function AiPanel() {
   const currentStep = activity?.currentStep ?? '';
   const liveReply = activityStatus === 'running' ? liveAssistantText(steps) : '';
   const runId = useAgentStore((s) => s.runId);
-  const [draft, setDraft] = useState('');
+  const [resumeChat] = useState(takeUpdateChat);
+  const [draft, setDraft] = useState(resumeChat?.draft ?? '');
+  const [selectedTask, setSelectedTask] = useState<BrowserTaskId | null>(null);
+  const restoredTask = useRef(false);
+  useEffect(() => {
+    if (resumeChat?.conversationId === current?.id && !restoredTask.current) {
+      restoredTask.current = true;
+      setSelectedTask(resumeChat?.browserTask ?? null);
+    } else setSelectedTask(null);
+  }, [current?.id, resumeChat]);
+  useEffect(() => {
+    const save = (event: Event) => {
+      if (current) (event as CustomEvent<UpdateChatSnapshot>).detail.chat = { conversationId: current.id, draft, browserTask: selectedTask ?? undefined };
+    };
+    window.addEventListener(SAVE_UPDATE_CHAT_EVENT, save);
+    return () => window.removeEventListener(SAVE_UPDATE_CHAT_EVENT, save);
+  }, [current, draft, selectedTask]);
   // Tasks the user submitted while a run was already going. They run one after
   // another as each finishes, so the user can queue up work instead of waiting.
   const [queued, setQueued] = useState<QueuedTask[]>([]);
@@ -102,8 +120,8 @@ export function AiPanel() {
   const [dispatchRevision, setDispatchRevision] = useState(0);
   const queuedRef = useRef(queued);
   queuedRef.current = queued;
-  const voiceContextRef = useRef({ model, skillId, attachments });
-  voiceContextRef.current = { model, skillId, attachments };
+  const voiceContextRef = useRef({ model, skillId, attachments, browserTask: selectedTask });
+  voiceContextRef.current = { model, skillId, attachments, browserTask: selectedTask };
   const onMessagesScroll = () => {
     const el = messagesRef.current;
     if (!el) return;
@@ -142,6 +160,16 @@ export function AiPanel() {
       // reuse it, so relaunching repeatedly doesn't litter History with blank
       // rows nobody asked for.
       const list = await bridge.conversations.list();
+      if (resumeChat && list.some((chat) => chat.id === resumeChat.conversationId)) {
+        const restored = await bridge.conversations.get(resumeChat.conversationId);
+        if (restored) {
+          setConversations(list);
+          setCurrent(restored);
+          clearUpdateChat();
+          return;
+        }
+      }
+      if (resumeChat) clearUpdateChat();
       const newest = list[0];
       const newestDetail = newest ? await bridge.conversations.get(newest.id) : null;
       if (newestDetail && newestDetail.messages.length === 0) {
@@ -153,9 +181,9 @@ export function AiPanel() {
         setConversations(await bridge.conversations.list());
       }
     })();
-  }, [setConversations, setCurrent]);
+  }, [setConversations, setCurrent, resumeChat]);
 
-  const sendMessage = async (text: string, atts: UiAttachment[] = [], budget?: number) => {
+  const sendMessage = async (text: string, atts: UiAttachment[] = [], budget?: number, browserTask?: BrowserTaskId) => {
     const raw = text.trim();
     if (!raw || !current) return;
     dispatchingRef.current = true;
@@ -202,6 +230,7 @@ export function AiPanel() {
         const { runId } = await bridge.agent.run({
           conversationId: current.id,
           userMessage: message,
+          ...(browserTask ? { browserTask } : {}),
           model,
           ...(skill ? { skillId: skill } : {}),
           ...(runAttachments ? { attachments: runAttachments } : {}),
@@ -226,17 +255,18 @@ export function AiPanel() {
   // running check reads live store state rather than a render snapshot, because
   // voice transcripts fire from a long-lived overlay closure that would
   // otherwise see a stale value and start a second, concurrent run.
-  const submit = async (text: string, atts: UiAttachment[] = []) => {
+  const submit = async (text: string, atts: UiAttachment[] = [], browserTask?: BrowserTaskId) => {
     const t = text.trim();
     if (!t) return;
+    setSelectedTask(null);
     const running = useAgentStore.getState().status === 'running';
     if (running || dispatchingRef.current || drainingRef.current || queuedRef.current.length > 0) {
-      const next = [...queuedRef.current, { text: t, attachments: atts }];
+      const next = [...queuedRef.current, { text: t, attachments: atts, browserTask }];
       queuedRef.current = next;
       setQueued(next);
       return;
     }
-    await sendMessage(t, atts);
+    await sendMessage(t, atts, undefined, browserTask);
   };
 
   const send = async () => {
@@ -246,7 +276,9 @@ export function AiPanel() {
     setDraft('');
     setAttachments([]);
     promptActivity.reset();
-    await submit(t, atts);
+    const task = selectedTask ?? undefined;
+    setSelectedTask(null);
+    await submit(t, atts, task);
   };
 
   // Drain the queue: whenever the agent goes idle and something is waiting,
@@ -261,7 +293,7 @@ export function AiPanel() {
     drainingRef.current = true;
     queuedRef.current = rest;
     setQueued(rest);
-    void sendMessage(next.text, next.attachments).finally(() => {
+    void sendMessage(next.text, next.attachments, undefined, next.browserTask).finally(() => {
       drainingRef.current = false;
       setDispatchRevision((revision) => revision + 1);
     });
@@ -273,7 +305,7 @@ export function AiPanel() {
   const onVoiceTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
-    void submit(t, attachments);
+    void submit(t, attachments, selectedTask ?? undefined);
     setAttachments([]);
     setDraft('');
   };
@@ -298,6 +330,7 @@ export function AiPanel() {
       return { status: 'failed', text: 'The assistant is still connecting. Try again shortly.' };
     }
     const context = voiceContextRef.current;
+    setSelectedTask(null);
     const focusRfpId = focusedRfpId(useWorkspaceStore.getState());
     dispatchingRef.current = true;
     setCurrent({
@@ -312,6 +345,7 @@ export function AiPanel() {
         conversationId: conversation.id,
         userMessage: message,
         model: context.model,
+        ...(context.browserTask ? { browserTask: context.browserTask } : {}),
         ...(context.skillId ? { skillId: context.skillId } : {}),
         ...(context.attachments.length > 0 ? { attachments: toRunAttachments(context.attachments) } : {}),
         ...(focusRfpId ? { focusRfpId } : {}),
@@ -580,8 +614,9 @@ export function AiPanel() {
         className="selectable flex-1 overflow-y-auto px-5 py-5"
       >
         {current && current.messages.length === 0 && (
-          <EmptyState onBrowse={(prompt) => {
-            setDraft(prompt);
+          <EmptyState selectedTask={selectedTask} onBrowse={(task) => {
+            setSelectedTask(task);
+            setDraft('');
             textareaRef.current?.focus();
           }} />
         )}
@@ -934,15 +969,8 @@ function AllowAccess({ task }: { task: string }) {
   );
 }
 
-// Browser tasks go through the ordinary composer so users can add their criteria.
-const BROWSER_TASKS = [
-  { label: 'Find grants for me', icon: 'search', prompt: 'Browse official funding sources to find open grants for me. First ask for any missing location, organization type, focus area and funding needs. Verify eligibility and deadlines, and link to each official source.' },
-  { label: 'Research a funder', icon: 'compass', prompt: 'Browse a funder’s official website to research its priorities, current grant programs and application requirements. Ask which funder I want to research, then provide findings with source links.' },
-  { label: 'Compare grant opportunities', icon: 'scale', prompt: 'Browse and compare grant opportunities by eligibility, funding amount, deadline and application requirements. Ask which grants or search criteria to use, verify the official sources and recommend the strongest matches.' },
-  { label: 'Explore this page', icon: 'external', prompt: 'Read the current browser page and follow relevant links to find funding opportunities, eligibility rules and application steps. Summarize what you verify with source links. If no page is open, ask me for a website.' },
-] as const;
-
-function EmptyState({ onBrowse }: { onBrowse: (prompt: string) => void }) {
+function EmptyState({ selectedTask, onBrowse }: { selectedTask: BrowserTaskId | null; onBrowse: (task: BrowserTaskId) => void }) {
+  const selected = BROWSER_TASKS.find((task) => task.id === selectedTask);
   return (
     <div className="space-y-5 pt-1 text-sm">
       <h2 className="text-[15px] font-semibold tracking-tight text-ink-primary">
@@ -950,17 +978,18 @@ function EmptyState({ onBrowse }: { onBrowse: (prompt: string) => void }) {
       </h2>
       <p className="leading-relaxed text-ink-secondary">
         Let your assistant browse websites, research funders and find grants.
-        Choose a task, add your criteria, then send it to get started.
+        Choose a task, answer one quick question, and I’ll browse for you.
       </p>
       <div className="grid gap-2">
         {BROWSER_TASKS.map((task) => (
-          <button key={task.label} type="button" onClick={() => onBrowse(task.prompt)}
+          <button key={task.label} type="button" onClick={() => onBrowse(task.id)} aria-pressed={selectedTask === task.id}
             className="flex w-full items-start gap-2.5 rounded-lg border border-line px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-primary/40 hover:bg-surface-muted">
             <Icon name={task.icon} className="mt-0.5 text-primary" />
             <span>{task.label}</span>
           </button>
         ))}
       </div>
+      {selected && <p role="status" className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-3 font-medium text-ink-primary">{selected.question}</p>}
     </div>
   );
 }

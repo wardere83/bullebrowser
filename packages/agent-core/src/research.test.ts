@@ -9,7 +9,14 @@ describe('live research requirements', () => {
     expect(isResearchRequest('Compare current funding opportunities')).toBe(true);
     expect(isResearchRequest('summarize this page')).toBe(false);
     expect(isResearchRequest('open https://grants.gov')).toBe(false);
+    expect(isResearchRequest('Fill the form with my contact information')).toBe(false);
   });
+  it('does not ask again after the user answered a browser option’s question', () => {
+    const progress = new ResearchProgress(true, false);
+    expect(progress.followUp('Which funder should I research?', new StepBudget())).toContain('Continue');
+    expect(progress.finish('Which funder should I research?')).not.toContain('Which funder');
+  });
+
   it('counts distinct successful source reads and excludes search snippets and empty pages', () => {
     const progress = new ResearchProgress(true);
     for (const url of ['https://duckduckgo.com/?q=grants', 'https://www.google.com/search?q=grants', 'https://bing.com/search?q=grants']) progress.observe(read(url));

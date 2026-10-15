@@ -237,13 +237,13 @@ textarea {
   mask-composite: exclude;
   opacity: 0;
   transition: opacity 260ms ease;
-  animation: halo-rotate 6s linear infinite;
+  animation: halo-rotate 10s linear infinite;
   pointer-events: none;
 }
 
 /* Idle — barely-there ring so the control feels alive but calm. */
 .prompt-input-shell--chat.prompt-input-shell--idle::before {
-  opacity: 0.14;
+  opacity: 0.55;
 }
 
 /* Focused / cooling down — clearly visible, unhurried. */
@@ -257,7 +257,7 @@ textarea {
 .prompt-input-shell--chat.prompt-input-shell--typing::before,
 .prompt-input-shell--chat.prompt-input-shell--working::before {
   opacity: 0.95;
-  animation-duration: 3.5s;
+  animation-duration: 10s;
 }
 
 /* Disabled — no ring at all. */

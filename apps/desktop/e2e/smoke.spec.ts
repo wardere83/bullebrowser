@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -14,10 +14,12 @@ async function launch(
     openAiOnly = false,
     withoutOpenAiKey = false,
     withoutKeys = false,
-  }: { openAiOnly?: boolean; withoutOpenAiKey?: boolean; withoutKeys?: boolean } = {},
+    restoredTabs,
+  }: { openAiOnly?: boolean; withoutOpenAiKey?: boolean; withoutKeys?: boolean; restoredTabs?: { urls: string[]; activeIndex: number } } = {},
 ) {
   // Fresh user-data dir per test so we always start from default settings.
   const userData = mkdtempSync(join(tmpdir(), 'bullebrowser-e2e-'));
+  if (restoredTabs) writeFileSync(join(userData, 'update-session.json'), JSON.stringify({ session: restoredTabs }));
 
   // ELECTRON_RUN_AS_NODE must NOT be inherited. If it is set, the Electron
   // binary runs as plain Node: there is no app and no window, and the
@@ -47,7 +49,11 @@ async function launch(
     cwd: appRoot,
     env,
   });
-  const win = await app.firstWindow({ timeout: 20_000 });
+  await app.firstWindow({ timeout: 20_000 });
+  // Restored native source tabs can load before the app chrome. Select the
+  // renderer explicitly instead of mistaking a source page for the app UI.
+  await expect.poll(() => app.windows().some((page) => page.url().includes('/renderer/index.html'))).toBe(true);
+  const win = app.windows().find((page) => page.url().includes('/renderer/index.html'))!;
   await win.waitForLoadState('domcontentloaded');
 
   // The panel ships open by default; open it idempotently either way.
@@ -315,151 +321,72 @@ test('dictation releases permission granted after cancellation', async () => {
 });
 
 
-test('updates show progress, keep browsing open, clear after acknowledgment and return for a later release', async () => {
-  const server = createServer((_request, response) => {
-    response.setHeader('Content-Type', 'text/html');
-    response.end('<!doctype html><title>Work during update</title><h1>Continue working</h1>');
-  });
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  if (!address || typeof address === 'string') throw Error('No update test port');
-  const url = `http://127.0.0.1:${address.port}/`;
+test('updates show one button, apply once without a loader, and restore the chat draft', async () => {
   const { app, win, userData } = await launch({ withoutKeys: true });
   try {
-    const processId = await app.evaluate(() => process.pid);
     await app.evaluate(({ ipcMain, BrowserWindow }) => {
       ipcMain.removeHandler('update:get-status');
-      ipcMain.handle('update:get-status', () => new Promise(resolve => {
-        ipcMain.once('test:resolve-update-status', () => resolve({ state: 'idle' }));
-      }));
-      let attempts = 0;
-      ipcMain.removeHandler('update:prepare');
-      ipcMain.handle('update:prepare', (_event, version: string) => {
-        attempts += 1;
-        (globalThis as Record<string, unknown>).__updatePrepare = { attempts, version };
-        if (attempts === 1) throw new Error('Preparation fixture failure');
-        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
-      });
-      ipcMain.removeHandler('update:retry');
-      ipcMain.handle('update:retry', () => {
-        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 0 });
-      });
-      ipcMain.removeHandler('update:dismiss');
-      ipcMain.handle('update:dismiss', (_event, version: string) => {
-        (globalThis as Record<string, unknown>).__dismissedUpdate = version;
+      ipcMain.handle('update:get-status', () => ({ state: 'idle' }));
+      ipcMain.removeHandler('update:apply');
+      ipcMain.handle('update:apply', (_event, version: string) => {
+        const values = ((globalThis as Record<string, unknown>).__appliedVersions ??= []) as string[];
+        values.push(version);
         BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
       });
     });
-    await win.reload();
     const composer = win.locator('aside textarea');
     await expect(composer).toBeEnabled();
-    await composer.fill('Keep this work while updating.');
-    await win.evaluate(async target => {
-      const tabs = await window.bullebrowser.tabs.list();
-      await window.bullebrowser.tabs.navigate(tabs.find(tab => tab.active)!.id, target);
-    }, url);
-    const notice = win.getByRole('region', { name: 'App update' });
-    const update = win.getByRole('button', { name: 'Keep browsing', exact: true });
-    await expect(notice).toBeHidden();
-    await app.evaluate(({ BrowserWindow, ipcMain }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 25 });
-      // A delayed initial idle snapshot must not erase a newer event.
-      ipcMain.emit('test:resolve-update-status');
-    });
-    await expect(notice).toContainText('Downloading v0.2.50 · 25%');
-    await expect(win.getByRole('progressbar', { name: 'Update download progress' })).toHaveAttribute('value', '25');
+    await composer.fill('list tabs');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(win.locator('.md-prose')).toBeVisible();
+    await composer.fill('Keep my draft through this update.');
+    const update = win.getByRole('button', { name: 'Update', exact: true });
     await expect(update).toBeHidden();
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'error', version: '0.2.50', message: 'Check your connection and retry.' });
-    });
-    await expect(notice).toContainText('Check your connection and retry.');
-    await win.getByRole('button', { name: 'Retry update', exact: true }).click();
-    await expect(notice).toContainText('Downloading v0.2.50 · 0%');
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'downloading', version: '0.2.50', percent: 100, phase: 'preparing' });
-    });
-    await expect(notice).toContainText('Preparing v0.2.50');
-    await expect(win.getByRole('progressbar', { name: 'Update download progress' })).not.toHaveAttribute('value');
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'error', version: '0.2.50', message: 'Reopen BulleBrowser to finish preparing this update.', retryable: false });
-    });
-    await expect(notice).toContainText('Reopen BulleBrowser');
-    await expect(win.getByRole('button', { name: 'Retry update', exact: true })).toBeHidden();
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.50' });
-    });
-    await expect(update).toBeVisible();
-    await expect(notice).toContainText('v0.2.50 ready for next launch');
-    await expect(notice).toContainText('Applies after you quit and reopen');
-    await expect(update).toHaveAttribute('title', /Keep this session open/);
-    await update.click();
-    await expect(notice).toContainText('Couldn’t prepare. Try again.');
-    await expect(update).toBeEnabled();
-    await update.click();
-    await expect(update).toBeHidden();
-    await expect(notice).toBeHidden();
-    await expect(win.getByRole('status').filter({ hasText: 'v0.2.50 prepared.' })).toBeHidden();
-    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__updatePrepare))
-      .toEqual({ attempts: 2, version: '0.2.50' });
-    expect(await app.evaluate(() => process.pid)).toBe(processId);
-    await expect(composer).toHaveValue('Keep this work while updating.');
-    await expect.poll(() => app.evaluate(({ BrowserWindow }, target) => {
-      const browserWindow = BrowserWindow.getAllWindows()[0];
-      const page = browserWindow.contentView.children.find(view =>
-        'webContents' in view && (view as import('electron').WebContentsView).webContents.getURL() === target,
-      ) as import('electron').WebContentsView | undefined;
-      return { open: !browserWindow.isDestroyed(), pageVisible: page?.getVisible(), pageUrl: page?.webContents.getURL() };
-    }, url)).toEqual({ open: true, pageVisible: true, pageUrl: url });
-    // The main-process acknowledgment survives reloading the renderer.
-    await app.evaluate(({ ipcMain }) => {
-      ipcMain.removeHandler('update:get-status');
-      ipcMain.handle('update:get-status', () => ({ state: 'idle' }));
-    });
-    await win.reload();
-    await expect(composer).toBeEnabled();
-    await expect(update).toBeHidden();
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.51' });
-    });
-    await expect(update).toBeVisible();
-    await expect(notice).toContainText('v0.2.51 ready for next launch');
-    await expect(update).toHaveAttribute('title', /0\.2\.51/);
-    await win.screenshot({ path: '/tmp/bulle-background-update.png' });
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'deferred', version: '0.2.52', preparedVersion: '0.2.50' });
-    });
-    await expect(notice).toContainText('v0.2.52 available');
-    await expect(notice).toContainText('After v0.2.50’s next launch');
-    await expect(update).toBeHidden();
-    await win.getByRole('button', { name: 'Got it', exact: true }).click();
-    await expect(notice).toBeHidden();
-    expect(await app.evaluate(() => (globalThis as Record<string, unknown>).__dismissedUpdate)).toBe('0.2.52');
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'deferred', version: '0.2.53', preparedVersion: '0.2.50' });
-    });
-    await expect(notice).toContainText('v0.2.53 available');
-    expect(await app.evaluate(() => process.pid)).toBe(processId);
-    if (process.platform === 'darwin') {
-      // Red-dot close keeps the Mac process alive; opening it again must rebind
-      // its window and IPC instead of leaving the updater attached to a dead UI.
-      const reopened = app.waitForEvent('window');
-      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
-      await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(0);
-      await app.evaluate(({ app: electronApp }) => { electronApp.emit('second-instance'); });
-      const next = await reopened;
-      await expect(next.locator('aside textarea')).toBeEnabled();
-      await expect(next.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
-      await expect(next.getByRole('button', { name: 'Organization Knowledge Hub', exact: true })).toBeHidden();
-      await expect(next.getByRole('region', { name: 'Funding workspace' })).toBeHidden();
-      expect(await app.evaluate(() => process.pid)).toBe(processId);
+    for (const state of ['downloading', 'ready']) {
+      await app.evaluate(({ BrowserWindow }, next) => {
+        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: next, version: '0.2.80', percent: 50 });
+      }, state);
+      if (state === 'downloading') {
+        await expect(update).toBeHidden();
+        await expect(win.getByRole('progressbar', { name: 'Update download progress' })).toBeHidden();
+      }
     }
+    await expect(update).toBeVisible();
+    await expect(update).toHaveText('Update');
+    await expect(update).toHaveAttribute('title', /restarts automatically/);
+    await update.click();
+    await expect(update).toBeHidden();
+    expect(await app.evaluate(() => (globalThis as Record<string, unknown>).__appliedVersions)).toEqual(['0.2.80']);
+    await win.reload();
+    await expect(composer).toHaveValue('Keep my draft through this update.');
+    await expect(win.locator('aside')).toContainText('list tabs');
+    await expect(win.getByRole('button', { name: 'Profile menu' }).locator('img')).toHaveCount(0);
   } finally {
     await app.close();
     rmSync(userData, { recursive: true, force: true });
-    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
 });
 
+test('an update relaunch restores real source tabs and the selected option', async () => {
+  const server = createServer((req, res) => {
+    res.setHeader('Content-Type', 'text/html');
+    res.end(`<html><title>Restored grant ${req.url}</title><h1>Grant source</h1></html>`);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const { app, win, userData } = await launch({ withoutKeys: true, restoredTabs: { urls: [base + '/one', base + '/two'], activeIndex: 1 } });
+  try {
+    await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.tabs.list()).map((tab) => ({ url: tab.url, active: tab.active })))).toEqual([
+      { url: base + '/one', active: false }, { url: base + '/two', active: true },
+    ]);
+    await expect(win.getByRole('textbox', { name: 'Address bar' })).toHaveValue(base + '/two');
+    await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeHidden();
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
 
 test('chat and spoken browser tasks use the real local assistant without any keys', async () => {
   const server = createServer((_req, res) => {

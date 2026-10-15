@@ -18,3 +18,5 @@ export * from './permissions.js';
 export * from './product-identity.js';
 export * from './terminology.js';
 export * from './structured.js';
+
+export * from './browser-tasks.js';

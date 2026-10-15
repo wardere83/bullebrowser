@@ -1,3 +1,4 @@
+import { presentationPause } from './browser/presentation.js';
 // ToolRuntime implementation that drives the active WebContentsView. Page
 // actions run as scripts injected with executeJavaScript (see the in-page
 // helpers at the bottom); keys go through sendInputEvent, and navigation
@@ -58,6 +59,7 @@ const SCREENSHOT_MAX_WIDTH = 1280;
 
 export class DesktopToolRuntime implements ToolRuntime {
   // Levels the user allowed for this task only ("Allow once").
+  private readingPresentation: { tabId: string; signal: AbortSignal } | undefined;
   private readonly grantedForTask = new Map<string, PermissionLevel>();
 
   constructor(
@@ -71,6 +73,19 @@ export class DesktopToolRuntime implements ToolRuntime {
     if (!view || view.webContents.isDestroyed()) throw new ToolError('TARGET_CLOSED', `Tab not found: ${tabId}`);
     this.onPageActivity?.(tabId);
     return view.webContents;
+  }
+
+  async presentAction(tabId: string, name: string, signal: AbortSignal): Promise<void> {
+    if (signal.aborted) throw new Error('cancelled');
+    const wc = this.wcFor(tabId);
+    await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
+      const element = document.querySelector('main h1, article h1, h1, main p, article p');
+      const rect = element?.getBoundingClientRect();
+      if (rect && rect.top >= 0 && rect.bottom < innerHeight) window.__bbCursor(element, { halo: true });
+      else window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
+    })()` ).catch(() => {});
+    await presentationPause(650, signal);
+    this.readingPresentation = name === 'read_page' ? { tabId, signal } : undefined;
   }
 
   // What every targeted page call starts with: the helpers, this frame's ref
@@ -148,6 +163,8 @@ export class DesktopToolRuntime implements ToolRuntime {
   }
 
   async readPage(tabId: string) {
+    const presentation = this.readingPresentation?.tabId === tabId ? this.readingPresentation : undefined;
+    this.readingPresentation = undefined;
     const wc = this.wcFor(tabId);
     const result = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as
       | { text: string }
@@ -171,6 +188,16 @@ export class DesktopToolRuntime implements ToolRuntime {
       );
     }
     const text = (('text' in result ? result.text : '') + framed.join('')).slice(0, 40_000);
+    if (presentation && text.trim()) {
+      if (presentation.signal.aborted) throw new Error('cancelled');
+      // Scan actual source content at a visible tempo. Respect reduced motion.
+      await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
+        const page = document.scrollingElement || document.documentElement;
+        if (page.scrollHeight > innerHeight * 1.3) window.scrollBy({ top: Math.round(innerHeight * .6), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+        window.__bbCursorTo(Math.round(innerWidth * .42), Math.round(innerHeight * .55));
+      })()`).catch(() => {});
+      await presentationPause(900, presentation.signal);
+    }
     return { title: wc.getTitle(), url: wc.getURL(), text };
   }
 

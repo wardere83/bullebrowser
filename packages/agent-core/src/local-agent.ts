@@ -191,44 +191,60 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     const page = await run('read_page');
     const result = await run('summarizePage', { text: String(page.text ?? ''), sourceUrl: String(page.url ?? '') });
     report = result.summary ? `${String(result.summary)}\n\nSource: ${String(page.url ?? '')}` : 'This page has no readable text to summarize.';
-  } else if (input.researchMode && isResearchRequest(message)) {
-    input.onStep({ type: 'thinking', detail: 'Searching the web and opening source pages…' });
-    const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(message)}`;
-    await run('navigate', { url: searchUrl });
-    await run('read_page');
-    const found = await run('listLinks');
-    const links = Array.isArray(found.links) ? found.links as Array<{ text?: string; href?: string }> : [];
-    const candidates = new Set<string>();
-    for (const link of links) {
-      try {
-        let url = new URL(link.href ?? '', searchUrl);
-        if (/(^|\.)duckduckgo\.com$/.test(url.hostname) && url.searchParams.has('uddg')) url = new URL(url.searchParams.get('uddg')!);
-        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || /(^|\.)(?:duckduckgo\.com|google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
-        url.hash = '';
-        candidates.add(url.href);
-      } catch { /* Ignore unusable links. */ }
-    }
-    const excerpts: string[] = [];
-    const readUrls = new Set<string>();
-    for (const url of [...candidates].slice(0, 6)) {
-      if (excerpts.length >= 3 || budget.used + 3 > budget.total) break;
-      try {
-        await run('navigate', { url });
-        const page = await run('read_page');
-        const text = String(page.text ?? '').trim();
-        const sourceUrl = String(page.url ?? url).replace(/#.*$/, '');
-        if (text && !readUrls.has(sourceUrl)) {
-          readUrls.add(sourceUrl);
-          excerpts.push(`Source: ${sourceUrl}\n\n> ${text.slice(0, 1000).replace(/\n/g, '\n> ')}`);
-        }
-      } catch (error) {
-        if (input.context.signal.aborted || /USER_DECLINED|cancelled|budget/i.test(String(error))) throw error;
-        // A blocked source must not prevent checking the remaining results.
+  } else if (input.browserTask || (input.researchMode && isResearchRequest(message))) {
+    input.onStep({ type: 'thinking', detail: 'Opening relevant options in the browser…' });
+    const explicitUrls = message.match(/https?:\/\/[^\s<>]+/g) ?? [];
+    const exploring = input.browserTask === 'explore_page' || (!input.browserTask && (CURRENT_PAGE.test(message) || explicitUrls.length > 0));
+    const query = input.browserTask === 'find_grants' ? `open grants funding ${message}`
+      : input.browserTask === 'research_funder' ? `${message} official grants programs eligibility`
+      : input.browserTask === 'compare_grants' ? `grants funding eligibility ${message}` : message;
+    if (exploring && explicitUrls[0]) await run('navigate', { url: explicitUrls[0] });
+    else if (!exploring) await run('navigate', { url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}` });
+    const firstPage = await run('read_page');
+    if (exploring && !String(firstPage.text ?? '').trim()) {
+      report = 'There is no readable page open. Enter a website URL and I’ll explore it.';
+    } else {
+      const found = await run('listLinks');
+      const links = Array.isArray(found.links) ? found.links as Array<{ text?: string; href?: string }> : [];
+      const base = String(firstPage.url || 'https://duckduckgo.com/');
+      const candidates = new Map<string, number>();
+      const words = message.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3);
+      for (const link of [...explicitUrls.map((href) => ({ href, text: message })), ...links]) {
+        try {
+          let url = new URL(link.href ?? '', base);
+          if (/(^|\.)duckduckgo\.com$/.test(url.hostname) && url.searchParams.has('uddg')) url = new URL(url.searchParams.get('uddg')!);
+          if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || /(^|\.)(?:duckduckgo\.com|google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
+          if (/\b(?:privacy|cookies?|login|sign in|terms of use)\b/i.test(link.text ?? '')) continue;
+          url.hash = '';
+          const label = `${link.text ?? ''} ${url.href}`.toLowerCase();
+          const score = words.filter((word) => label.includes(word)).length + (/\b(?:grant|funding|eligibility|program|application)/i.test(label) ? 2 : 0);
+          candidates.set(url.href, Math.max(candidates.get(url.href) ?? 0, score));
+        } catch { /* Ignore unusable links. */ }
       }
+      const options: Array<{ id: string; url: string }> = [];
+      const readUrls = new Set<string>();
+      const ranked = [...candidates].sort((a, b) => b[1] - a[1]).slice(0, 10);
+      for (const [url] of ranked) {
+        if (options.length >= 6 || budget.used + 3.5 > budget.total) break;
+        try {
+          const tab = await run('new_tab', { url });
+          const page = await run('read_page', { tabId: String(tab.id) });
+          const sourceUrl = String(page.url ?? url).replace(/#.*$/, '');
+          if (String(page.text ?? '').trim() && !readUrls.has(sourceUrl)) {
+            readUrls.add(sourceUrl);
+            options.push({ id: String(tab.id), url: sourceUrl });
+          }
+        } catch (error) {
+          if (input.context.signal.aborted || /USER_DECLINED|cancelled|budget/i.test(String(error))) throw error;
+          // A blocked source must not prevent checking the remaining results.
+        }
+      }
+      if (options[0]) await run('switch_tab', { tabId: options[0].id });
+      report = options.length
+        ? `I opened and read ${options.length} source pages in browser tabs. The top result is selected on the left. Review those options there; eligibility and deadlines still need verification.`
+        : exploring ? 'I checked this page but found no readable linked options. The page remains open on the left.'
+          : 'The search is open on the left, but I could not read relevant linked sources. Try a more specific funding goal or an official website URL.';
     }
-    report = excerpts.length
-      ? `I opened and read ${excerpts.length} source pages. These are source excerpts, not a verified eligibility assessment. Connect an assistant in Settings for tailored analysis and cross-checking.\n\n${excerpts.join('\n\n')}`
-      : 'I searched the web, but could not read relevant source pages. Try a more specific search or provide an official source URL. Connect an assistant in Settings for broader research.';
   } else if (funding) {
     report = FUNDING_REPLIES[funding] + (summaryRequested ? PAGE_SUMMARY_HINT : '');
   } else {

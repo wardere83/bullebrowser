@@ -1,3 +1,4 @@
+import { browserTask } from './browser-tasks.js';
 import { ResearchProgress, isResearchRequest } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 // The BulleBrowser agent loop.
@@ -354,6 +355,10 @@ export async function executeToolCall(
   for (;;) {
     attempts += 1;
     try {
+      if ((BROWSING_TOOL_NAMES.has(name) || name === 'switch_tab') && context.beforeBrowserAction) {
+        await context.beforeBrowserAction(name, input);
+        if (context.signal.aborted) throw new Error('cancelled');
+      }
       const output = await tool.execute(parsed, context);
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
 
@@ -496,7 +501,7 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 
 export async function runAgent(input: AgentInput): Promise<string> {
   const context = input.context;
-  const research = new ResearchProgress(Boolean(input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage)));
+  const research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage))), !input.browserTask);
   const originalOnStep = input.onStep;
   const onStep: AgentStepHandler = (step) => { research.observe(step); originalOnStep(step); };
   input = { ...input, onStep };
@@ -572,7 +577,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   const referenceNote = referenceBlocks.length > 0 ? `\n\n${REFERENCE_NOTE}` : '';
 
   const system =
-    `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
+    `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${browserTask(input.browserTask)?.instruction ?? ''}\n${input.browserTask ? 'The user has already answered the short clarifying question. Begin real browsing now. Use visible tabs as the work surface; leave viable options open and the strongest match selected. Limit the final chat response to a short outcome and essential caveats, without pasted page text.' : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
   const budget = new StepBudget(input.budget);
   const sealedContext = [pageContext, ...referenceBlocks].filter(Boolean).join('\n\n');

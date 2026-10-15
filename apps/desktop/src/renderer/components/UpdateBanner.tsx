@@ -1,152 +1,62 @@
 import { useEffect, useRef, useState } from 'react';
 import type { UpdateStatus } from '../../shared/ipc.js';
+import { useAgentStore } from '../state/agent-store.js';
+import { clearUpdateChat, saveUpdateChat, SAVE_UPDATE_CHAT_EVENT, type UpdateChatSnapshot } from '../lib/update-session.js';
 
-// Chrome stays above the native webpage view. Preparing a signed update never
-// quits this session; installation belongs to the user's next normal quit.
+// Downloads and verification happen in the background. Show one action only.
 export function UpdateBanner() {
   const [status, setStatus] = useState<UpdateStatus>({ state: 'idle' });
-  const current = useRef<UpdateStatus>(status);
   const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState(false);
-
+  const [error, setError] = useState(false);
+  const inFlight = useRef(false);
+  const running = useAgentStore((state) => state.status === 'running');
   useEffect(() => {
     let active = true;
-    let receivedEvent = false;
-    const receive = (next: UpdateStatus) => {
-      current.current = next;
-      setStatus(next);
-      setActionError(false);
-    };
+    let received = false;
     const unsubscribe = window.bullebrowser.updates.onStatus((next) => {
       if (!active) return;
-      receivedEvent = true;
-      receive(next);
+      received = true;
+      setStatus(next);
+      setError(false);
     });
-    void window.bullebrowser.updates.status().then((initial) => {
-      if (active && !receivedEvent) receive(initial);
+    void window.bullebrowser.updates.status().then((next) => {
+      if (active && !received) setStatus(next);
     }).catch(() => {});
-    return () => {
-      active = false;
-      unsubscribe();
-    };
+    return () => { active = false; unsubscribe(); };
   }, []);
 
-  const prepare = async () => {
-    if (status.state !== 'ready' || busy) return;
-    const version = status.version;
+  const available = status.state === 'ready' || status.state === 'deferred' || (status.state === 'error' && status.retryable !== false);
+  if (!available) return null;
+  const update = async () => {
+    if (inFlight.current || running) return;
+    inFlight.current = true;
     setBusy(true);
-    setActionError(false);
+    setError(false);
     try {
-      await window.bullebrowser.updates.prepare(version);
-      // A newer release arriving during the request must keep its own notice.
-      if (current.current.state === 'idle' || (current.current.state === 'ready' && current.current.version === version)) {
-        current.current = { state: 'idle' };
-        setStatus({ state: 'idle' });
-      }
+      if (status.state === 'ready' || status.state === 'deferred') {
+        const snapshot = new CustomEvent<UpdateChatSnapshot>(SAVE_UPDATE_CHAT_EVENT, { detail: {} });
+        window.dispatchEvent(snapshot);
+        const current = useAgentStore.getState().current;
+        const chat = snapshot.detail.chat ?? (current ? { conversationId: current.id, draft: '' } : null);
+        if (chat) saveUpdateChat(chat);
+        await window.bullebrowser.updates.apply(status.state === 'ready' ? status.version : status.preparedVersion);
+      } else await window.bullebrowser.updates.retry();
     } catch {
-      // An idle event is authoritative: a rejected/late IPC response must not
-      // resurrect an acknowledged notice.
-      if (current.current.state === 'ready' && current.current.version === version) {
-        const ready: UpdateStatus = { state: 'ready', version };
-        current.current = ready;
-        setStatus(ready);
-        setActionError(true);
-      }
+      clearUpdateChat();
+      setError(true);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
-
-  const retry = async () => {
-    if (busy || status.state !== 'error' || status.retryable === false) return;
-    setBusy(true);
-    try {
-      await window.bullebrowser.updates.retry();
-    } catch {
-      // The existing error stays visible until a successful retry event.
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const dismiss = async () => {
-    if (busy || status.state !== 'deferred') return;
-    const version = status.version;
-    setBusy(true);
-    try {
-      await window.bullebrowser.updates.dismiss(version);
-      if (current.current.state === 'deferred' && current.current.version === version) {
-        current.current = { state: 'idle' };
-        setStatus({ state: 'idle' });
-      }
-    } catch {
-      // Retain this or a newer notice until its acknowledgment succeeds.
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (status.state === 'idle') return null;
-
-  const progress = status.state === 'downloading' && status.percent !== undefined
-    ? Math.round(status.percent)
-    : null;
-  const actionClass = 'rounded bg-emerald-500 px-2 py-1.5 text-xs font-semibold text-white hover:bg-emerald-400 disabled:opacity-60';
-
+  const title = running ? 'Finish the current task before updating.' : error ? 'The update could not be applied. Click to retry.'
+    : status.state === 'deferred' ? `Install prepared v${status.preparedVersion} and reopen automatically. v${status.version} will download afterward.`
+    : status.state === 'ready' ? `Install v${status.version}. The app briefly restarts automatically and restores your tabs and chat.`
+      : 'Retry downloading the app update in the background.';
   return (
-    <section
-      aria-label="App update"
-      className="no-drag flex shrink-0 items-center gap-2 rounded-md bg-white/5 px-2 py-1"
-    >
-      <div role="status" className="max-w-44 text-[11px] leading-tight">
-        <div className="font-medium">
-          {status.state === 'downloading' && (status.phase === 'preparing'
-            ? `Preparing v${status.version}…`
-            : `Downloading v${status.version}${progress === null ? '…' : ` · ${progress}%`}`)}
-          {status.state === 'ready' && `v${status.version} ready for next launch`}
-          {status.state === 'deferred' && `v${status.version} available`}
-          {status.state === 'error' && `v${status.version} update interrupted`}
-        </div>
-        {status.state === 'ready' && <div className={actionError ? 'text-amber-300' : 'text-white/65'}>{actionError ? 'Couldn’t prepare. Try again.' : 'Applies after you quit and reopen'}</div>}
-        {status.state === 'deferred' && (
-          <div
-            className="text-white/65"
-            title={`v${status.preparedVersion} is already prepared. It applies after you quit and reopen; v${status.version} downloads on that next launch.`}
-          >
-            After v{status.preparedVersion}’s next launch
-          </div>
-        )}
-        {status.state === 'error' && <div className="truncate text-white/65" title={status.message}>{status.message}</div>}
-        {status.state === 'downloading' && (
-          <progress
-            aria-label="Update download progress"
-            value={status.phase === 'preparing' ? undefined : progress ?? undefined}
-            max={100}
-            className="mt-1 block h-1 w-28 accent-emerald-400"
-          />
-        )}
-      </div>
-      {status.state === 'ready' && (
-        <button
-          type="button"
-          onClick={() => void prepare()}
-          disabled={busy}
-          title={`BulleBrowser ${status.version} is prepared. Keep this session open; the update applies after a normal quit and reopen.`}
-          className={actionClass}
-        >
-          {busy ? 'Saving…' : 'Keep browsing'}
-        </button>
-      )}
-      {status.state === 'error' && status.retryable !== false && (
-        <button type="button" onClick={() => void retry()} disabled={busy} className={actionClass}>
-          {busy ? 'Retrying…' : 'Retry update'}
-        </button>
-      )}
-      {status.state === 'deferred' && (
-        <button type="button" onClick={() => void dismiss()} disabled={busy} className={actionClass}>
-          {busy ? 'Saving…' : 'Got it'}
-        </button>
-      )}
-    </section>
+    <button type="button" onClick={() => void update()} disabled={busy || running}
+      title={title} aria-label="Update" className="no-drag shrink-0 rounded bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-400 disabled:opacity-60">
+      Update
+    </button>
   );
 }

@@ -2,7 +2,7 @@
 // surface. Both the preload script and the renderer consume this so we
 // never duplicate string literals across processes.
 
-import type { ModelId, ProviderId } from '@bullebrowser/agent-core';
+import type { BrowserTaskId, ModelId, ProviderId } from '@bullebrowser/agent-core';
 import type { AgentStepEvent } from './agent-events.js';
 import type { FundingBridge } from './funding.js';
 
@@ -67,6 +67,7 @@ export const IPC = {
   UPDATE_STATUS: 'update:status', // main → renderer
   UPDATE_GET_STATUS: 'update:get-status',
   UPDATE_PREPARE: 'update:prepare',
+  UPDATE_APPLY: 'update:apply',
   UPDATE_RETRY: 'update:retry',
   UPDATE_DISMISS: 'update:dismiss',
   // UI events from main → renderer
@@ -220,6 +221,7 @@ export type RunAttachment =
   | { kind: 'screenshot'; url: string };
 
 export interface AgentRunRequest {
+  browserTask?: BrowserTaskId;
   conversationId: string;
   userMessage: string;
   model: ModelId;
@@ -328,6 +330,7 @@ export interface BrowserBridge {
     status(): Promise<UpdateStatus>;
     onStatus(cb: (status: UpdateStatus) => void): () => void;
     prepare(version: string): Promise<void>;
+    apply(version: string): Promise<void>;
     retry(): Promise<void>;
     dismiss(version: string): Promise<void>;
   };

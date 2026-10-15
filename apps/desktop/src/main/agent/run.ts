@@ -102,8 +102,10 @@ const BASE_SYSTEM = [
   '  goes in at the cursor; nothing already in the document is replaced.',
   '- A failed action tells you what IS on the page — read the error and retry',
   '  with a better target instead of repeating the same one.',
-  '- To compare or summarize several sources, open them in tabs and read_page each',
-  '  by tabId (no need to switch focus).',
+  '- Open viable sources in separate tabs and switch to each before reading it.',
+  '  Keep the best matching option visible in the browser when finished.',
+  '- The browser is the main work surface. Keep chat to brief progress and a',
+  '  concise result; do not paste long page excerpts or research reports into chat.',
   '',
   'Safety — these require the user to confirm first; do not do them unprompted:',
   'submitting forms that send the user\'s data, completing purchases or payments,',
@@ -130,7 +132,8 @@ const FUNDING_GENERAL = [
   'BulleBrowser is a strategic funding platform for businesses and CBOs. When the user asks about',
   'their own organization, funding opportunities, a funder or a proposal, treat it as funding work:',
   'ground what you say about the organization in its approved profile and documents, find listings',
-  'through the funding tools, and help the user develop their own proposal with structure,',
+  'by browsing official source websites in visible tabs; use funding tools as supporting data.',
+  'Help the user develop their own proposal with structure,',
   'reflective questions, outlines and feedback on their draft rather than writing narrative for them',
   'to submit. Check what the funder says about AI assistance before offering help with a proposal.',
   '',
@@ -229,7 +232,11 @@ export async function startAgentRun(
   }, (tabId) => {
     // Consent is handled by the tool executor before the runtime touches the
     // page. Late operations after Stop must not restore the browsing effect.
-    if (!controller.signal.aborted) tabManager.setBrowsingActivity(runId, tabId);
+    if (!controller.signal.aborted) {
+      // Each source being inspected is shown in the left browsing pane.
+      if (tabManager.getActiveId() !== tabId) tabManager.activate(tabId);
+      tabManager.setBrowsingActivity(runId, tabId);
+    }
   });
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
@@ -246,6 +253,9 @@ export async function startAgentRun(
 
   const startTabId = activeTabId;
   const ctx: ToolContext = {
+    beforeBrowserAction: (name, args) => runtime.presentAction(
+      typeof args.tabId === 'string' ? args.tabId : ctx.activeTabId, name, controller.signal,
+    ),
     // A live getter, not a snapshot. new_tab and switch_tab change which tab is
     // really active, so a value captured at run start goes stale the moment the
     // agent opens a tab: it would go on reading the new tab (those tools take an
@@ -269,6 +279,7 @@ export async function startAgentRun(
       assistantText = await runAgent({
         apiKey: apiKey ?? undefined,
         researchMode: true,
+        browserTask: req.browserTask,
         model,
         systemPrompt,
         history: conversation.messages
@@ -280,7 +291,8 @@ export async function startAgentRun(
         ...(grounding.referenceContext.length > 0 ? { referenceContext: grounding.referenceContext } : {}),
         ...(grounding.tools.length > 0 ? { extraTools: grounding.tools } : {}),
         context: ctx,
-        requestBrowseAccess: () => ask(req.userMessage, 'browse_access'),
+        // Choosing a browser task and submitting its answer explicitly starts browsing.
+        requestBrowseAccess: req.browserTask ? undefined : () => ask(req.userMessage, 'browse_access'),
         budget: req.budget ?? getSettings().stepBudget,
         onStep: (step) => {
           // Keep the model's own prose as it streams. If the run later dies
@@ -428,3 +440,5 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
       return { kind: 'done', ts };
   }
 }
+
+export function hasActiveAgentRuns(): boolean { return runs.size > 0; }

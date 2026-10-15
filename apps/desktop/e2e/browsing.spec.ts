@@ -362,19 +362,29 @@ test('failed first navigation keeps the attempted address and can recover with R
 });
 
 
-test('browser starters keep the intro open and put actionable research prompts in chat', async () => {
-  const { app, win, close } = await launch();
+test('each browser option asks a short app question instead of filling the composer', async () => {
+  const { win, close } = await launch();
   try {
-    await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
-    await expect(win.getByRole('region', { name: 'Funding workspace' })).toBeHidden();
-    await expect(win.getByRole('button', { name: 'Upload Entity’s Info', exact: true })).toBeHidden();
-    await expect(win.getByRole('button', { name: 'Organization Knowledge Hub', exact: true })).toBeHidden();
-    for (const label of ['Find grants for me', 'Research a funder', 'Compare grant opportunities', 'Explore this page']) {
+    const tasks = [
+      ['Find grants for me', 'Where are you based, and what needs funding?'],
+      ['Research a funder', 'Which funder should I research?'],
+      ['Compare grant opportunities', 'Which grants, or what funding goal, should I compare?'],
+      ['Explore this page', 'What should I look for on this page?'],
+    ];
+    for (const [label, question] of tasks) {
       await win.getByRole('button', { name: label, exact: true }).click();
-      await expect(win.locator('aside textarea')).toHaveValue(/official|current browser page/);
+      await expect(win.getByRole('status').filter({ hasText: question })).toBeVisible();
+      await expect(win.locator('aside textarea')).toHaveValue('');
       await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
     }
-    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
+    await win.emulateMedia({ reducedMotion: 'no-preference' });
+    const animation = await win.locator('.prompt-input-shell--chat').evaluate((element) => {
+      const style = getComputedStyle(element, '::before');
+      return { name: style.animationName, duration: style.animationDuration, opacity: Number(style.opacity) };
+    });
+    expect(animation.name).toBe('halo-rotate');
+    expect(animation.duration).toBe('10s');
+    expect(animation.opacity).toBeGreaterThan(0.4);
   } finally { await close(); }
 });
 
@@ -420,15 +430,65 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     const activity = win.getByRole('region', { name: 'Task activity' });
     await expect(activity).toBeVisible();
-    await expect(activity.getByText(/pages read/)).toBeVisible();
-    await expect(win.locator('.md-prose')).toContainText('3 source pages');
+    await expect(activity.getByText(/pages? read/)).toBeVisible();
+    await expect(win.locator('.md-prose')).toContainText('3 source pages', { timeout: 30_000 });
     await expect(activity.getByText('4 pages read', { exact: true })).toBeVisible();
     await activity.getByRole('button').click();
     await expect(activity.getByRole('log')).toContainText('Reading the page');
-    await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-3');
+    await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-1');
+    expect((await win.evaluate(() => window.bullebrowser.tabs.list())).filter((tab) => tab.url.includes('/program-'))).toHaveLength(3);
+    await expect(win.locator('.md-prose')).not.toContainText('Official grant source');
     await win.screenshot({ path: '/tmp/bullebrowser-research-progress.png' });
   } finally {
     await close();
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
 });
+
+for (const option of [
+  { label: 'Find grants for me', answer: 'California schools need accessibility funding' },
+  { label: 'Research a funder', answer: 'Community Foundation education programs' },
+  { label: 'Compare grant opportunities', answer: 'Accessible classrooms in California schools' },
+  { label: 'Explore this page', answer: 'Find the eligibility and application requirements' },
+]) {
+  test(`${option.label} asks once then browses visible source tabs at a readable tempo`, async () => {
+    const server = createServer((req, res) => {
+      res.setHeader('Content-Type', 'text/html');
+      res.end(`<html><head><title>Education funding options</title></head><body><h1>School grant programs</h1><p style="margin-bottom:900px">${req.url}: grants support accessible classrooms.</p><h2>Eligibility and application requirements</h2><p>Schools can request funding. Check program criteria.</p><a href="/program-1">Education grant one</a><a href="/program-2">Education grant two</a><a href="/program-3">Education grant three</a></body></html>`);
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+    const { app, win, close } = await launch();
+    try {
+      await enterAddress(win, base);
+      await expectPage(app, win, base + '/', 'School grant programs');
+      await app.evaluate((_electron, fixtureUrl) => {
+        const prototype = Object.getPrototypeOf((globalThis as unknown as { __bbTest: Hooks }).__bbTest.runtime);
+        const navigate = prototype.navigate;
+        prototype.navigate = function (id: string, url: string, options: unknown) {
+          return navigate.call(this, id, url.startsWith('https://duckduckgo.com/') ? fixtureUrl : url, options);
+        };
+      }, base);
+      await win.getByRole('button', { name: option.label, exact: true }).click();
+      await expect(win.locator('aside textarea')).toHaveValue('');
+      await win.locator('aside textarea').fill(option.answer);
+      const started = Date.now();
+      await win.getByRole('button', { name: 'Send', exact: true }).click();
+      await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeHidden();
+      await expect.poll(() => app.evaluate(async () => {
+        const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
+        return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_agent_cursor__')?.shadowRoot?.querySelector('.ptr'))");
+      })).toBe(true);
+      await expect(win.getByRole('status', { name: 'Browser progress' })).toBeVisible();
+      await expect(win.locator('.md-prose')).toContainText('3 source pages', { timeout: 30_000 });
+      expect(Date.now() - started).toBeGreaterThan(4_000);
+      const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+      expect(tabs.filter((tab) => tab.url.includes('/program-'))).toHaveLength(3);
+      expect(tabs.find((tab) => tab.active)?.url).toBe(base + '/program-1');
+      await expect(win.locator('.md-prose')).not.toContainText('grants support accessible classrooms');
+    } finally {
+      await close();
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+}

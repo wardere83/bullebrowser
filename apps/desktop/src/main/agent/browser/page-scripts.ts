@@ -483,8 +483,7 @@ export const AGENT_CURSOR = `
         host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
         (document.body || document.documentElement).appendChild(host);
         var root = host.attachShadow({ mode: 'open' });
-        root.innerHTML =
-          '<style>' +
+        var cursorStyle =
           ':host{all:initial}' +
           '.ptr{position:fixed;width:22px;height:22px;margin:-2px 0 0 -2px;' +
             'transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;' +
@@ -496,8 +495,11 @@ export const AGENT_CURSOR = `
             'box-shadow:0 0 0 3px rgba(32, 186, 209,.18);opacity:0;transition:opacity .2s}' +
           '.halo.go{opacity:1}' +
           '@keyframes bb-ring{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.2)}}' +
-          '@media (prefers-reduced-motion:reduce){.ptr{transition:none}.ring.go{animation:none}}' +
-          '</style>' +
+          '@media (prefers-reduced-motion:reduce){.ptr{transition:none}.ring.go{animation:none}}';
+        var cursorSheet = new CSSStyleSheet();
+        cursorSheet.replaceSync(cursorStyle);
+        root.adoptedStyleSheets = [cursorSheet];
+        root.innerHTML =
           '<svg class="ptr" viewBox="0 0 24 24" fill="none">' +
             '<path d="M5 3l14 8.5-6.2 1.4L9.8 19 5 3z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/>' +
           '</svg>' +

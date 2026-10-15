@@ -1,6 +1,6 @@
-// Published, signed releases download in the background. Acknowledging a ready
-// update never quits or restarts the browser: the updater applies it on the next
-// normal quit, and the user opens the new version whenever they choose.
+// Published, signed releases download in the background without interrupting
+// browsing. An explicit Update click installs and reopens with the saved session;
+// otherwise the staged release still applies on a normal quit.
 
 import { app, autoUpdater as nativeAutoUpdater, type BrowserWindow } from 'electron';
 // electron-updater is CommonJS; its default export works in the main ESM bundle.
@@ -65,6 +65,35 @@ export function prepareUpdate(version: string): void {
   }
   acknowledgedVersion = status.version;
   notifyStatus?.();
+}
+
+let installation: Promise<void> | undefined;
+let installingVersion: string | undefined;
+/** Explicit one-click installation. Background downloads never restart the app. */
+export function applyUpdate(version: string, saveSession: () => void = () => {}): Promise<void> {
+  if (installation) return installation;
+  const status = getUpdateStatus();
+  const preparedVersion = status.state === 'ready' ? status.version : status.state === 'deferred' ? status.preparedVersion : undefined;
+  if (!app.isPackaged || preparedVersion !== version) {
+    return Promise.reject(new Error('This update is not ready to install.'));
+  }
+  try { saveSession(); } catch (error) { return Promise.reject(error); }
+  installingVersion = version;
+  installation = new Promise<void>((resolve, reject) => {
+    setImmediate(() => {
+      try {
+        autoUpdater.autoRunAppAfterInstall = true;
+        autoUpdater.quitAndInstall(true, true);
+        resolve();
+      } catch (error) {
+        installation = undefined;
+        installingVersion = undefined;
+        autoUpdater.autoRunAppAfterInstall = false;
+        reject(error);
+      }
+    });
+  });
+  return installation;
 }
 
 export function dismissUpdateNotice(version: string): void {
@@ -158,6 +187,14 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   const failed = (err: Error) => {
     if (disposed) return;
     console.warn('[updater] error:', err?.message ?? err);
+    if (installingVersion) {
+      const version = installingVersion;
+      installingVersion = undefined;
+      installation = undefined;
+      autoUpdater.autoRunAppAfterInstall = false;
+      send({ state: 'ready', version });
+      return;
+    }
     const phase = stagingVersion ? 'prepare' : downloadVersion ? 'download' : 'check';
     const version = stagingVersion ?? downloadVersion ?? (latest.state === 'error' ? latest.version : undefined);
     if (!version) return; // An unrelated feed failure cannot hide a ready update.

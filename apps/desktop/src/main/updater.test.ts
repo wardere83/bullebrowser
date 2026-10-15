@@ -81,6 +81,42 @@ function deferred<T>() {
 }
 
 describe('background app updates', () => {
+  it('installs only after an explicit click, saves the session and automatically reopens', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    const saveSession = vi.fn();
+    const first = api.applyUpdate('0.2.38', saveSession);
+    const second = api.applyUpdate('0.2.38', saveSession);
+    await flush();
+    await Promise.all([first, second]);
+    expect(saveSession).toHaveBeenCalledTimes(1);
+    expect(updater.autoRunAppAfterInstall).toBe(true);
+    expect(updater.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
+  });
+
+  it('can install the prepared Mac release when a newer feed is deferred', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    nativeEvents.emit('update-downloaded', {}, '', '', new Date(), 'http://127.0.0.1:12345/update.zip');
+    events.emit('update-available', { version: '0.2.39' });
+    expect(api.getUpdateStatus()).toMatchObject({ state: 'deferred', preparedVersion: '0.2.38' });
+    await expect(api.applyUpdate('0.2.39')).rejects.toThrow('not ready');
+    const install = api.applyUpdate('0.2.38');
+    await flush();
+    await install;
+    expect(updater.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
+  });
+
+  it('does not close the browser when the update is not ready or saving the session fails', async () => {
+    const api = await start();
+    await expect(api.applyUpdate('0.2.38')).rejects.toThrow('not ready');
+    events.emit('update-downloaded', { version: '0.2.38' });
+    await expect(api.applyUpdate('0.2.38', () => { throw new Error('Could not save session'); })).rejects.toThrow('Could not save session');
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+  });
+
   it('automatically downloads a new release and acknowledges it without closing or restarting', async () => {
     const api = await start();
     expect(updater.autoDownload).toBe(false);

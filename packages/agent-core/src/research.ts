@@ -2,8 +2,9 @@ import type { AgentStep } from './types.js';
 import type { StepBudget } from './budget.js';
 
 export function isResearchRequest(request: string): boolean {
-  return /\b(?:research|browse|search|find|compare|investigate|look\s+for|discover|verify|latest|current|grants?|funders?|funding\s+opportunities)\b/i.test(request)
-    && !/^(?:please\s+)?(?:summari[sz]e|read|click|type|open|go to|navigate to|list tabs)\b/i.test(request);
+  const simpleCommand = /^(?:please\s+)?(?:summari[sz]e|read|click|type|open|go to|navigate to|list tabs)\b/i.test(request);
+  if (simpleCommand || /^(?:hi|hello|thanks|thank you|good morning)[!.\s]*$/i.test(request.trim())) return false;
+  return /\b(?:research|browse|search|find|compare|investigate|look\s+for|discover|verify|latest|current|grants?|funders?|funding\s+opportunities)\b/i.test(request);
 }
 
 /** Only successful live page reads count; search snippets and repeated reads do not. */
@@ -11,7 +12,7 @@ export class ResearchProgress {
   readonly sources = new Set<string>();
   private denied = false;
   private reminders = 0;
-  constructor(readonly enabled: boolean) {}
+  constructor(readonly enabled: boolean, private readonly allowClarification = true) {}
 
   readonly instructions = 'For research and grant discovery, actively browse multiple relevant sources. Search, open the results, follow official program and eligibility links, and read at least three distinct source pages when available. Search snippets alone are not evidence. Cross-check deadlines, eligibility and amounts against official sources. Explain gaps or blocked pages. Ask a brief clarification if essential criteria are missing. Respect the task budget and never claim unperformed browsing.';
 
@@ -29,7 +30,7 @@ export class ResearchProgress {
   }
 
   private clarification(text: string): boolean {
-    return text.length < 600 && /\?/.test(text) && /\b(?:which|what|where|could you|can you|please (?:share|provide)|tell me)\b/i.test(text);
+    return this.allowClarification && text.length < 600 && /\?/.test(text) && /\b(?:which|what|where|could you|can you|please (?:share|provide)|tell me)\b/i.test(text);
   }
 
   followUp(text: string, budget: StepBudget): string | null {

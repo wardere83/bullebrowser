@@ -83,14 +83,18 @@ describe('the keyless assistant', () => {
     let currentUrl = '';
     const context = makeContext({
       navigate: vi.fn(async (_id, url) => { currentUrl = url; return { url, title: 'Source' }; }),
+      newTab: vi.fn(async (url) => { currentUrl = url ?? ''; return { id: `tab-${url}`, url: currentUrl, title: 'Source', active: true }; }),
       readPage: vi.fn(async () => ({ title: 'Source', url: currentUrl, text: 'Official grant requirements.' })),
       listLinks: vi.fn(async () => [1, 2, 3].map((id) => ({ text: `Program ${id}`, href: `https://agency.gov/program-${id}` }))),
     });
     const result = await ask('Find grants for California schools', { researchMode: true, context });
     expect(result.requestBrowseAccess).toHaveBeenCalledTimes(1);
-    expect(context.runtime.navigate).toHaveBeenCalledTimes(4);
+    expect(context.runtime.navigate).toHaveBeenCalledTimes(1);
+    expect(context.runtime.newTab).toHaveBeenCalledTimes(3);
+    expect(context.runtime.switchTab).toHaveBeenCalledWith('tab-https://agency.gov/program-1');
     expect(result.reply).toContain('3 source pages');
-    expect(result.reply).toContain('https://agency.gov/program-3');
+    expect(context.runtime.newTab).toHaveBeenCalledWith('https://agency.gov/program-3');
+    expect(result.reply).not.toContain('Official grant requirements.');
     expect(result.steps.filter((step) => step.type === 'tool_result' && step.toolName === 'read_page')).toHaveLength(4);
   });
 
