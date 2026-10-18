@@ -1,3 +1,4 @@
+import { accessibilityManager } from '../accessibility.js';
 // Tab manager. Owns one WebContentsView per tab, attaches them to the
 // main BaseWindow, and broadcasts state changes to the renderer.
 
@@ -259,6 +260,7 @@ class TabManager {
 
   private wireEvents(tab: ManagedTab) {
     const wc = tab.view.webContents;
+    accessibilityManager.register(wc, getSettings().accessibility);
     wc.on('dom-ready', () => this.refreshBrowsingCloud(tab));
     wc.on('did-start-navigation', (event) => {
       if (event.isMainFrame && !event.isSameDocument) this.beginNavigation(tab, event.url);

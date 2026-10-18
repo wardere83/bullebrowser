@@ -11,6 +11,9 @@ interface BrowserStoreState {
   searchProvider: AppSettings['searchProvider'];
   showSettings: boolean;
   showAbout: boolean;
+  showAccessibility: boolean;
+  openAccessibility: () => void;
+  closeAccessibility: () => void;
   workspaceTabId: string | null;
   setWorkspaceTab: (tabId: string | null) => void;
   setTabs: (tabs: TabState[]) => void;
@@ -29,6 +32,9 @@ export const useBrowserStore = create<BrowserStoreState>((set) => ({
   searchProvider: 'bullebrowser',
   showSettings: false,
   showAbout: false,
+  showAccessibility: false,
+  openAccessibility: () => set({ showAccessibility: true }),
+  closeAccessibility: () => set({ showAccessibility: false }),
   workspaceTabId: null,
   setWorkspaceTab: (workspaceTabId) => set({ workspaceTabId }),
   setTabs: (tabs) =>

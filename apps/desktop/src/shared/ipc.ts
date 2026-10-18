@@ -1,3 +1,4 @@
+import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessibility.js';
 // Single source of truth for IPC channel names and the typed bridge
 // surface. Both the preload script and the renderer consume this so we
 // never duplicate string literals across processes.
@@ -128,6 +129,7 @@ export interface LayoutBounds {
 }
 
 export interface AppSettings {
+  accessibility?: AccessibilityPreferences;
   defaultModel: ModelId;
   aiPanelOpen: boolean;
   searchProvider: 'bullebrowser' | 'google' | 'bing';
@@ -139,6 +141,7 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  accessibility: DEFAULT_ACCESSIBILITY,
   defaultModel: 'claude-opus-4-7',
   aiPanelOpen: true,
   searchProvider: 'bullebrowser',

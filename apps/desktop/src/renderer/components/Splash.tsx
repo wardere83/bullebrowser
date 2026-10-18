@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useAccessibilityStore } from '../state/accessibility-store.js';
+import { useEffect, useRef, useState } from 'react';
 import { product } from '@bullebrowser/brand-tokens';
 import wordmark from '@bullebrowser/brand-tokens/wordmark.png';
 import filmUrl from '../assets/bullebrowser-film.mp4';
@@ -7,7 +8,8 @@ import posterUrl from '../assets/bullebrowser-film-poster.jpg';
 /** The shared browser-first product walkthrough. */
 export function Splash() {
   const video = useRef<HTMLVideoElement>(null);
-  const descriptionId = useId();
+  const preferencesReady = useAccessibilityStore((s) => s.ready);
+  const motion = useAccessibilityStore((s) => s.preferences.motion);
   const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
@@ -22,9 +24,9 @@ export function Splash() {
   }, []);
 
   useEffect(() => {
-    if (reducedMotion) video.current?.pause();
+    if (!preferencesReady || reducedMotion || motion === 'reduce') video.current?.pause();
     else void video.current?.play().catch(() => setPlaying(false));
-  }, [reducedMotion]);
+  }, [reducedMotion, motion, preferencesReady]);
 
   const togglePlayback = () => {
     const film = video.current;
@@ -69,12 +71,11 @@ export function Splash() {
                   muted
                   loop
                   playsInline
-                  autoPlay={!reducedMotion}
+                  autoPlay={preferencesReady && !reducedMotion && motion !== 'reduce'}
                   controls={false}
                   disablePictureInPicture
                   preload="auto"
                   aria-label="BulleBrowser visible browsing video"
-                  aria-describedby={descriptionId}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
                   onError={() => setFailed(true)}
@@ -90,25 +91,14 @@ export function Splash() {
               </>
             )}
           </div>
-          <p
-            id={descriptionId}
-            className="mt-3 text-center text-xs leading-relaxed text-ink-primary/70"
-          >
-            Choose a browsing option or type your goal in Your Assistant.
-            <span className="block">
-              Animated process overview · from your goal to sources you can review.
-            </span>
-          </p>
           {failed && (
             <p role="status" className="mt-2 text-center text-xs text-ink-primary/70">
-              The video couldn’t load. Choose a browsing option in Your Assistant to get started.
+              The video couldn’t load.
             </p>
           )}
         </div>
 
-        <div className="text-[11px] uppercase tracking-[0.18em] text-ink-primary/60">
-          by {product.vendor}
-        </div>
+        <p className="text-xs text-ink-primary/60">© 2026 BulleBrowser.</p>
       </div>
     </section>
   );

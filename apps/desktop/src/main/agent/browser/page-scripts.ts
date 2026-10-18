@@ -509,6 +509,10 @@ export const AGENT_CURSOR = `
       var ptr = root2.querySelector('.ptr');
       var ring = root2.querySelector('.ring');
       var halo = root2.querySelector('.halo');
+      var reduced = window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      ptr.style.transition = reduced ? 'none' : '';
+      ring.style.animation = reduced ? 'none' : '';
+      halo.style.transition = reduced ? 'none' : '';
 
       var x, y, r;
       if (opts.at) {

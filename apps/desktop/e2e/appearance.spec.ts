@@ -11,7 +11,7 @@ const cloudId = '__bb_browsing_cloud__';
 type Hooks = {
   tabManager: {
     getActiveId(): string;
-    getView(id: string): { webContents: Electron.WebContents };
+    getView(id: string): { webContents: Electron.WebContents; getVisible(): boolean };
     setBrowsingActivity(runId: string, tabId: string): void;
     clearBrowsingActivity(runId: string): void;
   };
@@ -21,7 +21,9 @@ type Hooks = {
   };
 };
 
-async function launch() {
+async function launch(accessibility?: Record<string, unknown>) {
+  const userData = mkdtempSync(join(tmpdir(), 'bullebrowser-appearance-'));
+  if (accessibility) writeFileSync(join(userData, 'settings.json'), JSON.stringify({ accessibility }));
   const env = {
     ...process.env,
     NODE_ENV: 'test',
@@ -32,7 +34,7 @@ async function launch() {
   delete (env as NodeJS.ProcessEnv).ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({
     cwd: appRoot,
-    args: ['.', '--no-sandbox', `--user-data-dir=${mkdtempSync(join(tmpdir(), 'bullebrowser-appearance-'))}`],
+    args: ['.', '--no-sandbox', `--user-data-dir=${userData}`],
     env,
   });
   const win = await app.firstWindow({ timeout: 20_000 });
@@ -46,11 +48,11 @@ async function launch() {
   return { app, win };
 }
 
-async function fixture() {
+async function fixture(extra = '') {
   const server = createServer((req, res) => {
     if (req.url === '/page.css') {
       res.setHeader('Content-Type', 'text/css');
-      res.end('body{margin:0;background:#f9fafb;color:#182436;font:18px system-ui}main{padding:36px;min-height:2200px}button{padding:18px;margin:12px 0}');
+      res.end('body{margin:0;background:#f9fafb;color:#182436;font:18px system-ui}main{padding:36px;min-height:2200px}button{padding:18px;margin:12px 0}a{text-decoration:none}');
       return;
     }
     if (req.url === '/page.js') {
@@ -60,7 +62,7 @@ async function fixture() {
     }
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'");
-    res.end('<!doctype html><html><head><title>Grant deadlines</title><link rel="stylesheet" href="/page.css"><script defer src="/page.js"></script></head><body><main><h1>Grant deadlines</h1><p>Grant applications close on December 15. Eligible schools can request funding for accessible classrooms.</p><button>Page interaction</button><output>Ready</output></main></body></html>');
+    res.end('<!doctype html><html><head><title>Grant deadlines</title><link rel="stylesheet" href="/page.css"><script defer src="/page.js"></script></head><body><main><h1>Grant deadlines</h1><p>Grant applications close on December 15. Eligible schools can request funding for accessible classrooms.</p><button>Page interaction</button><output>Ready</output>' + extra + '</main></body></html>');
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as { port: number };
@@ -377,4 +379,92 @@ test('the prompt border travels only during interaction and the intro stays whit
   } finally {
     await app.close();
   }
+});
+
+
+test('accessibility controls persist, affect native pages, reset and remain above browsing', async () => {
+  const site = await fixture('<a href="/next">Grant guidance</a>');
+  const { app, win } = await launch();
+  try {
+    const intro = win.getByRole('region', { name: 'BulleBrowser funding introduction' });
+    await expect(intro.getByText('© 2026 BulleBrowser.', { exact: true })).toBeVisible();
+    await expect(intro).not.toContainText('Choose a browsing option');
+    await expect(intro).not.toContainText('by Bulle Consulting');
+    const launcher = win.getByRole('button', { name: 'Accessibility', exact: true });
+    await launcher.click();
+    let panel = win.getByRole('dialog', { name: 'Accessibility', exact: true });
+    await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+    await win.screenshot({ path: join(tmpdir(), 'bullebrowser-accessibility-menu.png') });
+    await panel.getByLabel('Motion', { exact: true }).selectOption('reduce');
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await expect.poll(() => win.locator('video').evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
+    await panel.getByLabel('Text size', { exact: true }).selectOption('larger');
+    await expect.poll(() => win.evaluate(() => window.bullebrowser.settings.get().then((s) => s.accessibility?.textSize))).toBe('larger');
+    await panel.getByLabel('Increase contrast', { exact: true }).check();
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await panel.getByLabel('Roomier text spacing', { exact: true }).check();
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await panel.getByLabel('Use a clear reading font', { exact: true }).check();
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await panel.getByLabel('Underline links', { exact: true }).check();
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await win.keyboard.press('Escape');
+    await expect(launcher).toBeFocused();
+    const tab = await win.evaluate((url) => window.bullebrowser.tabs.create(url), site.url);
+    await expect.poll(() => readPage<string>(app, tab.id, 'document.title')).toBe('Grant deadlines');
+    await expect.poll(() => app.evaluate(({ BrowserWindow }, id) => {
+      const wc = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager.getView(id).webContents;
+      const ui = BrowserWindow.getAllWindows().find((window) => window.webContents.getURL().includes('/renderer/index.html'))!;
+      return { app: ui.webContents.getZoomFactor(), page: wc.getZoomFactor() };
+    }, tab.id)).toEqual({ app: 1.15, page: 1.15 });
+    const pageStyles = () => readPage<{ underline: string; font: string; spacing: string; color: string }>(app, tab.id, `(() => {
+      const a = getComputedStyle(document.querySelector('a'));
+      const p = getComputedStyle(document.querySelector('p'));
+      return { underline: a.textDecorationLine, font: p.fontFamily, spacing: p.letterSpacing, color: p.color };
+    })()`);
+    await expect.poll(() => pageStyles()).toMatchObject({ underline: 'underline', color: 'rgb(0, 0, 0)' });
+    expect((await pageStyles()).font).toContain('Arial');
+    expect((await pageStyles()).spacing).not.toBe('normal');
+    await launcher.click();
+    panel = win.getByRole('dialog', { name: 'Accessibility', exact: true });
+    await expect(panel).toBeVisible();
+    expect(await app.evaluate((_electron, id) => (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager.getView(id).getVisible(), tab.id)).toBe(false);
+    await win.keyboard.press('Escape');
+    await win.evaluate(({ id, url }) => window.bullebrowser.tabs.navigate(id, url), { id: tab.id, url: site.url + 'next' });
+    await expect.poll(() => pageStyles()).toMatchObject({ underline: 'underline' });
+    await win.reload();
+    await launcher.click();
+    panel = win.getByRole('dialog', { name: 'Accessibility', exact: true });
+    await expect(panel.getByLabel('Text size', { exact: true })).toHaveValue('larger');
+    await expect(panel.getByLabel('Increase contrast', { exact: true })).toBeChecked();
+    // Tab wraps within the menu, and Escape returns to the wheelchair button.
+    await panel.getByRole('button', { name: 'Close', exact: true }).focus();
+    await win.keyboard.press('Shift+Tab');
+    await expect(panel.locator('summary')).toBeFocused();
+    await win.keyboard.press('Tab');
+    await expect(panel.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+    await panel.getByLabel('Text size', { exact: true }).selectOption('largest');
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((window) => window.webContents.getURL().includes('/renderer/index.html'))!.webContents.getZoomFactor())).toBe(1.3);
+    const menuBounds = await panel.boundingBox();
+    expect(menuBounds!.x).toBeGreaterThanOrEqual(0);
+    expect(menuBounds!.x + menuBounds!.width).toBeLessThanOrEqual(await win.evaluate(() => innerWidth));
+    await panel.getByRole('button', { name: 'Reset preferences', exact: true }).click();
+    await expect(panel.getByLabel('Text size', { exact: true })).toHaveValue('default');
+    await expect(panel.getByLabel('Motion', { exact: true })).toHaveValue('system');
+    await expect(panel.getByLabel('Increase contrast', { exact: true })).not.toBeChecked();
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    await expect.poll(() => pageStyles()).toMatchObject({ underline: 'none', spacing: 'normal' });
+  } finally { await app.close(); await site.close(); }
+});
+
+
+test('saved reduced motion prevents intro autoplay on launch', async () => {
+  const { app, win } = await launch({ motion: 'reduce' });
+  try {
+    await expect(win.locator('video')).not.toHaveAttribute('autoplay');
+    await expect.poll(() => win.locator('video').evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
+    await win.getByRole('button', { name: 'Accessibility', exact: true }).click();
+    await expect(win.getByRole('dialog', { name: 'Accessibility' }).getByLabel('Motion', { exact: true })).toHaveValue('reduce');
+  } finally { await app.close(); }
 });

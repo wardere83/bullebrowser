@@ -17,6 +17,8 @@ export function TopBar() {
   const aiPanelOpen = useBrowserStore((s) => s.aiPanelOpen);
   const setAiPanelOpen = useBrowserStore((s) => s.setAiPanelOpen);
   const openSettings = useBrowserStore((s) => s.openSettings);
+  const openAccessibility = useBrowserStore((s) => s.openAccessibility);
+  const showAccessibility = useBrowserStore((s) => s.showAccessibility);
   const openAbout = useBrowserStore((s) => s.openAbout);
   const currentStep = useAgentStore((s) => s.currentStep);
   const status = useAgentStore((s) => s.status);
@@ -149,6 +151,16 @@ export function TopBar() {
         Your Assistant
       </button>
 
+      <button
+        type="button" onClick={openAccessibility} aria-label="Accessibility"
+        title="Accessibility" aria-haspopup="dialog" aria-expanded={showAccessibility}
+        className="no-drag grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-white text-ink-primary hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="15" cy="4" r="2" />
+          <path d="m14 7-1 6h6l3 6h-4l-2-4h-5l1-8M10 10a6 6 0 1 0 6 8" />
+        </svg>
+      </button>
       <div className="no-drag relative">
         <button
           type="button"

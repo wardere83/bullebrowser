@@ -377,14 +377,7 @@ test('each browser option asks a short app question instead of filling the compo
       await expect(win.locator('aside textarea')).toHaveValue('');
       await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
     }
-    await win.emulateMedia({ reducedMotion: 'no-preference' });
-    const animation = await win.locator('.prompt-input-shell--chat').evaluate((element) => {
-      const style = getComputedStyle(element, '::before');
-      return { name: style.animationName, duration: style.animationDuration, opacity: Number(style.opacity) };
-    });
-    expect(animation.name).toBe('halo-rotate');
-    expect(animation.duration).toBe('10s');
-    expect(animation.opacity).toBeGreaterThan(0.4);
+    // Composer motion is verified in the appearance suite, independently of task selection.
   } finally { await close(); }
 });
 

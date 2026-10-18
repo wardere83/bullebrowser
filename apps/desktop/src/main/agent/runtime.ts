@@ -193,7 +193,7 @@ export class DesktopToolRuntime implements ToolRuntime {
       // Scan actual source content at a visible tempo. Respect reduced motion.
       await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
         const page = document.scrollingElement || document.documentElement;
-        if (page.scrollHeight > innerHeight * 1.3) window.scrollBy({ top: Math.round(innerHeight * .6), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+        if (page.scrollHeight > innerHeight * 1.3) window.scrollBy({ top: Math.round(innerHeight * .6), behavior: (window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'instant' : 'smooth' });
         window.__bbCursorTo(Math.round(innerWidth * .42), Math.round(innerHeight * .55));
       })()`).catch(() => {});
       await presentationPause(550, presentation.signal);

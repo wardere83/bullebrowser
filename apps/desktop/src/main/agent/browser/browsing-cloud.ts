@@ -104,6 +104,8 @@ const CLOUD_CSS = `
     from { transform: translate3d(-4px, -24px, 0) scaleY(.98); }
     to { transform: translate3d(6px, 24px, 0) scaleY(1.03); }
   }
+  :host([data-reduce-motion]) { animation: none !important; will-change: auto !important; }
+  :host([data-reduce-motion]) .cloud { animation: none !important; will-change: auto !important; }
   @media (prefers-reduced-motion: reduce) {
     :host { animation: none !important; will-change: auto !important; }
     .cloud { animation: none; will-change: auto; }
@@ -126,7 +128,8 @@ export function browsingCloudScript(active: boolean, revision = 0): string {
         if (existing) existing.remove();
         return;
       }
-      if (existing || !document.documentElement) return;
+      if (existing) { existing.toggleAttribute('data-reduce-motion', Boolean(window.__bbReduceMotion)); return; }
+      if (!document.documentElement) return;
       // Constructed sheets also work on sites that disallow inline styles.
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(${JSON.stringify(CLOUD_CSS)});
@@ -134,6 +137,7 @@ export function browsingCloudScript(active: boolean, revision = 0): string {
       host.id = id;
       host.setAttribute('aria-hidden', 'true');
       host.setAttribute('role', 'presentation');
+      host.toggleAttribute('data-reduce-motion', Boolean(window.__bbReduceMotion));
       host.inert = true;
       const root = host.attachShadow({ mode: 'closed' });
       root.adoptedStyleSheets = [sheet];

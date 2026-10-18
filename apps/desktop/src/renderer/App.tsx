@@ -1,3 +1,6 @@
+import { AccessibilityModal } from './components/AccessibilityModal.js';
+import { useAccessibilityStore } from './state/accessibility-store.js';
+import { accessibilityZoom } from '../shared/accessibility.js';
 import { useEffect, useRef } from 'react';
 import { spacing } from '@bullebrowser/brand-tokens';
 import { TopBar } from './components/TopBar.js';
@@ -22,6 +25,10 @@ export function App() {
   const setAiPanelOpen = useBrowserStore((s) => s.setAiPanelOpen);
   const setSearchProvider = useBrowserStore((s) => s.setSearchProvider);
   const showSettings = useBrowserStore((s) => s.showSettings);
+  const showAccessibility = useBrowserStore((s) => s.showAccessibility);
+  const preferences = useAccessibilityStore((s) => s.preferences);
+  const setAccessibility = useAccessibilityStore((s) => s.setPreferences);
+  const zoom = accessibilityZoom(preferences);
   const showAbout = useBrowserStore((s) => s.showAbout);
   const appendStep = useAgentStore((s) => s.appendStep);
   const finishRun = useAgentStore((s) => s.finishRun);
@@ -36,7 +43,7 @@ export function App() {
   const activeTab = tabs.find((t) => t.active);
   const showIntro = !activeTab || isStartPageUrl(activeTab.url);
   const pendingConfirm = useAgentStore((s) => s.pendingConfirm);
-  const modalOpen = showSettings || showAbout || pendingConfirm?.kind === 'destructive';
+  const modalOpen = showSettings || showAbout || showAccessibility || pendingConfirm?.kind === 'destructive';
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -44,6 +51,7 @@ export function App() {
     initialized.current = true;
     (async () => {
       const settings = await window.bullebrowser.settings.get();
+      setAccessibility(settings.accessibility);
       setAiPanelOpen(settings.aiPanelOpen);
       setSearchProvider(settings.searchProvider);
       const list = await window.bullebrowser.tabs.list();
@@ -53,7 +61,7 @@ export function App() {
         setTabs(list);
       }
     })();
-  }, [setAiPanelOpen, setTabs, setSearchProvider]);
+  }, [setAiPanelOpen, setTabs, setSearchProvider, setAccessibility]);
 
   // Subscribe to tab updates.
   useEffect(() => {
@@ -117,10 +125,10 @@ export function App() {
 
   // Push layout bounds to main so the WebContentsView fits.
   useEffect(() => {
-    const top = spacing.topBarHeight + spacing.tabStripHeight;
-    const right = aiPanelOpen ? spacing.aiPanelWidth : 0;
+    const top = Math.round((spacing.topBarHeight + spacing.tabStripHeight) * zoom);
+    const right = aiPanelOpen ? Math.round(spacing.aiPanelWidth * zoom) : 0;
     void window.bullebrowser.layout.setBounds({ topInset: top, rightInset: right, modalOpen });
-  }, [aiPanelOpen, modalOpen]);
+  }, [aiPanelOpen, modalOpen, zoom]);
 
   useEffect(() => {
     void window.bullebrowser.settings.set({ aiPanelOpen });
@@ -141,6 +149,7 @@ export function App() {
         {aiPanelOpen && <AiPanel />}
       </div>
       <ConfirmDialog />
+      {showAccessibility && <AccessibilityModal />}
       {showSettings && <SettingsModal />}
       {showAbout && <AboutModal />}
     </div>

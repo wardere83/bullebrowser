@@ -1,3 +1,5 @@
+import { accessibilityManager } from './accessibility.js';
+import { normalizeAccessibility } from '../shared/accessibility.js';
 import { hasActiveAgentRuns } from './agent/run.js';
 import { saveUpdateTabs } from './storage/update-session.js';
 import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
@@ -92,9 +94,15 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
   );
   handle(IPC.BOOKMARK_REMOVE, (_e, id: string) => bookmarkStore.remove(id));
 
+  accessibilityManager.register(win.webContents, getSettings().accessibility);
+
   // settings & secrets
   handle(IPC.SETTINGS_GET, () => getSettings());
-  handle(IPC.SETTINGS_SET, (_e, patch: Partial<AppSettings>) => setSettings(patch));
+  handle(IPC.SETTINGS_SET, async (_e, patch: Partial<AppSettings>) => {
+    const next = setSettings(patch);
+    if (patch.accessibility !== undefined) await accessibilityManager.apply(normalizeAccessibility(next.accessibility));
+    return next;
+  });
   handle(IPC.UPDATE_APPLY, (_e, version: string) => applyUpdate(version, () => {
     if (hasActiveAgentRuns()) throw new Error('Finish the current task before updating.');
     saveUpdateTabs(tabManager.list());
