@@ -17,20 +17,11 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Hero — dark, centered, drifting blobs, the film as the product shot. */}
-      <section className="relative overflow-hidden bg-surface-dark text-ink-inverse">
-        <div
-          aria-hidden="true"
-          className="animate-blob pointer-events-none absolute -start-24 -top-24 h-80 w-80 rounded-full bg-primary/20 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="animate-blob pointer-events-none absolute -end-16 top-40 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
-          style={{ animationDelay: '-7s' }}
-        />
+      {/* White introduction, with the navy film as the visual focal point. */}
+      <section className="relative overflow-hidden bg-white text-ink-primary">
         <div className="relative mx-auto max-w-7xl px-6 pb-12 pt-20 text-center md:pb-16 md:pt-28">
           <Reveal>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs tracking-wide text-ink-inverse/80">
+            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1 text-xs tracking-wide text-ink-secondary">
               <span
                 aria-hidden="true"
                 className="h-1.5 w-1.5 rounded-full bg-primary"
@@ -45,7 +36,7 @@ export default function HomePage() {
             </h1>
           </Reveal>
           <Reveal delay={160}>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-inverse/80">
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-secondary">
               {t('home.sub')}
             </p>
           </Reveal>
@@ -54,12 +45,12 @@ export default function HomePage() {
               <Link href="/download" className={button.primary}>
                 {t('cta.download')}
               </Link>
-              <Link href="/features" className={button.secondary}>
+              <Link href="/features" className={`${button.secondary} border border-line`}>
                 {t('home.cta.app')}
               </Link>
             </div>
           </Reveal>
-          <p className="mt-6 text-xs tracking-wide text-ink-inverse/60">{t('home.platforms')}</p>
+          <p className="mt-6 text-xs tracking-wide text-ink-secondary">{t('home.platforms')}</p>
         </div>
         <div className="relative mx-auto max-w-[1280px] px-4 pb-20 sm:px-6 md:pb-28">
           <Reveal delay={360}>
@@ -70,7 +61,7 @@ export default function HomePage() {
 
       <BrowserWalkthrough />
 
-      <section className="border-y border-line bg-surface-muted py-20 md:py-24">
+      <section className="border-y border-line bg-white py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
             <Eyebrow>{t('app.eyebrow')}</Eyebrow>
@@ -88,10 +79,10 @@ export default function HomePage() {
 
       <AppAudiences />
 
-      <section className="bg-surface-dark text-white">
+      <section className="border-y border-line bg-white text-ink-primary">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-[1.2fr_1fr] md:py-28">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-secondary">
               {t('company.eyebrow')}
             </p>
             <h2 className="mt-5 text-3xl font-semibold tracking-tight md:text-4xl">
@@ -99,13 +90,11 @@ export default function HomePage() {
             </h2>
           </div>
           <div>
-            <p className="text-base leading-relaxed text-white/75">{t('company.body')}</p>
+            <p className="text-base leading-relaxed text-ink-secondary">{t('company.body')}</p>
             <div className="mt-7 flex flex-wrap gap-6">
-              <ArrowLink href="/about" tone="dark">
-                {t('company.cta')}
-              </ArrowLink>
+              <ArrowLink href="/about">{t('company.cta')}</ArrowLink>
               <a
-                className="text-sm font-semibold text-white underline underline-offset-4"
+                className="text-sm font-semibold text-ink-primary underline underline-offset-4"
                 href={`mailto:${product.contactEmail}`}
               >
                 {product.contactEmail}

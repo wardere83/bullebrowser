@@ -38,54 +38,32 @@ html {
   letter-spacing: 0 !important;
 }
 
-/* Halo effect — a gentle conic glow that circles the composer in the home
-   page's walk-through while a request is being typed. It rides on a ::before
-   pseudo-element behind the box so it never intercepts clicks, and
-   fades/animates in only when the parent carries `.is-active`. Honors
-   prefers-reduced-motion by holding a static glow instead of rotating. */
-@property --halo-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
 .halo {
   position: relative;
 }
-.halo::before {
-  content: '';
+.preview-border-track {
   position: absolute;
-  inset: -1.5px;
-  border-radius: inherit;
-  padding: 1.5px; /* the ring thickness */
-  background: conic-gradient(
-    from var(--halo-angle),
-    transparent 0deg,
-    var(--color-primary) 90deg,
-    var(--color-accent) 180deg,
-    var(--color-primary) 270deg,
-    transparent 360deg
-  );
-  /* Mask so only the padding box (the ring) shows, not the fill. */
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.35s ease;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
-.halo.is-active::before {
-  opacity: 1;
-  animation: halo-spin 10s linear infinite;
+.preview-border-track rect {
+  fill: none;
+  stroke: #20bad1;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 16 84;
+  opacity: 0;
 }
-@keyframes halo-spin {
+.halo:is(:hover, :focus-within) .preview-border-track rect {
+  opacity: 1;
+  animation: preview-border-lap 2.6s linear infinite;
+}
+@keyframes preview-border-lap {
   to {
-    --halo-angle: 360deg;
+    stroke-dashoffset: -100;
   }
 }
 
@@ -230,9 +208,8 @@ html {
   .animate-blob {
     animation: none;
   }
-  .halo.is-active::before {
+  .halo:is(:hover, :focus-within) .preview-border-track rect {
     animation: none;
-    opacity: 0.7;
   }
   .marquee {
     mask-image: none;
@@ -269,7 +246,7 @@ html {
   }
 }
 .preview-cursor {
-  animation: preview-cursor-travel 12s ease-in-out infinite;
+  animation: preview-cursor-travel 3.6s ease-in-out infinite;
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {

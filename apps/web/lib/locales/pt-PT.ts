@@ -102,14 +102,14 @@ export const ptPT: Messages = {
   'marquee.play': 'Retomar a lista em movimento',
 
   'film.title': 'Veja o navegador em ação.',
-  'film.label': 'Demonstração ilustrada do produto',
+  'film.label': 'Apresentação animada do processo',
   'film.caption':
-    'Um objetivo. Uma pergunta breve. Navegação visível entre fontes. Uma demonstração ilustrada da aplicação atual, com pedidos de exemplo em vez de resultados de financiamento em direto.',
+    'Do seu objetivo à pesquisa visível. Um mapa mental explica a pergunta breve, a exploração de fontes e a sua revisão para empresas e CBOs.',
   'film.play': 'Reproduzir o filme do BulleBrowser',
   'film.pause': 'Pausar o filme',
   'film.fallback': 'Não foi possível carregar o filme. Tente atualizar a página.',
   'film.description':
-    'Uma demonstração ilustrada e silenciosa do BulleBrowser. Quatro opções surgem ao lado do navegador. A escolha leva a uma pergunta breve. Uma resposta de exemplo inicia o cursor visível pelas fontes oficiais e os separadores permitem rever e comparar opções. Stop mantém o controlo nas mãos do utilizador.',
+    'Uma apresentação animada silenciosa com um globo de pontos e um mapa mental. O seu objetivo e uma pergunta breve levam à pesquisa visível e a fontes que pode rever. Quatro opções iniciam o processo. O assistente abre fontes oficiais, lê e compara páginas e mantém os separadores. Os utilizadores reveem as conclusões e podem parar a tarefa.',
 
   'ask.eyebrow': 'Quatro formas de começar',
   'ask.h2': 'Em que posso ajudar?',

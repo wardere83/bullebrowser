@@ -62,7 +62,7 @@ export function TopBar() {
 
   return (
     <header
-      className="drag-region flex h-11 items-center gap-2 border-b border-line/30 bg-surface-dark px-3 text-ink-inverse"
+      className="drag-region flex h-11 items-center gap-2 border-b border-line bg-white px-3 text-ink-primary"
       // macOS draws the window buttons inside this bar (hiddenInset); keep
       // them clear of the logo and the back / forward buttons, except in full
       // screen, where macOS hides them.
@@ -101,7 +101,7 @@ export function TopBar() {
 
       <form onSubmit={submit} className="no-drag min-w-0 flex-1">
         <div
-          className={`h-7 prompt-input-shell prompt-input-shell--dark prompt-input-shell--${addressActivity.state}`}
+          className={`h-7 prompt-input-shell prompt-input-shell--${addressActivity.state}`}
           data-activity-state={addressActivity.state}
         >
           <input
@@ -117,18 +117,18 @@ export function TopBar() {
             onBlur={addressActivity.onBlur}
             placeholder="Ask BulleBrowser or enter address"
             aria-label="Address bar"
-            className="prompt-input-field prompt-input-field--singleline prompt-input-field--dark"
+            className="prompt-input-field prompt-input-field--singleline"
           />
         </div>
       </form>
 
       {status === 'running' && (
-        <div className="no-drag flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs text-accent">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
+        <div className="no-drag flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-ink-primary">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
           <span className="max-w-[280px] truncate">{currentStep || 'Agent is working…'}</span>
           <button
             type="button"
-            className="rounded bg-white/10 px-2 py-0.5 text-[11px] hover:bg-white/20"
+            className="rounded bg-surface-muted px-2 py-0.5 text-[11px] hover:bg-line"
             onClick={() => runId && window.bullebrowser.agent.cancel(runId)}
           >
             Stop
@@ -141,8 +141,8 @@ export function TopBar() {
         onClick={openAssistant}
         className={`no-drag rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
           aiPanelOpen
-            ? 'bg-primary text-white'
-            : 'bg-white/10 text-ink-inverse hover:bg-white/20'
+            ? 'bg-primary text-ink-primary'
+            : 'bg-surface-muted text-ink-primary hover:bg-line'
         }`}
         aria-pressed={aiPanelOpen}
       >
@@ -153,7 +153,7 @@ export function TopBar() {
         <button
           type="button"
           onClick={() => setProfileOpen((v) => !v)}
-          className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-xs font-semibold text-ink-inverse hover:bg-white/20"
+          className="grid h-7 w-7 place-items-center rounded-full bg-surface-muted text-xs font-semibold text-ink-primary hover:bg-line"
           aria-label="Profile menu"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -213,7 +213,7 @@ function NavBtn({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid h-7 w-7 place-items-center rounded-md text-ink-inverse transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+      className="grid h-7 w-7 place-items-center rounded-md text-ink-primary transition-colors hover:bg-surface-muted disabled:opacity-30 disabled:hover:bg-transparent"
     >
       {children}
     </button>

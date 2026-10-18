@@ -33,7 +33,7 @@ export function AppBenefits() {
 export function AppAudiences() {
   const t = useT();
   return (
-    <section className="bg-surface-muted py-20 md:py-24">
+    <section className="bg-white py-20 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <Reveal>
           <Eyebrow>{t('app.audiences.eyebrow')}</Eyebrow>

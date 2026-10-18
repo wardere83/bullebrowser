@@ -114,14 +114,14 @@ export const en = {
 
   // The film. The description is what a screen reader hears in place of it.
   'film.title': 'See the browser get to work.',
-  'film.label': 'Illustrated product walkthrough',
+  'film.label': 'Animated process overview',
   'film.caption':
-    'One goal. A short question. Visible browsing across source pages. An illustrated walkthrough of the current app, with sample prompts rather than live grant results.',
+    'From your goal to visible research. A mind map explains the short question, source exploration and review process for businesses and CBOs.',
   'film.play': 'Play the BulleBrowser film',
   'film.pause': 'Pause the film',
   'film.fallback': 'The film could not load. Try refreshing the page.',
   'film.description':
-    'A silent illustrated walkthrough of BulleBrowser. Four browsing options sit beside the browser. Choosing an option leads to a short clarifying question. A sample answer starts visible cursor movement through official source pages, then open tabs support reviewing and comparing options. Stop keeps the user in control.',
+    'A silent animated overview with a rotating dotted globe and a mind map. Your goal and a short question lead to visible research and source pages you can review. Four browsing options start the process. The assistant opens official sources, reads and compares pages, and keeps source tabs available. Users review findings and can stop the task.',
 
   // The four options. Their names are in lib/terms.ts.
   'ask.eyebrow': 'Four ways to start',

@@ -21,7 +21,11 @@ body,
 }
 
 body {
-  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-family:
+    'DM Sans',
+    system-ui,
+    -apple-system,
+    sans-serif;
   font-size: 14px;
   color: #071422;
   background: #071422;
@@ -81,7 +85,7 @@ textarea {
 }
 
 .prompt-input-shell--focus {
-  border-color: #20BAD1;
+  border-color: #20bad1;
 }
 
 .prompt-input-shell--focus::after {
@@ -89,7 +93,7 @@ textarea {
 }
 
 .prompt-input-shell--typing {
-  border-color: #20BAD1;
+  border-color: #20bad1;
 }
 
 .prompt-input-shell--typing::after {
@@ -98,7 +102,7 @@ textarea {
 }
 
 .prompt-input-shell--cooldown {
-  border-color: #20BAD1;
+  border-color: #20bad1;
 }
 
 .prompt-input-shell--cooldown::after {
@@ -107,7 +111,7 @@ textarea {
 
 .prompt-input-shell--disabled {
   border-color: #d6dee8;
-  background: #EFF7F8;
+  background: #eff7f8;
 }
 
 .prompt-input-shell--disabled::after {
@@ -151,7 +155,7 @@ textarea {
 }
 
 .prompt-input-field--dark {
-  color: #EFF7F8;
+  color: #eff7f8;
 }
 
 .prompt-input-field--dark::placeholder {
@@ -188,93 +192,48 @@ textarea {
 }
 
 /* ------------------------------------------------------------------ */
-/* Chat input: animated rotating gradient halo (scoped to the AI panel */
-/* input only — the shared shell is also used by the top-bar address   */
-/* field, which must stay quiet). A conic gradient painted into a 1.5px */
-/* border ring via a mask, rotated by animating a custom angle prop.    */
-/* Idle: a whisper. Focused / working: bright and slowly rotating.      */
-/* ------------------------------------------------------------------ */
-@property --halo-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-/* Keep the chat shell's own border neutral in every state — the halo is
-   the focus/activity signal, not a colored border. */
+/* A solid segment follows the actual rounded perimeter at constant speed.
+   It is quiet until the user enters or focuses the composer. No glow or pulse. */
 .prompt-input-shell--chat,
 .prompt-input-shell--chat.prompt-input-shell--focus,
 .prompt-input-shell--chat.prompt-input-shell--typing,
 .prompt-input-shell--chat.prompt-input-shell--cooldown {
   border-color: #e5e9f0;
 }
-
-/* Suppress the generic box-glow on the chat variant; the ring replaces it. */
-.prompt-input-shell--chat::after {
+.prompt-input-shell--chat::after,
+.prompt-input-shell--chat::before {
   content: none;
 }
-
-.prompt-input-shell--chat::before {
-  content: '';
+.prompt-border-track {
   position: absolute;
-  inset: -1px;
-  border-radius: 9px; /* shell radius (8) + inset */
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--halo-angle),
-    rgba(32, 186, 209, 0) 0deg,
-    rgba(32, 186, 209, 0.85) 70deg,
-    rgba(127, 217, 230, 0.9) 140deg,
-    rgba(32, 186, 209, 0) 250deg,
-    rgba(32, 186, 209, 0) 360deg
-  );
-  /* Paint only the padding ring: fill everything, then punch out the
-     content box so just the 1.5px border remains. */
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 260ms ease;
-  animation: halo-rotate 10s linear infinite;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
-
-/* Idle — barely-there ring so the control feels alive but calm. */
-.prompt-input-shell--chat.prompt-input-shell--idle::before {
-  opacity: 0.55;
-}
-
-/* Focused / cooling down — clearly visible, unhurried. */
-.prompt-input-shell--chat.prompt-input-shell--focus::before,
-.prompt-input-shell--chat.prompt-input-shell--cooldown::before {
-  opacity: 0.6;
-}
-
-/* Typing or agent working — brightest, a touch faster. Listed last so it
-   wins over idle/focus when several state classes are present. */
-.prompt-input-shell--chat.prompt-input-shell--typing::before,
-.prompt-input-shell--chat.prompt-input-shell--working::before {
-  opacity: 0.95;
-  animation-duration: 10s;
-}
-
-/* Disabled — no ring at all. */
-.prompt-input-shell--chat.prompt-input-shell--disabled::before {
+.prompt-border-train {
+  fill: none;
+  stroke: #20bad1;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 16 84;
   opacity: 0;
   animation: none;
 }
-
-@keyframes halo-rotate {
+.prompt-input-shell--chat:is(:hover, :focus-within):not(.prompt-input-shell--disabled)
+  .prompt-border-train {
+  opacity: 1;
+  animation: prompt-border-lap 2.6s linear infinite;
+}
+@keyframes prompt-border-lap {
   to {
-    --halo-angle: 360deg;
+    stroke-dashoffset: -100;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  /* Keep a static gradient ring, but never rotate it. */
-  .prompt-input-shell--chat::before {
+  .prompt-input-shell--chat:is(:hover, :focus-within):not(.prompt-input-shell--disabled)
+    .prompt-border-train {
     animation: none;
   }
 }
@@ -308,7 +267,7 @@ textarea {
 }
 .md-prose pre {
   background: #071422;
-  color: #EFF7F8;
+  color: #eff7f8;
   padding: 12px;
   border-radius: 8px;
   overflow-x: auto;
@@ -333,29 +292,28 @@ textarea {
   vertical-align: top;
 }
 .md-prose th {
-  background: #EFF7F8;
+  background: #eff7f8;
   font-weight: 600;
 }
 .md-prose a {
-  color: #20BAD1;
+  color: #20bad1;
   text-decoration: underline;
 }
 
-/* The assistant has its own dark palette. Keep these colors scoped so the
-   browser chrome, start page and Settings retain their existing appearance.
-   Shared attachment and voice controls inherit the same palette here. */
+/* White assistant surfaces keep the navy product film as the visual focus.
+   Shared attachment and voice controls inherit this readable palette. */
 .chat-panel {
-  --chat-background: #212225;
-  --chat-surface: #2b2d32;
-  --chat-composer: #303339;
-  --chat-hover: #373b42;
-  --chat-border: #454a53;
-  --chat-text: #f3f4f6;
-  --chat-muted: #b5bcc8;
-  --chat-subtle: #a3acba;
+  --chat-background: #ffffff;
+  --chat-surface: #ffffff;
+  --chat-composer: #ffffff;
+  --chat-hover: #f1f5f8;
+  --chat-border: #d4dce4;
+  --chat-text: #142127;
+  --chat-muted: #53616d;
+  --chat-subtle: #64717d;
   --chat-brand: #20bad1;
-  --chat-danger: #ff9d9d;
-  color-scheme: dark;
+  --chat-danger: #b42318;
+  color-scheme: light;
   color: var(--chat-text);
   background: var(--chat-background);
   border-color: var(--chat-border);
@@ -382,18 +340,13 @@ textarea {
   background-color: var(--chat-surface);
 }
 .chat-panel .bg-surface-light\/95 {
-  background-color: rgb(33 34 37 / 96%);
+  background-color: rgb(255 255 255 / 96%);
 }
 .chat-panel :is(.bg-surface-muted, .hover\:bg-surface-muted:hover) {
   background-color: var(--chat-hover);
 }
-.chat-panel :is(
-  .border-line,
-  .border-line\/25,
-  .border-line\/40,
-  .border-line\/50,
-  .border-line\/60
-) {
+.chat-panel
+  :is(.border-line, .border-line\/25, .border-line\/40, .border-line\/50, .border-line\/60) {
   border-color: var(--chat-border);
 }
 .chat-panel :is(.border-danger, .border-danger\/30) {
@@ -462,12 +415,12 @@ textarea {
   overflow-wrap: anywhere;
 }
 .chat-panel .md-prose code {
-  color: #e0edf0;
+  color: #223f4d;
   background-color: var(--chat-hover);
 }
 .chat-panel .md-prose pre {
-  color: #e0edf0;
-  background-color: #16191e;
+  color: #223f4d;
+  background-color: #f1f5f8;
   border: 1px solid var(--chat-border);
   overflow-wrap: normal;
 }
@@ -482,7 +435,7 @@ textarea {
   background-color: var(--chat-surface);
 }
 .chat-panel .md-prose a {
-  color: #68d9e8;
+  color: #006d80;
   text-underline-offset: 3px;
 }
 .chat-panel .md-prose blockquote {
@@ -497,7 +450,7 @@ textarea {
 }
 .chat-panel ::selection {
   color: var(--chat-text);
-  background-color: #206174;
+  background-color: #c4ecf2;
 }
 
 /* Activity feed "still working" dot. Slow and low-contrast on purpose — it
@@ -507,8 +460,13 @@ textarea {
 }
 
 @keyframes activity-pulse {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -543,24 +501,51 @@ textarea {
 .bb-wave--idle .bb-wave-bar {
   animation: bb-wave-pulse 1.1s ease-in-out infinite;
 }
-.bb-wave--idle .bb-wave-bar:nth-child(2) { animation-delay: 0.15s; }
-.bb-wave--idle .bb-wave-bar:nth-child(3) { animation-delay: 0.3s; }
-.bb-wave--idle .bb-wave-bar:nth-child(4) { animation-delay: 0.45s; }
-.bb-wave--idle .bb-wave-bar:nth-child(5) { animation-delay: 0.15s; }
-.bb-wave--idle .bb-wave-bar:nth-child(6) { animation-delay: 0.3s; }
-.bb-wave--idle .bb-wave-bar:nth-child(7) { animation-delay: 0.45s; }
+.bb-wave--idle .bb-wave-bar:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.bb-wave--idle .bb-wave-bar:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.bb-wave--idle .bb-wave-bar:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.bb-wave--idle .bb-wave-bar:nth-child(5) {
+  animation-delay: 0.15s;
+}
+.bb-wave--idle .bb-wave-bar:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.bb-wave--idle .bb-wave-bar:nth-child(7) {
+  animation-delay: 0.45s;
+}
 @keyframes bb-wave-pulse {
-  0%, 100% { transform: scaleY(0.25); }
-  50% { transform: scaleY(0.9); }
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(0.9);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bb-wave--idle .bb-wave-bar { animation: none; transform: scaleY(0.55); }
+  .bb-wave--idle .bb-wave-bar {
+    animation: none;
+    transform: scaleY(0.55);
+  }
 }
 
 /* Breathing dot used by the Voice Mode overlay and other "live" indicators. */
 @keyframes soft-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -573,7 +558,7 @@ textarea {
 .workspace {
   /* Native controls (the list a select opens, scrollbars, the caret) follow
      the dark surface. */
-  color-scheme: dark;
+  color-scheme: light;
   scrollbar-color: rgb(255 255 255 / 24%) transparent;
   caret-color: #20bad1;
 }

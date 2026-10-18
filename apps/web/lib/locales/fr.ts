@@ -102,14 +102,14 @@ const text: Messages = {
   'marquee.play': 'Reprendre la liste défilante',
 
   'film.title': 'Voyez le navigateur passer à l’action.',
-  'film.label': 'Présentation illustrée du produit',
+  'film.label': 'Présentation animée du processus',
   'film.caption':
-    'Un objectif. Une courte question. Une navigation visible entre les sources. Une présentation illustrée de l’application actuelle, avec des exemples de demandes plutôt que des résultats de financement en direct.',
+    'De votre objectif à une recherche visible. Une carte mentale explique la courte question, l’exploration des sources et leur examen pour les entreprises et les CBOs.',
   'film.play': 'Lire le film BulleBrowser',
   'film.pause': 'Mettre le film en pause',
   'film.fallback': 'Le film n’a pas pu être chargé. Actualisez la page.',
   'film.description':
-    'Une présentation illustrée et silencieuse de BulleBrowser. Quatre options sont proposées à côté du navigateur. Une option mène à une courte question. Une réponse d’exemple lance le curseur visible sur les sources officielles, puis les onglets permettent de comparer les pistes. Stop garde le contrôle à l’utilisateur.',
+    'Une présentation animée silencieuse avec un globe de points et une carte mentale. Votre objectif et une courte question mènent à une recherche visible et à des sources consultables. Quatre options lancent le processus. L’assistant ouvre les sources officielles, lit et compare les pages et conserve les onglets. Les utilisateurs examinent les résultats et peuvent arrêter la tâche.',
 
   'ask.eyebrow': 'Quatre façons de commencer',
   'ask.h2': 'Comment puis-je vous aider ?',

@@ -427,17 +427,6 @@ export function AiPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
 
-  // Set when a new chat is opened by something the user did elsewhere in the
-  // window (switching organization in the workspace): focus stays where they are.
-  const keepFocusElsewhere = useRef(false);
-  useEffect(() => {
-    const elsewhere = keepFocusElsewhere.current;
-    keepFocusElsewhere.current = false;
-    if (!current || current.messages.length > 0 || status === 'running') return;
-    if (elsewhere) return;
-    textareaRef.current?.focus();
-  }, [current, status]);
-
   // Re-sync the optional cloud engine when Settings closes. Without its key,
   // the same composer uses the local assistant automatically.
   const settingsWasOpen = useRef(false);
@@ -498,16 +487,8 @@ export function AiPanel() {
     setQueued([]);
     setAttachments([]);
     setShowHistory(false);
-    // The switch was made in the workspace; opening the new chat must not pull
-    // keyboard focus out of it and into the composer.
-    const show = (conversation: ConversationDetail) => {
-      const active = document.activeElement;
-      const panel = textareaRef.current?.closest('aside');
-      keepFocusElsewhere.current = Boolean(
-        active && active !== document.body && panel && !panel.contains(active),
-      );
-      setCurrent(conversation);
-    };
+    // Keep focus where the user left it; loading a session is not an input action.
+    const show = (conversation: ConversationDetail) => setCurrent(conversation);
     void (async () => {
       const bridge = browserBridge();
       const list = await bridge.conversations.list();
@@ -745,6 +726,9 @@ export function AiPanel() {
                 }
               }}
             >
+              <svg className="prompt-border-track" aria-hidden="true" focusable="false">
+                <rect className="prompt-border-train" x="0" y="0" width="100%" height="100%" rx="14" pathLength="100" />
+              </svg>
               <textarea
                 ref={textareaRef}
                 value={draft}
@@ -763,7 +747,6 @@ export function AiPanel() {
                 }
                 rows={3}
                 className="prompt-input-field prompt-input-field--dark"
-                autoFocus={current?.messages.length === 0}
               />
             </div>
           </div>

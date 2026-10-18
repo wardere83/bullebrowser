@@ -102,14 +102,14 @@ export const es419: Messages = {
   'marquee.play': 'Reanudar la lista en movimiento',
 
   'film.title': 'Mira al navegador ponerse a trabajar.',
-  'film.label': 'Recorrido ilustrado del producto',
+  'film.label': 'Presentación animada del proceso',
   'film.caption':
-    'Una meta. Una pregunta breve. Navegación visible entre fuentes. Un recorrido ilustrado de la app actual, con solicitudes de ejemplo en lugar de resultados de subvenciones en vivo.',
+    'De tu meta a una investigación visible. Un mapa mental explica la pregunta breve, la exploración de fuentes y su revisión para empresas y CBOs.',
   'film.play': 'Reproducir el video de BulleBrowser',
   'film.pause': 'Pausar el video',
   'film.fallback': 'No se pudo cargar el video. Intenta actualizar la página.',
   'film.description':
-    'Un recorrido ilustrado y silencioso de BulleBrowser. Hay cuatro opciones junto al navegador. Elegir una genera una pregunta breve. Una respuesta de ejemplo inicia el cursor visible por fuentes oficiales y las pestañas permiten revisar y comparar opciones. Stop mantiene al usuario en control.',
+    'Una presentación animada silenciosa con un globo de puntos y un mapa mental. Tu meta y una pregunta breve llevan a una investigación visible y fuentes que puedes revisar. Cuatro opciones inician el proceso. El asistente abre fuentes oficiales, lee y compara páginas y conserva las pestañas. Los usuarios revisan los hallazgos y pueden detener la tarea.',
 
   'ask.eyebrow': 'Cuatro formas de empezar',
   'ask.h2': '¿En qué puedo ayudarte?',

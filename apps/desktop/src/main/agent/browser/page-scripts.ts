@@ -486,7 +486,7 @@ export const AGENT_CURSOR = `
         var cursorStyle =
           ':host{all:initial}' +
           '.ptr{position:fixed;width:22px;height:22px;margin:-2px 0 0 -2px;' +
-            'transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;' +
+            'transition:transform .28s cubic-bezier(.22,1,.36,1);will-change:transform;' +
             'filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}' +
           '.ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;' +
             'border:2px solid #20BAD1;opacity:0;pointer-events:none}' +

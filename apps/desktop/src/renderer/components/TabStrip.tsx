@@ -23,7 +23,7 @@ export function TabStrip() {
   return (
     <div
       ref={stripRef}
-      className="flex h-9 items-end gap-0.5 border-b border-line/30 bg-surface-dark px-2 pt-1 text-ink-inverse"
+      className="flex h-9 items-end gap-0.5 border-b border-line bg-white px-2 pt-1 text-ink-primary"
     >
       <div className="flex flex-1 items-end gap-0.5 overflow-x-auto">
         {tabs.map((t) => (
@@ -40,7 +40,7 @@ export function TabStrip() {
         type="button"
         aria-label="New tab"
         onClick={() => window.bullebrowser.tabs.create()}
-        className="ml-1 grid h-7 w-7 place-items-center rounded-md hover:bg-white/10"
+        className="ml-1 grid h-7 w-7 place-items-center rounded-md hover:bg-surface-muted"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 5v14M5 12h14" />
@@ -81,7 +81,7 @@ function Tab({
       className={`group relative flex h-7 w-[180px] items-center gap-2 rounded-t-md px-2 text-left text-xs transition-colors ${
         tab.active
           ? 'z-10 bg-surface-light font-medium text-ink-primary shadow-[inset_0_-3px_0_0_#20BAD1,0_0_10px_rgba(32,186,209,0.45)]'
-          : 'bg-white/5 text-ink-inverse/60 hover:bg-white/10'
+          : 'bg-surface-muted text-ink-secondary hover:bg-surface-muted'
       }`}
     >
       {tab.faviconUrl ? (

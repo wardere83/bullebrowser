@@ -170,7 +170,13 @@ export function BrowserWalkthrough() {
                 </p>
               )}
             </div>
-            <div className="halo is-active mt-auto rounded-xl border border-line bg-white px-4 py-4 text-xs text-ink-secondary">
+            <div
+              tabIndex={0}
+              className="halo mt-auto rounded-xl border border-line bg-white px-4 py-4 text-xs text-ink-secondary"
+            >
+              <svg className="preview-border-track" aria-hidden="true">
+                <rect x="0" y="0" width="100%" height="100%" rx="12" pathLength="100" />
+              </svg>
               Ask BulleBrowser to browse…
             </div>
           </div>

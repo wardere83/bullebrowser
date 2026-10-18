@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { product } from '@bullebrowser/brand-tokens';
-import wordmarkLight from '@bullebrowser/brand-tokens/wordmark-light.png';
+import wordmark from '@bullebrowser/brand-tokens/wordmark.png';
 import filmUrl from '../assets/bullebrowser-film.mp4';
 import posterUrl from '../assets/bullebrowser-film-poster.jpg';
 
@@ -36,23 +36,23 @@ export function Splash() {
   return (
     <section
       aria-label="BulleBrowser funding introduction"
-      className="h-full overflow-y-auto bg-surface-dark px-6 py-8 text-ink-inverse"
+      className="h-full overflow-y-auto bg-white px-6 py-8 text-ink-primary"
     >
       <div className="flex min-h-full flex-col items-center justify-center gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <h1>
             <img
-              src={wordmarkLight}
+              src={wordmark}
               alt={product.name}
               className="h-16 w-auto max-w-full select-none"
               draggable={false}
             />
           </h1>
-          <p className="text-sm text-ink-inverse/70">{product.tagline}</p>
+          <p className="text-sm text-ink-primary/70">{product.tagline}</p>
         </div>
 
         <div className="w-full max-w-3xl">
-          <div className="relative overflow-hidden rounded-2xl bg-black shadow-[0_30px_70px_-35px_rgba(0,0,0,0.8)] ring-1 ring-white/10">
+          <div className="relative overflow-hidden rounded-2xl bg-black shadow-[0_25px_65px_-35px_rgba(7,20,34,0.35)] ring-1 ring-black/10">
             {failed ? (
               <img
                 src={posterUrl}
@@ -90,18 +90,23 @@ export function Splash() {
               </>
             )}
           </div>
-          <p id={descriptionId} className="mt-3 text-center text-xs leading-relaxed text-ink-inverse/60">
+          <p
+            id={descriptionId}
+            className="mt-3 text-center text-xs leading-relaxed text-ink-primary/70"
+          >
             Choose a browsing option or type your goal in Your Assistant.
-            <span className="block">Illustrated walkthrough · follow the cursor and review the source tabs.</span>
+            <span className="block">
+              Animated process overview · from your goal to sources you can review.
+            </span>
           </p>
           {failed && (
-            <p role="status" className="mt-2 text-center text-xs text-ink-inverse/70">
+            <p role="status" className="mt-2 text-center text-xs text-ink-primary/70">
               The video couldn’t load. Choose a browsing option in Your Assistant to get started.
             </p>
           )}
         </div>
 
-        <div className="text-[11px] uppercase tracking-[0.18em] text-ink-inverse/40">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-ink-primary/60">
           by {product.vendor}
         </div>
       </div>

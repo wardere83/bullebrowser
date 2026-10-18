@@ -84,7 +84,7 @@ export class DesktopToolRuntime implements ToolRuntime {
       if (rect && rect.top >= 0 && rect.bottom < innerHeight) window.__bbCursor(element, { halo: true });
       else window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
     })()` ).catch(() => {});
-    await presentationPause(650, signal);
+    await presentationPause(380, signal);
     this.readingPresentation = name === 'read_page' ? { tabId, signal } : undefined;
   }
 
@@ -196,7 +196,7 @@ export class DesktopToolRuntime implements ToolRuntime {
         if (page.scrollHeight > innerHeight * 1.3) window.scrollBy({ top: Math.round(innerHeight * .6), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
         window.__bbCursorTo(Math.round(innerWidth * .42), Math.round(innerHeight * .55));
       })()`).catch(() => {});
-      await presentationPause(900, presentation.signal);
+      await presentationPause(550, presentation.signal);
     }
     return { title: wc.getTitle(), url: wc.getURL(), text };
   }

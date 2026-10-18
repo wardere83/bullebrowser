@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 
 // Change the public media URL when the film changes so visitors receive the
 // current overview even while their previous static assets are still cached.
-const filmRevision = 'visible-browsing-2026-10-15';
+const filmRevision = 'research-process-2026-10-17';
 
 // The BulleBrowser film: a muted, looping product film in a rounded "cinema"
 // frame. It autoplays like a hero video, except for visitors who ask for
@@ -16,7 +16,7 @@ const filmRevision = 'visible-browsing-2026-10-15';
 //
 // This is an animated overview of the app's benefits for businesses and CBOs.
 // Its label and accessible description introduce that story without presenting
-// live results. The illustrated interface reflects the current browser-first app.
+// live results. The mind map explains the current browser-first process.
 export function BrandFilm() {
   const t = useT();
   const video = useRef<HTMLVideoElement>(null);
@@ -103,7 +103,7 @@ export function BrandFilm() {
             )}
           </div>
         </div>
-        <figcaption className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-inverse/80">
+        <figcaption className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-secondary">
           {t('film.caption')}
         </figcaption>
       </figure>

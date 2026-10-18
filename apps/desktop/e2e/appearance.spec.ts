@@ -102,7 +102,7 @@ async function releaseRead(app: ElectronApplication) {
   });
 }
 
-test('dark chat keeps the composer, Markdown, history and attachment menu readable', async () => {
+test('white chat keeps the composer, Markdown, history and attachment menu readable', async () => {
   const { app, win } = await launch();
   try {
     const seed = await win.evaluate(async () => {
@@ -110,7 +110,7 @@ test('dark chat keeps the composer, Markdown, history and attachment menu readab
       return window.bullebrowser.conversations.get(list[0]!.id);
     });
     await app.evaluate(({ ipcMain }, conversation) => {
-      conversation!.title = 'Dark appearance fixture';
+      conversation!.title = 'Light appearance fixture';
       conversation!.messages = [
         { role: 'user', content: 'Summarize this page', timestamp: Date.now() },
         { role: 'assistant', content: '## Research summary\n\nThe deadline is **December 15**. See the [source](https://example.com).\n\nUse `local mode` without a key.\n\n```text\nApplications are open.\n```\n\n| Item | Detail |\n| --- | --- |\n| Funding | Accessible classrooms |\n\n> The page remains yours to control.', timestamp: Date.now() },
@@ -128,7 +128,7 @@ test('dark chat keeps the composer, Markdown, history and attachment menu readab
     // Relaunch deliberately opens a fresh chat; open the saved fixture through
     // the same history control a user uses to resume a conversation.
     await win.getByRole('button', { name: 'History', exact: true }).click();
-    await win.getByRole('button', { name: /Dark appearance fixture/ }).click();
+    await win.getByRole('button', { name: /Light appearance fixture/ }).click();
     await expect(win.getByRole('heading', { name: 'Research summary' })).toBeVisible();
     await win.locator('aside textarea').fill('A readable draft');
     const styles = await win.evaluate(() => {
@@ -150,19 +150,19 @@ test('dark chat keeps the composer, Markdown, history and attachment menu readab
       });
     });
     for (const style of styles) {
-      expect(Math.max(...style.background), style.selector).toBeLessThan(100);
+      expect(Math.min(...style.background), style.selector).toBeGreaterThan(220);
       expect(style.contrast, style.selector).toBeGreaterThanOrEqual(4.5);
     }
     await win.getByRole('button', { name: 'History', exact: true }).click();
     await expect(win.getByText('Chat history', { exact: true })).toBeVisible();
-    expect(await win.getByText('Chat history', { exact: true }).evaluate((element) => getComputedStyle(element.parentElement!.parentElement!).backgroundColor)).not.toBe('rgb(255, 255, 255)');
+    expect(await win.getByText('Chat history', { exact: true }).evaluate((element) => getComputedStyle(element.parentElement!.parentElement!).backgroundColor)).toBe('rgb(255, 255, 255)');
     await win.getByRole('button', { name: 'Close', exact: true }).click();
     await win.getByRole('button', { name: 'Add attachment', exact: true }).click();
     const upload = win.getByRole('button', { name: /Upload your file/ });
     await expect(upload).toBeVisible();
-    expect(await upload.evaluate((element) => getComputedStyle(element.parentElement!).backgroundColor)).not.toBe('rgb(255, 255, 255)');
+    expect(await upload.evaluate((element) => getComputedStyle(element.parentElement!).backgroundColor)).toBe('rgb(255, 255, 255)');
     await win.locator('aside header').click();
-    await win.screenshot({ path: join(tmpdir(), 'bullebrowser-dark-chat.png') });
+    await win.screenshot({ path: join(tmpdir(), 'bullebrowser-white-chat.png') });
   } finally { await app.close(); }
 });
 
@@ -348,5 +348,33 @@ test('page screenshots stay clear across navigation, overlapping captures and ca
     }).catch(() => {});
     await app.close();
     await site.close();
+  }
+});
+
+test('the prompt border travels only during interaction and the intro stays white', async () => {
+  const { app, win } = await launch();
+  try {
+    const intro = win.getByRole('region', { name: 'BulleBrowser funding introduction' });
+    await expect(intro).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    const input = win.locator('aside textarea');
+    const train = win.locator('aside .prompt-border-train');
+    await win.mouse.move(0, 0);
+    await expect(input).not.toBeFocused();
+    await expect(train).toHaveCSS('opacity', '0');
+    await input.hover();
+    await expect(train).toHaveCSS('opacity', '1');
+    const first = await train.evaluate((element) => getComputedStyle(element).strokeDashoffset);
+    await expect.poll(() => train.evaluate((element) => getComputedStyle(element).strokeDashoffset)).not.toBe(first);
+    await input.fill('Find grants for a youth program');
+    await expect(train).toHaveCSS('animation-duration', '2.6s');
+    await win.mouse.move(0, 0);
+    await expect(train).toHaveCSS('opacity', '1');
+    await input.blur();
+    await expect(train).toHaveCSS('opacity', '0');
+    await win.emulateMedia({ reducedMotion: 'reduce' });
+    await input.focus();
+    await expect(train).toHaveCSS('animation-name', 'none');
+  } finally {
+    await app.close();
   }
 });
