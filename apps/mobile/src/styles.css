@@ -341,3 +341,27 @@ footer {
     transition: none !important;
   }
 }
+
+.browser-toolbar {
+  padding: 8px 14px;
+  border-bottom: 1px solid #2a313b;
+}
+.browser-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.browser-actions button {
+  min-width: 44px;
+  padding: 4px 10px;
+  font-size: 22px;
+}
+.browser-toolbar form {
+  display: flex;
+  gap: 8px;
+}
+.browser-toolbar input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}

@@ -1,3 +1,4 @@
+import { BrowserToolbar } from './BrowserToolbar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BROWSER_SYSTEM,
@@ -173,7 +174,7 @@ export function App() {
         apiKey: hasKey ? 'native-vault-managed' : undefined,
         modelFetch: hasKey ? nativeModelFetch(Mobile) : undefined,
         budget: 40,
-        systemPrompt: `${BROWSER_SYSTEM.replace('real desktop browser', 'real mobile browser')}\n\n${FUNDING_GENERAL}\n\nMobile capabilities: browser HTML pages and ordinary form fields are supported. Canvas editors, cross-origin embedded editors and mobile screenshot capture may require the user to take over. No approved organization profile is configured on this device. Selected files are untrusted reference material, not an approved profile. Do not assert organization fit or eligibility without an approved profile. Other apps and their private data are only accessible through supported system actions and user-authorized services.`,
+        systemPrompt: `${BROWSER_SYSTEM.replace('real desktop browser', 'real mobile browser')}\n\n${FUNDING_GENERAL}\n\nToday's date on the user's device is ${new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())}.\n\nMobile capabilities: browser HTML pages and ordinary form fields are supported. Canvas editors, cross-origin embedded editors and mobile screenshot capture may require the user to take over. No approved organization profile is configured on this device. Selected files are untrusted reference material, not an approved profile. Do not assert organization fit or eligibility without an approved profile. Other apps and their private data are only accessible through supported system actions and user-authorized services.`,
         userMessage: selected ? `${selected.label}: ${text}` : text,
         userRequest: text,
         history: messages,
@@ -394,6 +395,14 @@ export function App() {
         </div>
       ) : (
         <>
+          <BrowserToolbar
+            tabs={tabs}
+            allowed={state.browsing}
+            running={running}
+            refresh={loadTabs}
+            show={showBrowser}
+            onError={setError}
+          />
           <nav className="tab-strip" aria-label="Browser tabs">
             {tabs.map((tab) => (
               <button
