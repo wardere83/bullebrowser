@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useBrowserStore } from '../state/browser-store.js';
 import type { ConnectorState } from '@bullebrowser/agent-core';
 
 export function ConnectorsSettings() {
+  const closeSettings = useBrowserStore((state) => state.closeSettings);
   const [states, setStates] = useState<ConnectorState[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -89,7 +91,7 @@ export function ConnectorsSettings() {
               <button
                 className="rounded border border-line px-2 py-1 text-xs focus-visible:ring-2"
                 disabled={busy}
-                onClick={() => void perform(() => window.bullebrowser.connectors.open(entry.id))}
+                onClick={() => void perform(async () => { await window.bullebrowser.connectors.open(entry.id); closeSettings(); })}
               >
                 Open / sign in
               </button>
