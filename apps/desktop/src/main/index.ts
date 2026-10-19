@@ -1,4 +1,4 @@
-import { takeUpdateTabs } from './storage/update-session.js';
+import { saveUpdateTabs, takeUpdateTabs } from './storage/update-session.js';
 import { app, BrowserWindow, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -6,7 +6,7 @@ import { product } from '@bullebrowser/brand-tokens';
 import { createBrowserWindow, runsHidden } from './window.js';
 import { registerIpc } from './ipc-handlers.js';
 import { tabManager } from './tabs/manager.js';
-import { setupAutoUpdate } from './updater.js';
+import { getUpdateStatus, setupAutoUpdate } from './updater.js';
 import { setupPermissions } from './permissions.js';
 import { setupAppMenu } from './menu.js';
 import { trackNetwork } from './agent/browser/net-activity.js';
@@ -114,4 +114,14 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Snapshot at the user's actual quit, not at an earlier Update click. Tabs may
+// have changed while a verified update was waiting in the background.
+app.on('before-quit', () => {
+  const status = getUpdateStatus();
+  if (status.state === 'ready' || status.state === 'deferred') {
+    try { saveUpdateTabs(tabManager.list()); }
+    catch { console.warn('[updater] Could not save tabs before normal quit.'); }
+  }
 });

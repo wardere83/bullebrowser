@@ -321,50 +321,89 @@ test('dictation releases permission granted after cancellation', async () => {
 });
 
 
-test('updates show one button, apply once without a loader, and restore the chat draft', async () => {
+test('updates expose real progress and stage without closing tabs or interrupting a chat', async () => {
   const { app, win, userData } = await launch({ withoutKeys: true });
   try {
     await app.evaluate(({ ipcMain, BrowserWindow }) => {
+      const state = globalThis as Record<string, unknown>;
+      state.__updateStatus = { state: 'idle' };
       ipcMain.removeHandler('update:get-status');
-      ipcMain.handle('update:get-status', () => ({ state: 'idle' }));
+      ipcMain.handle('update:get-status', () => state.__updateStatus);
+      ipcMain.removeHandler('update:check');
+      ipcMain.handle('update:check', () => {});
+      ipcMain.removeHandler('update:details');
+      ipcMain.handle('update:details', () => ({ installedVersion: '0.2.64', activationIssue: null }));
       ipcMain.removeHandler('update:apply');
       ipcMain.handle('update:apply', (_event, version: string) => {
-        const values = ((globalThis as Record<string, unknown>).__appliedVersions ??= []) as string[];
+        const values = (state.__appliedVersions ??= []) as string[];
         values.push(version);
-        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'idle' });
+        state.__updateStatus = { state: 'ready', version, scheduled: true };
+        BrowserWindow.getAllWindows()[0].webContents.send('update:status', state.__updateStatus);
       });
     });
     const composer = win.locator('aside textarea');
     await expect(composer).toBeEnabled();
-    await composer.fill('list tabs');
-    await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await expect(win.locator('.md-prose')).toBeVisible();
     await composer.fill('Keep my draft through this update.');
     const update = win.getByRole('button', { name: 'Update', exact: true });
-    await expect(update).toBeHidden();
-    for (const state of ['downloading', 'ready']) {
-      await app.evaluate(({ BrowserWindow }, next) => {
-        BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: next, version: '0.2.80', percent: 50 });
-      }, state);
-      if (state === 'downloading') {
-        await expect(update).toBeHidden();
-        await expect(win.getByRole('progressbar', { name: 'Update download progress' })).toBeHidden();
-      }
-    }
     await expect(update).toBeVisible();
-    await expect(update).toHaveText('Update');
-    await expect(update).toHaveAttribute('title', /restarts automatically/);
     await update.click();
-    await expect(update).toBeHidden();
+    const dialog = win.getByRole('dialog', { name: 'BulleBrowser updates' });
+    await expect(dialog).toContainText('Running version: 0.2.64');
+    for (const percent of [12, 63, 100]) {
+      await app.evaluate(({ BrowserWindow }, progress) => {
+        const next = { state: 'downloading', version: '0.2.80', percent: progress };
+        (globalThis as Record<string, unknown>).__updateStatus = next;
+        BrowserWindow.getAllWindows()[0].webContents.send('update:status', next);
+      }, percent);
+      await expect(dialog.getByRole('progressbar')).toHaveAttribute('aria-valuenow', String(Math.min(percent, 99)));
+    }
+    await app.evaluate(({ BrowserWindow }) => {
+      const next = { state: 'downloading', version: '0.2.80', phase: 'preparing' };
+      (globalThis as Record<string, unknown>).__updateStatus = next;
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', next);
+    });
+    await expect(dialog.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    await expect(dialog).toContainText('Verifying and preparing');
+    await app.evaluate(({ BrowserWindow }) => {
+      const next = { state: 'ready', version: '0.2.80' };
+      (globalThis as Record<string, unknown>).__updateStatus = next;
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', next);
+    });
+    await expect(dialog.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
+    await dialog.getByRole('button', { name: 'Keep browsing with update prepared' }).click();
+    await expect(update).toHaveText('Update ready');
+    await expect(dialog).toContainText('next normal quit and launch');
     expect(await app.evaluate(() => (globalThis as Record<string, unknown>).__appliedVersions)).toEqual(['0.2.80']);
-    await win.reload();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(composer).toHaveValue('Keep my draft through this update.');
-    await expect(win.locator('aside')).toContainText('list tabs');
-    await expect(win.getByRole('button', { name: 'Profile menu' }).locator('img')).toHaveCount(0);
+    await win.reload();
+    await expect(update).toHaveText('Update ready');
+    await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
   } finally {
     await app.close();
     rmSync(userData, { recursive: true, force: true });
   }
+});
+
+ test('update failures stay visible and give recovery without quitting', async () => {
+  const { app, win, userData } = await launch({ withoutKeys: true });
+  try {
+    await app.evaluate(({ ipcMain, BrowserWindow }) => {
+      ipcMain.removeHandler('update:details');
+      ipcMain.handle('update:details', () => ({ installedVersion: '0.2.64', activationIssue: 'The previous update did not activate.' }));
+      const next = { state: 'error', version: '0.2.80', message: 'Not enough free space for the update.', retryable: true };
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', next);
+      ipcMain.removeHandler('update:check');
+      ipcMain.handle('update:check', () => { throw new Error('Offline'); });
+    });
+    await win.getByRole('button', { name: 'Update', exact: true }).click();
+    const dialog = win.getByRole('dialog', { name: 'BulleBrowser updates' });
+    await expect(dialog).toContainText('previous update did not activate');
+    await expect(dialog).toContainText('Could not check for updates');
+    await expect(dialog.getByRole('link', { name: 'Latest installer' })).toHaveAttribute('href', 'https://bullebrowser.com/download');
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(win.locator('aside textarea')).toBeEnabled();
+  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
 });
 
 test('an update relaunch restores real source tabs and the selected option', async () => {

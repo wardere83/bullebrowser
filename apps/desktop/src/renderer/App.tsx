@@ -29,6 +29,7 @@ export function App() {
   const preferences = useAccessibilityStore((s) => s.preferences);
   const setAccessibility = useAccessibilityStore((s) => s.setPreferences);
   const zoom = accessibilityZoom(preferences);
+  const showUpdates = useBrowserStore((s) => s.showUpdates);
   const showAbout = useBrowserStore((s) => s.showAbout);
   const appendStep = useAgentStore((s) => s.appendStep);
   const finishRun = useAgentStore((s) => s.finishRun);
@@ -43,7 +44,7 @@ export function App() {
   const activeTab = tabs.find((t) => t.active);
   const showIntro = !activeTab || isStartPageUrl(activeTab.url);
   const pendingConfirm = useAgentStore((s) => s.pendingConfirm);
-  const modalOpen = showSettings || showAbout || showAccessibility || pendingConfirm?.kind === 'destructive';
+  const modalOpen = showUpdates || showSettings || showAbout || showAccessibility || pendingConfirm?.kind === 'destructive';
 
   // Initial sync with main + first tab if none.
   useEffect(() => {

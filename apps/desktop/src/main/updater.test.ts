@@ -4,7 +4,7 @@ import { compare } from 'semver';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { app, updater, nativeUpdater } = vi.hoisted(() => ({
-  app: { isPackaged: true, quit: vi.fn(), relaunch: vi.fn(), once: vi.fn() },
+  app: { isPackaged: true, getVersion: () => '0.2.37', getAppPath: () => '/Applications/BulleBrowser.app/Contents/Resources/app', quit: vi.fn(), relaunch: vi.fn(), once: vi.fn() },
   nativeUpdater: { getFeedURL: vi.fn(), emit: vi.fn(), on: vi.fn(), removeListener: vi.fn(), quitAndInstall: vi.fn(), checkForUpdates: vi.fn() },
   updater: {
     currentVersion: { compare: vi.fn() },
@@ -22,6 +22,7 @@ const { app, updater, nativeUpdater } = vi.hoisted(() => ({
 }));
 vi.mock('electron', () => ({ app, autoUpdater: nativeUpdater }));
 vi.mock('electron-updater', () => ({ default: { autoUpdater: updater } }));
+vi.mock('./storage/update-receipt.js', () => ({ recordPreparedUpdate: vi.fn(), reconcilePreparedUpdate: vi.fn(() => null) }));
 
 const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!;
 let events: EventEmitter;
@@ -81,7 +82,7 @@ function deferred<T>() {
 }
 
 describe('background app updates', () => {
-  it('installs only after an explicit click, saves the session and automatically reopens', async () => {
+  it('stages an explicit click once, saves the session, and never quits or relaunches', async () => {
     const api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
     expect(updater.quitAndInstall).not.toHaveBeenCalled();
@@ -91,8 +92,11 @@ describe('background app updates', () => {
     await flush();
     await Promise.all([first, second]);
     expect(saveSession).toHaveBeenCalledTimes(1);
-    expect(updater.autoRunAppAfterInstall).toBe(true);
-    expect(updater.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
+    expect(updater.autoRunAppAfterInstall).toBe(false);
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+    expect(app.relaunch).not.toHaveBeenCalled();
+    expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38', scheduled: true });
   });
 
   it('can install the prepared Mac release when a newer feed is deferred', async () => {
@@ -106,7 +110,8 @@ describe('background app updates', () => {
     const install = api.applyUpdate('0.2.38');
     await flush();
     await install;
-    expect(updater.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38', scheduled: true });
   });
 
   it('does not close the browser when the update is not ready or saving the session fails', async () => {
@@ -169,7 +174,7 @@ describe('background app updates', () => {
     expect(api.getUpdateStatus()).toEqual({ state: 'idle' });
   });
 
-  it('checks every five minutes even after a ready update is acknowledged', async () => {
+  it('checks every minute even after a ready update is acknowledged', async () => {
     const api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
     api.prepareUpdate('0.2.38');
@@ -180,10 +185,10 @@ describe('background app updates', () => {
       events.emit('update-available', { version: '0.2.39' });
       return null;
     });
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(api.getUpdateStatus()).toEqual({ state: 'idle' });
     expect(updater.downloadUpdate).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.39' });
     expect(updater.checkForUpdates).toHaveBeenCalledTimes(3);
     expect(updater.downloadUpdate).toHaveBeenCalledTimes(1);
@@ -196,7 +201,7 @@ describe('background app updates', () => {
       events.emit('update-available', { version: '0.2.38' });
       return null;
     });
-    await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(3 * 60 * 1000);
     events.emit('update-available', { version: '0.2.39' });
     events.emit('update-downloaded', { version: '0.2.38' });
     events.emit('update-not-available');
@@ -336,7 +341,7 @@ describe('background app updates', () => {
     events.emit('update-available', { version: '0.2.38' });
     await flush();
     updater.checkForUpdates.mockRejectedValueOnce(new Error('Release server unavailable'));
-    await api.retryUpdate();
+    await expect(api.retryUpdate()).rejects.toThrow('Could not check');
     expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not check for the update. Please retry.' });
     events.emit('update-not-available');
     expect(api.getUpdateStatus().state).toBe('error');
@@ -360,7 +365,7 @@ describe('background app updates', () => {
     const api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
     updater.checkForUpdates.mockRejectedValueOnce(new Error('Feed offline'));
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(60 * 1000);
     events.emit('error', new Error('Feed offline'));
     expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
     await api.retryUpdate();
@@ -371,7 +376,7 @@ describe('background app updates', () => {
     const check = deferred<null>();
     updater.checkForUpdates.mockReturnValueOnce(check.promise);
     const api = await start();
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(60 * 1000);
     win.emit('focus');
     expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
     check.resolve(null);
@@ -391,7 +396,7 @@ describe('background app updates', () => {
       events.emit('update-available', { version: '0.2.39' });
       return null;
     });
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.39' });
     expect(updater.downloadUpdate).toHaveBeenCalledTimes(2);
   });
@@ -672,7 +677,7 @@ describe('background app updates', () => {
     oldWindow.webContents.send.mockClear();
     nativeEvents.emit('update-downloaded', {}, '', '', new Date(), 'http://127.0.0.1:12345/update.zip');
     expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(60 * 1000);
     expect(updater.checkForUpdates).toHaveBeenCalledTimes(2);
     expect(oldWindow.webContents.send).not.toHaveBeenCalled();
     win = Object.assign(new EventEmitter(), { isDestroyed: () => false, webContents: { send: vi.fn() } });
@@ -749,6 +754,29 @@ describe('background app updates', () => {
     api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
     expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
+  });
+
+  it('blocks automatic replacement of a Mac disk-image copy without closing it', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
+    const path = Object.getOwnPropertyDescriptor(process, 'execPath')!;
+    Object.defineProperty(process, 'execPath', { ...path, value: '/Volumes/BulleBrowser/BulleBrowser.app/Contents/MacOS/BulleBrowser' });
+    try {
+      const api = await start();
+      events.emit('update-available', { version: '0.2.38' });
+      await flush();
+      expect(api.getUpdateStatus()).toMatchObject({ state: 'error', retryable: false, message: expect.stringContaining('Applications') });
+      expect(updater.downloadUpdate).not.toHaveBeenCalled();
+      expect(app.quit).not.toHaveBeenCalled();
+    } finally { Object.defineProperty(process, 'execPath', path); }
+  });
+
+  it('checks explicitly while idle and reports feed failures to the caller', async () => {
+    const api = await start();
+    await api.checkForAppUpdates();
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(2);
+    updater.checkForUpdates.mockRejectedValueOnce(new Error('Offline'));
+    await expect(api.checkForAppUpdates()).rejects.toThrow('Could not check');
+    expect(app.quit).not.toHaveBeenCalled();
   });
 
   it('does not start updater work in development builds', async () => {
