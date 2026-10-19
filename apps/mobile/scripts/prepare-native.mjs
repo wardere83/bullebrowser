@@ -1,6 +1,6 @@
 // Generate reproducible native projects from the pinned Capacitor templates.
 // Sources in native/ are authoritative; generated ios/ and android/ are ignored.
-import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -86,6 +86,18 @@ for (const platform of platforms.length ? platforms : ['ios', 'android']) {
           resolve(`android/app/src/main/res/mipmap-${density}/${name}`),
         );
     }
+    const testRoot = resolve('android/app/src/androidTest/java/com/bullebrowser/mobile');
+    mkdirSync(testRoot, { recursive: true });
+    copyFileSync(
+      resolve('native/android/androidTest/MobileAgentInstrumentedTest.java'),
+      resolve(testRoot, 'MobileAgentInstrumentedTest.java'),
+    );
+    rmSync(
+      resolve(
+        'android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java',
+      ),
+      { force: true },
+    );
     // Device-bound assistant keys cannot be restored with a cloud/device backup.
     replace(
       'android/app/src/main/AndroidManifest.xml',

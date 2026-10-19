@@ -22,6 +22,7 @@ jobs:
       - run: pnpm --filter @bullebrowser/mobile test
       - run: pnpm --filter @bullebrowser/mobile build
   android:
+    timeout-minutes: 25
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +44,24 @@ jobs:
         with:
           name: android-debug-for-qa-not-store-release
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+      - name: Enable KVM for Android device tests
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: cd apps/mobile/android && ./gradlew connectedDebugAndroidTest --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-native-device-test-results
+          path: apps/mobile/android/app/build/reports/androidTests/
   ios:
     runs-on: macos-latest
     steps:
