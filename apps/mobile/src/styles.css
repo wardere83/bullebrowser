@@ -1,0 +1,425 @@
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  color: #f5f7fa;
+  background: #101720;
+  font-synthesis: none;
+  font-size: 15px;
+  color-scheme: dark;
+  --accent: #20bad1;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  border: 1px solid #586577;
+  color: #f5f7fa;
+  background: transparent;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-height: 44px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+input,
+textarea,
+select {
+  border: 1px solid #586577;
+  background: #101720;
+  color: inherit;
+  padding: 12px;
+  border-radius: 10px;
+  min-height: 44px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #aeb6c2;
+}
+label:not(.permission) {
+  display: block;
+}
+label > input:not([type='checkbox']):not([type='file']),
+label > select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+}
+input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex-shrink: 0;
+}
+.mobile-shell {
+  max-width: 900px;
+  margin: auto;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #2a313b;
+}
+.brand {
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+h1 {
+  font-size: 23px;
+  margin: 0 0 12px;
+}
+h2 {
+  font-size: 19px;
+}
+h3 {
+  font-size: 16px;
+}
+.tab-strip {
+  display: flex;
+  overflow: auto;
+  gap: 8px;
+  padding: 10px 14px;
+  min-height: 58px;
+}
+.tab-strip button {
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.tab-strip [aria-current='page'] {
+  border-bottom: 2px solid #fff;
+}
+.browser-slot {
+  height: 38dvh;
+  min-height: 190px;
+  background: white;
+  color: #526072;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+}
+.chat {
+  padding: 20px 18px;
+}
+.activity {
+  font-size: 13px;
+  color: #aeb6c2;
+}
+.messages {
+  max-height: 28dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.messages article {
+  border-bottom: 1px solid #2a313b;
+  padding: 12px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.messages p {
+  line-height: 1.6;
+}
+.messages small {
+  color: #aeb6c2;
+}
+.shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 16px 0;
+}
+.shortcuts button {
+  text-align: left;
+  font-size: 13px;
+}
+.composer {
+  display: flex;
+  gap: 8px;
+  border: 1px solid #586577;
+  border-radius: 14px;
+  padding: 7px;
+  margin-top: 14px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  border: 0;
+}
+.composer:focus-within::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -130%;
+  background: conic-gradient(from 0deg, transparent 0 88%, var(--accent) 94%, transparent 100%);
+  animation: orbit 3s linear infinite;
+}
+.composer:focus-within::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: #101720;
+  z-index: -1;
+  border-radius: 12px;
+}
+@keyframes orbit {
+  to {
+    transform: rotate(1turn);
+  }
+}
+.attach,
+.external {
+  font-size: 12px;
+  margin-top: 14px;
+}
+.attach input {
+  font-size: 12px;
+  padding: 10px 0;
+  max-width: 100%;
+}
+.settings {
+  padding: 20px 18px;
+}
+.settings-section {
+  border: 1px solid #2a313b;
+  border-radius: 16px;
+  padding: 18px;
+  margin: 18px 0;
+}
+.settings p,
+.settings small {
+  font-size: 13px;
+  color: #aeb6c2;
+  line-height: 1.65;
+}
+.settings-section > label {
+  margin: 16px 0;
+}
+.permission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0;
+}
+.permission small,
+.connector small {
+  display: block;
+  font-size: 12px;
+  color: #aeb6c2;
+  margin-top: 4px;
+}
+.connector-list {
+  max-height: 48dvh;
+  overflow: auto;
+  margin: 18px 0;
+}
+.connector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #2a313b;
+}
+.connector label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+.connector button {
+  padding: 8px;
+  font-size: 12px;
+}
+.settings form label {
+  margin: 12px 0;
+}
+.settings-section > button {
+  margin: 8px 8px 8px 0;
+}
+.error {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 16px;
+  background: #44232b;
+  color: #fff;
+  padding: 14px;
+  border: 1px solid #ff8ca2;
+  border-radius: 12px;
+  z-index: 20;
+}
+.error button {
+  margin-left: 12px;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #000b;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.approval {
+  background: #101720;
+  border: 1px solid #586577;
+  border-radius: 20px;
+  max-width: 550px;
+  width: 100%;
+  padding: 24px;
+  max-height: 85dvh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.approval-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+.destination {
+  font-family: monospace;
+}
+.preview-notice {
+  max-width: 480px;
+  margin: 15vh auto;
+  padding: 24px;
+  line-height: 1.7;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+footer {
+  padding: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: #aeb6c2;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+.browser-toolbar {
+  padding: 8px 14px;
+  border-bottom: 1px solid #2a313b;
+}
+.browser-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.browser-actions button {
+  min-width: 44px;
+  padding: 4px 10px;
+  font-size: 22px;
+}
+.browser-toolbar form {
+  display: flex;
+  gap: 8px;
+}
+.browser-toolbar input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+/* Keep task controls reachable while the browser and chat scroll independently. */
+.mobile-shell {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+header,
+.browser-toolbar,
+.tab-strip,
+footer {
+  flex-shrink: 0;
+}
+.browser-slot {
+  height: 25dvh;
+  min-height: 140px;
+  flex-shrink: 0;
+}
+.browser-slot.has-tabs {
+  height: 38dvh;
+}
+.chat,
+.settings {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.messages {
+  max-height: none;
+  overflow: visible;
+}
+.mobile-shell:has(.composer:focus-within) .browser-slot {
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+@media (max-height: 700px) {
+  .browser-slot {
+    height: 18dvh;
+    min-height: 90px;
+  }
+}
+
+@media (max-width: 360px) {
+  header {
+    padding-inline: 12px;
+  }
+  .brand {
+    font-size: 18px;
+  }
+  header button {
+    padding-inline: 10px;
+  }
+}

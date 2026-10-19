@@ -43,3 +43,7 @@ playwright-report/
 
 # Vercel
 .vercel
+
+# Mobile native projects are generated from pinned templates and native/ sources.
+apps/mobile/ios/
+apps/mobile/android/
