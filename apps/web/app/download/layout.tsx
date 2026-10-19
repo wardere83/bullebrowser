@@ -3,7 +3,7 @@ import { pageMetadata } from '@/lib/metadata';
 
 export const metadata = pageMetadata({
   title: 'Download',
-  description: `Download ${product.name} for macOS, Windows and Linux: the strategic funding platform for businesses and CBOs.`,
+  description: `Download ${product.name} for desktop and check iOS and Android availability: the strategic funding platform for businesses and CBOs.`,
   path: '/download/',
 });
 

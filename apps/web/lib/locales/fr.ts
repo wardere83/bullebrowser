@@ -374,6 +374,13 @@ const text: Messages = {
   'features.cta.h2': 'Appuyez votre prochaine décision de financement sur des preuves.',
   'features.cta.sub': 'Disponible pour macOS, Windows et Linux.',
 
+  'mobile.heading': "BulleBrowser sur mobile",
+  'mobile.description': "Choisissez iOS ou Android ci-dessous. Les téléchargements mobiles seront disponibles après publication dans les boutiques.",
+  'mobile.pending': "Bientôt disponible",
+  'mobile.appStore': "Télécharger sur l’App Store",
+  'mobile.playStore': "Télécharger sur Google Play",
+  'mobile.beta': "Rejoindre la bêta",
+  'mobile.permissions': "L’accès mobile se limite aux fichiers sélectionnés, aux actions système prises en charge et aux services autorisés. Les protections de votre téléphone restent applicables.",
   'download.h1': 'Télécharger BulleBrowser',
   'download.sub':
     'Les programmes d’installation de la version actuelle de BulleBrowser, la plateforme stratégique de financement pour les entreprises et les CBOs. C’est une application de bureau pour macOS, Windows et Linux.',
