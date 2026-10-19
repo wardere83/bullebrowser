@@ -8,6 +8,7 @@ if (process.platform !== 'linux') process.env.BULLEBROWSER_HIDDEN ??= '1';
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['**/mobile/**', '**/website/**'],
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,
