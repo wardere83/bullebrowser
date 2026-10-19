@@ -11,6 +11,7 @@ interface BrowserStoreState {
   searchProvider: AppSettings['searchProvider'];
   showSettings: boolean;
   showAbout: boolean;
+  showUpdates: boolean;
   showAccessibility: boolean;
   openAccessibility: () => void;
   closeAccessibility: () => void;
@@ -22,6 +23,8 @@ interface BrowserStoreState {
   setSearchProvider: (searchProvider: AppSettings['searchProvider']) => void;
   openSettings: () => void;
   closeSettings: () => void;
+  openUpdates: () => void;
+  closeUpdates: () => void;
   openAbout: () => void;
   closeAbout: () => void;
 }
@@ -32,6 +35,9 @@ export const useBrowserStore = create<BrowserStoreState>((set) => ({
   searchProvider: 'bullebrowser',
   showSettings: false,
   showAbout: false,
+  showUpdates: false,
+  openUpdates: () => set({ showUpdates: true }),
+  closeUpdates: () => set({ showUpdates: false }),
   showAccessibility: false,
   openAccessibility: () => set({ showAccessibility: true }),
   closeAccessibility: () => set({ showAccessibility: false }),

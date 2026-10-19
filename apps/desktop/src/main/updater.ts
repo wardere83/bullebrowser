@@ -1,15 +1,16 @@
 // Published, signed releases download in the background without interrupting
-// browsing. An explicit Update click installs and reopens with the saved session;
-// otherwise the staged release still applies on a normal quit.
+// browsing. Update clicks stage the verified release without quitting.
+// Native binaries activate on the next normal quit and launch.
 
 import { app, autoUpdater as nativeAutoUpdater, type BrowserWindow } from 'electron';
 // electron-updater is CommonJS; its default export works in the main ESM bundle.
 import electronUpdater from 'electron-updater';
 import { compare, valid } from 'semver';
 import { IPC, type UpdateStatus } from '../shared/ipc.js';
+import { recordPreparedUpdate, reconcilePreparedUpdate } from './storage/update-receipt.js';
 
 const { autoUpdater } = electronUpdater;
-const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const CHECK_INTERVAL_MS = 60 * 1000;
 const FOCUS_CHECK_INTERVAL_MS = 60 * 1000;
 const NATIVE_STAGING_TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_CONNECTION_RETRIES = 3;
@@ -19,6 +20,8 @@ let latest: UpdateStatus = { state: 'idle' };
 let highestVersion: string | undefined;
 let acknowledgedVersion: string | undefined;
 let requestCheck: (() => Promise<void>) | undefined;
+let activationIssue: string | null = null;
+let stageUpdate: ((version: string) => void) | undefined;
 let notifyStatus: (() => void) | undefined;
 let bindWindow: ((win: BrowserWindow) => void) | undefined;
 
@@ -67,33 +70,24 @@ export function prepareUpdate(version: string): void {
   notifyStatus?.();
 }
 
-let installation: Promise<void> | undefined;
-let installingVersion: string | undefined;
-/** Explicit one-click installation. Background downloads never restart the app. */
-export function applyUpdate(version: string, saveSession: () => void = () => {}): Promise<void> {
-  if (installation) return installation;
+/** Stage a release while keeping every browser window and active task alive. */
+export async function applyUpdate(version: string, saveSession: () => void = () => {}): Promise<void> {
   const status = getUpdateStatus();
   const preparedVersion = status.state === 'ready' ? status.version : status.state === 'deferred' ? status.preparedVersion : undefined;
-  if (!app.isPackaged || preparedVersion !== version) {
-    return Promise.reject(new Error('This update is not ready to install.'));
-  }
-  try { saveSession(); } catch (error) { return Promise.reject(error); }
-  installingVersion = version;
-  installation = new Promise<void>((resolve, reject) => {
-    setImmediate(() => {
-      try {
-        autoUpdater.autoRunAppAfterInstall = true;
-        autoUpdater.quitAndInstall(true, true);
-        resolve();
-      } catch (error) {
-        installation = undefined;
-        installingVersion = undefined;
-        autoUpdater.autoRunAppAfterInstall = false;
-        reject(error);
-      }
-    });
-  });
-  return installation;
+  if (!app.isPackaged || preparedVersion !== version) throw new Error('This update is not ready to prepare.');
+  if (status.state === 'ready' && status.scheduled) return;
+  saveSession();
+  stageUpdate?.(version);
+}
+
+export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null } {
+  return { installedVersion: app.getVersion(), activationIssue };
+}
+
+/** Explicit checks work even when no update notice has been announced yet. */
+export async function checkForAppUpdates(): Promise<void> {
+  if (!app.isPackaged) throw new Error('Automatic updates are available in installed builds.');
+  await requestCheck?.();
 }
 
 export function dismissUpdateNotice(version: string): void {
@@ -132,6 +126,21 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   let connectionRetryAttempts = 0;
   let lastCheckTime = -Infinity;
   const isMac = process.platform === 'darwin';
+  try {
+    activationIssue = reconcilePreparedUpdate(app.getVersion(), app.getAppPath());
+  } catch {
+    activationIssue = 'Could not read the previous update record. Check for updates or use the latest installer.';
+  }
+  const rememberPrepared = (version: string) => {
+    try { recordPreparedUpdate(version, app.getVersion(), app.getAppPath()); }
+    catch { activationIssue = 'The update is verified, but its history could not be saved. Check free disk space before your next launch.'; }
+  };
+  const installLocationError = isMac && /(?:^\/Volumes\/|\/AppTranslocation\/)/.test(process.execPath)
+    ? 'Move BulleBrowser to Applications and open that copy before updating. Updates cannot replace an app running from a disk image or a translocated location.'
+    : null;
+  if (installLocationError) activationIssue = installLocationError;
+  let checkError: Error | undefined;
+
 
   const publish = () => {
     if (!disposed && targetWindow && !targetWindow.isDestroyed()) targetWindow.webContents.send(IPC.UPDATE_STATUS, getUpdateStatus());
@@ -142,6 +151,13 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     publish();
   };
   notifyStatus = publish;
+  const scheduled = (version: string) => {
+    if (disposed) throw new Error('The updater is no longer available.');
+    rememberPrepared(version);
+    send({ state: 'ready', version, scheduled: true });
+  };
+  stageUpdate = scheduled;
+
 
   // Control downloads ourselves so checks continue after an update is ready,
   // without repeatedly staging that version or replacing it with a stale feed.
@@ -187,14 +203,6 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   const failed = (err: Error) => {
     if (disposed) return;
     console.warn('[updater] error:', err?.message ?? err);
-    if (installingVersion) {
-      const version = installingVersion;
-      installingVersion = undefined;
-      installation = undefined;
-      autoUpdater.autoRunAppAfterInstall = false;
-      send({ state: 'ready', version });
-      return;
-    }
     const phase = stagingVersion ? 'prepare' : downloadVersion ? 'download' : 'check';
     const version = stagingVersion ?? downloadVersion ?? (latest.state === 'error' ? latest.version : undefined);
     if (!version) return; // An unrelated feed failure cannot hide a ready update.
@@ -240,6 +248,10 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       return;
     }
     highestVersion = info.version;
+    if (installLocationError) {
+      send({ state: 'error', version: info.version, message: installLocationError, retryable: false });
+      return;
+    }
     clearConnectionRetry();
     downloadVersion = info.version;
     send({ state: 'downloading', version: info.version });
@@ -290,6 +302,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       clearConnectionRetry();
       connectionRetryAttempts = 0;
       downloadVersion = undefined;
+      rememberPrepared(info.version);
       send({ state: 'ready', version: info.version });
     }
   };
@@ -315,6 +328,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       clearConnectionRetry();
       connectionRetryAttempts = 0;
       nativePreparedVersion = version;
+      rememberPrepared(version);
       send({ state: 'ready', version });
     }
   };
@@ -346,10 +360,11 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     if (checkPromise) return checkPromise;
     clearConnectionRetry();
     lastCheckTime = Date.now();
+    checkError = undefined;
     const task = Promise.resolve()
       .then(() => disposed ? null : autoUpdater.checkForUpdates())
       .then(() => undefined)
-      .catch(failed)
+      .catch((err: Error) => { checkError = err; failed(err); })
       .finally(() => {
         if (checkPromise === task) checkPromise = undefined;
       });
@@ -362,8 +377,8 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     // The error event arrives before the download promise settles. A click
     // during that gap must wait for cleanup instead of silently doing nothing.
     if (downloadPromise) await downloadPromise;
-    if (getUpdateStatus().state !== 'error') return;
-    return check();
+    await check();
+    if (checkError) throw new Error('Could not check for updates. Check your connection and try again.');
   };
   requestCheck = requestedCheck;
   const focused = () => {
@@ -386,7 +401,11 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   bindWindow = bind;
   bind(win);
   void check();
-  const timer = setInterval(() => { void check(); }, CHECK_INTERVAL_MS);
+  const timer = setInterval(() => {
+    // Failed downloads use bounded backoff; native staging failures need an
+    // explicit retry. Routine discovery must not bypass either policy.
+    if (latest.state !== 'error') void check();
+  }, CHECK_INTERVAL_MS);
   app.once('quit', () => {
     disposed = true;
     clearInterval(timer);
@@ -404,6 +423,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       nativeAutoUpdater.removeListener('update-not-available', nativeUnavailable);
     }
     if (requestCheck === requestedCheck) requestCheck = undefined;
+    if (stageUpdate === scheduled) stageUpdate = undefined;
     if (notifyStatus === publish) notifyStatus = undefined;
     if (bindWindow === bind) bindWindow = undefined;
   });

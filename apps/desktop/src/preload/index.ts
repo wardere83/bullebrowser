@@ -112,6 +112,8 @@ const bridge: BrowserBridge = {
     prepare: (version) => ipcRenderer.invoke(IPC.UPDATE_PREPARE, version),
     apply: (version) => ipcRenderer.invoke(IPC.UPDATE_APPLY, version),
     retry: () => ipcRenderer.invoke(IPC.UPDATE_RETRY),
+    check: () => ipcRenderer.invoke(IPC.UPDATE_CHECK),
+    details: () => ipcRenderer.invoke(IPC.UPDATE_DETAILS),
     dismiss: (version) => ipcRenderer.invoke(IPC.UPDATE_DISMISS, version),
   },
   app: {

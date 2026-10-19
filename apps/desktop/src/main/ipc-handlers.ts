@@ -1,10 +1,8 @@
 import { accessibilityManager } from './accessibility.js';
 import { normalizeAccessibility } from '../shared/accessibility.js';
-import { hasActiveAgentRuns } from './agent/run.js';
-import { saveUpdateTabs } from './storage/update-session.js';
 import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { ProviderId } from '@bullebrowser/agent-core';
-import { applyUpdate, dismissUpdateNotice, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
+import { applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,13 +101,12 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     if (patch.accessibility !== undefined) await accessibilityManager.apply(normalizeAccessibility(next.accessibility));
     return next;
   });
-  handle(IPC.UPDATE_APPLY, (_e, version: string) => applyUpdate(version, () => {
-    if (hasActiveAgentRuns()) throw new Error('Finish the current task before updating.');
-    saveUpdateTabs(tabManager.list());
-  }));
+  handle(IPC.UPDATE_APPLY, (_e, version: string) => applyUpdate(version));
   handle(IPC.UPDATE_GET_STATUS, () => getUpdateStatus());
   handle(IPC.UPDATE_PREPARE, (_e, version: string) => prepareUpdate(version));
   handle(IPC.UPDATE_RETRY, () => retryUpdate());
+  handle(IPC.UPDATE_CHECK, () => checkForAppUpdates());
+  handle(IPC.UPDATE_DETAILS, () => getUpdateDetails());
   handle(IPC.UPDATE_DISMISS, (_e, version: string) => dismissUpdateNotice(version));
   handle(IPC.SECRET_HAS_API_KEY, (_e, provider?: ProviderId) => hasApiKey(provider));
   handle(IPC.SECRET_SET_API_KEY, (_e, key: string, provider?: ProviderId) => setApiKey(key, provider));
