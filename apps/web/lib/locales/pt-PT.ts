@@ -371,6 +371,13 @@ export const ptPT: Messages = {
   'features.cta.h2': 'Fundamente a sua próxima decisão de financiamento em evidências.',
   'features.cta.sub': 'Disponível para macOS, Windows e Linux.',
 
+  'mobile.heading': "BulleBrowser no telemóvel",
+  'mobile.description': "Escolha iOS ou Android abaixo. As transferências móveis ficam disponíveis após a publicação nas lojas de aplicações.",
+  'mobile.pending': "Brevemente",
+  'mobile.appStore': "Obter na App Store",
+  'mobile.playStore': "Obter no Google Play",
+  'mobile.beta': "Aderir à versão beta",
+  'mobile.permissions': "O acesso móvel limita-se aos ficheiros selecionados, às ações de sistema suportadas e aos serviços autorizados. Os controlos de privacidade do telemóvel continuam a aplicar-se.",
   'download.h1': 'Transferir o BulleBrowser',
   'download.sub':
     'Instaladores da versão atual do BulleBrowser, a plataforma estratégica de financiamento para empresas e CBOs. É uma aplicação para computador, disponível para macOS, Windows e Linux.',

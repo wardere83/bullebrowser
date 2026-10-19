@@ -371,6 +371,13 @@ export const ar: Messages = {
   'features.cta.h2': 'ابنِ قرار التمويل التالي على الأدلة.',
   'features.cta.sub': 'متاح لأنظمة macOS وWindows وLinux.',
 
+  'mobile.heading': "BulleBrowser على الهاتف",
+  'mobile.description': "اختر iOS أو Android أدناه. تتوفر تنزيلات الهاتف بعد النشر في متاجر التطبيقات.",
+  'mobile.pending': "قريباً",
+  'mobile.appStore': "التنزيل من App Store",
+  'mobile.playStore': "التنزيل من Google Play",
+  'mobile.beta': "انضم إلى النسخة التجريبية",
+  'mobile.permissions': "يقتصر الوصول على الملفات التي تختارها وإجراءات النظام المدعومة والخدمات التي تأذن بها. تظل ضوابط الخصوصية في هاتفك سارية.",
   'download.h1': 'تنزيل BulleBrowser',
   'download.sub':
     'برامج التثبيت للإصدار الحالي من BulleBrowser، منصة التمويل الاستراتيجي للشركات و CBOs. وهو تطبيق لسطح المكتب يعمل على macOS و Windows و Linux.',

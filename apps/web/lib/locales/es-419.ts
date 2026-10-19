@@ -370,6 +370,13 @@ export const es419: Messages = {
   'features.cta.h2': 'Basa tu próxima decisión de financiamiento en evidencia.',
   'features.cta.sub': 'Disponible para macOS, Windows y Linux.',
 
+  'mobile.heading': "BulleBrowser en tu celular",
+  'mobile.description': "Elige iOS o Android abajo. Las descargas móviles estarán disponibles después de la publicación en las tiendas.",
+  'mobile.pending': "Próximamente",
+  'mobile.appStore': "Descargar en App Store",
+  'mobile.playStore': "Descargar en Google Play",
+  'mobile.beta': "Unirse a la beta",
+  'mobile.permissions': "El acceso móvil se limita a los archivos que selecciones, las acciones compatibles del sistema y los servicios que autorices. Los controles de privacidad de tu teléfono siguen vigentes.",
   'download.h1': 'Descargar BulleBrowser',
   'download.sub':
     'Instaladores de la versión actual de BulleBrowser, la plataforma estratégica de financiamiento para empresas y CBOs. Es una aplicación de escritorio para macOS, Windows y Linux.',
