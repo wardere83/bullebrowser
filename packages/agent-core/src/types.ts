@@ -257,6 +257,8 @@ export interface AgentInput {
   /** Require live multi-source research for research prompts. */
   researchMode?: boolean;
   apiKey?: string;
+  /** Native host transport: credentials remain in the OS vault, outside page JavaScript. */
+  modelFetch?: typeof fetch;
   model: ModelId;
   systemPrompt: string;
   history: { role: 'user' | 'assistant'; content: string }[];

@@ -37,6 +37,13 @@ const fundingCalls = Object.fromEntries(
 ) as unknown as Omit<FundingBridge, 'onEvent'>;
 
 const bridge: BrowserBridge = {
+  connectors: {
+    list: () => ipcRenderer.invoke(IPC.CONNECTOR_LIST),
+    add: (name, url) => ipcRenderer.invoke(IPC.CONNECTOR_ADD, name, url),
+    remove: (id) => ipcRenderer.invoke(IPC.CONNECTOR_REMOVE, id),
+    set: (id, enabled) => ipcRenderer.invoke(IPC.CONNECTOR_SET, id, enabled),
+    open: (id) => ipcRenderer.invoke(IPC.CONNECTOR_OPEN, id),
+  },
   tabs: {
     list: () => ipcRenderer.invoke(IPC.TAB_LIST),
     create: (url) => ipcRenderer.invoke(IPC.TAB_CREATE, url),
