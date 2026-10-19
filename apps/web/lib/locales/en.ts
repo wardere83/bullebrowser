@@ -390,6 +390,13 @@ export const en = {
   'features.cta.sub': 'Available for macOS, Windows and Linux.',
 
   // Download page
+  'mobile.heading': "BulleBrowser on mobile",
+  'mobile.description': "Choose iOS or Android below. Mobile downloads become available after publication in the app stores.",
+  'mobile.pending': "Coming soon",
+  'mobile.appStore': "Get on the App Store",
+  'mobile.playStore': "Get on Google Play",
+  'mobile.beta': "Join the beta",
+  'mobile.permissions': "Mobile access is limited to the files you select, supported system actions and services you authorize. Your phone’s privacy controls still apply.",
   'download.h1': 'Download BulleBrowser',
   'download.sub':
     'Installers for the current release of BulleBrowser, the strategic funding platform for businesses and CBOs. It is a desktop app for macOS, Windows and Linux.',

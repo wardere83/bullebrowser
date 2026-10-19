@@ -77,6 +77,8 @@ export const IPC = {
   UPDATE_PREPARE: 'update:prepare',
   UPDATE_APPLY: 'update:apply',
   UPDATE_RETRY: 'update:retry',
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DETAILS: 'update:details',
   UPDATE_DISMISS: 'update:dismiss',
   // UI events from main → renderer
   UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
@@ -113,7 +115,7 @@ export interface AgentResultEvent {
 export type UpdateStatus =
   | { state: 'idle' }
   | { state: 'downloading'; version: string; percent?: number; phase?: 'preparing' }
-  | { state: 'ready'; version: string }
+  | { state: 'ready'; version: string; scheduled?: boolean }
   | { state: 'deferred'; version: string; preparedVersion: string }
   | { state: 'error'; version: string; message: string; retryable?: boolean };
 
@@ -349,6 +351,8 @@ export interface BrowserBridge {
     prepare(version: string): Promise<void>;
     apply(version: string): Promise<void>;
     retry(): Promise<void>;
+    check(): Promise<void>;
+    details(): Promise<{ installedVersion: string; activationIssue: string | null }>;
     dismiss(version: string): Promise<void>;
   };
   ui: {

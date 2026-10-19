@@ -1,4 +1,5 @@
 'use client';
+import { MobileDownloads } from './MobileDownloads';
 
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
@@ -115,6 +116,8 @@ export function DownloadTable() {
           </tbody>
         </table>
       </div>
+
+      <MobileDownloads />
 
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <Link href="/install" className={link.onLight}>

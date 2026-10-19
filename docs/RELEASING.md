@@ -181,3 +181,14 @@ chore:        tooling, configs, deps
 
 Allowed scopes: `desktop`, `web`, `agent-core`, `brand-tokens`,
 `release`, `docs`, `repo`.
+
+
+## Non-disruptive update contract
+
+- Only published releases appear in installed apps. A commit or build in progress is not an installable update.
+- The Updates control is always visible. Installed builds check at startup, once per minute, on focus, and on request. Network failures have bounded retries.
+- Progress reflects download events; transfer completion is held below 100% until native verification/preparation completes. The glossy animation respects reduced motion.
+- Clicking Update never calls quitAndInstall, quits, relaunches, or stops an active task. Verified native packages apply on the next normal quit/launch. Native Electron/main-process changes cannot replace already-running code without a process restart; never label a prepared version as the running version.
+- On the next launch, reconcile the prepared receipt against app.getVersion(). A stale or different app copy produces a recovery explanation. Disk-image/translocated Mac copies must be moved to Applications and opened there before updating.
+- Users stuck on a previously broken updater need a one-time install from https://bullebrowser.com/download. Replacing the running signed bundle or bypassing code-signature validation is not a supported shortcut.
+- Before shipping, run updater/receipt tests, the full desktop unit suite, type checks, lint, build, and the headless update UI smoke tests. Verify the published native assets, update manifests, and website manifest all name the new version.

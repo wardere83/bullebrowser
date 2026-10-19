@@ -58,6 +58,8 @@ jobs:
       - name: Build static export
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_PUBLIC_IOS_APP_URL: ${{ vars.IOS_APP_URL }}
+          NEXT_PUBLIC_ANDROID_APP_URL: ${{ vars.ANDROID_APP_URL }}
         run: pnpm --filter @bullebrowser/web build
 
       # The site is not published if its copy breaks a rule it has to keep:

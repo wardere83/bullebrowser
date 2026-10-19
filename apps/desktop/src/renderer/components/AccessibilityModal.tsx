@@ -47,7 +47,7 @@ export function AccessibilityModal() {
       <p className="mb-5 text-sm leading-relaxed text-slate-600">
         Adjust the app and browsing pages to suit you. Preferences stay on this device.
       </p>
-      <fieldset aria-busy={saving} className="space-y-4">
+      <fieldset disabled={saving} aria-busy={saving} className="space-y-4">
         <label className="flex items-center justify-between gap-4 text-sm">
           <span>Text size</span>
           <select

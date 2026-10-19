@@ -399,6 +399,8 @@ test('accessibility controls persist, affect native pages, reset and remain abov
     await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
     await expect.poll(() => win.locator('video').evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
     await panel.getByLabel('Text size', { exact: true }).selectOption('larger');
+    await expect(panel.locator('fieldset')).toHaveAttribute('aria-busy', 'false');
+    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
     await expect.poll(() => win.evaluate(() => window.bullebrowser.settings.get().then((s) => s.accessibility?.textSize))).toBe('larger');
     await panel.getByLabel('Increase contrast', { exact: true }).check();
     await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');

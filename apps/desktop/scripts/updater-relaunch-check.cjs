@@ -180,7 +180,7 @@ describe('installed platform updater keeps the current session open', { concurre
   });
 });
 
-describe('explicit one-click updates reopen automatically', { concurrency: false }, () => {
+describe('native library restart API (not used by the non-disruptive Update button)', { concurrency: false }, () => {
   test('Mac applies its prepared signed bundle and reopens only after the click', () => {
     const { updater, nativeUpdater, actions } = createFixture(MacUpdater);
     nativeUpdater.emit('update-downloaded');
