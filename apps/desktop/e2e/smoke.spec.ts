@@ -262,7 +262,7 @@ test('keyless live voice records audio, handles approvals, speaks results, and c
     await win.getByRole('button', { name: 'Stop Voice Mode', exact: true }).click();
     await expect(win.getByRole('region', { name: 'Live Voice Mode' })).toBeHidden();
     await expect(approval).toBeHidden();
-    await win.waitForFunction('window.__voiceProbe.mic.getAudioTracks().every(track => track.readyState === "ended")');
+    await expect.poll(() => win.evaluate('window.__voiceProbe.mic.getAudioTracks().every(track => track.readyState === "ended")')).toBe(true);
     expect((await mainProbe()).cancels).toEqual(['runtime-run-2', 'runtime-run-3']);
   } finally {
     await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
@@ -296,7 +296,7 @@ test('dictation releases the microphone as soon as Send is pressed', async () =>
     await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
     await send.click();
     await expect(win.getByRole('dialog', { name: 'Voice input' }).getByText(/Transcribing/)).toBeVisible();
-    await win.waitForFunction('window.__voiceProbe.mic.getTracks().every(track => track.readyState === "ended")');
+    await expect.poll(() => win.evaluate('window.__voiceProbe.mic.getTracks().every(track => track.readyState === "ended")')).toBe(true);
   } finally {
     await win.evaluate('Promise.all(window.__voiceProbe?.contexts.map(context => context.close()) ?? [])').catch(() => {});
     await app.close();

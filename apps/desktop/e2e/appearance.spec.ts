@@ -402,14 +402,15 @@ test('accessibility controls persist, affect native pages, reset and remain abov
     await expect(panel.locator('fieldset')).toHaveAttribute('aria-busy', 'false');
     await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
     await expect.poll(() => win.evaluate(() => window.bullebrowser.settings.get().then((s) => s.accessibility?.textSize))).toBe('larger');
-    await panel.getByLabel('Increase contrast', { exact: true }).check();
-    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
-    await panel.getByLabel('Roomier text spacing', { exact: true }).check();
-    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
-    await panel.getByLabel('Use a clear reading font', { exact: true }).check();
-    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
-    await panel.getByLabel('Underline links', { exact: true }).check();
-    await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    // Preferences are persisted through IPC before the controlled inputs update.
+    // check() asserts synchronously after clicking and races that round trip.
+    for (const label of ['Increase contrast', 'Roomier text spacing', 'Use a clear reading font', 'Underline links']) {
+      const checkbox = panel.getByLabel(label, { exact: true });
+      await checkbox.click();
+      await expect(checkbox).toBeChecked();
+      await expect(panel.locator('fieldset')).toHaveAttribute('aria-busy', 'false');
+      await expect(panel.getByRole('status')).toHaveText('Preferences saved on this device.');
+    }
     await win.keyboard.press('Escape');
     await expect(launcher).toBeFocused();
     const tab = await win.evaluate((url) => window.bullebrowser.tabs.create(url), site.url);
