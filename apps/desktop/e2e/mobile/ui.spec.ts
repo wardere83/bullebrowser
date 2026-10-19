@@ -121,6 +121,7 @@ test('opening Settings stops an in-flight assistant and keeps the native browser
         }
         if (method === 'requestModel') {
           fixture.requestStarted = true;
+          fixture.requestCount = Number(fixture.requestCount ?? 0) + 1;
           return new Promise(() => {});
         }
         if (method === 'cancelModel') {
@@ -135,12 +136,18 @@ test('opening Settings stops an in-flight assistant and keeps the native browser
   await page
     .getByRole('textbox', { name: 'Your goal', exact: true })
     .fill('Summarize the current page');
-  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await page.locator('.composer').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+    form.requestSubmit();
+  });
   await expect
     .poll(() =>
       page.evaluate(() => (window as unknown as { requestStarted: boolean }).requestStarted),
     )
     .toBe(true);
+  expect(
+    await page.evaluate(() => (window as unknown as { requestCount: number }).requestCount),
+  ).toBe(1);
   await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect
@@ -156,4 +163,20 @@ test('opening Settings stops an in-flight assistant and keeps the native browser
       ),
     )
     .toBe(false);
+  await page.getByRole('button', { name: 'Back to assistant', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Your goal', exact: true })
+    .fill('Keep this draft while opening Settings');
+  await page.evaluate(() => {
+    (document.querySelector('.composer') as HTMLFormElement).requestSubmit();
+    (document.querySelector('[aria-label="Open Settings"]') as HTMLButtonElement).click();
+  });
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to assistant', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Your goal', exact: true })).toHaveValue(
+    'Keep this draft while opening Settings',
+  );
+  expect(
+    await page.evaluate(() => (window as unknown as { requestCount: number }).requestCount),
+  ).toBe(1);
 });

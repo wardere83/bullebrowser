@@ -42,6 +42,8 @@ export function App() {
   const [approval, setApproval] = useState<Approval | null>(null);
   const approvalRef = useRef<Approval | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const starting = useRef(false);
+  const stopEpoch = useRef(0);
   const browserSlot = useRef<HTMLDivElement>(null);
   const denyButton = useRef<HTMLButtonElement>(null);
   const [model, setModel] = useState<ModelId>(DEFAULT_MODEL);
@@ -92,6 +94,7 @@ export function App() {
     };
   }, [page, approval, tabs.length]);
   function stop() {
+    stopEpoch.current++;
     controller.current?.abort();
     approvalRef.current?.resolve(false);
     approvalRef.current = null;
@@ -141,9 +144,21 @@ export function App() {
   }
   async function run(event: React.FormEvent) {
     event.preventDefault();
+    if (starting.current) return;
+    starting.current = true;
+    try {
+      await runTask(event);
+    } finally {
+      starting.current = false;
+    }
+  }
+  async function runTask(event: React.FormEvent) {
+    event.preventDefault();
     if (!prompt.trim() || running || !state) return;
     setError('');
+    const epoch = stopEpoch.current;
     const fresh = await Mobile.getState();
+    if (epoch !== stopEpoch.current) return;
     setState(fresh);
     if (!fresh.browsing) {
       setPage('settings');
@@ -268,7 +283,7 @@ export function App() {
         )}
         <button
           onClick={() => {
-            if (page === 'assistant' && running) stop();
+            if (page === 'assistant') stop();
             setPage(page === 'settings' ? 'assistant' : 'settings');
           }}
           title={
