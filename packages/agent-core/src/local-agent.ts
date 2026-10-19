@@ -1,3 +1,4 @@
+import { isBlockedDestination } from './destinations.js';
 import { isResearchRequest } from './research.js';
 import type { ToolCallOutcome } from './agent-loop.js';
 import { StepBudget } from './budget.js';
@@ -199,20 +200,26 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
       : input.browserTask === 'research_funder' ? `${message} official grants programs eligibility`
       : input.browserTask === 'compare_grants' ? `grants funding eligibility ${message}` : message;
     if (exploring && explicitUrls[0]) await run('navigate', { url: explicitUrls[0] });
-    else if (!exploring) await run('navigate', { url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}` });
+    else if (!exploring) await run('navigate', { url: `https://www.google.com/search?q=${encodeURIComponent(query)}` });
     const firstPage = await run('read_page');
     if (exploring && !String(firstPage.text ?? '').trim()) {
       report = 'There is no readable page open. Enter a website URL and I’ll explore it.';
     } else {
       const found = await run('listLinks');
       const links = Array.isArray(found.links) ? found.links as Array<{ text?: string; href?: string }> : [];
-      const base = String(firstPage.url || 'https://duckduckgo.com/');
+      const base = String(firstPage.url || 'https://www.google.com/');
       const candidates = new Map<string, number>();
       const words = message.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3);
       for (const link of [...explicitUrls.map((href) => ({ href, text: message })), ...links]) {
         try {
           let url = new URL(link.href ?? '', base);
-          if (/(^|\.)duckduckgo\.com$/.test(url.hostname) && url.searchParams.has('uddg')) url = new URL(url.searchParams.get('uddg')!);
+          // Google exposes many source links through /url; unwrap locally,
+          // then check the final host before any navigation or tab creation.
+          if (/(^|\.)google\.[a-z.]+$/.test(url.hostname) && url.pathname === '/url') {
+            const source = url.searchParams.get('q') ?? url.searchParams.get('url');
+            if (source) url = new URL(source);
+          }
+          if (isBlockedDestination(url.href)) continue;
           if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || /(^|\.)(?:duckduckgo\.com|google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
           if (/\b(?:privacy|cookies?|login|sign in|terms of use)\b/i.test(link.text ?? '')) continue;
           url.hash = '';

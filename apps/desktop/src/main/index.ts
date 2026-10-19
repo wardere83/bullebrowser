@@ -65,7 +65,10 @@ async function createWindow() {
   const updateSession = takeUpdateTabs();
   if (updateSession) {
     const restored = [];
-    for (const url of updateSession.urls) restored.push(await tabManager.create(url));
+    for (const url of updateSession.urls) {
+      try { restored.push(await tabManager.create(url)); }
+      catch { restored.push(await tabManager.create('about:blank')); }
+    }
     const active = restored[updateSession.activeIndex];
     if (active) tabManager.activate(active.id);
   }

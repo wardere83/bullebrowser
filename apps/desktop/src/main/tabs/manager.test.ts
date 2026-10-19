@@ -65,6 +65,28 @@ function fail(view: MockView, url: string, code = -102, mainFrame = true) {
 }
 
 describe('native browsing navigation recovery', () => {
+  it('rejects restricted direct navigation and tab creation before a view or request exists', async () => {
+    const { manager, id, view } = await createManager();
+    const loads = view.webContents.loadURL.mock.calls.length;
+    await expect(manager.navigate(id, 'https://duckduckgo.com/?q=private')).rejects.toThrow('blocked');
+    await expect(manager.create('https://html.duckduckgo.com/')).rejects.toThrow('blocked');
+    expect(mocks.views).toHaveLength(1);
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+    expect(manager.list()[0]?.url).toBe('about:blank');
+  });
+
+  it('prevents restricted page navigation and redirect events', async () => {
+    const { view } = await createManager();
+    for (const name of ['will-navigate', 'will-redirect']) {
+      const event = { preventDefault: vi.fn() };
+      view.webContents.emit(name, event, 'https://www.duckduckgo.com./');
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      const permitted = { preventDefault: vi.fn() };
+      view.webContents.emit(name, permitted, 'https://agency.gov/');
+      expect(permitted.preventDefault).not.toHaveBeenCalled();
+    }
+  });
+
   it('shows the native view and attempted address as soon as a blank tab starts browsing', async () => {
     const { manager, id, view } = await createManager();
     expect(view.setVisible).toHaveBeenLastCalledWith(false);

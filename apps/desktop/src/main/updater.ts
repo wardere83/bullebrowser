@@ -76,8 +76,9 @@ export async function applyUpdate(version: string, saveSession: () => void = () 
   const preparedVersion = status.state === 'ready' ? status.version : status.state === 'deferred' ? status.preparedVersion : undefined;
   if (!app.isPackaged || preparedVersion !== version) throw new Error('This update is not ready to prepare.');
   if (status.state === 'ready' && status.scheduled) return;
+  if (!stageUpdate) throw new Error('The updater is not available. Check for updates again.');
   saveSession();
-  stageUpdate?.(version);
+  stageUpdate(version);
 }
 
 export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null } {
@@ -87,7 +88,8 @@ export function getUpdateDetails(): { installedVersion: string; activationIssue:
 /** Explicit checks work even when no update notice has been announced yet. */
 export async function checkForAppUpdates(): Promise<void> {
   if (!app.isPackaged) throw new Error('Automatic updates are available in installed builds.');
-  await requestCheck?.();
+  if (!requestCheck) throw new Error('The updater is not available. Check for updates again.');
+  await requestCheck();
 }
 
 export function dismissUpdateNotice(version: string): void {

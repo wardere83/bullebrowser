@@ -779,6 +779,16 @@ describe('background app updates', () => {
     expect(app.quit).not.toHaveBeenCalled();
   });
 
+  it('reports an unavailable updater instead of accepting an update click as success', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    appEvents.emit('quit');
+    await expect(api.checkForAppUpdates()).rejects.toThrow('not available');
+    const save = vi.fn();
+    await expect(api.applyUpdate('0.2.38', save)).rejects.toThrow('not available');
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('does not start updater work in development builds', async () => {
     app.isPackaged = false;
     const api = await start();

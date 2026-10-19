@@ -1,3 +1,4 @@
+import { isBlockedDestination } from '@bullebrowser/agent-core';
 import { normalizeAccessibility } from '../../shared/accessibility.js';
 import { DEFAULT_SETTINGS, type AppSettings } from '../../shared/ipc.js';
 import { createStore } from './store.js';
@@ -34,7 +35,7 @@ export function getSettings(): AppSettings {
     'https://duckduckgo.com/',
   ]);
   const normalizedHomepageUrl =
-    !storedHomepageUrl?.trim() || LEGACY_DEFAULTS.has(storedHomepageUrl)
+    !storedHomepageUrl?.trim() || LEGACY_DEFAULTS.has(storedHomepageUrl) || isBlockedDestination(storedHomepageUrl)
       ? DEFAULT_SETTINGS.homepageUrl
       : storedHomepageUrl;
 
