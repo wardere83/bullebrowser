@@ -82,10 +82,12 @@ export function App() {
     const observer = new ResizeObserver(layout);
     if (element) observer.observe(element);
     window.addEventListener('resize', layout);
+    window.addEventListener('scroll', layout, true);
     layout();
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', layout);
+      window.removeEventListener('scroll', layout, true);
     };
   }, [page, approval, tabs.length]);
   function stop() {

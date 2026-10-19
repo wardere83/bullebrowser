@@ -24,6 +24,10 @@ const replace = (file, from, to) => {
 for (const platform of platforms.length ? platforms : ['ios', 'android']) {
   if (!existsSync(platform)) invoke('add', platform);
   if (platform === 'ios') {
+    copyFileSync(
+      resolve('native/assets/icon-1024.png'),
+      resolve('ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'),
+    );
     const project = resolve('ios/App/App.xcodeproj/project.pbxproj');
     for (const name of [
       'MobileAgentPlugin.swift',
@@ -69,6 +73,19 @@ for (const platform of platforms.length ? platforms : ['ios', 'android']) {
     mkdirSync(java, { recursive: true });
     for (const name of ['MainActivity.java', 'MobileAgentPlugin.java'])
       copyFileSync(resolve('native/android', name), resolve(java, name));
+    for (const [density, size] of [
+      ['mdpi', 48],
+      ['hdpi', 72],
+      ['xhdpi', 96],
+      ['xxhdpi', 144],
+      ['xxxhdpi', 192],
+    ]) {
+      for (const name of ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png'])
+        copyFileSync(
+          resolve(`native/assets/icon-${size}.png`),
+          resolve(`android/app/src/main/res/mipmap-${density}/${name}`),
+        );
+    }
     // Device-bound assistant keys cannot be restored with a cloud/device backup.
     replace(
       'android/app/src/main/AndroidManifest.xml',

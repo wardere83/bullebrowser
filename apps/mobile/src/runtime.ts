@@ -74,7 +74,7 @@ export class MobileRuntime implements ToolRuntime {
       refs = { seq: 0, fps: {}, url: tab.url };
       this.refs.set(tabId, refs);
     }
-    const script = `${PAGE_HELPERS}; __bb.RefSeq=${refs.seq}; __bb.Refs=${JSON.stringify(refs.fps)}; ${AGENT_CURSOR}; return await (${expression});`;
+    const script = `${PAGE_HELPERS}; __bb.RefSeq=${refs.seq}; __bb.Refs=${JSON.stringify(refs.fps)}; ${AGENT_CURSOR}; return await (${expression.trim().replace(/;$/, '')});`;
     const result = await this.native.browser({ action: 'evaluate', tabId, script });
     this.signal.throwIfAborted();
     return result.value as T;

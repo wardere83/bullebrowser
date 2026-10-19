@@ -18,7 +18,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -52,7 +52,7 @@ public class MobileAgentPlugin extends Plugin {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String active = "";
     private boolean visible = false;
-    private FrameLayout.LayoutParams bounds = new FrameLayout.LayoutParams(0, 0);
+    private CoordinatorLayout.LayoutParams bounds = new CoordinatorLayout.LayoutParams(0, 0);
     private SharedPreferences prefs;
     @Override public void load() { prefs = getContext().getSharedPreferences("bullebrowser-mobile", 0); }
     private boolean allowed(String capability) { return prefs.getBoolean(capability, false); }
@@ -152,7 +152,7 @@ public class MobileAgentPlugin extends Plugin {
     }
     private void select(String id) {
         active = id;
-        for (Map.Entry<String, WebView> entry : tabs.entrySet()) { entry.getValue().setLayoutParams(bounds); entry.getValue().setVisibility(entry.getKey().equals(id) && visible && allowed("browsing") ? View.VISIBLE : View.GONE); }
+        for (Map.Entry<String, WebView> entry : tabs.entrySet()) { entry.getValue().setLayoutParams(new CoordinatorLayout.LayoutParams(bounds)); entry.getValue().setVisibility(entry.getKey().equals(id) && visible && allowed("browsing") ? View.VISIBLE : View.GONE); }
     }
     private void waitNavigation(String id, PluginCall call) {
         PluginCall previous = pending.put(id, call); if (previous != null) previous.reject("Navigation replaced.");
@@ -227,7 +227,7 @@ public class MobileAgentPlugin extends Plugin {
             int width = Math.max(0, (int)(call.getDouble("width", 0.0) * scale)), height = Math.max(0, (int)(call.getDouble("height", 0.0) * scale));
             WebView bridgeView = getBridge().getWebView(); ViewGroup parent = (ViewGroup) bridgeView.getParent();
             int x = Math.max(0, (int)(call.getDouble("x", 0.0) * scale) + bridgeView.getLeft()), y = Math.max(0, (int)(call.getDouble("y", 0.0) * scale) + bridgeView.getTop());
-            bounds = new FrameLayout.LayoutParams(Math.max(0, Math.min(width, parent.getWidth() - x)), Math.max(0, Math.min(height, parent.getHeight() - y))); bounds.leftMargin = x; bounds.topMargin = y;
+            bounds = new CoordinatorLayout.LayoutParams(Math.max(0, Math.min(width, parent.getWidth() - x)), Math.max(0, Math.min(height, parent.getHeight() - y))); bounds.leftMargin = x; bounds.topMargin = y;
             visible = call.getBoolean("visible", false) && bounds.width > 0 && bounds.height > 0; select(active); call.resolve();
         });
     }
