@@ -23,7 +23,7 @@ test('search, explicitly enable, persist and revoke a custom browser connector',
     await dialog.getByRole('searchbox', { name: 'Find a connector' }).fill('Google Drive');
     const drive = dialog.getByRole('checkbox', { name: /Google Drive/ });
     await expect(drive).not.toBeChecked();
-    await drive.check();
+    await drive.click();
     await expect(drive).toBeChecked();
     await dialog
       .getByRole('textbox', { name: 'Service name', exact: true })
@@ -35,7 +35,7 @@ test('search, explicitly enable, persist and revoke a custom browser connector',
     await dialog.getByRole('searchbox', { name: 'Find a connector' }).fill('Procurement');
     const custom = dialog.getByRole('checkbox', { name: /Procurement workspace/ });
     await expect(custom).not.toBeChecked();
-    await custom.check();
+    await custom.click();
     await expect(custom).toBeChecked();
     const stored = await page.evaluate(() => window.bullebrowser.connectors.list());
     expect(stored.find((entry) => entry.name === 'Procurement workspace')?.enabled).toBe(true);
