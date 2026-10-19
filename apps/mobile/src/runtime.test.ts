@@ -19,6 +19,22 @@ describe('mobile action authority', () => {
     await expect(runtime.goBack('tab')).rejects.toThrow();
     expect(browser).not.toHaveBeenCalled();
   });
+  it('does not open a page if Stop arrives while the view is being presented', async () => {
+    const controller = new AbortController();
+    const browser = vi.fn();
+    const runtime = new MobileRuntime(
+      { browser } as unknown as NativeMobile,
+      async () => true,
+      controller.signal,
+      async () => {
+        controller.abort();
+      },
+    );
+    await expect(runtime.newTab('https://example.com')).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(browser).not.toHaveBeenCalled();
+  });
   it('requires separate exact-action approvals even after a previous approval', async () => {
     const ask = vi.fn(async () => true);
     const runtime = new MobileRuntime(

@@ -222,7 +222,7 @@ export function App() {
         },
       });
       setMessages((previous) => [...previous, { role: 'assistant', content: result }]);
-      setStatus('Task finished.');
+      setStatus('Ready for your review.');
     } catch (err) {
       if (lastText)
         setMessages((previous) => [...previous, { role: 'assistant', content: lastText }]);
@@ -267,7 +267,13 @@ export function App() {
           </button>
         )}
         <button
-          onClick={() => setPage(page === 'settings' ? 'assistant' : 'settings')}
+          onClick={() => {
+            if (page === 'assistant' && running) stop();
+            setPage(page === 'settings' ? 'assistant' : 'settings');
+          }}
+          title={
+            running && page === 'assistant' ? 'Open Settings and stop the current task' : undefined
+          }
           aria-label={page === 'settings' ? 'Back to assistant' : 'Open Settings'}
         >
           {page === 'settings' ? 'Done' : 'Settings'}
@@ -416,6 +422,7 @@ export function App() {
                 <button
                   key={tab.id}
                   aria-current={tab.active ? 'page' : undefined}
+                  disabled={running}
                   onClick={() =>
                     void Mobile.browser({ action: 'switch', tabId: tab.id })
                       .then(loadTabs)

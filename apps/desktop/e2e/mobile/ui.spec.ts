@@ -77,3 +77,83 @@ test('mobile Settings permission and connector controls (native bridge fixture, 
   await browsing.uncheck();
   await expect(browsing).not.toBeChecked();
 });
+
+test('opening Settings stops an in-flight assistant and keeps the native browser hidden (bridge fixture)', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const fixture = window as unknown as Record<string, unknown>;
+    fixture.androidBridge = {};
+    fixture.Capacitor = {
+      PluginHeaders: [
+        {
+          name: 'MobileAgent',
+          methods: ['getState', 'viewport', 'browser', 'requestModel', 'cancelModel'].map(
+            (name) => ({ name, rtype: 'promise' }),
+          ),
+        },
+      ],
+      nativePromise: async (_plugin: string, method: string, input: Record<string, unknown>) => {
+        if (method === 'getState')
+          return {
+            browsing: true,
+            files: false,
+            externalApps: false,
+            enabledConnectors: [],
+            customConnectors: [],
+            hasKeyAnthropic: true,
+            hasKeyOpenai: false,
+          };
+        if (method === 'viewport') {
+          fixture.lastViewport = input;
+          return;
+        }
+        if (method === 'browser') {
+          const tab = {
+            id: 'tab',
+            title: 'Official source',
+            url: 'https://agency.gov/',
+            active: true,
+          };
+          if (input.action === 'list') return { tabs: [tab] };
+          if (input.action === 'switch') return { tab };
+          return { value: { text: 'An official public source.' } };
+        }
+        if (method === 'requestModel') {
+          fixture.requestStarted = true;
+          return new Promise(() => {});
+        }
+        if (method === 'cancelModel') {
+          fixture.requestStopped = true;
+          return;
+        }
+        throw Error('Unsupported fixture method.');
+      },
+    };
+  });
+  await page.goto('http://127.0.0.1:4174');
+  await page
+    .getByRole('textbox', { name: 'Your goal', exact: true })
+    .fill('Summarize the current page');
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { requestStarted: boolean }).requestStarted),
+    )
+    .toBe(true);
+  await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { requestStopped: boolean }).requestStopped),
+    )
+    .toBe(true);
+  await expect(page.getByRole('button', { name: 'Stop current task' })).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as unknown as { lastViewport: { visible: boolean } }).lastViewport.visible,
+      ),
+    )
+    .toBe(false);
+});

@@ -36,6 +36,7 @@ export class MobileRuntime implements ToolRuntime {
   async newTab(url = 'https://www.google.com/') {
     this.signal.throwIfAborted();
     await this.showBrowser();
+    this.signal.throwIfAborted();
     const tab = (await this.native.browser({ action: 'new', url })).tab;
     if (!tab) throw new Error('The browser could not open a tab.');
     this.activeTabId = tab.id;
@@ -44,6 +45,7 @@ export class MobileRuntime implements ToolRuntime {
   async switchTab(tabId: string) {
     this.signal.throwIfAborted();
     await this.showBrowser();
+    this.signal.throwIfAborted();
     const tab = (await this.native.browser({ action: 'switch', tabId })).tab;
     if (!tab) throw new Error('Tab not found.');
     this.activeTabId = tab.id;
@@ -59,6 +61,7 @@ export class MobileRuntime implements ToolRuntime {
   async navigate(tabId: string, url: string) {
     this.signal.throwIfAborted();
     await this.showBrowser();
+    this.signal.throwIfAborted();
     const tab = (await this.native.browser({ action: 'navigate', tabId, url })).tab;
     if (!tab) throw new Error('Navigation failed.');
     this.activeTabId = tab.id;
@@ -75,13 +78,14 @@ export class MobileRuntime implements ToolRuntime {
       this.refs.set(tabId, refs);
     }
     const script = `${PAGE_HELPERS}; __bb.RefSeq=${refs.seq}; __bb.Refs=${JSON.stringify(refs.fps)}; ${AGENT_CURSOR}; return await (${expression.trim().replace(/;$/, '')});`;
+    this.signal.throwIfAborted();
     const result = await this.native.browser({ action: 'evaluate', tabId, script });
     this.signal.throwIfAborted();
     return result.value as T;
   }
   async presentAction(tabId: string) {
     this.signal.throwIfAborted();
-    await this.showBrowser();
+    await this.switchTab(tabId);
     await this.evaluate(
       tabId,
       `(() => { const target=document.querySelector('main h1,article h1,h1,main p'); if(target) window.__bbCursor(target,{halo:true}); else window.__bbCursorTo(innerWidth*.35,innerHeight*.35); return true; })()`,
