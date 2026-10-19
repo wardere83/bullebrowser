@@ -192,8 +192,10 @@ export function App() {
           },
           signal: abort.signal,
           runtime,
-          beforeBrowserAction: async () => {
-            await showBrowser();
+          beforeBrowserAction: async (_name, args) => {
+            await runtime.presentAction(
+              typeof args.tabId === 'string' ? args.tabId : runtime.activeTabId,
+            );
           },
         },
         requestBrowseAccess: () =>
@@ -259,6 +261,11 @@ export function App() {
     <main className="mobile-shell">
       <header>
         <span className="brand">BulleBrowser</span>
+        {running && (
+          <button aria-label="Stop current task" onClick={stop}>
+            Stop
+          </button>
+        )}
         <button
           onClick={() => setPage(page === 'settings' ? 'assistant' : 'settings')}
           aria-label={page === 'settings' ? 'Back to assistant' : 'Open Settings'}
@@ -403,22 +410,28 @@ export function App() {
             show={showBrowser}
             onError={setError}
           />
-          <nav className="tab-strip" aria-label="Browser tabs">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                aria-current={tab.active ? 'page' : undefined}
-                onClick={() =>
-                  void Mobile.browser({ action: 'switch', tabId: tab.id })
-                    .then(loadTabs)
-                    .catch((err: Error) => setError(err.message))
-                }
-              >
-                {tab.title || 'Loading…'}
-              </button>
-            ))}
-          </nav>
-          <div ref={browserSlot} className="browser-slot" aria-label="Live browser">
+          {tabs.length > 0 && (
+            <nav className="tab-strip" aria-label="Browser tabs">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  aria-current={tab.active ? 'page' : undefined}
+                  onClick={() =>
+                    void Mobile.browser({ action: 'switch', tabId: tab.id })
+                      .then(loadTabs)
+                      .catch((err: Error) => setError(err.message))
+                  }
+                >
+                  {tab.title || 'Loading…'}
+                </button>
+              ))}
+            </nav>
+          )}
+          <div
+            ref={browserSlot}
+            className={`browser-slot ${tabs.length ? 'has-tabs' : ''}`}
+            aria-label="Live browser"
+          >
             <p>
               {tabs.length
                 ? 'Your live browser appears here.'

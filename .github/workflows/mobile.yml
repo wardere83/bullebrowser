@@ -56,7 +56,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: cd apps/mobile/android && ./gradlew connectedDebugAndroidTest --no-daemon
+          script: cd apps/mobile/android && ./gradlew :app:connectedDebugAndroidTest --no-daemon
       - uses: actions/upload-artifact@v4
         if: always()
         with:

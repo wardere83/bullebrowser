@@ -33,6 +33,8 @@ test('mobile adapter executes the real shared page scripts against HTML', async 
     new AbortController().signal,
     async () => {},
   );
+  await runtime.presentAction('tab');
+  await expect(page.locator('#__bb_agent_cursor__')).toHaveCount(1);
   expect((await runtime.readPage('tab')).text).toContain('Applications close');
   expect((await runtime.listLinks('tab'))[0]!.href).toBe('https://agency.gov/opportunity');
   const found = await runtime.findElements('tab');

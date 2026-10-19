@@ -79,6 +79,26 @@ export class MobileRuntime implements ToolRuntime {
     this.signal.throwIfAborted();
     return result.value as T;
   }
+  async presentAction(tabId: string) {
+    this.signal.throwIfAborted();
+    await this.showBrowser();
+    await this.evaluate(
+      tabId,
+      `(() => { const target=document.querySelector('main h1,article h1,h1,main p'); if(target) window.__bbCursor(target,{halo:true}); else window.__bbCursorTo(innerWidth*.35,innerHeight*.35); return true; })()`,
+    );
+    await new Promise<void>((resolve, reject) => {
+      const abort = () => {
+        clearTimeout(timer);
+        reject(new DOMException('Task stopped', 'AbortError'));
+      };
+      const timer = setTimeout(() => {
+        this.signal.removeEventListener('abort', abort);
+        resolve();
+      }, 400);
+      this.signal.addEventListener('abort', abort, { once: true });
+      if (this.signal.aborted) abort();
+    });
+  }
   async readPage(tabId: string) {
     const data = await this.evaluate<{ text?: string; error?: string }>(
       tabId,
