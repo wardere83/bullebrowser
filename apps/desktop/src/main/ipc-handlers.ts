@@ -1,3 +1,4 @@
+import { addConnector, removeConnector, connectorCatalog, enabledConnectors, listConnectors, setConnector } from './connectors/service.js';
 import { accessibilityManager } from './accessibility.js';
 import { normalizeAccessibility } from '../shared/accessibility.js';
 import { hasActiveAgentRuns } from './agent/run.js';
@@ -95,6 +96,25 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
   handle(IPC.BOOKMARK_REMOVE, (_e, id: string) => bookmarkStore.remove(id));
 
   accessibilityManager.register(win.webContents, getSettings().accessibility);
+
+  // Untrusted sites have no connector-management bridge. Check sender again in main.
+  const connectorSender = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Connectors are only available in app Settings.');
+    }
+  };
+  handle(IPC.CONNECTOR_LIST, (event) => { connectorSender(event); return listConnectors(); });
+  handle(IPC.CONNECTOR_SET, (event, id: unknown, enabled: unknown) => {
+    connectorSender(event); return setConnector(id, enabled);
+  });
+  handle(IPC.CONNECTOR_ADD, (event, name: unknown, url: unknown) => { connectorSender(event); return addConnector(name, url); });
+  handle(IPC.CONNECTOR_REMOVE, (event, id: unknown) => { connectorSender(event); return removeConnector(id); });
+  handle(IPC.CONNECTOR_OPEN, (event, id: unknown) => {
+    connectorSender(event);
+    const entry = connectorCatalog().find((entry) => entry.id === id);
+    if (!entry || !enabledConnectors().includes(entry.id)) throw new Error('Enable the connector first.');
+    return tabManager.create(entry.url);
+  });
 
   // settings & secrets
   handle(IPC.SETTINGS_GET, () => getSettings());

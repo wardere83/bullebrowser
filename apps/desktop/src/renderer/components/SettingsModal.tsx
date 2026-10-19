@@ -1,3 +1,4 @@
+import { ConnectorsSettings } from './ConnectorsSettings.js';
 import { useEffect, useRef, useState } from 'react';
 import { ASSISTANTS, providerFor, type ModelId } from '@bullebrowser/agent-core';
 import { useBrowserStore } from '../state/browser-store.js';
@@ -96,6 +97,7 @@ export function SettingsModal() {
   return (
     <Modal title="Settings" onClose={closeSettings} width={560}>
       <section className="space-y-4">
+        <ConnectorsSettings />
         <p className="text-xs leading-relaxed text-ink-secondary">
           BulleBrowser helps your organization find funding opportunities, understand funder
           priorities, assess its alignment and develop proposals ethically. Everything on this

@@ -599,7 +599,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
     return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research });
   }
 
-  const client = new Anthropic({ apiKey: input.apiKey });
+  const client = new Anthropic({ apiKey: input.apiKey, ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
 
   // Adaptive thinking lets the model reason between tool calls, which markedly
   // improves multi-step browsing. Supported on the Opus/Sonnet tiers but not on
@@ -851,6 +851,8 @@ async function runOpenAiTurns(args: {
       input.apiKey as string,
       { model: input.model, messages, tools, tool_choice: 'auto', max_tokens: MAX_TOKENS_PER_TURN },
       context.signal,
+      undefined,
+      input.modelFetch,
     );
 
     const choice = response.choices?.[0];

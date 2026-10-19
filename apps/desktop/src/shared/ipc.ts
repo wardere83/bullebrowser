@@ -1,3 +1,4 @@
+import type { ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
 import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessibility.js';
 // Single source of truth for IPC channel names and the typed bridge
 // surface. Both the preload script and the renderer consume this so we
@@ -27,6 +28,12 @@ export const IPC = {
   BOOKMARK_LIST: 'bookmark:list',
   BOOKMARK_ADD: 'bookmark:add',
   BOOKMARK_REMOVE: 'bookmark:remove',
+  // Browser-backed connectors (app chrome only)
+  CONNECTOR_LIST: 'connector:list',
+  CONNECTOR_SET: 'connector:set',
+  CONNECTOR_OPEN: 'connector:open',
+  CONNECTOR_ADD: 'connector:add',
+  CONNECTOR_REMOVE: 'connector:remove',
   // Settings / secrets
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
@@ -249,6 +256,13 @@ export interface AppInfo {
 
 // The shape exposed by preload as window.bullebrowser
 export interface BrowserBridge {
+  connectors: {
+    list(): Promise<ConnectorState[]>;
+    add(name: string, url: string): Promise<ConnectorState[]>;
+    remove(id: string): Promise<ConnectorState[]>;
+    set(id: ConnectorId, enabled: boolean): Promise<ConnectorState[]>;
+    open(id: ConnectorId): Promise<TabState>;
+  };
   tabs: {
     list(): Promise<TabState[]>;
     create(url?: string): Promise<TabState>;

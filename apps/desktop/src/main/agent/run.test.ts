@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
+import type * as AgentCore from '@bullebrowser/agent-core';
 import type { AgentInput } from '@bullebrowser/agent-core';
 import { IPC, type AgentResultEvent, type AgentRunRequest } from '../../shared/ipc.js';
 
@@ -13,7 +14,8 @@ const mocks = vi.hoisted(() => ({
   pageActivity: vi.fn<(tabId: string) => void>(),
 }));
 
-vi.mock('@bullebrowser/agent-core', () => ({
+vi.mock('@bullebrowser/agent-core', async (importOriginal) => ({
+  ...await importOriginal<typeof AgentCore>(),
   DEFAULT_MODEL: 'gpt-4o',
   FUNDING_RULES: 'Rules for funding work.',
   FUNDING_WORKFLOW_IDS: ['find_opportunities', 'assess_alignment', 'funder_priorities', 'proposal_guide'],
@@ -21,6 +23,7 @@ vi.mock('@bullebrowser/agent-core', () => ({
   providerFor: () => 'openai',
   runAgent: mocks.runAgent,
 }));
+vi.mock('../connectors/service.js', () => ({ enabledConnectors: () => [], connectorCatalog: () => [] }));
 vi.mock('../storage/conversations.js', () => ({
   conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage, bind: () => true },
 }));

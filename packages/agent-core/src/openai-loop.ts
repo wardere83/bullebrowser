@@ -71,8 +71,9 @@ export async function createOpenAiCompletion(
   signal: AbortSignal,
   // Another address for the same endpoint: a gateway, or a test server.
   url: string = OPENAI_URL,
+  transport: typeof fetch = fetch,
 ): Promise<OpenAiResponse> {
-  const response = await fetch(url, {
+  const response = await transport(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
