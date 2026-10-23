@@ -1,0 +1,27 @@
+# Render service setup template. Remain disabled until setup/tests are complete.
+services:
+  - type: web
+    name: bullebrowser-cloud
+    runtime: node
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && node services/cloud/build.mjs
+    startCommand: node services/cloud/dist/server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: CLOUD_ENABLED
+        value: "false"
+      - key: BILLING_ENABLED
+        value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

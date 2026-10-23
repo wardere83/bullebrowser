@@ -1,0 +1,10 @@
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const dir = path.dirname(fileURLToPath(import.meta.url));
+const repo = path.resolve(dir, '../..');
+const store = path.join(repo, 'node_modules/.pnpm');
+const pkg = fs.readdirSync(store).find((name) => name.startsWith('esbuild@'));
+if (!pkg) throw new Error('Install repository dependencies first');
+execFileSync(path.join(store, pkg, 'node_modules/esbuild/bin/esbuild'), [path.join(dir, 'server.mjs'), '--bundle', '--platform=node', '--format=esm', '--target=node22', `--outfile=${path.join(dir, 'dist/server.mjs')}`], { stdio: 'inherit' });

@@ -45,6 +45,10 @@ jobs:
         run: pnpm --filter @bullebrowser/desktop test
       - name: Widget authorization tests
         run: node --test services/widget-backend/auth.test.mjs
+      - name: Shared cloud authentication and billing safety tests
+        run: |
+          node --test services/cloud/cloud.test.mjs
+          node services/cloud/build.mjs
       - name: Web build smoke
         run: pnpm --filter @bullebrowser/web build
       - name: Web copy rules (terminology, translations, exported pages)
