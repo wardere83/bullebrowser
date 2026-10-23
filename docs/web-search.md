@@ -35,7 +35,11 @@ redirects, popups, embedded frames and other page resources. Old prohibited
 homepages and restored update tabs cannot reopen the service.
 
 After a blocked desktop navigation, Go back restores the still-loaded allowed
-page when one is available. The embedded widget cannot inspect the browser's
+page when one is available and refreshes its browsing indicator. A denied popup
+records the attempted destination on its originating tab so the agent reports
+the policy refusal. Embedded form checks apply only to actions that can submit
+the form, using the actual submitter's resolved destination; ordinary form
+controls remain usable. The embedded widget cannot inspect the browser's
 history destinations, so its Back and Forward tools refuse unknown targets;
 the agent must navigate to an explicit allowed URL instead.
 

@@ -114,19 +114,42 @@ function resolveField(target: string): HTMLElement | null {
 
 const THIS_TAB = 'page';
 
-function assertElementDestination(el: Element): void {
+type FormControl = HTMLButtonElement | HTMLInputElement;
+const IMPLICIT_SUBMIT_TYPES = new Set([
+  'text', 'search', 'tel', 'url', 'email', 'password', 'date', 'month', 'week', 'time', 'datetime-local', 'number',
+]);
+const isSubmitControl = (control: FormControl): boolean => control.type === 'submit' || control.type === 'image';
+const isImplicitSubmitField = (control: FormControl): boolean =>
+  control.tagName === 'INPUT' && IMPLICIT_SUBMIT_TYPES.has(control.type);
+
+function assertElementDestination(el: Element, action: 'click' | 'Enter' | 'Space' = 'click'): void {
   const link = el.closest('a[href]') as HTMLAnchorElement | null;
   if (link) assertAllowedDestination(link.href);
   // A selector can resolve a span/icon inside the actual submit button.
-  const control = el.closest('button, input') as HTMLButtonElement | HTMLInputElement | null;
+  const control = el.closest('button, input') as FormControl | null;
   const form = control?.form;
-  if (form) {
-    const override = control.getAttribute('formaction');
-    // formAction is already resolved by the browser, including <base href>.
-    // Embedded/adapted DOMs without that property use the document's base URI.
-    assertAllowedDestination(override === null ? form.action :
-      control.formAction || new URL(override, control.ownerDocument?.baseURI ?? document.baseURI));
+  if (!form || control.matches(':disabled')) return;
+
+  let submitter: FormControl | undefined;
+  if (isSubmitControl(control)) {
+    submitter = control;
+  } else if (action === 'Enter' && isImplicitSubmitField(control)) {
+    // Enter activates the form's first submit button, including controls with
+    // an explicit form owner outside the form. Without one, only a form with
+    // at most one implicit-submission field can submit.
+    const controls = Array.from((form.getRootNode() as ParentNode).querySelectorAll<FormControl>('button, input'))
+      .filter((candidate) => candidate.form === form);
+    submitter = controls.find(isSubmitControl);
+    if (submitter?.matches(':disabled') || (!submitter && controls.filter(isImplicitSubmitField).length > 1)) return;
+  } else {
+    return;
   }
+
+  const override = submitter?.getAttribute('formaction') ?? null;
+  // formAction is already resolved by the browser, including <base href>.
+  // Embedded/adapted DOMs without that property use the document's base URI.
+  assertAllowedDestination(override === null || !submitter ? form.action :
+    submitter.formAction || new URL(override, submitter.ownerDocument?.baseURI ?? document.baseURI));
 }
 
 export interface DomRuntimeOptions {
@@ -292,7 +315,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     async pressKey(_id, key) {
       assertAllowedDestination(location.href);
       const el = (document.activeElement as HTMLElement) ?? document.body;
-      if (key === 'Enter' || key === 'Space') assertElementDestination(el);
+      if (key === 'Enter' || key === 'Space') assertElementDestination(el, key);
       for (const type of ['keydown', 'keyup'] as const) {
         el.dispatchEvent(new KeyboardEvent(type, { key: key === 'Space' ? ' ' : key, bubbles: true }));
         assertAllowedDestination(location.href);
