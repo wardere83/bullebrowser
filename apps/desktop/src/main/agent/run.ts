@@ -1,4 +1,4 @@
-import { connectorTools, webSearchTool } from '@bullebrowser/agent-core';
+import { browserSearch, connectorTools, webSearchTool } from '@bullebrowser/agent-core';
 import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
 // (skill-aware), wires the ToolContext to the active tab, runs the loop,
@@ -209,7 +209,11 @@ export async function startAgentRun(
         userRequest: req.userMessage,
         // Sealed by the loop as reference material; never part of the instructions.
         ...(grounding.referenceContext.length > 0 ? { referenceContext: grounding.referenceContext } : {}),
-        extraTools: [webSearchTool({ apiKey: getApiKey('brave') ?? undefined, signal: controller.signal }), ...grounding.tools, ...connectorTools({
+        extraTools: [webSearchTool({ apiKey: getApiKey('brave') ?? undefined, signal: controller.signal,
+          browserSearch: browserSearch({ runtime, activeTabId: () => ctx.activeTabId, signal: controller.signal,
+            presentAction: (tabId, action, signal) => runtime.presentAction(tabId, action, signal),
+          }),
+        }), ...grounding.tools, ...connectorTools({
           enabled: async () => enabledConnectors(),
           catalog: async () => connectorCatalog(),
           authorize: () => ask('Allow this task to open an enabled connector in your browser?', 'browse_access'),

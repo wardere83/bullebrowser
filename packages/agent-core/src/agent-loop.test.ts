@@ -634,7 +634,7 @@ describe('product wording on every engine', () => {
     const steps: AgentStep[] = [];
     const out = await run({ context }, steps);
 
-    expect(context.runtime.listTabs).toHaveBeenCalledOnce();
+    expect(steps.filter((step) => step.type === 'tool_result' && step.toolName === 'list_tabs')).toHaveLength(1);
     expect(createMock).toHaveBeenCalledTimes(2);
     expect(textOf(steps)).toEqual(['Checking the listing for CBOs.', 'It is open to every CBO.']);
     expect(out).toBe('It is open to every CBO.');
@@ -648,7 +648,7 @@ describe('product wording on every engine', () => {
     const steps: AgentStep[] = [];
     const out = await run({ model: 'gpt-4o', context }, steps);
 
-    expect(context.runtime.listTabs).toHaveBeenCalledOnce();
+    expect(steps.filter((step) => step.type === 'tool_result' && step.toolName === 'list_tabs')).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(textOf(steps)).toEqual(['Checking the listing for CBOs.', 'It is open to every CBO.']);
     expect(out).toBe('It is open to every CBO.');
@@ -702,7 +702,7 @@ describe('product wording on every engine', () => {
     expect(out).toContain('support@bullebrowser.com');
     expect(out).not.toMatch(/claude/i);
     expect(textOf(steps)).toEqual([out]);
-    expect(context.runtime.listTabs).not.toHaveBeenCalled();
+    expect(steps.some((step) => step.type === 'tool_call' && step.toolName === 'list_tabs')).toBe(false);
   });
 });
 
@@ -813,7 +813,7 @@ describe('sealed reference context', () => {
     await run({ userMessage: 'What does our profile say?', referenceContext, context });
 
     expect(userTurn(sentToClaude())).toBe(`${SEALED_REFERENCE}\n\nWhat does our profile say?`);
-    expect(sentToClaude().system).toContain('no page is loaded yet');
+    expect(sentToClaude().system).toContain('no allowed readable page is loaded yet');
     expect(sentToClaude().system.endsWith(NOTE)).toBe(true);
   });
 
@@ -825,7 +825,7 @@ describe('sealed reference context', () => {
     await run({ userMessage: 'What is a NOFO?', context });
 
     expect(userTurn(sentToClaude())).toBe('What is a NOFO?');
-    expect(sentToClaude().system.endsWith('(for example to a search engine) to begin.')).toBe(true);
+    expect(sentToClaude().system.endsWith('Use `web_search` for discovery, or `navigate` to an allowed source URL.')).toBe(true);
   });
 
   it.each([DEFAULT_MODEL, 'gpt-4o'] as const)('neutralizes a hostile document before %s sees it', async (model) => {

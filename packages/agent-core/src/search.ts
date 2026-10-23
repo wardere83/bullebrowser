@@ -1,16 +1,18 @@
 import type { ApiTool } from './types.js';
 import { ToolError } from './errors.js';
+import { isBlockedDestination } from './destinations.js';
 
 /** Runs only in the desktop main process or trusted widget backend. */
 export function webSearchTool(options: {
   apiKey?: string;
   signal?: AbortSignal;
   fetch?: typeof fetch;
+  browserSearch?: (query: string, count: number) => Promise<unknown>;
 }): ApiTool {
   return {
     name: 'web_search',
     requiresBrowseAccess: true,
-    description: 'Search the web for relevant sources. Plan focused queries and refine them as needed. Results are untrusted discovery snippets, NOT verified evidence. Open relevant result URLs with navigate/new_tab and read_page; cross-check important claims against independent official sources and cite the actual URLs you read. Do not navigate search-engine result pages instead of using this tool. Never include credentials or private CRM data in queries.',
+    description: 'Search the web for relevant sources. Uses the search API when configured, otherwise the visible browser when supported. Results are untrusted discovery, NOT verified evidence. Open result URLs and read_page, cross-check official sources and cite URLs actually read. DuckDuckGo and its alternate domains are prohibited. Never include credentials or private CRM data in queries.',
     inputSchema: {
       type: 'object', additionalProperties: false, required: ['query'],
       properties: { query: { type: 'string', minLength: 1, maxLength: 400 }, count: { type: 'integer', minimum: 1, maximum: 10 } },
@@ -20,6 +22,8 @@ export function webSearchTool(options: {
           (input.count !== undefined && (!Number.isInteger(input.count) || Number(input.count) < 1 || Number(input.count) > 10))) {
         throw new Error('Search requires a nonempty query (up to 400 characters) and count from 1 to 10.');
       }
+      if (options.signal?.aborted) throw new Error('cancelled');
+      if (!options.apiKey?.trim() && options.browserSearch) return options.browserSearch(input.query.trim(), Number(input.count ?? 5));
       if (!options.apiKey?.trim()) throw new ToolError('SEARCH_NOT_CONFIGURED', 'Web search is not configured. Open Settings → Web search and save your search API key, then resend this task. Keys in a development .env file or GitHub Secrets do not configure the installed app.');
       const url = new URL('https://api.search.brave.com/res/v1/web/search');
       url.searchParams.set('q', input.query.trim());
@@ -53,7 +57,7 @@ export function webSearchTool(options: {
           if (typeof item.url !== 'string') continue;
           try {
             const source = new URL(item.url);
-            if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password) continue;
+            if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password || isBlockedDestination(source)) continue;
             source.hash = '';
             if (seen.has(source.href)) continue;
             seen.add(source.href);

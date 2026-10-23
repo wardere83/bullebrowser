@@ -1,5 +1,6 @@
 import type { AgentStep } from './types.js';
 import type { StepBudget } from './budget.js';
+import { isBlockedDestination } from './destinations.js';
 
 export function isResearchRequest(request: string): boolean {
   const simpleCommand = /^(?:please\s+)?(?:summari[sz]e|read|click|type|open|go to|navigate to|list tabs)\b/i.test(request);
@@ -23,7 +24,7 @@ export class ResearchProgress {
     if (!page?.text?.trim() || !page.url) return;
     try {
       const url = new URL(page.url);
-      if (!['http:', 'https:'].includes(url.protocol) || /(^|\.)(?:google\.[a-z.]+|bing\.com|duckduckgo\.com)$/.test(url.hostname)) return;
+      if (!['http:', 'https:'].includes(url.protocol) || isBlockedDestination(url) || /(^|\.)(?:google\.[a-z.]+|bing\.com)$/.test(url.hostname)) return;
       url.hash = '';
       this.sources.add(url.href);
     } catch { /* Invalid addresses cannot count as sources. */ }

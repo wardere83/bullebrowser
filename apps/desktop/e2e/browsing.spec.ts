@@ -17,7 +17,7 @@ type Hooks = {
 
 type ReadProbe = { entered: number; release: (() => void) | null };
 
-async function launch() {
+async function launch(extraArgs: string[] = []) {
   const userData = mkdtempSync(join(tmpdir(), 'bullebrowser-browsing-'));
   const env = {
     ...process.env,
@@ -32,7 +32,7 @@ async function launch() {
   try {
     app = await electron.launch({
       cwd: appRoot,
-      args: ['.', '--no-sandbox', `--user-data-dir=${userData}`],
+      args: ['.', '--no-sandbox', `--user-data-dir=${userData}`, ...extraArgs],
       env,
     });
     const win = await app.firstWindow({ timeout: 20_000 });
@@ -382,20 +382,24 @@ test('each browser option asks a short app question instead of filling the compo
   } finally { await close(); }
 });
 
-test('missing search configuration offers Settings without exposing tool envelopes', async () => {
+test('no search key uses visible browser search and filters DuckDuckGo results', async () => {
+  const source = await fixture();
   const { app, win, close } = await launch();
   try {
-    await app.evaluate(() => { process.env.BRAVE_SEARCH_API_KEY = ''; });
+    await app.evaluate(({ session }, base) => {
+      process.env.BRAVE_SEARCH_API_KEY = '';
+      session.defaultSession.protocol.handle('https', () => new Response(`<html><head><title>Search results</title></head><body><a href="https://duckduckgo.com/">Blocked</a><a href="${base}/one">School grants program</a><a href="${base}/two">School grants application</a></body></html>`, { headers: { 'Content-Type': 'text/html' } }));
+    }, source.url);
     await win.locator('aside textarea').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
-    const configure = win.getByRole('button', { name: 'Configure web search', exact: true });
-    await expect(configure).toBeVisible();
+    await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
+    await expect(win.getByRole('button', { name: 'Configure web search', exact: true })).toHaveCount(0);
     await expect(win.getByRole('region', { name: 'Task activity' })).not.toContainText('untrusted_page_data');
-    await configure.click();
-    await expect(win.getByRole('dialog', { name: 'Settings', exact: true })).toBeVisible();
-    await expect(win.getByLabel('Brave Search API key')).toBeVisible();
-  } finally { await close(); }
+    const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+    expect(tabs.some((tab) => /duckduckgo|duck\.com|ddg\.gg/.test(tab.url))).toBe(false);
+    expect(tabs.some((tab) => tab.url.startsWith('https://www.google.com/search'))).toBe(true);
+  } finally { await close(); await source.close(); }
 });
 
 test('search-key settings are visible, masked and separate from model keys', async () => {
@@ -410,6 +414,175 @@ test('search-key settings are visible, masked and separate from model keys', asy
     await expect(section.getByRole('button', { name: 'Save search key', exact: true })).toBeDisabled();
     await expect(section).not.toContainText('fixture-search-key-not-real');
   } finally { await close(); }
+});
+
+test('restricted destinations never send requests through navigation, redirects, popups or page resources', async () => {
+  const receivedRestricted: string[] = [];
+  const allowedPaths: string[] = [];
+  let port = 0;
+  const server = createServer((req, res) => {
+    const host = req.headers.host ?? '';
+    if (!host.startsWith('127.0.0.1:')) receivedRestricted.push(host);
+    else allowedPaths.push(req.url ?? '/');
+    if (req.url === '/redirect') {
+      res.writeHead(302, { Location: `http://html.duckduckgo.com:${port}/redirected` });
+      res.end();
+      return;
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><a id="blocked-popup-link" target="_blank" href="http://duckduckgo.com:${port}/popup-link">Restricted popup</a><button id="blocked-popup-script" onclick="window.open('http://html.duckduckgo.com:${port}/popup-script'); history.replaceState({}, '', '#after-popup')">Open restricted popup</button><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  port = (server.address() as { port: number }).port;
+  const base = `http://127.0.0.1:${port}`;
+  // A regression must never contact the actual prohibited service. These
+  // names resolve only to this fixture, with proxies disabled for this test.
+  const { app, win, close } = await launch([
+    '--no-proxy-server',
+    '--host-resolver-rules=MAP duckduckgo.com 127.0.0.1, MAP *.duckduckgo.com 127.0.0.1, MAP duck.com 127.0.0.1, MAP ddg.gg 127.0.0.1',
+  ]);
+  try {
+    const pageErrors: string[] = [];
+    win.on('pageerror', (error) => pageErrors.push(error.message));
+    await app.evaluate(({ session }) => {
+      const sent: string[] = [];
+      (globalThis as Record<string, unknown>).__restrictedRequestProbe = sent;
+      // Observe sends without replacing the production onBeforeRequest guard.
+      session.defaultSession.webRequest.onSendHeaders({ urls: ['<all_urls>'] }, (details) => {
+        sent.push(details.url);
+      });
+    });
+    await enterAddress(win, `${base}/allowed`);
+    await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
+    await app.evaluate(() => {
+      const manager = (globalThis as unknown as { __bbTest: { tabManager: Hooks['tabManager'] & {
+        setBrowsingActivity(runId: string, tabId: string): void;
+      } } }).__bbTest.tabManager;
+      manager.setBrowsingActivity('policy-recovery', manager.getActiveId());
+    });
+    const hasBrowsingCloud = () => app.evaluate(() => {
+      const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
+      return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_browsing_cloud__'))");
+    });
+    await expect.poll(hasBrowsingCloud).toBe(true);
+    await enterAddress(win, `http://duckduckgo.com:${port}/typed`);
+    await expect(win.getByRole('region', { name: 'Page loading error' })).toContainText('blocked by BulleBrowser policy');
+    await app.evaluate(() => {
+      const manager = (globalThis as unknown as { __bbTest: { tabManager: {
+        clearBrowsingActivity(runId: string): void;
+      } } }).__bbTest.tabManager;
+      manager.clearBrowsingActivity('policy-recovery');
+    });
+    const captureFailure = await win.evaluate(async () => {
+      try { await window.bullebrowser.agent.captureScreenshot(); return ''; }
+      catch (error) { return (error as Error).message; }
+    });
+    expect(captureFailure).toContain('blocked by BulleBrowser policy');
+    const recovery = win.getByRole('region', { name: 'Page loading error' }).getByRole('button', { name: 'Go back', exact: true });
+    await expect(recovery).toBeEnabled();
+    await recovery.click();
+    await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
+    await expect.poll(hasBrowsingCloud).toBe(false);
+    const outcomes = await app.evaluate(async ({ session }, fixturePort) => {
+      const hooks = (globalThis as unknown as { __bbTest: {
+        tabManager: Hooks['tabManager'] & {
+          create(url: string): Promise<unknown>;
+          navigate(id: string, url: string): Promise<void>;
+          back(id: string): Promise<void>;
+          getNavigationUrl(id: string): string | undefined;
+          list(): Array<{ id: string }>;
+        };
+        runtime: Hooks['runtime'] & {
+          navigate(id: string, url: string): Promise<unknown>;
+          click(id: string, target: string): Promise<unknown>;
+          pressKey(id: string, key: string): Promise<unknown>;
+        };
+      } }).__bbTest;
+      const manager = hooks.tabManager;
+      const id = manager.getActiveId();
+      const wc = manager.getView(id).webContents;
+      const refused: string[] = [];
+      const policyFailures: Record<string, string | undefined> = {};
+      const attempt = async (name: string, operation: () => Promise<unknown>) => {
+        try { await operation(); }
+        catch (error) {
+          refused.push(name);
+          policyFailures[name] = (error as { code?: string }).code;
+        }
+      };
+      const root = `http://duckduckgo.com:${fixturePort}/direct`;
+      await attempt('tab-create', () => manager.create(root));
+      await attempt('tab-navigate', () => manager.navigate(id, root));
+      await attempt('agent-navigate', () => hooks.runtime.navigate(id, root));
+      // Exercise the native network guard even if an entry point bypasses
+      // manager/runtime validation. Chromium load error wording varies by OS.
+      await wc.loadURL(root).catch(() => {});
+      await wc.loadURL(`http://127.0.0.1:${fixturePort}/allowed`);
+      const pageResources = await wc.executeJavaScript(`Promise.all([
+        new Promise(resolve => {
+          const image = new Image();
+          image.onload = () => resolve('image-loaded');
+          image.onerror = () => resolve('image-blocked');
+          image.src = 'http://duck.com:${fixturePort}/pixel';
+          document.body.append(image);
+        }),
+        fetch('http://ddg.gg:${fixturePort}/fetch').then(() => 'fetch-loaded', () => 'fetch-blocked')
+      ])`);
+      const beforePopup = manager.list().length;
+      await wc.executeJavaScript(`window.open('http://html.duckduckgo.com:${fixturePort}/popup'); true`);
+      const afterPopup = manager.list().length;
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await attempt('agent-popup-link', () => hooks.runtime.click(id, '#blocked-popup-link'));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      const inPageUpdate = new Promise<void>((resolve) => wc.once('did-navigate-in-page', () => resolve()));
+      await attempt('agent-popup-script', () => hooks.runtime.click(id, '#blocked-popup-script'));
+      await inPageUpdate;
+      await attempt('blocked-popup-read', () => hooks.runtime.readPage(id));
+      await manager.back(id);
+      const popupRecovery = {
+        url: manager.getNavigationUrl(id), nativeUrl: wc.getURL(), visible: manager.getView(id).getVisible(),
+      };
+      const afterAgentPopups = manager.list().length;
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await attempt('agent-click', () => hooks.runtime.click(id, '#blocked-link'));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await wc.executeJavaScript("document.querySelector('#blocked-input').focus()");
+      await attempt('agent-enter', () => hooks.runtime.pressKey(id, 'Enter'));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await wc.loadURL(`http://127.0.0.1:${fixturePort}/redirect`).catch(() => {});
+      const afterRedirect = wc.getURL();
+      await attempt('blocked-redirect-read', () => hooks.runtime.readPage(id));
+      // Future isolated browser sessions must receive the same network guard.
+      const isolated = session.fromPartition('destination-guard-regression');
+      await attempt('isolated-session', () => isolated.fetch(root));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/control`);
+      return { refused, policyFailures, pageResources, beforePopup, afterPopup, afterAgentPopups, popupRecovery, afterRedirect };
+    }, port);
+    expect(outcomes.refused).toEqual(['tab-create', 'tab-navigate', 'agent-navigate', 'agent-popup-link', 'agent-popup-script', 'blocked-popup-read', 'agent-click', 'agent-enter', 'blocked-redirect-read', 'isolated-session']);
+    expect(outcomes.policyFailures).toMatchObject({
+      'agent-popup-link': 'BLOCKED_BY_POLICY', 'agent-popup-script': 'BLOCKED_BY_POLICY',
+      'blocked-popup-read': 'BLOCKED_BY_POLICY',
+      'agent-click': 'BLOCKED_BY_POLICY', 'agent-enter': 'BLOCKED_BY_POLICY', 'blocked-redirect-read': 'BLOCKED_BY_POLICY',
+    });
+    expect(outcomes.pageResources).toEqual(['image-blocked', 'fetch-blocked']);
+    expect(outcomes.afterPopup).toBe(outcomes.beforePopup);
+    expect(outcomes.afterAgentPopups).toBe(outcomes.beforePopup);
+    expect(outcomes.popupRecovery).toEqual({
+      url: `${base}/allowed#after-popup`, nativeUrl: `${base}/allowed#after-popup`, visible: true,
+    });
+    expect(outcomes.afterRedirect).not.toContain('duckduckgo.com');
+    const sent = await app.evaluate(() => (globalThis as Record<string, unknown>).__restrictedRequestProbe as string[]);
+    expect(sent.some((url) => url === `${base}/control`)).toBe(true);
+    expect(sent.filter((url) => /duckduckgo|duck\.com|ddg\.gg/i.test(new URL(url).hostname))).toEqual([]);
+    expect(allowedPaths).toContain('/redirect');
+    expect(allowedPaths).toContain('/control');
+    expect(receivedRestricted).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    await expectPage(app, win, `${base}/control`, 'Allowed source page');
+  } finally {
+    await close();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 test('settings and about stay above browsing and restore the page when closed', async () => {
@@ -442,7 +615,10 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await app.evaluate((_electron, fixtureUrl) => {
       const original = globalThis.fetch;
       globalThis.fetch = async (input, init) => {
-        if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })) } }));
+        if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [
+          { title: 'Prohibited search result', url: 'https://duckduckgo.com/?q=school+grants' },
+          ...[1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })),
+        ] } }));
         return original(input, init);
       };
     }, base);
@@ -458,6 +634,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await expect(activity.getByText('3 pages read', { exact: true })).toBeVisible();
     await activity.getByRole('button').click();
     await expect(activity.getByRole('log')).toContainText('Reading the page');
+    await expect(activity.getByRole('log')).not.toContainText('duckduckgo.com');
     await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-1');
     expect((await win.evaluate(() => window.bullebrowser.tabs.list())).filter((tab) => tab.url.includes('/program-'))).toHaveLength(3);
     await expect(win.locator('.md-prose')).not.toContainText('Official grant source');
