@@ -83,6 +83,21 @@ export function UpdateBanner() {
     } catch { setError('Could not prepare this update. Your app is still open. Check again or use the latest installer.'); }
     finally { inFlight.current = false; setStaging(false); }
   };
+  const finish = async () => {
+    if (inFlight.current || (status.state !== 'ready' && status.state !== 'deferred')) return;
+    inFlight.current = true;
+    setError('');
+    try {
+      const snapshot = new CustomEvent<UpdateChatSnapshot>(SAVE_UPDATE_CHAT_EVENT, { detail: {} });
+      window.dispatchEvent(snapshot);
+      const current = useAgentStore.getState().current;
+      const chat = snapshot.detail.chat ?? (current ? { conversationId: current.id, draft: '' } : null);
+      if (chat) saveUpdateChat(chat);
+      await window.bullebrowser.updates.finish(status.state === 'ready' ? status.version : status.preparedVersion);
+    } catch {
+      setError('Could not finish installing the update. Your browser remains open. Retry or download the latest installer.');
+    } finally { inFlight.current = false; }
+  };
   const downloading = status.state === 'downloading';
   const ready = status.state === 'ready' || status.state === 'deferred';
   const scheduled = status.state === 'ready' && status.scheduled;
@@ -100,7 +115,7 @@ export function UpdateBanner() {
 
   return <>
     <button type="button" onClick={show} aria-label="Update" aria-haspopup="dialog"
-      title="View update progress. Updating never closes this window."
+      title="View update progress and choose when to restart to activate native changes."
       className="update-control no-drag relative shrink-0 overflow-hidden rounded px-3 py-1.5 text-xs font-semibold text-white"
       data-active={downloading || checking || staging}>
       <span className="relative z-10">{label}</span>
@@ -127,6 +142,8 @@ export function UpdateBanner() {
         {status.state === 'deferred' && <p className="text-xs">v{status.version} is also available and will download after the prepared version activates.</p>}
         {error && <p role="alert" className="text-danger">{error}</p>}
         <div className="flex flex-wrap gap-2">
+          {ready && <button type="button" disabled={staging} onClick={() => void finish()}
+            className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">Finish update and reopen</button>}
           {ready && !scheduled && <button type="button" disabled={staging} onClick={() => void prepare()}
             className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">{staging ? 'Preparing…' : 'Prepare update — restart later'}</button>}
           <button type="button" disabled={checking || downloading || staging || (status.state === 'error' && status.retryable === false)}
