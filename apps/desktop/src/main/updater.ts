@@ -7,7 +7,7 @@ import { app, autoUpdater as nativeAutoUpdater, type BrowserWindow } from 'elect
 import electronUpdater from 'electron-updater';
 import { compare, valid } from 'semver';
 import { IPC, type UpdateStatus } from '../shared/ipc.js';
-import { recordPreparedUpdate, reconcilePreparedUpdate } from './storage/update-receipt.js';
+import { getActivatedUpdateVersion, recordPreparedUpdate, reconcilePreparedUpdate } from './storage/update-receipt.js';
 
 const { autoUpdater } = electronUpdater;
 const CHECK_INTERVAL_MS = 60 * 1000;
@@ -80,8 +80,8 @@ export async function applyUpdate(version: string, saveSession: () => void = () 
   stageUpdate?.(version);
 }
 
-export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null } {
-  return { installedVersion: app.getVersion(), activationIssue };
+export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null; completedVersion: string | null } {
+  return { installedVersion: app.getVersion(), activationIssue, completedVersion: getActivatedUpdateVersion() };
 }
 
 /** Explicit checks work even when no update notice has been announced yet. */
