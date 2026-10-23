@@ -9,6 +9,7 @@
 // What happened is reported in the tool result so the agent knows.
 
 import type { WebContents } from 'electron';
+import { isBlockedDestination } from '@bullebrowser/agent-core';
 import { getSettings } from '../../storage/settings.js';
 
 export interface ConsentResult {
@@ -78,7 +79,7 @@ const CONSENT_FRAME_HOSTS = /trustarc\.com|consensu\.org|privacy-mgmt\.com|cooki
 
 // Look once, press once, report. Never throws.
 export async function dismissConsent(wc: WebContents): Promise<ConsentResult | null> {
-  if (wc.isDestroyed() || getSettings().autoDismissConsent === false) return null;
+  if (wc.isDestroyed() || isBlockedDestination(wc.getURL()) || getSettings().autoDismissConsent === false) return null;
   const frames = [
     wc.mainFrame,
     ...wc.mainFrame.framesInSubtree.filter((f) => {
@@ -91,6 +92,7 @@ export async function dismissConsent(wc: WebContents): Promise<ConsentResult | n
   ];
   for (const frame of frames) {
     try {
+      if (isBlockedDestination(frame.url)) continue;
       const hit = (await Promise.race([
         frame.executeJavaScript(DISMISS, true),
         new Promise((r) => setTimeout(() => r(null), 3_000)),

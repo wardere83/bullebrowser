@@ -23,3 +23,4 @@ export * from './browser-tasks.js';
 export * from './connectors.js';
 export * from './browser-host.js';
 export * from './search.js';
+export * from './destinations.js';

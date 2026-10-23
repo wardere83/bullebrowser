@@ -8,6 +8,7 @@
 // don't count, so pages that never go fully idle still settle.
 
 import type { Session, WebContents } from 'electron';
+import { isBlockedDestination } from '@bullebrowser/agent-core';
 
 const IGNORED_TYPES = new Set(['webSocket', 'ping', 'cspReport', 'media']);
 const LONG_LIVED_MS = 4_000;
@@ -28,6 +29,14 @@ export function trackNetwork(session: Session): void {
     t.inflight.get(d.webContentsId)?.delete(d.id);
   };
   session.webRequest.onBeforeRequest(filter, (d, cb) => {
+    // A single session listener owns both policy and activity tracking. A
+    // separate blocker would replace this handler in Electron. Check every
+    // resource, including redirects, frames and long-lived requests, before
+    // Chromium can send it or the idle tracker can count it.
+    if (isBlockedDestination(d.url)) {
+      cb({ cancel: true });
+      return;
+    }
     if (d.webContentsId !== undefined && !IGNORED_TYPES.has(d.resourceType)) {
       let m = t.inflight.get(d.webContentsId);
       if (!m) t.inflight.set(d.webContentsId, (m = new Map()));

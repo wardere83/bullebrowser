@@ -16,6 +16,10 @@ import { loadDotEnv } from './env.js';
 // .env so the agent is connected without re-entering the key in Settings.
 loadDotEnv([process.cwd(), app.getAppPath()]);
 
+// Cover any future/partitioned sessions as well as the default browser
+// session. The listener is registered before any window or source fetch.
+app.on('session-created', trackNetwork);
+
 // Hard-quit if a second instance launches; the first instance focuses its window.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {

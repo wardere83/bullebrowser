@@ -12,6 +12,10 @@
 // bundle) — nothing runs until a method is called in a page.
 
 import type { TabSummary, ToolRuntime } from './types.js';
+import { assertAllowedDestination, isBlockedDestination } from './destinations.js';
+import { ToolError } from './errors.js';
+
+const UNVERIFIED_HISTORY_MESSAGE = 'History navigation is blocked because the embedded browser cannot verify its destination. Navigate to an explicit allowed URL instead.';
 
 // Same shadow-DOM-piercing query the desktop runtime uses, so a click/type
 // finds controls inside web components (which most modern CRMs are built from).
@@ -110,6 +114,21 @@ function resolveField(target: string): HTMLElement | null {
 
 const THIS_TAB = 'page';
 
+function assertElementDestination(el: Element): void {
+  const link = el.closest('a[href]') as HTMLAnchorElement | null;
+  if (link) assertAllowedDestination(link.href);
+  // A selector can resolve a span/icon inside the actual submit button.
+  const control = el.closest('button, input') as HTMLButtonElement | HTMLInputElement | null;
+  const form = control?.form;
+  if (form) {
+    const override = control.getAttribute('formaction');
+    // formAction is already resolved by the browser, including <base href>.
+    // Embedded/adapted DOMs without that property use the document's base URI.
+    assertAllowedDestination(override === null ? form.action :
+      control.formAction || new URL(override, control.ownerDocument?.baseURI ?? document.baseURI));
+  }
+}
+
 export interface DomRuntimeOptions {
   // Called before a destructive action (submit/delete/purchase) so the host can
   // ask the user. Defaults to allowing, matching the desktop confirm delegate.
@@ -142,6 +161,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
       // soft navigation is safe; otherwise the agent should click a link
       // instead, which is the natural motion inside a CRM SPA anyway.
       const dest = new URL(url, location.href);
+      assertAllowedDestination(dest);
       if (dest.origin === location.origin) {
         location.assign(dest.href);
       } else {
@@ -154,22 +174,29 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     },
 
     async readPage() {
+      assertAllowedDestination(location.href);
       const text = readableText();
       if (!text) throw new Error('The page has no readable text yet.');
       return { title: document.title, url: location.href, text };
     },
 
     async click(_id, target) {
+      assertAllowedDestination(location.href);
       const el = resolveClickable(target);
       if (!el) throw new Error(`No element matched: ${target}`);
+      assertElementDestination(el);
       (el as HTMLElement).scrollIntoView({ block: 'center' });
       cursor(el, { click: true });
       await new Promise((r) => setTimeout(r, 300));
+      assertAllowedDestination(location.href);
+      assertElementDestination(el);
       (el as HTMLElement).click();
+      assertAllowedDestination(location.href);
       return { matched: (el as HTMLElement).outerHTML.slice(0, 200) };
     },
 
     async type(_id, target, text) {
+      assertAllowedDestination(location.href);
       const el = resolveField(target);
       if (!el) throw new Error(`No input matched: ${target}`);
       el.scrollIntoView({ block: 'center' });
@@ -198,6 +225,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
       // Character by character, so live search and controlled inputs behave and
       // the user can watch it — same as the desktop app.
       for (let i = 1; i <= text.length; i++) {
+        assertAllowedDestination(location.href);
         write(text.slice(0, i));
         await new Promise((r) => setTimeout(r, Math.max(8, Math.min(28, Math.round(1400 / text.length)))));
       }
@@ -206,6 +234,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     },
 
     async extract(_id, schema) {
+      assertAllowedDestination(location.href);
       const headings = Array.from(document.querySelectorAll('h1,h2,h3'))
         .slice(0, 50)
         .map((h) => ({ level: h.tagName, text: (h as HTMLElement).innerText?.trim() }));
@@ -226,15 +255,17 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     },
 
     async getSelection() {
+      assertAllowedDestination(location.href);
       return { text: String(window.getSelection?.() ?? '') };
     },
 
     async listLinks() {
+      assertAllowedDestination(location.href);
       const seen = new Set<string>();
       const out: { text: string; href: string }[] = [];
       for (const a of deepQueryAll('a[href]')) {
         const href = (a as HTMLAnchorElement).href;
-        if (!href || !/^https?:/i.test(href) || seen.has(href) || !isVisible(a)) continue;
+        if (!href || !/^https?:/i.test(href) || isBlockedDestination(href) || seen.has(href) || !isVisible(a)) continue;
         seen.add(href);
         out.push({ text: ((a as HTMLElement).innerText || '').trim().slice(0, 120), href });
         if (out.length >= 200) break;
@@ -243,10 +274,12 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     },
 
     async queryDom(_id, selector) {
+      assertAllowedDestination(location.href);
       return { matches: deepQueryAll(selector).length };
     },
 
     async scroll(_id, opts) {
+      assertAllowedDestination(location.href);
       const doc = document.scrollingElement || document.documentElement;
       const amount = opts.amount ?? 600;
       if (opts.direction === 'down') window.scrollBy({ top: amount, behavior: 'smooth' });
@@ -257,18 +290,23 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     },
 
     async pressKey(_id, key) {
+      assertAllowedDestination(location.href);
       const el = (document.activeElement as HTMLElement) ?? document.body;
+      if (key === 'Enter' || key === 'Space') assertElementDestination(el);
       for (const type of ['keydown', 'keyup'] as const) {
         el.dispatchEvent(new KeyboardEvent(type, { key: key === 'Space' ? ' ' : key, bubbles: true }));
+        assertAllowedDestination(location.href);
       }
       return { pressed: key };
     },
 
     async waitFor(_id, condition) {
+      assertAllowedDestination(location.href);
       const timeout = Math.min(condition.timeoutMs ?? 10_000, 10_000);
       if (condition.selector) {
         const start = Date.now();
         while (Date.now() - start < timeout) {
+          assertAllowedDestination(location.href);
           if (deepQuery(condition.selector)) return { matched: true };
           await new Promise((r) => setTimeout(r, 100));
         }
@@ -282,10 +320,13 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
 
     // A widget owns one document — present it as the single active tab and make
     // the multi-tab surface degrade sensibly rather than error.
-    async newTab() {
+    async newTab(url) {
+      if (url) assertAllowedDestination(url);
+      assertAllowedDestination(location.href);
       return tab();
     },
     async switchTab() {
+      assertAllowedDestination(location.href);
       return tab();
     },
     async listTabs() {
@@ -295,16 +336,16 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
       return { closed: false };
     },
     async goBack() {
-      history.back();
-      await new Promise((r) => setTimeout(r, 400));
-      return { url: location.href };
+      assertAllowedDestination(location.href);
+      // The host page cannot inspect a cross-origin history target before it unloads.
+      throw new ToolError('BLOCKED_BY_POLICY', UNVERIFIED_HISTORY_MESSAGE);
     },
     async goForward() {
-      history.forward();
-      await new Promise((r) => setTimeout(r, 400));
-      return { url: location.href };
+      assertAllowedDestination(location.href);
+      throw new ToolError('BLOCKED_BY_POLICY', UNVERIFIED_HISTORY_MESSAGE);
     },
     async reload() {
+      assertAllowedDestination(location.href);
       location.reload();
       return { url: location.href };
     },

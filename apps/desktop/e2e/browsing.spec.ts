@@ -17,7 +17,7 @@ type Hooks = {
 
 type ReadProbe = { entered: number; release: (() => void) | null };
 
-async function launch() {
+async function launch(extraArgs: string[] = []) {
   const userData = mkdtempSync(join(tmpdir(), 'bullebrowser-browsing-'));
   const env = {
     ...process.env,
@@ -32,7 +32,7 @@ async function launch() {
   try {
     app = await electron.launch({
       cwd: appRoot,
-      args: ['.', '--no-sandbox', `--user-data-dir=${userData}`],
+      args: ['.', '--no-sandbox', `--user-data-dir=${userData}`, ...extraArgs],
       env,
     });
     const win = await app.firstWindow({ timeout: 20_000 });
@@ -396,6 +396,137 @@ test('search-key settings are visible, masked and separate from model keys', asy
   } finally { await close(); }
 });
 
+test('restricted destinations never send requests through navigation, redirects, popups or page resources', async () => {
+  const receivedRestricted: string[] = [];
+  const allowedPaths: string[] = [];
+  let port = 0;
+  const server = createServer((req, res) => {
+    const host = req.headers.host ?? '';
+    if (!host.startsWith('127.0.0.1:')) receivedRestricted.push(host);
+    else allowedPaths.push(req.url ?? '/');
+    if (req.url === '/redirect') {
+      res.writeHead(302, { Location: `http://html.duckduckgo.com:${port}/redirected` });
+      res.end();
+      return;
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  port = (server.address() as { port: number }).port;
+  const base = `http://127.0.0.1:${port}`;
+  // A regression must never contact the actual prohibited service. These
+  // names resolve only to this fixture, with proxies disabled for this test.
+  const { app, win, close } = await launch([
+    '--no-proxy-server',
+    '--host-resolver-rules=MAP duckduckgo.com 127.0.0.1, MAP *.duckduckgo.com 127.0.0.1, MAP duck.com 127.0.0.1, MAP ddg.gg 127.0.0.1',
+  ]);
+  try {
+    const pageErrors: string[] = [];
+    win.on('pageerror', (error) => pageErrors.push(error.message));
+    await app.evaluate(({ session }) => {
+      const sent: string[] = [];
+      (globalThis as Record<string, unknown>).__restrictedRequestProbe = sent;
+      // Observe sends without replacing the production onBeforeRequest guard.
+      session.defaultSession.webRequest.onSendHeaders({ urls: ['<all_urls>'] }, (details) => {
+        sent.push(details.url);
+      });
+    });
+    await enterAddress(win, `${base}/allowed`);
+    await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
+    await enterAddress(win, `http://duckduckgo.com:${port}/typed`);
+    await expect(win.getByRole('region', { name: 'Page loading error' })).toContainText('blocked by BulleBrowser policy');
+    const captureFailure = await win.evaluate(async () => {
+      try { await window.bullebrowser.agent.captureScreenshot(); return ''; }
+      catch (error) { return (error as Error).message; }
+    });
+    expect(captureFailure).toContain('blocked by BulleBrowser policy');
+    const recovery = win.getByRole('region', { name: 'Page loading error' }).getByRole('button', { name: 'Go back', exact: true });
+    await expect(recovery).toBeEnabled();
+    await recovery.click();
+    await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
+    const outcomes = await app.evaluate(async ({ session }, fixturePort) => {
+      const hooks = (globalThis as unknown as { __bbTest: {
+        tabManager: Hooks['tabManager'] & {
+          create(url: string): Promise<unknown>;
+          navigate(id: string, url: string): Promise<void>;
+          list(): Array<{ id: string }>;
+        };
+        runtime: Hooks['runtime'] & {
+          navigate(id: string, url: string): Promise<unknown>;
+          click(id: string, target: string): Promise<unknown>;
+          pressKey(id: string, key: string): Promise<unknown>;
+        };
+      } }).__bbTest;
+      const manager = hooks.tabManager;
+      const id = manager.getActiveId();
+      const wc = manager.getView(id).webContents;
+      const refused: string[] = [];
+      const policyFailures: Record<string, string | undefined> = {};
+      const attempt = async (name: string, operation: () => Promise<unknown>) => {
+        try { await operation(); }
+        catch (error) {
+          refused.push(name);
+          policyFailures[name] = (error as { code?: string }).code;
+        }
+      };
+      const root = `http://duckduckgo.com:${fixturePort}/direct`;
+      await attempt('tab-create', () => manager.create(root));
+      await attempt('tab-navigate', () => manager.navigate(id, root));
+      await attempt('agent-navigate', () => hooks.runtime.navigate(id, root));
+      // Exercise the native network guard even if an entry point bypasses
+      // manager/runtime validation. Chromium load error wording varies by OS.
+      await wc.loadURL(root).catch(() => {});
+      await wc.loadURL(`http://127.0.0.1:${fixturePort}/allowed`);
+      const pageResources = await wc.executeJavaScript(`Promise.all([
+        new Promise(resolve => {
+          const image = new Image();
+          image.onload = () => resolve('image-loaded');
+          image.onerror = () => resolve('image-blocked');
+          image.src = 'http://duck.com:${fixturePort}/pixel';
+          document.body.append(image);
+        }),
+        fetch('http://ddg.gg:${fixturePort}/fetch').then(() => 'fetch-loaded', () => 'fetch-blocked')
+      ])`);
+      const beforePopup = manager.list().length;
+      await wc.executeJavaScript(`window.open('http://html.duckduckgo.com:${fixturePort}/popup'); true`);
+      const afterPopup = manager.list().length;
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await attempt('agent-click', () => hooks.runtime.click(id, '#blocked-link'));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await wc.executeJavaScript("document.querySelector('#blocked-input').focus()");
+      await attempt('agent-enter', () => hooks.runtime.pressKey(id, 'Enter'));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await wc.loadURL(`http://127.0.0.1:${fixturePort}/redirect`).catch(() => {});
+      const afterRedirect = wc.getURL();
+      await attempt('blocked-redirect-read', () => hooks.runtime.readPage(id));
+      // Future isolated browser sessions must receive the same network guard.
+      const isolated = session.fromPartition('destination-guard-regression');
+      await attempt('isolated-session', () => isolated.fetch(root));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/control`);
+      return { refused, policyFailures, pageResources, beforePopup, afterPopup, afterRedirect };
+    }, port);
+    expect(outcomes.refused).toEqual(['tab-create', 'tab-navigate', 'agent-navigate', 'agent-click', 'agent-enter', 'blocked-redirect-read', 'isolated-session']);
+    expect(outcomes.policyFailures).toMatchObject({
+      'agent-click': 'BLOCKED_BY_POLICY', 'agent-enter': 'BLOCKED_BY_POLICY', 'blocked-redirect-read': 'BLOCKED_BY_POLICY',
+    });
+    expect(outcomes.pageResources).toEqual(['image-blocked', 'fetch-blocked']);
+    expect(outcomes.afterPopup).toBe(outcomes.beforePopup);
+    expect(outcomes.afterRedirect).not.toContain('duckduckgo.com');
+    const sent = await app.evaluate(() => (globalThis as Record<string, unknown>).__restrictedRequestProbe as string[]);
+    expect(sent.some((url) => url === `${base}/control`)).toBe(true);
+    expect(sent.filter((url) => /duckduckgo|duck\.com|ddg\.gg/i.test(new URL(url).hostname))).toEqual([]);
+    expect(allowedPaths).toContain('/redirect');
+    expect(allowedPaths).toContain('/control');
+    expect(receivedRestricted).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    await expectPage(app, win, `${base}/control`, 'Allowed source page');
+  } finally {
+    await close();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test('settings and about stay above browsing and restore the page when closed', async () => {
   const source = await fixture();
   const { app, win, close } = await launch();
@@ -426,7 +557,10 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await app.evaluate((_electron, fixtureUrl) => {
       const original = globalThis.fetch;
       globalThis.fetch = async (input, init) => {
-        if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })) } }));
+        if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [
+          { title: 'Prohibited search result', url: 'https://duckduckgo.com/?q=school+grants' },
+          ...[1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })),
+        ] } }));
         return original(input, init);
       };
     }, base);
@@ -442,6 +576,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await expect(activity.getByText('3 pages read', { exact: true })).toBeVisible();
     await activity.getByRole('button').click();
     await expect(activity.getByRole('log')).toContainText('Reading the page');
+    await expect(activity.getByRole('log')).not.toContainText('duckduckgo.com');
     await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-1');
     expect((await win.evaluate(() => window.bullebrowser.tabs.list())).filter((tab) => tab.url.includes('/program-'))).toHaveLength(3);
     await expect(win.locator('.md-prose')).not.toContainText('Official grant source');

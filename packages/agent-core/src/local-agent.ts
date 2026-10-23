@@ -4,6 +4,7 @@ import { StepBudget } from './budget.js';
 import type { AgentInput } from './types.js';
 import { AGENT_IDENTITY, protectAssistantIdentity } from './product-identity.js';
 import { FUNDING_SCREENS, applyTerminology } from './terminology.js';
+import { isBlockedDestination } from './destinations.js';
 
 type Call = (name: string, input: Record<string, unknown>) => Promise<ToolCallOutcome>;
 
@@ -211,9 +212,8 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
       const words = message.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3);
       for (const link of [...explicitUrls.map((href) => ({ href, text: message })), ...links]) {
         try {
-          let url = new URL(link.href ?? '', base);
-          if (/(^|\.)duckduckgo\.com$/.test(url.hostname) && url.searchParams.has('uddg')) url = new URL(url.searchParams.get('uddg')!);
-          if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || /(^|\.)(?:duckduckgo\.com|google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
+          const url = new URL(link.href ?? '', base);
+          if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || isBlockedDestination(url) || /(^|\.)(?:google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
           if (/\b(?:privacy|cookies?|login|sign in|terms of use)\b/i.test(link.text ?? '')) continue;
           url.hash = '';
           const label = `${link.text ?? ''} ${url.href}`.toLowerCase();

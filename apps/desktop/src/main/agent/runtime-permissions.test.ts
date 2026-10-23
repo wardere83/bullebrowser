@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('../tabs/manager.js', () => ({ tabManager: {
   getView: () => ({ webContents: { isDestroyed: () => false, getURL: () => mocks.url } }),
+  getNavigationUrl: () => mocks.url,
 } }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({}) }));
 vi.mock('../storage/site-permissions.js', () => ({

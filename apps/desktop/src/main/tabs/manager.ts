@@ -4,10 +4,12 @@ import { accessibilityManager } from '../accessibility.js';
 
 import { app, type BrowserWindow, Menu, MenuItem, WebContentsView, clipboard } from 'electron';
 import { randomUUID } from 'node:crypto';
+import { assertAllowedDestination, BLOCKED_DESTINATION_MESSAGE, isBlockedDestination } from '@bullebrowser/agent-core';
 import { IPC, type TabState, type LayoutBounds } from '../../shared/ipc.js';
 import { historyStore } from '../storage/history.js';
 import { getSettings } from '../storage/settings.js';
 import { browsingCloudScript } from '../agent/browser/browsing-cloud.js';
+import { trackNetwork } from '../agent/browser/net-activity.js';
 
 function getDefaultHome(): string {
   return getSettings().homepageUrl;
@@ -68,6 +70,8 @@ class TabManager {
 
   async create(url?: string, openerId?: string): Promise<TabState> {
     if (!this.win) throw new Error('No window attached');
+    const destination = url ?? getDefaultHome();
+    assertAllowedDestination(destination);
     const id = randomUUID();
     const view = new WebContentsView({
       webPreferences: {
@@ -79,11 +83,12 @@ class TabManager {
         devTools: !app.isPackaged,
       },
     });
+    trackNetwork(view.webContents.session);
     const tab: ManagedTab = {
       id,
       view,
       title: 'New Tab',
-      url: url ?? getDefaultHome(),
+      url: destination,
       loading: true,
       ...(openerId ? { openerId } : {}),
     };
@@ -156,6 +161,10 @@ class TabManager {
 
   async navigate(id: string, url: string): Promise<void> {
     const tab = this.find(id);
+    // Direct chrome navigation never reaches Electron's navigation events
+    // when policy refuses it, so publish the visible error here as well.
+    if (tab && isBlockedDestination(url)) this.blockNavigation(tab, url);
+    assertAllowedDestination(url);
     if (!tab) return;
     this.beginNavigation(tab, url);
     // Failed navigations show the chrome's retry page; don't reject.
@@ -164,18 +173,41 @@ class TabManager {
 
   async reload(id: string): Promise<void> {
     const tab = this.find(id);
+    if (tab) assertAllowedDestination(tab.url);
     if (tab?.loadError) await this.navigate(id, tab.url);
     else tab?.view.webContents.reload();
   }
 
   async back(id: string): Promise<void> {
-    const wc = this.find(id)?.view.webContents;
-    if (wc?.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
+    const tab = this.find(id);
+    if (!tab) return;
+    const retainedUrl = this.policyRecoveryUrl(tab);
+    if (retainedUrl) {
+      // A prevented link/form never committed a history entry. Restore the
+      // allowed document already in this view, including on its first page.
+      tab.url = retainedUrl;
+      tab.navigationUrl = retainedUrl;
+      tab.loading = false;
+      delete tab.loadError;
+      this.relayout();
+      this.broadcast();
+      return;
+    }
+    const wc = tab.view.webContents;
+    if (wc.navigationHistory.canGoBack()) {
+      const entry = wc.navigationHistory.getEntryAtIndex(wc.navigationHistory.getActiveIndex() - 1);
+      if (entry) assertAllowedDestination(entry.url);
+      wc.navigationHistory.goBack();
+    }
   }
 
   async forward(id: string): Promise<void> {
     const wc = this.find(id)?.view.webContents;
-    if (wc?.navigationHistory.canGoForward()) wc.navigationHistory.goForward();
+    if (wc?.navigationHistory.canGoForward()) {
+      const entry = wc.navigationHistory.getEntryAtIndex(wc.navigationHistory.getActiveIndex() + 1);
+      if (entry) assertAllowedDestination(entry.url);
+      wc.navigationHistory.goForward();
+    }
   }
 
   getActiveId(): string | null {
@@ -184,6 +216,14 @@ class TabManager {
 
   getView(id: string): WebContentsView | undefined {
     return this.find(id)?.view;
+  }
+
+  // A rejected redirect can leave the old page in webContents.getURL().
+  // Preserve the attempted destination so an agent cannot report that old
+  // page as a successful load/read of the blocked address.
+  getNavigationUrl(id: string): string | undefined {
+    const tab = this.find(id);
+    return tab?.navigationUrl ?? tab?.url;
   }
 
   // Each run owns the page it actually touched. Switching the user's tab must
@@ -225,7 +265,7 @@ class TabManager {
 
   private async refreshBrowsingCloud(tab: ManagedTab): Promise<void> {
     const wc = tab.view.webContents;
-    if (wc.isDestroyed()) return;
+    if (wc.isDestroyed() || isBlockedDestination(tab.url) || isBlockedDestination(wc.getURL())) return;
     const active = !this.cloudCaptures.has(tab.id) && this.activeId === tab.id && !isStartPage(tab.url) &&
       [...this.browsingTargets.values()].includes(tab.id);
     // A late script from a previous document/request cannot revive activity
@@ -243,6 +283,20 @@ class TabManager {
     return this.tabs.find((t) => t.id === id);
   }
 
+  private policyRecoveryUrl(tab: ManagedTab): string | undefined {
+    if (tab.loadError?.code !== -20 || !isBlockedDestination(tab.navigationUrl ?? tab.url)) return;
+    const wc = tab.view.webContents;
+    if (wc.isDestroyed()) return;
+    const retainedUrl = wc.getURL();
+    try {
+      const url = new URL(retainedUrl);
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && !isBlockedDestination(url)) return retainedUrl;
+    } catch {
+      // Blank, invalid and browser error documents are not recovery targets.
+    }
+    return;
+  }
+
   private toState(t: ManagedTab): TabState {
     const wc = t.view.webContents;
     return {
@@ -251,7 +305,7 @@ class TabManager {
       url: t.url,
       loading: t.loading,
       ...(t.loadError ? { loadError: t.loadError } : {}),
-      canGoBack: wc.navigationHistory.canGoBack(),
+      canGoBack: !!this.policyRecoveryUrl(t) || wc.navigationHistory.canGoBack(),
       canGoForward: wc.navigationHistory.canGoForward(),
       faviconUrl: t.faviconUrl,
       active: this.activeId === t.id,
@@ -261,12 +315,37 @@ class TabManager {
   private wireEvents(tab: ManagedTab) {
     const wc = tab.view.webContents;
     accessibilityManager.register(wc, getSettings().accessibility);
+    wc.on('will-navigate', (event, url) => {
+      if (!isBlockedDestination(url)) return;
+      event.preventDefault();
+      this.blockNavigation(tab, url);
+    });
+    wc.on('will-frame-navigate', (event) => {
+      if (!isBlockedDestination(event.url)) return;
+      event.preventDefault();
+      if (event.isMainFrame) this.blockNavigation(tab, event.url);
+    });
+    wc.on('will-redirect', (event, url, _inPlace, isMainFrame) => {
+      if (!isBlockedDestination(url)) return;
+      event.preventDefault();
+      if (isMainFrame) this.blockNavigation(tab, url);
+    });
     wc.on('dom-ready', () => this.refreshBrowsingCloud(tab));
     wc.on('did-start-navigation', (event) => {
-      if (event.isMainFrame && !event.isSameDocument) this.beginNavigation(tab, event.url);
+      if (event.isMainFrame && !event.isSameDocument) {
+        if (isBlockedDestination(event.url)) {
+          // The request listener cancels the provisional load. Calling stop()
+          // here races a subsequent allowed navigation and can cancel it too.
+          this.blockNavigation(tab, event.url);
+        } else this.beginNavigation(tab, event.url);
+      }
     });
     wc.on('did-redirect-navigation', (event) => {
-      if (event.isMainFrame) this.beginNavigation(tab, event.url);
+      if (event.isMainFrame) {
+        if (isBlockedDestination(event.url)) {
+          this.blockNavigation(tab, event.url);
+        } else this.beginNavigation(tab, event.url);
+      }
     });
     wc.on('did-start-loading', () => {
       tab.loading = true;
@@ -279,6 +358,10 @@ class TabManager {
     // ERR_ABORTED (-3) is normal (redirects, user navigation); ignore it.
     // Subframe failures and superseded loads must not replace a working page.
     wc.on('did-fail-load', (_e, errorCode, _desc, url, isMainFrame) => {
+      if (isMainFrame && isBlockedDestination(url)) {
+        if (!tab.navigationUrl || tab.navigationUrl === url) this.blockNavigation(tab, url);
+        return;
+      }
       if (isMainFrame && errorCode !== -3 && (!tab.navigationUrl || tab.navigationUrl === url)) {
         if (url) tab.url = url;
         tab.loading = false;
@@ -296,6 +379,11 @@ class TabManager {
       this.broadcast();
     });
     wc.on('did-navigate', (_e, url) => {
+      if (isBlockedDestination(url)) {
+        wc.stop();
+        this.blockNavigation(tab, url);
+        return;
+      }
       if (isStartPage(url) && tab.navigationUrl && !isStartPage(tab.navigationUrl)) return;
       tab.url = url;
       tab.navigationUrl = url;
@@ -313,7 +401,7 @@ class TabManager {
       this.broadcast();
     });
     wc.setWindowOpenHandler(({ url }) => {
-      void this.create(url, tab.id);
+      if (!isBlockedDestination(url)) void this.create(url, tab.id).catch(() => {});
       return { action: 'deny' };
     });
     // A page can end itself (window.close() after a sign-in or a download
@@ -361,7 +449,8 @@ class TabManager {
         menu.append(
           new MenuItem({
             label: 'Open link in new tab',
-            click: () => void this.create(linkURL),
+            enabled: !isBlockedDestination(linkURL),
+            click: () => void this.create(linkURL).catch(() => {}),
           }),
         );
         menu.append(
@@ -403,17 +492,17 @@ class TabManager {
         new MenuItem({
           label: 'Back',
           enabled: wc.navigationHistory.canGoBack(),
-          click: () => wc.navigationHistory.goBack(),
+          click: () => void this.back(tab.id).catch(() => {}),
         }),
       );
       menu.append(
         new MenuItem({
           label: 'Forward',
           enabled: wc.navigationHistory.canGoForward(),
-          click: () => wc.navigationHistory.goForward(),
+          click: () => void this.forward(tab.id).catch(() => {}),
         }),
       );
-      menu.append(new MenuItem({ label: 'Reload', click: () => wc.reload() }));
+      menu.append(new MenuItem({ label: 'Reload', click: () => void this.reload(tab.id).catch(() => {}) }));
 
       if (this.win) menu.popup({ window: this.win });
     });
@@ -429,6 +518,15 @@ class TabManager {
     tab.url = url;
     tab.loading = true;
     delete tab.loadError;
+    this.relayout();
+    this.broadcast();
+  }
+
+  private blockNavigation(tab: ManagedTab, url: string) {
+    tab.navigationUrl = url;
+    tab.url = url;
+    tab.loading = false;
+    tab.loadError = { code: -20, message: BLOCKED_DESTINATION_MESSAGE };
     this.relayout();
     this.broadcast();
   }

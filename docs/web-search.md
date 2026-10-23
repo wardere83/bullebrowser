@@ -24,4 +24,25 @@ Missing keys, rejected keys, quota limits, malformed responses and timeouts prod
 explicit errors, not silent browser-search fallbacks. Mocked tests do not verify
 production credentials or quota; a live smoke test needs a configured Brave key.
 
+## Prohibited destinations
+
+DuckDuckGo is prohibited, regardless of saved settings, earlier conversations,
+search results or model instructions. The shared destination policy rejects
+`duckduckgo.com`, `duck.com`, `ddg.gg` and their subdomains before agent actions
+or page reads, and removes those URLs from discovery results. The desktop app
+also cancels requests in every Electron session before transmission, including
+redirects, popups, embedded frames and other page resources. Old prohibited
+homepages and restored update tabs cannot reopen the service.
+
+After a blocked desktop navigation, Go back restores the still-loaded allowed
+page when one is available. The embedded widget cannot inspect the browser's
+history destinations, so its Back and Forward tools refuse unknown targets;
+the agent must navigate to an explicit allowed URL instead.
+
+Keep this restriction independent of Brave key availability. A blocked attempt
+must never be reported as a successful open or read. Regression tests exercise
+the real desktop network guard with prohibited hostnames mapped to a local
+fixture, verify that no restricted request is sent, and verify recovery to an
+allowed source. They never contact the prohibited service.
+
 API documentation: https://api-dashboard.search.brave.com/app/documentation/web-search

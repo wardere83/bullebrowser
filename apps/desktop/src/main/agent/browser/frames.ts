@@ -3,12 +3,14 @@
 // cross-site iframes, so every targeted action goes through here.
 
 import type { WebContents, WebFrameMain } from 'electron';
+import { assertAllowedDestination, isBlockedDestination } from '@bullebrowser/agent-core';
 import { PAGE_HELPERS } from './page-scripts.js';
 
 // The agent drives a real browser holding the user's live sessions, so only
 // web pages may be opened — never file:, data: or javascript: URLs, whatever
 // tool or caller the URL arrives through.
 export function assertWebUrl(url: string): void {
+  assertAllowedDestination(url);
   let scheme: string;
   try {
     scheme = new URL(url).protocol;
@@ -41,6 +43,7 @@ export async function evalPage<T>(
   prelude: string,
   expression: string,
 ): Promise<T> {
+  assertAllowedDestination('getURL' in target ? target.getURL() : target.url);
   // A frame that is swapped out or torn down mid-call can leave
   // executeJavaScript pending forever, which froze the whole run; cap it.
   const run = target.executeJavaScript(
@@ -97,7 +100,7 @@ export function subFrames(wc: WebContents): SubFrame[] {
   const out: SubFrame[] = [];
   for (const f of wc.mainFrame.framesInSubtree) {
     try {
-      if (f === wc.mainFrame || f.detached || !/^https?:/.test(f.url)) continue;
+      if (f === wc.mainFrame || f.detached || !/^https?:/.test(f.url) || isBlockedDestination(f.url)) continue;
       out.push({ frame: f, index: f.frameTreeNodeId, purpose: framePurpose(f.url, f.name) });
     } catch {
       /* a frame disposed while we were listing: not there any more */

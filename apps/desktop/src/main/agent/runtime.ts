@@ -6,6 +6,8 @@ import { presentationPause } from './browser/presentation.js';
 
 import {
   ToolError,
+  assertAllowedDestination,
+  isBlockedDestination,
   levelAllows,
   type ActionPreview,
   type KeyName,
@@ -74,6 +76,7 @@ export class DesktopToolRuntime implements ToolRuntime {
       for (const wc of this.touched) {
         if (wc.isDestroyed()) continue;
         for (const frame of wc.mainFrame.framesInSubtree) {
+          if (isBlockedDestination(frame.url)) continue;
           void frame.executeJavaScript(`window.__bbCancelledRun = ${JSON.stringify(this.actionId)}`).catch(() => {});
         }
         wc.stop();
@@ -82,18 +85,30 @@ export class DesktopToolRuntime implements ToolRuntime {
     }, { once: true });
   }
 
-  private wcFor(tabId: string): WebContents {
+  private wcFor(tabId: string, navigationOnly = false): WebContents {
     if (this.signal?.aborted) throw new Error('cancelled');
     const view = tabManager.getView(tabId);
     if (!view || view.webContents.isDestroyed()) throw new ToolError('TARGET_CLOSED', `Tab not found: ${tabId}`);
-    this.onPageActivity?.(tabId);
+    if (!navigationOnly) {
+      assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+      assertAllowedDestination(view.webContents.getURL());
+      this.onPageActivity?.(tabId);
+    }
     this.touched.add(view.webContents);
     return view.webContents;
   }
 
   async presentAction(tabId: string, name: string, signal: AbortSignal): Promise<void> {
     if (signal.aborted) throw new Error('cancelled');
-    const wc = this.wcFor(tabId);
+    const navigationOnly = name === 'navigate' || name === 'new_tab';
+    const wc = this.wcFor(tabId, navigationOnly);
+    if (navigationOnly) {
+      // Recovery can navigate to an allowed source without reading or
+      // decorating the blocked page it is leaving behind.
+      this.readingPresentation = undefined;
+      if (isBlockedDestination(tabManager.getNavigationUrl(tabId) ?? '') || isBlockedDestination(wc.getURL())) return;
+      this.onPageActivity?.(tabId);
+    }
     await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
       const element = document.querySelector('main h1, article h1, h1, main p, article p');
       const rect = element?.getBoundingClientRect();
@@ -113,15 +128,16 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   // After a page loads: clear any cookie banner, and say so.
   private async afterLoad(wc: WebContents, mode: WaitMode): Promise<{ consent?: string }> {
+    assertAllowedDestination(wc.getURL());
     if (mode === 'none') return {};
     const hit = await dismissConsent(wc);
     return hit ? { consent: describeConsent(hit) } : {};
   }
 
   async navigate(tabId: string, url: string, opts: { wait?: WaitMode } = {}) {
-    const wc = this.wcFor(tabId);
     // Second line of defence behind the navigate schema's allowlist.
     assertWebUrl(url);
+    const wc = this.wcFor(tabId, true);
     const mode = opts.wait ?? 'idle';
     let status: number | undefined;
     const onNavigate = (_e: unknown, _url: string, code: number) => {
@@ -161,7 +177,9 @@ export class DesktopToolRuntime implements ToolRuntime {
     } finally {
       if (!wc.isDestroyed()) wc.off('did-navigate', onNavigate);
     }
+    assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
     const extra = await this.afterLoad(wc, mode);
+    this.onPageActivity?.(tabId);
     // A page load wipes the overlay with the old document; put the pointer
     // back where a person's would be, so the user can follow the agent.
     await wc
@@ -214,6 +232,7 @@ export class DesktopToolRuntime implements ToolRuntime {
       })()`).catch(() => {});
       await presentationPause(550, presentation.signal);
     }
+    assertAllowedDestination(wc.getURL());
     return { title: wc.getTitle(), url: wc.getURL(), text };
   }
 
@@ -266,7 +285,15 @@ export class DesktopToolRuntime implements ToolRuntime {
           if (!/context was destroyed|frame was disposed|Render frame was disposed/i.test((e as Error).message)) throw e;
         }
       }
+      // Refuse a prevented navigation before waiting for a load that cannot
+      // complete or inspecting the previous document for DOM quiet.
+      assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+      assertAllowedDestination(wc.getURL());
     }, mode);
+    // A prevented navigation leaves getURL() on the previous document.
+    // Report the attempted destination's refusal instead of a successful click.
+    assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+    assertAllowedDestination(wc.getURL());
     const extra = wc.getURL() !== before ? await this.afterLoad(wc, mode) : {};
     return { matched, url: wc.getURL(), ...extra };
   }
@@ -407,7 +434,8 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async listLinks(tabId: string): Promise<{ text: string; href: string }[]> {
     const wc = this.wcFor(tabId);
-    return (await wc.executeJavaScript(LIST_LINKS)) as { text: string; href: string }[];
+    const links = (await wc.executeJavaScript(LIST_LINKS)) as { text: string; href: string }[];
+    return links.filter((link) => !isBlockedDestination(link.href));
   }
 
   async queryDom(tabId: string, selector: string): Promise<{ matches: number }> {
@@ -454,6 +482,7 @@ export class DesktopToolRuntime implements ToolRuntime {
         });
       }
       await pageQuiet(wc);
+      assertAllowedDestination(tabManager.getNavigationUrl(tab.id) ?? '');
       const extra = await this.afterLoad(wc, 'idle');
       const now = tabManager.list().find((t) => t.id === tab.id);
       return { id: tab.id, title: now?.title ?? wc.getTitle(), url: wc.getURL(), active: true, ...extra };
@@ -462,6 +491,7 @@ export class DesktopToolRuntime implements ToolRuntime {
   }
 
   async switchTab(tabId: string): Promise<TabSummary> {
+    this.wcFor(tabId);
     tabManager.activate(tabId);
     const list = tabManager.list();
     const tab = list.find((t) => t.id === tabId);
@@ -490,7 +520,7 @@ export class DesktopToolRuntime implements ToolRuntime {
   // after therefore returned the URL we just left, so the model saw an
   // unchanged URL, decided the step hadn't worked, and went back a second time.
   // Wait for the navigation to actually commit.
-  private async afterNavigation(wc: WebContents, act: () => Promise<void>): Promise<{ url: string }> {
+  private async afterNavigation(tabId: string, wc: WebContents, act: () => Promise<void>): Promise<{ url: string }> {
     const settled = new Promise<void>((resolve) => {
       const done = () => {
         clearTimeout(timer);
@@ -508,22 +538,24 @@ export class DesktopToolRuntime implements ToolRuntime {
     });
     await act();
     await settled;
+    assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+    assertAllowedDestination(wc.getURL());
     return { url: wc.getURL() };
   }
 
   async goBack(tabId: string): Promise<{ url: string }> {
     const wc = this.wcFor(tabId);
-    return this.afterNavigation(wc, () => tabManager.back(tabId));
+    return this.afterNavigation(tabId, wc, () => tabManager.back(tabId));
   }
 
   async goForward(tabId: string): Promise<{ url: string }> {
     const wc = this.wcFor(tabId);
-    return this.afterNavigation(wc, () => tabManager.forward(tabId));
+    return this.afterNavigation(tabId, wc, () => tabManager.forward(tabId));
   }
 
   async reload(tabId: string): Promise<{ url: string }> {
     const wc = this.wcFor(tabId);
-    return this.afterNavigation(wc, () => tabManager.reload(tabId));
+    return this.afterNavigation(tabId, wc, () => tabManager.reload(tabId));
   }
 
   async scroll(
@@ -544,7 +576,11 @@ export class DesktopToolRuntime implements ToolRuntime {
     await settleAfter(wc, async () => {
       wc.focus();
       await withInput(wc, (send) => pressWith(send, KEY_DEFS[key]));
+      assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+      assertAllowedDestination(wc.getURL());
     });
+    assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+    assertAllowedDestination(wc.getURL());
     return { pressed: key };
   }
 

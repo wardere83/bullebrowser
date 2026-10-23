@@ -1,6 +1,7 @@
 import { normalizeAccessibility } from '../../shared/accessibility.js';
 import { DEFAULT_SETTINGS, type AppSettings } from '../../shared/ipc.js';
 import { createStore } from './store.js';
+import { isBlockedDestination } from '@bullebrowser/agent-core';
 
 const store = createStore<AppSettings & Record<string, unknown>>(
   'settings',
@@ -30,11 +31,9 @@ export function getSettings(): AppSettings {
     'https://bullebrowser.com',
     'https://bullebrowser.com/',
     'https://bullebrowser.com/preview',
-    'https://duckduckgo.com',
-    'https://duckduckgo.com/',
   ]);
   const normalizedHomepageUrl =
-    !storedHomepageUrl?.trim() || LEGACY_DEFAULTS.has(storedHomepageUrl)
+    !storedHomepageUrl?.trim() || LEGACY_DEFAULTS.has(storedHomepageUrl) || isBlockedDestination(storedHomepageUrl)
       ? DEFAULT_SETTINGS.homepageUrl
       : storedHomepageUrl;
 
