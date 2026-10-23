@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
 import { activityActions, pagesRead, type ActivityStatus } from './task-activity.js';
+import { useBrowserStore } from '../state/browser-store.js';
 
 export function TaskActivity({
   steps,
@@ -78,6 +79,10 @@ export function TaskActivity({
             ))}
           </ol>
           {failed && currentStep && <p role="alert" className="mt-2 break-words text-danger">{currentStep}</p>}
+          {failed && /Web search is not configured/i.test(currentStep) && (
+            <button type="button" onClick={() => useBrowserStore.getState().openSettings()}
+              className="mt-3 rounded bg-primary px-3 py-2 text-sm text-white">Configure web search</button>
+          )}
         </div>
       )}
     </section>

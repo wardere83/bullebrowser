@@ -79,6 +79,17 @@ async function ask(userMessage: string, overrides: Partial<AgentInput> = {}): Pr
 }
 
 describe('the keyless assistant', () => {
+  it('shows a readable configuration error without internal envelopes', async () => {
+    const { webSearchTool } = await import('./search.js');
+    let message = '';
+    try {
+      await ask('Find grants for California schools', { researchMode: true, extraTools: [webSearchTool({})] });
+    } catch (error) { message = (error as Error).message; }
+    expect(message).toContain('Open Settings → Web search');
+    expect(message).not.toContain('untrusted_page_data');
+    expect(message).not.toContain('"error"');
+    expect(message).not.toContain('UNKNOWN');
+  });
   it('searches and reads multiple linked sources for research prompts without a key', async () => {
     let currentUrl = '';
     const context = makeContext({

@@ -167,6 +167,8 @@ function previewOutput(output: unknown): unknown {
 // so the consent gate, the policy checks and the step reporting exist once
 // rather than once per provider.
 export interface ToolCallOutcome {
+  /** Human-readable failure, separate from the model's untrusted-data envelope. */
+  errorMessage?: string;
   text: string;
   isError: boolean;
   /** Base64 PNG, set only for a successful screenshot. */
@@ -255,6 +257,7 @@ export async function executeToolCall(
       text: sealed(JSON.stringify(neutralizeDeep(errorPayload(err))), name),
       isError: true,
       errorCode: err.code,
+      errorMessage: err.message,
     });
   };
 

@@ -1,4 +1,5 @@
 import type { ApiTool } from './types.js';
+import { ToolError } from './errors.js';
 
 /** Runs only in the desktop main process or trusted widget backend. */
 export function webSearchTool(options: {
@@ -19,7 +20,7 @@ export function webSearchTool(options: {
           (input.count !== undefined && (!Number.isInteger(input.count) || Number(input.count) < 1 || Number(input.count) > 10))) {
         throw new Error('Search requires a nonempty query (up to 400 characters) and count from 1 to 10.');
       }
-      if (!options.apiKey?.trim()) throw new Error('Web search is not configured. Open Settings → Web search in the desktop app, or set BRAVE_SEARCH_API_KEY in the backend environment. Search-engine navigation will not be substituted.');
+      if (!options.apiKey?.trim()) throw new ToolError('SEARCH_NOT_CONFIGURED', 'Web search is not configured. Open Settings → Web search and save your search API key, then resend this task. Keys in a development .env file or GitHub Secrets do not configure the installed app.');
       const url = new URL('https://api.search.brave.com/res/v1/web/search');
       url.searchParams.set('q', input.query.trim());
       url.searchParams.set('count', String(input.count ?? 5));

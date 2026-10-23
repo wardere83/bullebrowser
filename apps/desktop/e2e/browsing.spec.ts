@@ -382,6 +382,22 @@ test('each browser option asks a short app question instead of filling the compo
   } finally { await close(); }
 });
 
+test('missing search configuration offers Settings without exposing tool envelopes', async () => {
+  const { app, win, close } = await launch();
+  try {
+    await app.evaluate(() => { process.env.BRAVE_SEARCH_API_KEY = ''; });
+    await win.locator('aside textarea').fill('Find grants for California schools');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+    const configure = win.getByRole('button', { name: 'Configure web search', exact: true });
+    await expect(configure).toBeVisible();
+    await expect(win.getByRole('region', { name: 'Task activity' })).not.toContainText('untrusted_page_data');
+    await configure.click();
+    await expect(win.getByRole('dialog', { name: 'Settings', exact: true })).toBeVisible();
+    await expect(win.getByLabel('Brave Search API key')).toBeVisible();
+  } finally { await close(); }
+});
+
 test('search-key settings are visible, masked and separate from model keys', async () => {
   const { win, close } = await launch();
   try {

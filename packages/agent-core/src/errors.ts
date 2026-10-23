@@ -8,6 +8,10 @@
 // `next` tells the model what to do when it sees one.
 
 export const TOOL_ERRORS = {
+  SEARCH_NOT_CONFIGURED: {
+    retryable: false,
+    next: 'Ask the user to configure Web search in Settings. Do not retry or substitute a browser search engine.',
+  },
   ELEMENT_NOT_FOUND: {
     retryable: false,
     next: 'Nothing on the page matched. Call find_elements (or read_page) and use a ref from it.',

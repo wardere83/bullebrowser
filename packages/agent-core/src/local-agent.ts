@@ -147,7 +147,7 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     if (!budget.charge(name).ok) throw new Error('Step budget exhausted.');
     const result = await call(name, args);
     if (input.context.signal.aborted) throw new Error('cancelled');
-    if (result.isError) throw new Error(result.text);
+    if (result.isError) throw new Error(result.errorMessage ?? 'The requested action could not complete. Check the task activity for details.');
     // executeToolCall contains and neutralizes page data for cloud callers.
     // Local commands consume it only as data, never as another instruction.
     const data = result.text.replace(/^<untrusted_page_data[^>]*>\n/, '').replace(/\n<\/untrusted_page_data>$/, '');

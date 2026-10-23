@@ -16,7 +16,7 @@ it('uses header authentication, filters unsafe and duplicate results, and labels
 it('fails explicitly without a key or valid arguments without making requests', async () => {
   const request = vi.fn<typeof fetch>();
   const tool = webSearchTool({ fetch: request });
-  await expect(tool.execute({ query: 'grants' })).rejects.toThrow('BRAVE_SEARCH_API_KEY');
+  await expect(tool.execute({ query: 'grants' })).rejects.toMatchObject({ code: 'SEARCH_NOT_CONFIGURED', message: expect.stringContaining('Open Settings → Web search') });
   await expect(tool.execute({ query: '', count: 99 })).rejects.toThrow('nonempty');
   expect(request).not.toHaveBeenCalled();
 });
