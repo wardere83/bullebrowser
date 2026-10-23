@@ -25,7 +25,7 @@ export const BROWSER_SYSTEM = [
   '',
   'Browsing effectively:',
   '- To find information you do not already have, search: navigate to',
-  '  https://duckduckgo.com/?q=<query> (or google/bing), read_page the results,',
+  '  https://www.bing.com/search?q=<query> (or another user-selected search provider), read_page the results,',
   '  then open the most relevant results and read those pages before answering.',
   '- After navigate or a click that loads new content, use wait_for',
   '  (selector or networkIdle) before read_page when the page renders',
