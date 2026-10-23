@@ -30,11 +30,9 @@ export function getSettings(): AppSettings {
     'https://bullebrowser.com',
     'https://bullebrowser.com/',
     'https://bullebrowser.com/preview',
-    'https://duckduckgo.com',
-    'https://duckduckgo.com/',
   ]);
   const normalizedHomepageUrl =
-    !storedHomepageUrl?.trim() || LEGACY_DEFAULTS.has(storedHomepageUrl)
+    !storedHomepageUrl?.trim() || LEGACY_DEFAULTS.has(storedHomepageUrl) || /^https?:\/\/(?:www\.)?duckduckgo\.com(?:[/:?#]|$)/i.test(storedHomepageUrl)
       ? DEFAULT_SETTINGS.homepageUrl
       : storedHomepageUrl;
 
