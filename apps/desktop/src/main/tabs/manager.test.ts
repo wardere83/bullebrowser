@@ -1,10 +1,12 @@
 import { EventEmitter } from 'node:events';
+import { runInNewContext } from 'node:vm';
 import type { BrowserWindow } from 'electron';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 interface MockView {
   webContents: EventEmitter & {
     loadURL: Mock; reload: Mock; stop: Mock; getURL: Mock;
+    executeJavaScript: Mock; setWindowOpenHandler: Mock;
     navigationHistory: { canGoBack: Mock; goBack: Mock };
   };
   setVisible: Mock;
@@ -41,7 +43,6 @@ vi.mock('electron', async () => {
 });
 vi.mock('../storage/history.js', () => ({ historyStore: { record: mocks.record } }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ homepageUrl: 'about:blank' }) }));
-vi.mock('../agent/browser/browsing-cloud.js', () => ({ browsingCloudScript: () => '' }));
 vi.mock('../agent/browser/net-activity.js', () => ({ trackNetwork: vi.fn() }));
 
 beforeEach(() => {
@@ -115,6 +116,63 @@ describe('native browsing navigation recovery', () => {
     view.webContents.emit('will-frame-navigate', event);
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(manager.list()[0]?.loadError).toBeUndefined();
+  });
+
+  it('records denied popup attempts on the originating tab without opening or loading another page', async () => {
+    const { manager, id, view } = await createManager();
+    const allowed = 'https://agency.gov/';
+    await manager.navigate(id, allowed);
+    view.webContents.getURL.mockReturnValue(allowed);
+    const loads = view.webContents.loadURL.mock.calls.length;
+    const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
+    const blocked = 'https://duckduckgo.com/?q=private';
+    expect(open({ url: blocked })).toEqual({ action: 'deny' });
+    expect(manager.getNavigationUrl(id)).toBe(blocked);
+    expect(manager.list()).toHaveLength(1);
+    expect(manager.list()[0]).toMatchObject({ id, url: blocked, canGoBack: true, loadError: { code: -20 } });
+    expect(mocks.views).toHaveLength(1);
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+    expect(view.webContents.getURL()).toBe(allowed);
+    await manager.back(id);
+    expect(manager.getNavigationUrl(id)).toBe(allowed);
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+  });
+
+  it('still opens allowed popups as managed tabs without marking the originating page as blocked', async () => {
+    const { manager, id, view } = await createManager();
+    const allowed = 'https://agency.gov/';
+    await manager.navigate(id, allowed);
+    view.webContents.getURL.mockReturnValue(allowed);
+    const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
+    expect(open({ url: 'https://agency.gov/grants' })).toEqual({ action: 'deny' });
+    expect(manager.getNavigationUrl(id)).toBe(allowed);
+    expect(manager.list().find((tab) => tab.id === id)?.loadError).toBeUndefined();
+    expect(mocks.views).toHaveLength(2);
+    expect(mocks.views[1]!.webContents.loadURL).toHaveBeenCalledExactlyOnceWith('https://agency.gov/grants');
+    expect(manager.list()[1]).toMatchObject({ url: 'https://agency.gov/grants', active: true });
+  });
+
+  it('clears retained browsing decoration when the run stopped while its policy error hid the document', async () => {
+    const { manager, id, view } = await createManager();
+    const allowed = 'https://agency.gov/';
+    await manager.navigate(id, allowed);
+    view.webContents.getURL.mockReturnValue(allowed);
+    let decorated = true;
+    const cloud = { remove: () => { decorated = false; }, toggleAttribute: vi.fn() };
+    const page = { window: {}, document: { getElementById: () => decorated ? cloud : null } };
+    view.webContents.executeJavaScript.mockImplementation(async (script: string) => runInNewContext(script, page));
+    manager.setBrowsingActivity('run', id);
+    expect(decorated).toBe(true);
+    view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, 'https://duckduckgo.com/');
+    const scriptsBeforeStop = view.webContents.executeJavaScript.mock.calls.length;
+    manager.clearBrowsingActivity('run');
+    // Policy keeps the hidden document untouched until explicit recovery.
+    expect(view.webContents.executeJavaScript).toHaveBeenCalledTimes(scriptsBeforeStop);
+    expect(decorated).toBe(true);
+    await manager.back(id);
+    expect(manager.getNavigationUrl(id)).toBe(allowed);
+    expect(decorated).toBe(false);
   });
 
   it.each([false, true])('restores the retained allowed page without loading or traversing history (native back: %s)', async (nativeBack) => {

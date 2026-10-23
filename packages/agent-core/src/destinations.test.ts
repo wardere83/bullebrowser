@@ -292,6 +292,22 @@ describe('Brave-only discovery failures', () => {
 describe('embedded runtime destination restriction', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  function formControl(tagName: string, type: string, form: { action: string }) {
+    const control = {
+      tagName, type, form, formAction: '', outerHTML: `<${tagName.toLowerCase()} type="${type}">`,
+      matches: vi.fn(() => false), getAttribute: vi.fn<(name: string) => string | null>(() => null),
+      closest: vi.fn(), scrollIntoView: vi.fn(), click: vi.fn(), dispatchEvent: vi.fn(),
+    };
+    control.closest.mockImplementation((selector: string) => selector === 'button, input' ? control : null);
+    return control;
+  }
+
+  function stubKeyboardEvents() {
+    vi.stubGlobal('KeyboardEvent', class {
+      constructor(public type: string, public options: KeyboardEventInit) {}
+    });
+  }
+
   it.each(['goBack', 'goForward'] as const)('refuses %s from an allowed page when the history target cannot be verified', async (method) => {
     const pageLocation = { href: 'https://agency.gov/' };
     vi.stubGlobal('location', pageLocation);
@@ -336,9 +352,10 @@ describe('embedded runtime destination restriction', () => {
     expect(showCursor).not.toHaveBeenCalled();
   });
 
-  it.each(['click', 'Enter'])('resolves a child span to its submitting control before %s', async (action) => {
+  it.each(['click', 'Enter', 'Space'] as const)('resolves a child span to its submitting control before %s', async (action) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
     const button = {
+      tagName: 'BUTTON', type: 'submit', matches: () => false,
       form: { action: 'https://duckduckgo.com/submit' },
       getAttribute: () => null,
     };
@@ -351,17 +368,84 @@ describe('embedded runtime destination restriction', () => {
       querySelectorAll: (selector: string) => selector === '*' ? [] : [span],
     });
     const runtime = createDomToolRuntime();
-    await expect(action === 'click' ? runtime.click('page', '#submit span') : runtime.pressKey('page', 'Enter'))
+    await expect(action === 'click' ? runtime.click('page', '#submit span') : runtime.pressKey('page', action))
       .rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
     expect(span.scrollIntoView).not.toHaveBeenCalled();
     expect(span.click).not.toHaveBeenCalled();
     expect(span.dispatchEvent).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['BUTTON', 'button', 'click'], ['BUTTON', 'reset', 'click'],
+    ['INPUT', 'button', 'click'], ['INPUT', 'reset', 'click'], ['INPUT', 'text', 'click'],
+    ['INPUT', 'checkbox', 'click'], ['INPUT', 'radio', 'click'],
+    ['BUTTON', 'button', 'Enter'], ['INPUT', 'checkbox', 'Space'], ['INPUT', 'text', 'Space'],
+  ] as const)('allows %s type=%s with %s when the unused form action is blocked', async (tagName, type, action) => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/' });
+    const control = formControl(tagName, type, { action: 'https://duckduckgo.com/submit' });
+    vi.stubGlobal('document', {
+      activeElement: control,
+      querySelectorAll: (selector: string) => selector === '*' ? [] : [control],
+    });
+    stubKeyboardEvents();
+    const runtime = createDomToolRuntime();
+    if (action === 'click') {
+      await expect(runtime.click('page', '#control')).resolves.toMatchObject({ matched: control.outerHTML });
+      expect(control.click).toHaveBeenCalledOnce();
+    } else {
+      await expect(runtime.pressKey('page', action)).resolves.toEqual({ pressed: action });
+      expect(control.dispatchEvent).toHaveBeenCalledTimes(2);
+    }
+    expect(control.getAttribute).not.toHaveBeenCalled();
+  });
+
+  it.each(['submit', 'image'])('still blocks clicks on an input type=%s before activation', async (type) => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/' });
+    const control = formControl('INPUT', type, { action: 'https://duckduckgo.com/submit' });
+    vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [control] });
+    await expect(createDomToolRuntime().click('page', '#submit')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(control.click).not.toHaveBeenCalled();
+    expect(control.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it.each(['form action', 'default submitter override'])('checks the actual %s for implicit Enter submission', async (destination) => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/' });
+    const form = { action: destination === 'form action' ? 'https://duckduckgo.com/submit' : 'https://agency.gov/submit', getRootNode: vi.fn() };
+    const input = formControl('INPUT', 'text', form);
+    const submitter = formControl('BUTTON', 'submit', form);
+    submitter.getAttribute.mockReturnValue('submit');
+    submitter.formAction = 'https://duckduckgo.com/base/submit';
+    const controls = destination === 'form action' ? [input] : [input, submitter];
+    form.getRootNode.mockReturnValue({ querySelectorAll: () => controls });
+    vi.stubGlobal('document', { activeElement: input });
+
+    await expect(createDomToolRuntime().pressKey('page', 'Enter')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(input.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(['allowed override', 'disabled default submitter', 'multiple fields without submitter'])('allows Enter with %s despite the unused blocked form action', async (scenario) => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/' });
+    const form = { action: 'https://duckduckgo.com/submit', getRootNode: vi.fn() };
+    const input = formControl('INPUT', 'text', form);
+    const submitter = formControl('BUTTON', 'submit', form);
+    submitter.getAttribute.mockReturnValue('https://agency.gov/submit');
+    submitter.formAction = 'https://agency.gov/submit';
+    submitter.matches.mockReturnValue(scenario === 'disabled default submitter');
+    const controls = scenario === 'multiple fields without submitter' ?
+      [input, formControl('INPUT', 'text', form)] : [input, submitter];
+    form.getRootNode.mockReturnValue({ querySelectorAll: () => controls });
+    vi.stubGlobal('document', { activeElement: input });
+    stubKeyboardEvents();
+
+    await expect(createDomToolRuntime().pressKey('page', 'Enter')).resolves.toEqual({ pressed: 'Enter' });
+    expect(input.dispatchEvent).toHaveBeenCalledTimes(2);
+  });
+
   it.each(['resolved formAction', 'document base URI'])('checks a relative formaction against %s', async (resolution) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/current' });
     const baseURI = 'https://duckduckgo.com/search/';
     const button = {
+      tagName: 'BUTTON', type: 'submit', matches: () => false,
       form: { action: 'https://agency.gov/safe' },
       formAction: resolution === 'resolved formAction' ? 'https://duckduckgo.com/search/submit' : '',
       ownerDocument: { baseURI },

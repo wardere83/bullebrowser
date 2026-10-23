@@ -410,7 +410,7 @@ test('restricted destinations never send requests through navigation, redirects,
       return;
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
+    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><a id="blocked-popup-link" target="_blank" href="http://duckduckgo.com:${port}/popup-link">Restricted popup</a><button id="blocked-popup-script" onclick="window.open('http://html.duckduckgo.com:${port}/popup-script')">Open restricted popup</button><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = (server.address() as { port: number }).port;
@@ -434,8 +434,25 @@ test('restricted destinations never send requests through navigation, redirects,
     });
     await enterAddress(win, `${base}/allowed`);
     await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
+    await app.evaluate(() => {
+      const manager = (globalThis as unknown as { __bbTest: { tabManager: Hooks['tabManager'] & {
+        setBrowsingActivity(runId: string, tabId: string): void;
+      } } }).__bbTest.tabManager;
+      manager.setBrowsingActivity('policy-recovery', manager.getActiveId());
+    });
+    const hasBrowsingCloud = () => app.evaluate(() => {
+      const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
+      return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_browsing_cloud__'))");
+    });
+    await expect.poll(hasBrowsingCloud).toBe(true);
     await enterAddress(win, `http://duckduckgo.com:${port}/typed`);
     await expect(win.getByRole('region', { name: 'Page loading error' })).toContainText('blocked by BulleBrowser policy');
+    await app.evaluate(() => {
+      const manager = (globalThis as unknown as { __bbTest: { tabManager: {
+        clearBrowsingActivity(runId: string): void;
+      } } }).__bbTest.tabManager;
+      manager.clearBrowsingActivity('policy-recovery');
+    });
     const captureFailure = await win.evaluate(async () => {
       try { await window.bullebrowser.agent.captureScreenshot(); return ''; }
       catch (error) { return (error as Error).message; }
@@ -445,6 +462,7 @@ test('restricted destinations never send requests through navigation, redirects,
     await expect(recovery).toBeEnabled();
     await recovery.click();
     await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
+    await expect.poll(hasBrowsingCloud).toBe(false);
     const outcomes = await app.evaluate(async ({ session }, fixturePort) => {
       const hooks = (globalThis as unknown as { __bbTest: {
         tabManager: Hooks['tabManager'] & {
@@ -492,6 +510,11 @@ test('restricted destinations never send requests through navigation, redirects,
       await wc.executeJavaScript(`window.open('http://html.duckduckgo.com:${fixturePort}/popup'); true`);
       const afterPopup = manager.list().length;
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await attempt('agent-popup-link', () => hooks.runtime.click(id, '#blocked-popup-link'));
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      await attempt('agent-popup-script', () => hooks.runtime.click(id, '#blocked-popup-script'));
+      const afterAgentPopups = manager.list().length;
+      await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
       await attempt('agent-click', () => hooks.runtime.click(id, '#blocked-link'));
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
       await wc.executeJavaScript("document.querySelector('#blocked-input').focus()");
@@ -504,14 +527,16 @@ test('restricted destinations never send requests through navigation, redirects,
       const isolated = session.fromPartition('destination-guard-regression');
       await attempt('isolated-session', () => isolated.fetch(root));
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/control`);
-      return { refused, policyFailures, pageResources, beforePopup, afterPopup, afterRedirect };
+      return { refused, policyFailures, pageResources, beforePopup, afterPopup, afterAgentPopups, afterRedirect };
     }, port);
-    expect(outcomes.refused).toEqual(['tab-create', 'tab-navigate', 'agent-navigate', 'agent-click', 'agent-enter', 'blocked-redirect-read', 'isolated-session']);
+    expect(outcomes.refused).toEqual(['tab-create', 'tab-navigate', 'agent-navigate', 'agent-popup-link', 'agent-popup-script', 'agent-click', 'agent-enter', 'blocked-redirect-read', 'isolated-session']);
     expect(outcomes.policyFailures).toMatchObject({
+      'agent-popup-link': 'BLOCKED_BY_POLICY', 'agent-popup-script': 'BLOCKED_BY_POLICY',
       'agent-click': 'BLOCKED_BY_POLICY', 'agent-enter': 'BLOCKED_BY_POLICY', 'blocked-redirect-read': 'BLOCKED_BY_POLICY',
     });
     expect(outcomes.pageResources).toEqual(['image-blocked', 'fetch-blocked']);
     expect(outcomes.afterPopup).toBe(outcomes.beforePopup);
+    expect(outcomes.afterAgentPopups).toBe(outcomes.beforePopup);
     expect(outcomes.afterRedirect).not.toContain('duckduckgo.com');
     const sent = await app.evaluate(() => (globalThis as Record<string, unknown>).__restrictedRequestProbe as string[]);
     expect(sent.some((url) => url === `${base}/control`)).toBe(true);

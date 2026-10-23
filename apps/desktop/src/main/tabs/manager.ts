@@ -191,6 +191,7 @@ class TabManager {
       delete tab.loadError;
       this.relayout();
       this.broadcast();
+      await this.refreshBrowsingCloud(tab);
       return;
     }
     const wc = tab.view.webContents;
@@ -401,7 +402,10 @@ class TabManager {
       this.broadcast();
     });
     wc.setWindowOpenHandler(({ url }) => {
-      if (!isBlockedDestination(url)) void this.create(url, tab.id).catch(() => {});
+      // Keep a denied popup visible to the action that opened it, just like a
+      // denied same-tab navigation. Its existing document remains recoverable.
+      if (isBlockedDestination(url)) this.blockNavigation(tab, url);
+      else void this.create(url, tab.id).catch(() => {});
       return { action: 'deny' };
     });
     // A page can end itself (window.close() after a sign-in or a download
