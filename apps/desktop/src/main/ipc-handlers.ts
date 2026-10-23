@@ -157,9 +157,12 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     const id = tabManager.getActiveId();
     const view = id ? tabManager.getView(id) : null;
     if (!id || !view) return null;
+    assertAllowedDestination(tabManager.getNavigationUrl(id) ?? '');
     assertAllowedDestination(view.webContents.getURL());
     return tabManager.withoutBrowsingCloud(id, async () => {
       const image = await view.webContents.capturePage();
+      assertAllowedDestination(tabManager.getNavigationUrl(id) ?? '');
+      assertAllowedDestination(view.webContents.getURL());
       return { pngBase64: image.toPNG().toString('base64'), url: view.webContents.getURL() };
     });
   });

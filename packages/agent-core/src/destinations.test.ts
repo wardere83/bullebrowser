@@ -120,6 +120,58 @@ describe('agent destination enforcement', () => {
     expect(ctx.runtime.readPage).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['click', { target: 'Submit' }], ['clickElement', { target: 'Submit' }],
+    ['type', { target: 'Search', text: 'private' }], ['typeIntoField', { target: 'Search', text: 'private' }],
+    ['press_key', { key: 'Enter' }], ['screenshot', {}], ['extract', { schema: {} }],
+    ['find_elements', {}], ['scroll', { direction: 'down' }], ['reload', {}],
+  ])('ignores a forged tabId when %s acts on the active tab', async (name, args) => {
+    const ctx = context('https://duckduckgo.com/');
+    vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
+      { id: '1', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: 'allowed', title: 'Allowed', url: 'https://agency.gov/', active: false },
+    ]);
+    const { outcome, steps } = await execute(String(name), { ...args, tabId: 'allowed' }, ctx);
+    expect(outcome.errorCode).toBe('BLOCKED_BY_POLICY');
+    expect(steps.map((step) => step.type)).toEqual(['error']);
+    expect(ctx.runtime.inspectTarget).not.toHaveBeenCalled();
+    expect(ctx.beforeBrowserAction).not.toHaveBeenCalled();
+    for (const [method, fn] of Object.entries(ctx.runtime)) {
+      if (method !== 'listTabs') expect(fn, method).not.toHaveBeenCalled();
+    }
+  });
+
+  it('also rejects a forged tabId through a direct registry call', async () => {
+    const ctx = context('https://duckduckgo.com/');
+    vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
+      { id: '1', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: 'allowed', title: 'Allowed', url: 'https://agency.gov/', active: false },
+    ]);
+    const input = { target: 'Submit', tabId: 'allowed' };
+    await expect(tools.click.execute(input, ctx)).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(ctx.runtime.click).not.toHaveBeenCalled();
+  });
+
+  it('still lets a tab-aware read inspect an allowed nonactive tab', async () => {
+    const ctx = context('https://duckduckgo.com/');
+    vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
+      { id: '1', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: 'allowed', title: 'Allowed', url: 'https://agency.gov/', active: false },
+    ]);
+    vi.mocked(ctx.runtime.readPage).mockResolvedValue({ title: 'Source', url: 'https://agency.gov/', text: 'Source text' });
+    expect((await execute('read_page', { tabId: 'allowed' }, ctx)).outcome.isError).toBe(false);
+    expect(ctx.runtime.readPage).toHaveBeenCalledWith('allowed');
+  });
+
+  it('checks the actual active metadata for getActiveTab', async () => {
+    const ctx = context();
+    vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
+      { id: '1', title: 'Allowed', url: 'https://agency.gov/', active: false },
+      { id: '2', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+    ]);
+    expect((await execute('getActiveTab', {}, ctx)).outcome.errorCode).toBe('BLOCKED_BY_POLICY');
+  });
+
   it('allows leaving a blocked tab for an allowed source and closing it', async () => {
     const ctx = context('https://duckduckgo.com/');
     expect((await execute('navigate', { url: 'https://agency.gov/' }, ctx)).outcome.isError).toBe(false);
@@ -136,6 +188,60 @@ describe('agent destination enforcement', () => {
     expect(outcome.errorCode).toBe('BLOCKED_BY_POLICY');
     expect(outcome.text).not.toContain('Must not reach model');
     expect(steps.some((step) => step.type === 'tool_result')).toBe(false);
+  });
+
+  it.each(['click', 'press_key'])('does not report success when %s navigates but returns no final URL', async (name) => {
+    const ctx = context();
+    let url = 'https://agency.gov/';
+    vi.mocked(ctx.runtime.listTabs).mockImplementation(async () => [{ id: '1', title: 'Page', url, active: true }]);
+    vi.mocked(ctx.runtime.click).mockImplementation(async () => {
+      url = 'https://duckduckgo.com/';
+      return { matched: 'Link', url: 'https://agency.gov/' };
+    });
+    vi.mocked(ctx.runtime.pressKey).mockImplementation(async () => {
+      url = 'https://duckduckgo.com/';
+      return { pressed: 'Enter' };
+    });
+    const { outcome, steps } = await execute(name, name === 'click' ? { target: 'Link' } : { key: 'Enter' }, ctx);
+    expect(outcome).toMatchObject({ isError: true, errorCode: 'BLOCKED_BY_POLICY' });
+    expect(steps.some((step) => step.type === 'tool_result')).toBe(false);
+  });
+
+  it('rechecks the original target after an action changes the active tab', async () => {
+    const ctx = context();
+    let originalUrl = 'https://agency.gov/';
+    vi.mocked(ctx.runtime.listTabs).mockImplementation(async () => [
+      { id: '1', title: 'Original', url: originalUrl, active: ctx.activeTabId === '1' },
+      { id: '2', title: 'Other', url: 'https://other.gov/', active: ctx.activeTabId === '2' },
+    ]);
+    vi.mocked(ctx.runtime.click).mockImplementation(async () => {
+      originalUrl = 'https://duckduckgo.com/';
+      ctx.activeTabId = '2';
+      return { matched: 'Link' };
+    });
+    expect((await execute('click', { target: 'Link' }, ctx)).outcome.errorCode).toBe('BLOCKED_BY_POLICY');
+  });
+
+  it('checks the requested nonactive tab after a read, even if its result URL is stale', async () => {
+    const ctx = context();
+    let targetUrl = 'https://other.gov/';
+    vi.mocked(ctx.runtime.listTabs).mockImplementation(async () => [
+      { id: '1', title: 'Current', url: 'https://agency.gov/', active: true },
+      { id: '2', title: 'Target', url: targetUrl, active: false },
+    ]);
+    vi.mocked(ctx.runtime.readPage).mockImplementation(async () => {
+      targetUrl = 'https://duckduckgo.com/';
+      return { title: 'Old', url: 'https://other.gov/', text: 'Stale source text' };
+    });
+    const { outcome, steps } = await execute('read_page', { tabId: '2' }, ctx);
+    expect(outcome.errorCode).toBe('BLOCKED_BY_POLICY');
+    expect(steps.some((step) => step.type === 'tool_result')).toBe(false);
+  });
+
+  it('allows new-tab recovery without rechecking the blocked original page', async () => {
+    const ctx = context('https://duckduckgo.com/');
+    expect((await execute('new_tab', { url: 'https://agency.gov/' }, ctx)).outcome.isError).toBe(false);
+    expect(ctx.runtime.newTab).toHaveBeenCalledWith('https://agency.gov/');
   });
 
   it('does not perceive an already-open blocked page when a run starts', async () => {
@@ -211,5 +317,58 @@ describe('embedded runtime destination restriction', () => {
     expect(link.scrollIntoView).not.toHaveBeenCalled();
     expect(link.click).not.toHaveBeenCalled();
     expect(showCursor).not.toHaveBeenCalled();
+  });
+
+  it.each(['click', 'Enter'])('resolves a child span to its submitting control before %s', async (action) => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/' });
+    const button = {
+      form: { action: 'https://duckduckgo.com/submit' },
+      getAttribute: () => null,
+    };
+    const span = {
+      closest: (selector: string) => selector === 'button, input' ? button : null,
+      scrollIntoView: vi.fn(), click: vi.fn(), dispatchEvent: vi.fn(),
+    };
+    vi.stubGlobal('document', {
+      activeElement: span,
+      querySelectorAll: (selector: string) => selector === '*' ? [] : [span],
+    });
+    const runtime = createDomToolRuntime();
+    await expect(action === 'click' ? runtime.click('page', '#submit span') : runtime.pressKey('page', 'Enter'))
+      .rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(span.scrollIntoView).not.toHaveBeenCalled();
+    expect(span.click).not.toHaveBeenCalled();
+    expect(span.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(['resolved formAction', 'document base URI'])('checks a relative formaction against %s', async (resolution) => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/current' });
+    const baseURI = 'https://duckduckgo.com/search/';
+    const button = {
+      form: { action: 'https://agency.gov/safe' },
+      formAction: resolution === 'resolved formAction' ? 'https://duckduckgo.com/search/submit' : '',
+      ownerDocument: { baseURI },
+      getAttribute: () => 'submit',
+    };
+    const span = {
+      closest: (selector: string) => selector === 'button, input' ? button : null,
+      scrollIntoView: vi.fn(), click: vi.fn(),
+    };
+    vi.stubGlobal('document', { baseURI, querySelectorAll: (selector: string) => selector === '*' ? [] : [span] });
+    await expect(createDomToolRuntime().click('page', '#submit span')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(span.click).not.toHaveBeenCalled();
+    expect(span.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('does not report a direct DOM click as successful after its handler changes to a blocked URL', async () => {
+    const pageLocation = { href: 'https://agency.gov/' };
+    vi.stubGlobal('location', pageLocation);
+    const button = {
+      closest: () => null, scrollIntoView: vi.fn(), outerHTML: '<button>Open</button>',
+      click: vi.fn(() => { pageLocation.href = 'https://duckduckgo.com/'; }),
+    };
+    vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [button] });
+    await expect(createDomToolRuntime().click('page', 'button')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(button.click).toHaveBeenCalledOnce();
   });
 });

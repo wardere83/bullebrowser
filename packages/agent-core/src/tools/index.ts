@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { KEY_NAMES, type KeyName, type ToolContext, type ToolDefinition, type ToolName } from '../types.js';
-import { assertAllowedDestination, assertAllowedToolDestination, isBlockedDestination } from '../destinations.js';
+import { assertAllowedDestination, assertAllowedTab, assertAllowedToolDestination, isBlockedDestination } from '../destinations.js';
 
 const EmptyObject = z.object({}).strict();
 
@@ -454,8 +454,12 @@ const toolDefinitions = {
 export const tools = Object.fromEntries(Object.entries(toolDefinitions).map(([name, definition]) => {
   const tool = definition as ToolImpl<Record<string, unknown>, unknown>;
   return [name, { ...definition, execute: async (input: Record<string, unknown>, context: ToolContext) => {
-    await assertAllowedToolDestination(name, input, context);
+    const targetTabId = await assertAllowedToolDestination(name, input, context);
     const output = await tool.execute(input, context);
+    // An action may navigate without returning a URL, or return the URL it
+    // captured before navigation. Verify the actual targeted tab again before
+    // any success result reaches the model or the progress feed.
+    if (targetTabId) await assertAllowedTab(context, targetTabId);
     if (output && typeof output === 'object') {
       const result = output as Record<string, unknown>;
       if (typeof result.url === 'string') assertAllowedDestination(result.url);

@@ -96,7 +96,9 @@ test('keyless Voice Mode speaks the same general product answer', async () => {
     await app.evaluate(({ ipcMain }) => {
       ipcMain.removeHandler('voice:transcribe');
       ipcMain.handle('voice:transcribe', (_event, audio) => {
-        if (!(audio instanceof Float32Array) || !audio.length) throw new Error('Expected PCM audio');
+        if (!(audio instanceof Float32Array) || audio.length < 1600 || !audio.some((sample) => Math.abs(sample) > 0.003)) {
+          throw new Error('Expected at least 100 ms of captured PCM speech');
+        }
         return { text: 'How was BulleBrowser built?' };
       });
       // Capture what the bundled voice is asked to say; clips are short tones.
@@ -111,8 +113,25 @@ test('keyless Voice Mode speaks the same general product answer', async () => {
       });
     });
     await win.evaluate(() => {
-      const probe = { recorder: null as MediaRecorder | null, spoken: [] as string[], contexts: [] as AudioContext[] };
+      const probe = { recorder: null as MediaRecorder | null, spoken: [] as string[], contexts: [] as AudioContext[],
+        speechStartedAt: null as number | null, speechSeconds: 0, encodedBytes: 0 };
       (window as unknown as Record<string, unknown>).__identityVoice = probe;
+      // Observe the real samples consumed by LocalVoiceSession's speech
+      // detector. Recorder state alone says nothing about audio readiness,
+      // especially while a CI runner is starting its audio graph.
+      const readSamples = AnalyserNode.prototype.getFloatTimeDomainData;
+      AnalyserNode.prototype.getFloatTimeDomainData = function (samples) {
+        readSamples.call(this, samples);
+        if (probe.recorder?.state !== 'recording') return;
+        const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
+        if (rms > 0.025) {
+          probe.speechStartedAt ??= this.context.currentTime;
+          probe.speechSeconds = this.context.currentTime - probe.speechStartedAt;
+        } else {
+          probe.speechStartedAt = null;
+          probe.speechSeconds = 0;
+        }
+      };
       navigator.mediaDevices.getUserMedia = async () => {
         const context = new AudioContext();
         probe.contexts.push(context);
@@ -128,6 +147,12 @@ test('keyless Voice Mode speaks the same general product answer', async () => {
         constructor(stream: MediaStream, options?: MediaRecorderOptions) {
           super(stream, options);
           probe.recorder = this;
+          probe.speechStartedAt = null;
+          probe.speechSeconds = 0;
+          probe.encodedBytes = 0;
+          this.addEventListener('dataavailable', (event) => {
+            if (probe.recorder === this) probe.encodedBytes += event.data.size;
+          });
         }
       };
       window.speechSynthesis.speak = (utterance) => {
@@ -137,8 +162,14 @@ test('keyless Voice Mode speaks the same general product answer', async () => {
     });
     await win.getByRole('button', { name: 'Voice Mode', exact: true }).click();
     await expect(win.getByRole('button', { name: 'Mute microphone', exact: true })).toBeEnabled();
-    await win.waitForFunction(() => (window as unknown as { __identityVoice: { recorder: MediaRecorder | null } }).__identityVoice.recorder?.state === 'recording');
-    await win.waitForTimeout(800);
+    await win.waitForFunction(() => {
+      const probe = (window as unknown as { __identityVoice: { recorder: MediaRecorder | null; speechSeconds: number } }).__identityVoice;
+      return probe.recorder?.state === 'recording' && probe.speechSeconds >= 0.25;
+    }, undefined, { timeout: 10_000 });
+    // Flush an actual encoded chunk before stopping; the production listener
+    // still receives it and performs the normal decode and 16 kHz resampling.
+    await win.evaluate(() => (window as unknown as { __identityVoice: { recorder: MediaRecorder } }).__identityVoice.recorder.requestData());
+    await win.waitForFunction(() => (window as unknown as { __identityVoice: { encodedBytes: number } }).__identityVoice.encodedBytes > 0);
     await win.evaluate(() => (window as unknown as { __identityVoice: { recorder: MediaRecorder } }).__identityVoice.recorder.stop());
     const heard = () => app.evaluate(() => ((globalThis as Record<string, unknown>).__identitySpoken as string[]).join(' '));
     await expect.poll(heard).toContain('support at bullebrowser dot com');

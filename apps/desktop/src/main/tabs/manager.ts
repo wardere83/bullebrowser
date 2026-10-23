@@ -160,8 +160,11 @@ class TabManager {
   }
 
   async navigate(id: string, url: string): Promise<void> {
-    assertAllowedDestination(url);
     const tab = this.find(id);
+    // Direct chrome navigation never reaches Electron's navigation events
+    // when policy refuses it, so publish the visible error here as well.
+    if (tab && isBlockedDestination(url)) this.blockNavigation(tab, url);
+    assertAllowedDestination(url);
     if (!tab) return;
     this.beginNavigation(tab, url);
     // Failed navigations show the chrome's retry page; don't reject.

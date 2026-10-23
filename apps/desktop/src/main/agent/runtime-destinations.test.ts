@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   url: 'https://agency.gov/', navigationUrl: 'https://agency.gov/',
   execute: vi.fn(), capture: vi.fn(), load: vi.fn(), activate: vi.fn(),
-  getView: vi.fn(),
+  getView: vi.fn(), send: vi.fn(),
 }));
 vi.mock('../tabs/manager.js', () => ({ tabManager: {
   getView: mocks.getView,
@@ -14,12 +14,19 @@ vi.mock('../storage/site-permissions.js', () => ({ originOf: vi.fn(), sitePermis
 import { DesktopToolRuntime } from './runtime.js';
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.url = 'https://agency.gov/';
   mocks.navigationUrl = mocks.url;
+  const mainFrame = {
+    get url() { return mocks.url; },
+    framesInSubtree: [], executeJavaScript: mocks.execute,
+  };
   mocks.getView.mockReturnValue({ webContents: {
     isDestroyed: () => false, getURL: () => mocks.url,
-    getTitle: () => 'Source', on: vi.fn(), off: vi.fn(),
+    getTitle: () => 'Source', on: vi.fn(), off: vi.fn(), once: vi.fn(), focus: vi.fn(),
+    mainFrame,
+    session: { webRequest: { onBeforeRequest: vi.fn(), onCompleted: vi.fn(), onErrorOccurred: vi.fn() } },
+    debugger: { isAttached: () => true, sendCommand: mocks.send },
     executeJavaScript: mocks.execute, capturePage: mocks.capture, loadURL: mocks.load,
   } });
 });
@@ -72,6 +79,27 @@ it('does not read the old document when a blocked redirect left it behind', asyn
   const runtime = new DesktopToolRuntime({ request: vi.fn() });
   await expect(runtime.readPage('tab')).rejects.toThrow('blocked by BulleBrowser policy');
   expect(mocks.execute).not.toHaveBeenCalled();
+});
+
+it.each(['click', 'Enter'] as const)('reports a prevented %s navigation as a policy error while the old URL remains loaded', async (action) => {
+  const runtime = new DesktopToolRuntime({ request: vi.fn() });
+  const blocked = 'https://duckduckgo.com/?q=private';
+  mocks.execute.mockResolvedValue({ ok: true, value: { matched: 'Search', onTop: true, x: 5, y: 5, ref: '@1' } });
+  mocks.send.mockImplementation(async (_method: string, params: { type: string }) => {
+    if (params.type === 'mouseReleased' || params.type === 'keyDown') mocks.navigationUrl = blocked;
+  });
+  vi.useFakeTimers();
+  try {
+    const result = expect(action === 'click'
+      ? runtime.click('tab', 'Search', { wait: 'none' })
+      : runtime.pressKey('tab', 'Enter')).rejects.toMatchObject({ code: 'BLOCKED_BY_POLICY' });
+    await vi.runAllTimersAsync();
+    await result;
+    expect(mocks.navigationUrl).toBe(blocked);
+    expect(mocks.url).toBe('https://agency.gov/');
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it('filters prohibited link destinations from discovery on allowed pages', async () => {

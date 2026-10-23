@@ -43,15 +43,30 @@ const PAGE_TOOLS = new Set([
   'press_key', 'select_option', 'find_elements', 'wait_for',
 ]);
 
-/** Shared by execution and direct registry callers, including legacy aliases. */
+// Other tools always act on context.activeTabId. An unrecognized tabId field
+// must not redirect the safety check away from the page they will actually use.
+const TAB_ID_TOOLS = new Set([
+  'read_page', 'getPageText', 'getPageMetadata', 'getSelection', 'listLinks',
+  'queryDom', 'extractStructuredData', 'switch_tab',
+]);
+
+/** Returns the checked page target for post-action verification, when present. */
 export async function assertAllowedToolDestination(
   name: string, input: Record<string, unknown>, context: ToolContext,
-): Promise<void> {
+): Promise<string | undefined> {
   if ((name === 'navigate' || name === 'new_tab') && typeof input.url === 'string') {
     assertAllowedDestination(input.url);
   }
   if (name === 'summarizePage' && typeof input.sourceUrl === 'string') assertAllowedDestination(input.sourceUrl);
+  if (name === 'getActiveTab') {
+    const tabs = await context.runtime.listTabs();
+    const tab = tabs.find((candidate) => candidate.active) ?? tabs.find((candidate) => candidate.id === context.activeTabId);
+    if (tab) assertAllowedDestination(tab.url);
+    return tab?.id;
+  }
   if (PAGE_TOOLS.has(name)) {
-    await assertAllowedTab(context, typeof input.tabId === 'string' ? input.tabId : context.activeTabId);
+    const tabId = TAB_ID_TOOLS.has(name) && typeof input.tabId === 'string' ? input.tabId : context.activeTabId;
+    await assertAllowedTab(context, tabId);
+    return tabId;
   }
 }

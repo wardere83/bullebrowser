@@ -285,7 +285,15 @@ export class DesktopToolRuntime implements ToolRuntime {
           if (!/context was destroyed|frame was disposed|Render frame was disposed/i.test((e as Error).message)) throw e;
         }
       }
+      // Refuse a prevented navigation before waiting for a load that cannot
+      // complete or inspecting the previous document for DOM quiet.
+      assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+      assertAllowedDestination(wc.getURL());
     }, mode);
+    // A prevented navigation leaves getURL() on the previous document.
+    // Report the attempted destination's refusal instead of a successful click.
+    assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+    assertAllowedDestination(wc.getURL());
     const extra = wc.getURL() !== before ? await this.afterLoad(wc, mode) : {};
     return { matched, url: wc.getURL(), ...extra };
   }
@@ -568,7 +576,11 @@ export class DesktopToolRuntime implements ToolRuntime {
     await settleAfter(wc, async () => {
       wc.focus();
       await withInput(wc, (send) => pressWith(send, KEY_DEFS[key]));
+      assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+      assertAllowedDestination(wc.getURL());
     });
+    assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
+    assertAllowedDestination(wc.getURL());
     return { pressed: key };
   }
 

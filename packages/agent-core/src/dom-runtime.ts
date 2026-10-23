@@ -114,10 +114,15 @@ const THIS_TAB = 'page';
 function assertElementDestination(el: Element): void {
   const link = el.closest('a[href]') as HTMLAnchorElement | null;
   if (link) assertAllowedDestination(link.href);
-  const form = (el as HTMLButtonElement | HTMLInputElement).form;
+  // A selector can resolve a span/icon inside the actual submit button.
+  const control = el.closest('button, input') as HTMLButtonElement | HTMLInputElement | null;
+  const form = control?.form;
   if (form) {
-    const override = el.getAttribute('formaction');
-    assertAllowedDestination(override === null ? form.action : new URL(override, location.href));
+    const override = control.getAttribute('formaction');
+    // formAction is already resolved by the browser, including <base href>.
+    // Embedded/adapted DOMs without that property use the document's base URI.
+    assertAllowedDestination(override === null ? form.action :
+      control.formAction || new URL(override, control.ownerDocument?.baseURI ?? document.baseURI));
   }
 }
 
@@ -183,6 +188,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
       assertAllowedDestination(location.href);
       assertElementDestination(el);
       (el as HTMLElement).click();
+      assertAllowedDestination(location.href);
       return { matched: (el as HTMLElement).outerHTML.slice(0, 200) };
     },
 
@@ -286,6 +292,7 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
       if (key === 'Enter' || key === 'Space') assertElementDestination(el);
       for (const type of ['keydown', 'keyup'] as const) {
         el.dispatchEvent(new KeyboardEvent(type, { key: key === 'Space' ? ' ' : key, bubbles: true }));
+        assertAllowedDestination(location.href);
       }
       return { pressed: key };
     },

@@ -68,16 +68,25 @@ function fail(view: MockView, url: string, code = -102, mainFrame = true) {
 }
 
 describe('native browsing navigation recovery', () => {
-  it('refuses prohibited direct destinations before creating a view or loading a page', async () => {
-    const { manager, id, view } = await createManager();
+  it('shows direct policy refusals without creating a view or loading a page, then recovers', async () => {
+    const { manager, id, view, win } = await createManager();
     const loads = view.webContents.loadURL.mock.calls.length;
     for (const url of ['https://duckduckgo.com/?q=private', 'https://html.duckduckgo.com/', 'https://duck.com/', 'https://ddg.gg/']) {
       await expect(manager.create(url)).rejects.toThrow('blocked by BulleBrowser policy');
       await expect(manager.navigate(id, url)).rejects.toThrow('blocked by BulleBrowser policy');
+      expect(manager.list()[0]).toMatchObject({ url, loading: false, loadError: {
+        code: -20, message: expect.stringContaining('blocked by BulleBrowser policy'),
+      } });
+      expect(manager.getNavigationUrl(id)).toBe(url);
+      expect(view.setVisible).toHaveBeenLastCalledWith(false);
+      expect(win.webContents.send).toHaveBeenLastCalledWith(expect.any(String), manager.list());
     }
     expect(mocks.views).toHaveLength(1);
     expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
-    expect(manager.list()[0]?.url).toBe('about:blank');
+    await manager.navigate(id, 'https://agency.gov/');
+    expect(manager.getNavigationUrl(id)).toBe('https://agency.gov/');
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(view.setVisible).toHaveBeenLastCalledWith(true);
   });
 
   it('prevents page navigations and redirects and exposes the blocked outcome', async () => {
