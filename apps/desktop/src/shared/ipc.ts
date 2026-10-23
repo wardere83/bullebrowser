@@ -352,7 +352,7 @@ export interface BrowserBridge {
     apply(version: string): Promise<void>;
     retry(): Promise<void>;
     check(): Promise<void>;
-    details(): Promise<{ installedVersion: string; activationIssue: string | null }>;
+    details(): Promise<{ installedVersion: string; activationIssue: string | null; completedVersion: string | null }>;
     dismiss(version: string): Promise<void>;
   };
   ui: {
