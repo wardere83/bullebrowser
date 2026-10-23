@@ -24,6 +24,7 @@ export function TopBar() {
   const status = useAgentStore((s) => s.status);
   const runId = useAgentStore((s) => s.runId);
   const searchProvider = useBrowserStore((s) => s.searchProvider);
+  const [navigationError, setNavigationError] = useState('');
   const [draftUrl, setDraftUrl] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +42,7 @@ export function TopBar() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    setNavigationError('');
     if (!active || !draftUrl.trim()) return;
     const action = parseAddressBarInput(draftUrl, searchProvider);
     if (action.type === 'agent') {
@@ -53,7 +55,9 @@ export function TopBar() {
       setDraftUrl(active.url === 'about:blank' ? '' : active.url);
       return;
     }
-    void window.bullebrowser.tabs.navigate(active.id, action.url);
+    void window.bullebrowser.tabs.navigate(active.id, action.url).catch(() => {
+      setNavigationError('This destination could not be opened. It may be blocked by BulleBrowser policy.');
+    });
   };
 
   const openAssistant = () => {
@@ -204,6 +208,7 @@ export function TopBar() {
 
       {/* Published updates stay visible through download and preparation. */}
       <UpdateBanner />
+      {navigationError && <span role="alert" className="no-drag max-w-64 text-xs text-danger">{navigationError}</span>}
     </header>
   );
 }

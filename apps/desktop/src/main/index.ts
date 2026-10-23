@@ -1,3 +1,4 @@
+import { isBlockedDestination } from '@bullebrowser/agent-core';
 import { saveUpdateTabs, takeUpdateTabs } from './storage/update-session.js';
 import { app, BrowserWindow, session } from 'electron';
 import { fileURLToPath } from 'node:url';
@@ -65,7 +66,9 @@ async function createWindow() {
   const updateSession = takeUpdateTabs();
   if (updateSession) {
     const restored = [];
-    for (const url of updateSession.urls) restored.push(await tabManager.create(url));
+    for (const url of updateSession.urls) {
+      restored.push(await tabManager.create(isBlockedDestination(url) ? 'about:blank' : url));
+    }
     const active = restored[updateSession.activeIndex];
     if (active) tabManager.activate(active.id);
   }
@@ -82,6 +85,9 @@ async function createWindow() {
   }
   if (!win.isDestroyed()) setupAutoUpdate(win);
 }
+
+// Cover isolated source-fetch sessions as well as visible browser tabs.
+app.on('session-created', trackNetwork);
 
 app.whenReady().then(async () => {
   // Count each tab's requests from the start, so "has the page gone quiet?"

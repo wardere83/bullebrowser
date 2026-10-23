@@ -1,3 +1,4 @@
+import { isBlockedDestination, BLOCKED_DESTINATION_MESSAGE } from './destinations.js';
 import type { PlanStep, PolicyDecision, TargetFacts } from './types.js';
 
 // Blocking a typing action outright is a hard stop with no user override, so
@@ -24,6 +25,9 @@ export interface PolicyEngine {
 
 export class PrivacyPolicyEngine implements PolicyEngine {
   evaluateToolStep(step: PlanStep): PolicyDecision {
+    if (typeof step.input.url === 'string' && isBlockedDestination(step.input.url)) {
+      return { allowed: false, reason: BLOCKED_DESTINATION_MESSAGE, requiresConfirmation: false };
+    }
     if (step.toolName === 'typeIntoField' || step.toolName === 'type') {
       const target = String(step.input.target ?? '');
       if (SENSITIVE_FIELD_RE.test(target)) {
@@ -79,6 +83,7 @@ export class PrivacyPolicyEngine implements PolicyEngine {
 
   allowExternalProvider(context: { url?: string; text?: string }): PolicyDecision {
     const url = context.url ?? '';
+    if (isBlockedDestination(url)) return { allowed: false, reason: BLOCKED_DESTINATION_MESSAGE, requiresConfirmation: false };
     const text = context.text ?? '';
     if (/mail|messages|bank|wallet|account|checkout/i.test(url)) {
       return {

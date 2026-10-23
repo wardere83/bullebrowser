@@ -1,3 +1,4 @@
+import { assertAllowedDestination, isBlockedDestination, BLOCKED_DESTINATION_MESSAGE } from '@bullebrowser/agent-core';
 import { accessibilityManager } from '../accessibility.js';
 // Tab manager. Owns one WebContentsView per tab, attaches them to the
 // main BaseWindow, and broadcasts state changes to the renderer.
@@ -68,6 +69,7 @@ class TabManager {
 
   async create(url?: string, openerId?: string): Promise<TabState> {
     if (!this.win) throw new Error('No window attached');
+    assertAllowedDestination(url ?? getDefaultHome());
     const id = randomUUID();
     const view = new WebContentsView({
       webPreferences: {
@@ -155,6 +157,7 @@ class TabManager {
   }
 
   async navigate(id: string, url: string): Promise<void> {
+    assertAllowedDestination(url);
     const tab = this.find(id);
     if (!tab) return;
     this.beginNavigation(tab, url);
@@ -261,6 +264,11 @@ class TabManager {
   private wireEvents(tab: ManagedTab) {
     const wc = tab.view.webContents;
     accessibilityManager.register(wc, getSettings().accessibility);
+    const blockNavigation = (event: { preventDefault(): void }, url: string) => {
+      if (isBlockedDestination(url)) event.preventDefault();
+    };
+    wc.on('will-navigate', blockNavigation);
+    wc.on('will-redirect', blockNavigation);
     wc.on('dom-ready', () => this.refreshBrowsingCloud(tab));
     wc.on('did-start-navigation', (event) => {
       if (event.isMainFrame && !event.isSameDocument) this.beginNavigation(tab, event.url);
@@ -313,7 +321,7 @@ class TabManager {
       this.broadcast();
     });
     wc.setWindowOpenHandler(({ url }) => {
-      void this.create(url, tab.id);
+      if (!isBlockedDestination(url)) void this.create(url, tab.id);
       return { action: 'deny' };
     });
     // A page can end itself (window.close() after a sign-in or a download
@@ -461,6 +469,7 @@ class TabManager {
 }
 
 function loadErrorMessage(code: number): string {
+  if (code === -20) return BLOCKED_DESTINATION_MESSAGE;
   if (code <= -200 && code >= -299) return 'This site’s secure connection could not be verified. Check the address or try again later.';
   if (code === -105 || code === -137) return 'This site could not be found. Check the address and your internet connection.';
   if (code === -106) return 'You appear to be offline. Check your internet connection and retry.';

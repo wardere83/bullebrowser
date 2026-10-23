@@ -1,3 +1,4 @@
+import { isBlockedDestination, BLOCKED_DESTINATION_MESSAGE } from '../destinations.js';
 import { z } from 'zod';
 import { KEY_NAMES, type KeyName, type ToolContext, type ToolDefinition, type ToolName } from '../types.js';
 
@@ -35,6 +36,10 @@ const NavigateInput = z.object({
     .describe('An http:// or https:// URL. A bare host like "example.com" is fine.')
     .transform((value, ctx) => {
       const normalized = normalizeAgentUrl(value);
+      if (normalized && isBlockedDestination(normalized)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: BLOCKED_DESTINATION_MESSAGE });
+        return z.NEVER;
+      }
       if (!normalized) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

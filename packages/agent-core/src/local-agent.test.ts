@@ -85,11 +85,17 @@ describe('the keyless assistant', () => {
       navigate: vi.fn(async (_id, url) => { currentUrl = url; return { url, title: 'Source' }; }),
       newTab: vi.fn(async (url) => { currentUrl = url ?? ''; return { id: `tab-${url}`, url: currentUrl, title: 'Source', active: true }; }),
       readPage: vi.fn(async () => ({ title: 'Source', url: currentUrl, text: 'Official grant requirements.' })),
-      listLinks: vi.fn(async () => [1, 2, 3].map((id) => ({ text: `Program ${id}`, href: `https://agency.gov/program-${id}` }))),
+      listLinks: vi.fn(async () => [
+        { text: 'Grants search', href: 'https://duckduckgo.com/?q=grants' },
+        { text: 'Wrapped blocked search', href: 'https://www.google.com/url?q=https%3A%2F%2Fduckduckgo.com%2F' },
+        { text: 'Program 1', href: 'https://www.google.com/url?q=https%3A%2F%2Fagency.gov%2Fprogram-1' },
+        ...[1, 2, 3].map((id) => ({ text: `Program ${id}`, href: `https://agency.gov/program-${id}` })),
+      ]),
     });
     const result = await ask('Find grants for California schools', { researchMode: true, context });
     expect(result.requestBrowseAccess).toHaveBeenCalledTimes(1);
     expect(context.runtime.navigate).toHaveBeenCalledTimes(1);
+    expect(context.runtime.navigate).toHaveBeenCalledWith('t1', expect.stringContaining('https://www.google.com/search?q='));
     expect(context.runtime.newTab).toHaveBeenCalledTimes(3);
     expect(context.runtime.switchTab).toHaveBeenCalledWith('tab-https://agency.gov/program-1');
     expect(result.reply).toContain('3 source pages');

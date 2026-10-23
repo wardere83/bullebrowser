@@ -485,3 +485,47 @@ for (const option of [
     }
   });
 }
+
+
+test('restricted destinations cannot send requests through direct loads, redirects or page fetches', async () => {
+  const server = createServer((req, res) => {
+    if (req.url === '/redirect') {
+      res.writeHead(302, { Location: 'https://duckduckgo.com/?q=bullebrowser-policy-fixture' });
+      res.end();
+    } else {
+      res.setHeader('Content-Type', 'text/html');
+      res.end('<!doctype html><title>Permitted policy fixture</title><h1>Permitted source</h1>');
+    }
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const app = await launch();
+  try {
+    const result = await app.app.evaluate(async ({ session }, base) => {
+      const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
+      const wc = manager.getView(manager.getActiveId()).webContents;
+      const sent: string[] = [];
+      session.defaultSession.webRequest.onSendHeaders({ urls: ['<all_urls>'] }, (details) => { sent.push(details.url); });
+      const errorFor = async (url: string) => { try { await wc.loadURL(url); return ''; } catch (error) { return String(error); } };
+      try {
+        const directError = await errorFor('https://duckduckgo.com/?q=bullebrowser-policy-fixture');
+        const redirectError = await errorFor(`${base}/redirect`);
+        await wc.loadURL(base);
+        const fetchResult = await wc.executeJavaScript("fetch('https://html.duckduckgo.com/html/?q=bullebrowser-policy-fixture').then(() => 'sent', () => 'blocked')");
+        return { directError, redirectError, fetchResult, sent, url: wc.getURL() };
+      } finally { session.defaultSession.webRequest.onSendHeaders(null); }
+    }, base);
+    expect(result.directError).toContain('ERR_BLOCKED_BY_CLIENT');
+    expect(result.redirectError).toMatch(/ERR_BLOCKED_BY_CLIENT|ERR_ABORTED/);
+    expect(result.fetchResult).toBe('blocked');
+    expect(result.sent.some((url) => new URL(url).hostname.endsWith('duckduckgo.com'))).toBe(false);
+    expect(result.sent).toContain(`${base}/redirect`);
+    expect(result.url).toBe(`${base}/`);
+    await enterAddress(app.win, 'https://duckduckgo.com/');
+    await expect(app.win.getByRole('alert')).toContainText('blocked by BulleBrowser policy');
+    expect((await pageState(app.app)).url).toBe(`${base}/`);
+  } finally {
+    await app.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});

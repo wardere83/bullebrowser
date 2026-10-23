@@ -1,3 +1,4 @@
+import { isBlockedDestination } from '@bullebrowser/agent-core';
 // Network activity per tab, for "has the page gone quiet?".
 //
 // One set of webRequest listeners per session, installed once and left in
@@ -28,6 +29,9 @@ export function trackNetwork(session: Session): void {
     t.inflight.get(d.webContentsId)?.delete(d.id);
   };
   session.webRequest.onBeforeRequest(filter, (d, cb) => {
+    // Enforce before transfer, including redirects, frames, fetches and beacons.
+    // Keep this in the existing listener: Electron permits only one per event.
+    if (isBlockedDestination(d.url)) { cb({ cancel: true }); return; }
     if (d.webContentsId !== undefined && !IGNORED_TYPES.has(d.resourceType)) {
       let m = t.inflight.get(d.webContentsId);
       if (!m) t.inflight.set(d.webContentsId, (m = new Map()));

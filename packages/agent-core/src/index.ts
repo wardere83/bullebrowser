@@ -22,3 +22,5 @@ export * from './structured.js';
 export * from './browser-tasks.js';
 export * from './connectors.js';
 export * from './browser-host.js';
+
+export * from './destinations.js';
