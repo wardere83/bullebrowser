@@ -13,6 +13,9 @@
 
 import type { TabSummary, ToolRuntime } from './types.js';
 import { assertAllowedDestination, isBlockedDestination } from './destinations.js';
+import { ToolError } from './errors.js';
+
+const UNVERIFIED_HISTORY_MESSAGE = 'History navigation is blocked because the embedded browser cannot verify its destination. Navigate to an explicit allowed URL instead.';
 
 // Same shadow-DOM-piercing query the desktop runtime uses, so a click/type
 // finds controls inside web components (which most modern CRMs are built from).
@@ -334,15 +337,12 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     },
     async goBack() {
       assertAllowedDestination(location.href);
-      history.back();
-      await new Promise((r) => setTimeout(r, 400));
-      return { url: location.href };
+      // The host page cannot inspect a cross-origin history target before it unloads.
+      throw new ToolError('BLOCKED_BY_POLICY', UNVERIFIED_HISTORY_MESSAGE);
     },
     async goForward() {
       assertAllowedDestination(location.href);
-      history.forward();
-      await new Promise((r) => setTimeout(r, 400));
-      return { url: location.href };
+      throw new ToolError('BLOCKED_BY_POLICY', UNVERIFIED_HISTORY_MESSAGE);
     },
     async reload() {
       assertAllowedDestination(location.href);

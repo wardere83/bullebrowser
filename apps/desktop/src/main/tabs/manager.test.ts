@@ -3,7 +3,10 @@ import type { BrowserWindow } from 'electron';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 interface MockView {
-  webContents: EventEmitter & { loadURL: Mock; reload: Mock; stop: Mock };
+  webContents: EventEmitter & {
+    loadURL: Mock; reload: Mock; stop: Mock; getURL: Mock;
+    navigationHistory: { canGoBack: Mock; goBack: Mock };
+  };
   setVisible: Mock;
   setBounds: Mock;
 }
@@ -16,12 +19,12 @@ vi.mock('electron', async () => {
     loadURL = vi.fn(async () => {});
     reload = vi.fn();
     executeJavaScript = vi.fn(async () => {});
-    getURL = () => 'about:blank';
+    getURL = vi.fn(() => 'about:blank');
     stop = vi.fn();
     close = vi.fn();
     isDestroyed = () => false;
     setWindowOpenHandler = vi.fn();
-    navigationHistory = { canGoBack: () => false, canGoForward: () => false, goBack: vi.fn(), goForward: vi.fn() };
+    navigationHistory = { canGoBack: vi.fn(() => false), canGoForward: () => false, goBack: vi.fn(), goForward: vi.fn() };
   }
   return {
     app: { isPackaged: true },
@@ -112,6 +115,63 @@ describe('native browsing navigation recovery', () => {
     view.webContents.emit('will-frame-navigate', event);
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(manager.list()[0]?.loadError).toBeUndefined();
+  });
+
+  it.each([false, true])('restores the retained allowed page without loading or traversing history (native back: %s)', async (nativeBack) => {
+    const { manager, id, view, win } = await createManager();
+    const allowed = 'https://agency.gov/grants';
+    await manager.navigate(id, allowed);
+    view.webContents.getURL.mockReturnValue(allowed);
+    view.webContents.emit('did-navigate', {}, allowed, 200, 'OK');
+    view.webContents.emit('did-stop-loading');
+    view.webContents.navigationHistory.canGoBack.mockReturnValue(nativeBack);
+    expect(manager.list()[0]?.canGoBack).toBe(nativeBack);
+    const loads = view.webContents.loadURL.mock.calls.length;
+    const blocked = 'https://duckduckgo.com/?q=private';
+    view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, blocked);
+    expect(manager.list()[0]).toMatchObject({ url: blocked, canGoBack: true, loadError: { code: -20 } });
+    expect(view.setVisible).toHaveBeenLastCalledWith(false);
+
+    await manager.back(id);
+    expect(manager.list()[0]).toMatchObject({ url: allowed, loading: false, canGoBack: nativeBack });
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(manager.getNavigationUrl(id)).toBe(allowed);
+    expect(view.setVisible).toHaveBeenLastCalledWith(true);
+    expect(win.webContents.send).toHaveBeenLastCalledWith(expect.any(String), manager.list());
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+    expect(view.webContents.navigationHistory.goBack).not.toHaveBeenCalled();
+    expect(mocks.record).toHaveBeenCalledTimes(1);
+
+    fail(view, blocked, -20);
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(manager.getNavigationUrl(id)).toBe(allowed);
+  });
+
+  it.each(['about:blank', 'https://duck.com/', 'file:///private/document.html', 'chrome-error://chromewebdata/'])('does not restore an unsafe retained document: %s', async (retainedUrl) => {
+    const { manager, id, view } = await createManager();
+    view.webContents.getURL.mockReturnValue(retainedUrl);
+    const blocked = 'https://duckduckgo.com/';
+    view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, blocked);
+    expect(manager.list()[0]?.canGoBack).toBe(false);
+    const loads = view.webContents.loadURL.mock.calls.length;
+    await manager.back(id);
+    expect(manager.list()[0]).toMatchObject({ url: blocked, loadError: { code: -20 } });
+    expect(view.setVisible).toHaveBeenLastCalledWith(false);
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+    expect(view.webContents.navigationHistory.goBack).not.toHaveBeenCalled();
+  });
+
+  it('revalidates a retained document before restoring it', async () => {
+    const { manager, id, view } = await createManager();
+    view.webContents.getURL.mockReturnValue('https://agency.gov/');
+    const blocked = 'https://duckduckgo.com/';
+    view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, blocked);
+    expect(manager.list()[0]?.canGoBack).toBe(true);
+    view.webContents.getURL.mockReturnValue('https://ddg.gg/');
+    await manager.back(id);
+    expect(manager.list()[0]).toMatchObject({ url: blocked, canGoBack: false, loadError: { code: -20 } });
+    expect(view.setVisible).toHaveBeenLastCalledWith(false);
+    expect(view.webContents.navigationHistory.goBack).not.toHaveBeenCalled();
   });
 
   it('lets an allowed navigation recover while an older prohibited load finishes failing', async () => {

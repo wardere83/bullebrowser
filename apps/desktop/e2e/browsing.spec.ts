@@ -441,7 +441,9 @@ test('restricted destinations never send requests through navigation, redirects,
       catch (error) { return (error as Error).message; }
     });
     expect(captureFailure).toContain('blocked by BulleBrowser policy');
-    await enterAddress(win, `${base}/allowed`);
+    const recovery = win.getByRole('region', { name: 'Page loading error' }).getByRole('button', { name: 'Go back', exact: true });
+    await expect(recovery).toBeEnabled();
+    await recovery.click();
     await expectPage(app, win, `${base}/allowed`, 'Allowed source page');
     const outcomes = await app.evaluate(async ({ session }, fixturePort) => {
       const hooks = (globalThis as unknown as { __bbTest: {

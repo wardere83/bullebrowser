@@ -292,6 +292,23 @@ describe('Brave-only discovery failures', () => {
 describe('embedded runtime destination restriction', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each(['goBack', 'goForward'] as const)('refuses %s from an allowed page when the history target cannot be verified', async (method) => {
+    const pageLocation = { href: 'https://agency.gov/' };
+    vi.stubGlobal('location', pageLocation);
+    const navigateToUnknownTarget = () => { pageLocation.href = 'https://duckduckgo.com/'; };
+    const pageHistory = { back: vi.fn(navigateToUnknownTarget), forward: vi.fn(navigateToUnknownTarget) };
+    vi.stubGlobal('history', pageHistory);
+
+    await expect(createDomToolRuntime()[method]('page')).rejects.toMatchObject({
+      code: 'BLOCKED_BY_POLICY',
+      retryable: false,
+      message: expect.stringMatching(/cannot verify its destination.*explicit allowed URL/),
+    });
+    expect(pageHistory.back).not.toHaveBeenCalled();
+    expect(pageHistory.forward).not.toHaveBeenCalled();
+    expect(pageLocation.href).toBe('https://agency.gov/');
+  });
+
   it('rejects page reads before examining a prohibited document', async () => {
     vi.stubGlobal('location', { href: 'https://duckduckgo.com/' });
     const querySelector = vi.fn();

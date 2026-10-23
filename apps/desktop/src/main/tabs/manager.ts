@@ -179,8 +179,22 @@ class TabManager {
   }
 
   async back(id: string): Promise<void> {
-    const wc = this.find(id)?.view.webContents;
-    if (wc?.navigationHistory.canGoBack()) {
+    const tab = this.find(id);
+    if (!tab) return;
+    const retainedUrl = this.policyRecoveryUrl(tab);
+    if (retainedUrl) {
+      // A prevented link/form never committed a history entry. Restore the
+      // allowed document already in this view, including on its first page.
+      tab.url = retainedUrl;
+      tab.navigationUrl = retainedUrl;
+      tab.loading = false;
+      delete tab.loadError;
+      this.relayout();
+      this.broadcast();
+      return;
+    }
+    const wc = tab.view.webContents;
+    if (wc.navigationHistory.canGoBack()) {
       const entry = wc.navigationHistory.getEntryAtIndex(wc.navigationHistory.getActiveIndex() - 1);
       if (entry) assertAllowedDestination(entry.url);
       wc.navigationHistory.goBack();
@@ -269,6 +283,20 @@ class TabManager {
     return this.tabs.find((t) => t.id === id);
   }
 
+  private policyRecoveryUrl(tab: ManagedTab): string | undefined {
+    if (tab.loadError?.code !== -20 || !isBlockedDestination(tab.navigationUrl ?? tab.url)) return;
+    const wc = tab.view.webContents;
+    if (wc.isDestroyed()) return;
+    const retainedUrl = wc.getURL();
+    try {
+      const url = new URL(retainedUrl);
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && !isBlockedDestination(url)) return retainedUrl;
+    } catch {
+      // Blank, invalid and browser error documents are not recovery targets.
+    }
+    return;
+  }
+
   private toState(t: ManagedTab): TabState {
     const wc = t.view.webContents;
     return {
@@ -277,7 +305,7 @@ class TabManager {
       url: t.url,
       loading: t.loading,
       ...(t.loadError ? { loadError: t.loadError } : {}),
-      canGoBack: wc.navigationHistory.canGoBack(),
+      canGoBack: !!this.policyRecoveryUrl(t) || wc.navigationHistory.canGoBack(),
       canGoForward: wc.navigationHistory.canGoForward(),
       faviconUrl: t.faviconUrl,
       active: this.activeId === t.id,
