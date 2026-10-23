@@ -380,9 +380,9 @@ describe('embedded runtime destination restriction', () => {
     ['INPUT', 'button', 'click'], ['INPUT', 'reset', 'click'], ['INPUT', 'text', 'click'],
     ['INPUT', 'checkbox', 'click'], ['INPUT', 'radio', 'click'],
     ['BUTTON', 'button', 'Enter'], ['INPUT', 'checkbox', 'Space'], ['INPUT', 'text', 'Space'],
-  ] as const)('allows %s type=%s with %s when the unused form action is blocked', async (tagName, type, action) => {
+  ] as const)('allows %s type=%s with %s in an allowed-action form', async (tagName, type, action) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
-    const control = formControl(tagName, type, { action: 'https://duckduckgo.com/submit' });
+    const control = formControl(tagName, type, { action: 'https://agency.gov/submit' });
     vi.stubGlobal('document', {
       activeElement: control,
       querySelectorAll: (selector: string) => selector === '*' ? [] : [control],
@@ -397,6 +397,43 @@ describe('embedded runtime destination restriction', () => {
       expect(control.dispatchEvent).toHaveBeenCalledTimes(2);
     }
     expect(control.getAttribute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['BUTTON', 'button', 'submit'], ['INPUT', 'checkbox', 'requestSubmit'],
+  ] as const)('rejects a %s type=%s before its handler can defer form.%s()', async (tagName, type, method) => {
+    const pageLocation = { href: 'https://agency.gov/' };
+    vi.stubGlobal('location', pageLocation);
+    const action = 'https://duckduckgo.com/submit';
+    const submit = vi.fn(() => { pageLocation.href = action; });
+    const form = { action, submit, requestSubmit: submit };
+    const control = formControl(tagName, type, form);
+    const handler = vi.fn(() => queueMicrotask(() => form[method]()));
+    // A checkbox click also invokes its change handler in a browser.
+    control.click.mockImplementation(handler);
+    vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [control] });
+    const showCursor = vi.fn();
+
+    await expect(createDomToolRuntime({ showCursor }).click('page', '#control'))
+      .rejects.toMatchObject({ code: 'BLOCKED_BY_POLICY' });
+    await Promise.resolve();
+    expect(control.scrollIntoView).not.toHaveBeenCalled();
+    expect(showCursor).not.toHaveBeenCalled();
+    expect(control.click).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
+    expect(pageLocation.href).toBe('https://agency.gov/');
+  });
+
+  it('rejects a blocked form action even when its submitter override is allowed', async () => {
+    vi.stubGlobal('location', { href: 'https://agency.gov/' });
+    const control = formControl('BUTTON', 'submit', { action: 'https://duckduckgo.com/submit' });
+    control.getAttribute.mockReturnValue('https://agency.gov/submit');
+    control.formAction = 'https://agency.gov/submit';
+    vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [control] });
+
+    await expect(createDomToolRuntime().click('page', '#submit')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
+    expect(control.click).not.toHaveBeenCalled();
   });
 
   it.each(['submit', 'image'])('still blocks clicks on an input type=%s before activation', async (type) => {
@@ -423,9 +460,9 @@ describe('embedded runtime destination restriction', () => {
     expect(input.dispatchEvent).not.toHaveBeenCalled();
   });
 
-  it.each(['allowed override', 'disabled default submitter', 'multiple fields without submitter'])('allows Enter with %s despite the unused blocked form action', async (scenario) => {
+  it.each(['allowed override', 'disabled default submitter', 'multiple fields without submitter'])('allows Enter with %s in an allowed-action form', async (scenario) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
-    const form = { action: 'https://duckduckgo.com/submit', getRootNode: vi.fn() };
+    const form = { action: 'https://agency.gov/submit', getRootNode: vi.fn() };
     const input = formControl('INPUT', 'text', form);
     const submitter = formControl('BUTTON', 'submit', form);
     submitter.getAttribute.mockReturnValue('https://agency.gov/submit');

@@ -410,7 +410,7 @@ test('restricted destinations never send requests through navigation, redirects,
       return;
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><a id="blocked-popup-link" target="_blank" href="http://duckduckgo.com:${port}/popup-link">Restricted popup</a><button id="blocked-popup-script" onclick="window.open('http://html.duckduckgo.com:${port}/popup-script')">Open restricted popup</button><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
+    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><a id="blocked-popup-link" target="_blank" href="http://duckduckgo.com:${port}/popup-link">Restricted popup</a><button id="blocked-popup-script" onclick="window.open('http://html.duckduckgo.com:${port}/popup-script'); history.replaceState({}, '', '#after-popup')">Open restricted popup</button><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = (server.address() as { port: number }).port;
@@ -468,6 +468,8 @@ test('restricted destinations never send requests through navigation, redirects,
         tabManager: Hooks['tabManager'] & {
           create(url: string): Promise<unknown>;
           navigate(id: string, url: string): Promise<void>;
+          back(id: string): Promise<void>;
+          getNavigationUrl(id: string): string | undefined;
           list(): Array<{ id: string }>;
         };
         runtime: Hooks['runtime'] & {
@@ -512,7 +514,14 @@ test('restricted destinations never send requests through navigation, redirects,
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
       await attempt('agent-popup-link', () => hooks.runtime.click(id, '#blocked-popup-link'));
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
+      const inPageUpdate = new Promise<void>((resolve) => wc.once('did-navigate-in-page', () => resolve()));
       await attempt('agent-popup-script', () => hooks.runtime.click(id, '#blocked-popup-script'));
+      await inPageUpdate;
+      await attempt('blocked-popup-read', () => hooks.runtime.readPage(id));
+      await manager.back(id);
+      const popupRecovery = {
+        url: manager.getNavigationUrl(id), nativeUrl: wc.getURL(), visible: manager.getView(id).getVisible(),
+      };
       const afterAgentPopups = manager.list().length;
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
       await attempt('agent-click', () => hooks.runtime.click(id, '#blocked-link'));
@@ -527,16 +536,20 @@ test('restricted destinations never send requests through navigation, redirects,
       const isolated = session.fromPartition('destination-guard-regression');
       await attempt('isolated-session', () => isolated.fetch(root));
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/control`);
-      return { refused, policyFailures, pageResources, beforePopup, afterPopup, afterAgentPopups, afterRedirect };
+      return { refused, policyFailures, pageResources, beforePopup, afterPopup, afterAgentPopups, popupRecovery, afterRedirect };
     }, port);
-    expect(outcomes.refused).toEqual(['tab-create', 'tab-navigate', 'agent-navigate', 'agent-popup-link', 'agent-popup-script', 'agent-click', 'agent-enter', 'blocked-redirect-read', 'isolated-session']);
+    expect(outcomes.refused).toEqual(['tab-create', 'tab-navigate', 'agent-navigate', 'agent-popup-link', 'agent-popup-script', 'blocked-popup-read', 'agent-click', 'agent-enter', 'blocked-redirect-read', 'isolated-session']);
     expect(outcomes.policyFailures).toMatchObject({
       'agent-popup-link': 'BLOCKED_BY_POLICY', 'agent-popup-script': 'BLOCKED_BY_POLICY',
+      'blocked-popup-read': 'BLOCKED_BY_POLICY',
       'agent-click': 'BLOCKED_BY_POLICY', 'agent-enter': 'BLOCKED_BY_POLICY', 'blocked-redirect-read': 'BLOCKED_BY_POLICY',
     });
     expect(outcomes.pageResources).toEqual(['image-blocked', 'fetch-blocked']);
     expect(outcomes.afterPopup).toBe(outcomes.beforePopup);
     expect(outcomes.afterAgentPopups).toBe(outcomes.beforePopup);
+    expect(outcomes.popupRecovery).toEqual({
+      url: `${base}/allowed#after-popup`, nativeUrl: `${base}/allowed#after-popup`, visible: true,
+    });
     expect(outcomes.afterRedirect).not.toContain('duckduckgo.com');
     const sent = await app.evaluate(() => (globalThis as Record<string, unknown>).__restrictedRequestProbe as string[]);
     expect(sent.some((url) => url === `${base}/control`)).toBe(true);

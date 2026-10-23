@@ -153,6 +153,58 @@ describe('native browsing navigation recovery', () => {
     expect(manager.list()[1]).toMatchObject({ url: 'https://agency.gov/grants', active: true });
   });
 
+  it('keeps a popup refusal through retained-page history and hash changes until Back recovery', async () => {
+    const { manager, id, view } = await createManager();
+    const allowed = 'https://agency.gov/grants';
+    await manager.navigate(id, allowed);
+    view.webContents.getURL.mockReturnValue(allowed);
+    const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
+    const blocked = 'https://duckduckgo.com/?q=private';
+    open({ url: blocked });
+    const loads = view.webContents.loadURL.mock.calls.length;
+    const updated = `${allowed}?tab=eligibility#requirements`;
+    for (const url of [`${allowed}?tab=eligibility`, updated]) {
+      view.webContents.getURL.mockReturnValue(url);
+      view.webContents.emit('did-start-navigation', { isMainFrame: true, isSameDocument: true, url });
+      view.webContents.emit('did-navigate-in-page', {}, url, true);
+      expect(manager.getNavigationUrl(id)).toBe(blocked);
+      expect(manager.list()[0]).toMatchObject({ url: blocked, canGoBack: true, loadError: { code: -20 } });
+      expect(view.setVisible).toHaveBeenLastCalledWith(false);
+    }
+
+    await manager.back(id);
+    expect(manager.getNavigationUrl(id)).toBe(updated);
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(view.setVisible).toHaveBeenLastCalledWith(true);
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+    expect(view.webContents.navigationHistory.goBack).not.toHaveBeenCalled();
+    const afterRecovery = `${allowed}?tab=eligibility#deadline`;
+    view.webContents.getURL.mockReturnValue(afterRecovery);
+    view.webContents.emit('did-navigate-in-page', {}, afterRecovery, true);
+    expect(manager.getNavigationUrl(id)).toBe(afterRecovery);
+    expect(manager.list()[0]?.url).toBe(afterRecovery);
+  });
+
+  it('accepts same-document updates after explicit allowed navigation clears a refusal', async () => {
+    const { manager, id, view } = await createManager();
+    view.webContents.getURL.mockReturnValue('https://agency.gov/');
+    const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
+    open({ url: 'https://duckduckgo.com/' });
+    const allowed = 'https://agency.gov/next';
+    await manager.navigate(id, allowed);
+    view.webContents.getURL.mockReturnValue(allowed);
+    start(view, allowed);
+    view.webContents.emit('did-navigate', {}, allowed, 200, 'OK');
+    view.webContents.emit('did-stop-loading');
+    const updated = `${allowed}#details`;
+    view.webContents.getURL.mockReturnValue(updated);
+    view.webContents.emit('did-navigate-in-page', {}, updated, true);
+    expect(manager.getNavigationUrl(id)).toBe(updated);
+    expect(manager.list()[0]).toMatchObject({ url: updated, loading: false });
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(view.setVisible).toHaveBeenLastCalledWith(true);
+  });
+
   it('clears retained browsing decoration when the run stopped while its policy error hid the document', async () => {
     const { manager, id, view } = await createManager();
     const allowed = 'https://agency.gov/';

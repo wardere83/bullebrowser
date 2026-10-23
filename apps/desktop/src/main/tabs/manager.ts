@@ -396,6 +396,9 @@ class TabManager {
     });
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
       if (!isMainFrame) return;
+      // History/hash updates on the retained document must not erase a policy
+      // refusal before explicit recovery or a new document navigation.
+      if (tab.loadError?.code === -20 && isBlockedDestination(tab.navigationUrl ?? tab.url)) return;
       tab.url = url;
       tab.navigationUrl = url;
       this.relayout();
