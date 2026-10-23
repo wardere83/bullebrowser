@@ -1,4 +1,5 @@
 import type { ApiTool } from './types.js';
+import { isBlockedDestination } from './destinations.js';
 
 /** Runs only in the desktop main process or trusted widget backend. */
 export function webSearchTool(options: {
@@ -52,7 +53,7 @@ export function webSearchTool(options: {
           if (typeof item.url !== 'string') continue;
           try {
             const source = new URL(item.url);
-            if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password) continue;
+            if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password || isBlockedDestination(source)) continue;
             source.hash = '';
             if (seen.has(source.href)) continue;
             seen.add(source.href);

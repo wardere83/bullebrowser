@@ -26,6 +26,8 @@ export const BROWSER_SYSTEM = [
   'Browsing effectively:',
   '- For discovery, plan focused queries and call web_search. Do not navigate',
   '  search-engine result pages. If search fails or is unconfigured, report it.',
+  '  DuckDuckGo and its alternate domains are blocked. Never open or read them,',
+  '  including links from old conversations, redirects, or search fallbacks.',
   '  Open relevant result URLs and read their pages. Cross-check important',
   '  claims with independent primary sources, cite the URLs actually inspected,',
   '  and distinguish conflicting evidence, missing data and unverified snippets.',

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { KEY_NAMES, type KeyName, type ToolContext, type ToolDefinition, type ToolName } from '../types.js';
+import { assertAllowedDestination, assertAllowedToolDestination, isBlockedDestination } from '../destinations.js';
 
 const EmptyObject = z.object({}).strict();
 
@@ -115,7 +116,7 @@ export interface ToolImpl<I, O> extends ToolDefinition<I, O> {
   execute: (input: I, ctx: ToolContext) => Promise<O>;
 }
 
-export const tools = {
+const toolDefinitions = {
   getActiveTab: {
     name: 'getActiveTab',
     description: 'Return the active tab metadata.',
@@ -447,6 +448,27 @@ export const tools = {
     { matched: boolean }
   >,
 } as const;
+
+// Hosts sometimes execute a registry tool directly instead of going through
+// the model loop. Keep the same destination restriction on both entry points.
+export const tools = Object.fromEntries(Object.entries(toolDefinitions).map(([name, definition]) => {
+  const tool = definition as ToolImpl<Record<string, unknown>, unknown>;
+  return [name, { ...definition, execute: async (input: Record<string, unknown>, context: ToolContext) => {
+    await assertAllowedToolDestination(name, input, context);
+    const output = await tool.execute(input, context);
+    if (output && typeof output === 'object') {
+      const result = output as Record<string, unknown>;
+      if (typeof result.url === 'string') assertAllowedDestination(result.url);
+      if ((name === 'listTabs' || name === 'list_tabs') && Array.isArray(result.tabs)) {
+        return { ...result, tabs: result.tabs.filter((tab) => !isBlockedDestination(tab.url)) };
+      }
+      if (name === 'listLinks' && Array.isArray(result.links)) {
+        return { ...result, links: result.links.filter((link) => !isBlockedDestination(link.href)) };
+      }
+    }
+    return output;
+  } }];
+})) as unknown as typeof toolDefinitions;
 
 export type ToolRegistry = typeof tools;
 

@@ -14,4 +14,14 @@ describe('tabs across an explicit update', () => {
     saveUpdateTabs([{ url: 'javascript:alert(1)', active: false }, { url: 'https://agency.gov/', active: true }]);
     expect(takeUpdateTabs()).toEqual({ urls: ['https://agency.gov/'], activeIndex: 0 });
   });
+  it('does not restore prohibited pages or their redirect aliases after updating', () => {
+    saveUpdateTabs([
+      { url: 'https://DUCKDUCKGO.COM./?q=private', active: false },
+      { url: 'https://html.duckduckgo.com/', active: false },
+      { url: 'https://duck.com/', active: false },
+      { url: 'https://ddg.gg/', active: true },
+      { url: 'https://agency.gov/', active: false },
+    ]);
+    expect(takeUpdateTabs()).toEqual({ urls: ['https://agency.gov/'], activeIndex: 0 });
+  });
 });

@@ -2,7 +2,7 @@ import { addConnector, removeConnector, connectorCatalog, enabledConnectors, lis
 import { accessibilityManager } from './accessibility.js';
 import { normalizeAccessibility } from '../shared/accessibility.js';
 import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import type { ProviderId } from '@bullebrowser/agent-core';
+import { assertAllowedDestination, type ProviderId } from '@bullebrowser/agent-core';
 import { finishUpdate, applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -157,6 +157,7 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     const id = tabManager.getActiveId();
     const view = id ? tabManager.getView(id) : null;
     if (!id || !view) return null;
+    assertAllowedDestination(view.webContents.getURL());
     return tabManager.withoutBrowsingCloud(id, async () => {
       const image = await view.webContents.capturePage();
       return { pngBase64: image.toPNG().toString('base64'), url: view.webContents.getURL() };

@@ -1,5 +1,6 @@
 import type { ToolContext } from './types.js';
 import type { MemoryStore } from './memory.js';
+import { assertAllowedDestination, assertAllowedTab, BLOCKED_DESTINATION_MESSAGE, isBlockedDestination } from './destinations.js';
 
 export interface RetrievedContext {
   url?: string;
@@ -18,7 +19,9 @@ export async function retrieveContext(
   memory: MemoryStore,
 ): Promise<RetrievedContext> {
   try {
+    await assertAllowedTab(context, context.activeTabId);
     const page = await context.runtime.readPage(context.activeTabId);
+    assertAllowedDestination(page.url);
     return {
       url: page.url,
       title: page.title,
@@ -33,6 +36,9 @@ export async function retrieveContext(
     try {
       const tabs = await context.runtime.listTabs();
       const active = tabs.find((t) => t.id === context.activeTabId) ?? tabs.find((t) => t.active);
+      if (active && isBlockedDestination(active.url)) {
+        return { unreadableReason: BLOCKED_DESTINATION_MESSAGE, memory: memory.all() };
+      }
       url = active?.url;
       title = active?.title;
     } catch {

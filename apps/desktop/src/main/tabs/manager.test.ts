@@ -3,7 +3,7 @@ import type { BrowserWindow } from 'electron';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 interface MockView {
-  webContents: EventEmitter & { loadURL: Mock; reload: Mock };
+  webContents: EventEmitter & { loadURL: Mock; reload: Mock; stop: Mock };
   setVisible: Mock;
   setBounds: Mock;
 }
@@ -16,6 +16,8 @@ vi.mock('electron', async () => {
     loadURL = vi.fn(async () => {});
     reload = vi.fn();
     executeJavaScript = vi.fn(async () => {});
+    getURL = () => 'about:blank';
+    stop = vi.fn();
     close = vi.fn();
     isDestroyed = () => false;
     setWindowOpenHandler = vi.fn();
@@ -37,6 +39,7 @@ vi.mock('electron', async () => {
 vi.mock('../storage/history.js', () => ({ historyStore: { record: mocks.record } }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ homepageUrl: 'about:blank' }) }));
 vi.mock('../agent/browser/browsing-cloud.js', () => ({ browsingCloudScript: () => '' }));
+vi.mock('../agent/browser/net-activity.js', () => ({ trackNetwork: vi.fn() }));
 
 beforeEach(() => {
   vi.resetModules();
@@ -65,6 +68,57 @@ function fail(view: MockView, url: string, code = -102, mainFrame = true) {
 }
 
 describe('native browsing navigation recovery', () => {
+  it('refuses prohibited direct destinations before creating a view or loading a page', async () => {
+    const { manager, id, view } = await createManager();
+    const loads = view.webContents.loadURL.mock.calls.length;
+    for (const url of ['https://duckduckgo.com/?q=private', 'https://html.duckduckgo.com/', 'https://duck.com/', 'https://ddg.gg/']) {
+      await expect(manager.create(url)).rejects.toThrow('blocked by BulleBrowser policy');
+      await expect(manager.navigate(id, url)).rejects.toThrow('blocked by BulleBrowser policy');
+    }
+    expect(mocks.views).toHaveLength(1);
+    expect(view.webContents.loadURL).toHaveBeenCalledTimes(loads);
+    expect(manager.list()[0]?.url).toBe('about:blank');
+  });
+
+  it('prevents page navigations and redirects and exposes the blocked outcome', async () => {
+    const { manager, id, view } = await createManager();
+    const url = 'https://DUCKDUCKGO.COM./?q=private';
+    const event = { preventDefault: vi.fn() };
+    view.webContents.emit('will-navigate', event, url);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(manager.list()[0]?.loadError?.message).toContain('blocked by BulleBrowser policy');
+    expect(manager.getNavigationUrl(id)).toBe(url);
+    await expect(manager.reload(id)).rejects.toThrow('blocked by BulleBrowser policy');
+    await manager.navigate(id, 'https://agency.gov/');
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    const redirect = { preventDefault: vi.fn() };
+    view.webContents.emit('will-redirect', redirect, 'https://ddg.gg/', false, true);
+    expect(redirect.preventDefault).toHaveBeenCalledOnce();
+    expect(manager.getNavigationUrl(id)).toBe('https://ddg.gg/');
+  });
+
+  it('blocks prohibited subframes without marking the allowed parent page as failed', async () => {
+    const { manager, view } = await createManager();
+    const event = { preventDefault: vi.fn(), url: 'https://links.duckduckgo.com/', isMainFrame: false };
+    view.webContents.emit('will-frame-navigate', event);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+  });
+
+  it('lets an allowed navigation recover while an older prohibited load finishes failing', async () => {
+    const { manager, id, view } = await createManager();
+    const blocked = 'https://duckduckgo.com/?q=private';
+    start(view, blocked);
+    expect(manager.list()[0]?.loadError).toBeDefined();
+    // Session policy cancels that load; a separate stop would race this one.
+    expect(view.webContents.stop).not.toHaveBeenCalled();
+    await manager.navigate(id, 'https://agency.gov/');
+    fail(view, blocked, -20);
+    expect(manager.list()[0]).toMatchObject({ url: 'https://agency.gov/', loading: true });
+    expect(manager.list()[0]?.loadError).toBeUndefined();
+    expect(manager.getNavigationUrl(id)).toBe('https://agency.gov/');
+  });
+
   it('shows the native view and attempted address as soon as a blank tab starts browsing', async () => {
     const { manager, id, view } = await createManager();
     expect(view.setVisible).toHaveBeenLastCalledWith(false);

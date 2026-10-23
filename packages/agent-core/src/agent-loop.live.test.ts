@@ -17,28 +17,19 @@ const MODEL: ClaudeModelId = 'claude-sonnet-4-6';
 const SYSTEM = [
   'You are the BulleBrowser agent with control of a web browser.',
   'Tools: navigate, read_page, extract, list_tabs, click, type, press_key, scroll, wait_for.',
-  'To find information you do not already have, navigate to a search engine',
-  '(https://duckduckgo.com/?q=...) then read_page the results before answering.',
+  'To find information you do not already have, use web_search, then navigate',
+  'directly to a relevant source URL and read_page before answering.',
   'Always read a page before answering; ground answers in what you read. Be concise.',
 ].join('\n');
 
-// A tiny scripted "web": navigation resolves to page content; a search URL
-// synthesizes a results page. Returns page-specific text so answers must differ.
+// A tiny scripted "web": navigation resolves to page-specific source content,
+// while the injected web_search tool supplies synthetic discovery results.
 function scriptedRuntime(startUrl: string, startPage: { title: string; text: string }) {
   let current = { url: startUrl, title: startPage.title, text: startPage.text };
 
   const resolve = (url: string): { title: string; text: string } => {
     const u = url.toLowerCase();
-    if (u.includes('duckduckgo') || u.includes('google') || u.includes('bing')) {
-      const q = decodeURIComponent((url.split('q=')[1] ?? '').split('&')[0] ?? '').replace(/\+/g, ' ');
-      if (/capital.*france|france.*capital/.test(q.toLowerCase())) {
-        return {
-          title: `${q} - Search`,
-          text: `Search results for "${q}". Paris is the capital of France. Paris — Wikipedia: Paris is the capital and most populous city of France.`,
-        };
-      }
-      return { title: `${q} - Search`, text: `Search results for "${q}". Several sources discuss ${q}.` };
-    }
+    if (u.includes('france.example')) return { title: 'France', text: 'Paris is the capital of France.' };
     if (u.includes('example.com')) {
       return {
         title: 'Example Domain',
@@ -122,6 +113,12 @@ async function ask(
     systemPrompt: SYSTEM,
     history: [],
     userMessage,
+    extraTools: [{
+      name: 'web_search', description: 'Search for source URLs, then open and read them.',
+      inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+      requiresBrowseAccess: true,
+      execute: async () => ({ results: [{ title: 'France', url: 'https://france.example/capital', snippet: 'France and its capital.' }] }),
+    }],
     context,
     onStep: (s: AgentStep) => {
       if (s.type === 'tool_call' && s.toolName) tools.push(s.toolName);
@@ -163,7 +160,8 @@ describe.skipIf(!process.env.ANTHROPIC_API_KEY)('runAgent live browsing (real AP
     expect(r2.tools.length, 'prompt 2 invoked tools').toBeGreaterThan(0);
     expect(r3.tools.length, 'prompt 3 invoked tools').toBeGreaterThan(0);
     expect(r1.tools).toContain('navigate');
-    expect(r2.tools).toContain('navigate'); // navigated to a search engine
+    expect(r2.tools).toContain('web_search');
+    expect(r2.tools).toContain('navigate'); // opened an actual source
     expect(r1.tools.concat(r2.tools, r3.tools)).toContain('read_page');
 
     // Answers are grounded in the pages that were read.

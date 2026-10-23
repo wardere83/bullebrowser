@@ -6,6 +6,8 @@
 // closed and opened again (macOS), so it is looked up each time it is needed.
 
 import { app, type BrowserWindow, session } from 'electron';
+import { assertAllowedDestination } from '@bullebrowser/agent-core';
+import { trackNetwork } from '../agent/browser/net-activity.js';
 import type { FundingEvent } from '../../shared/funding.js';
 import { extractDocumentFile } from '../documents/host.js';
 import { GuideStore } from '../guide/store.js';
@@ -68,8 +70,11 @@ const testHooksOn = (): boolean => !app.isPackaged && process.env.BULLEBROWSER_T
  * cookies or sign-ins of the sites the user browses.
  */
 const sourceFetch: FetchLike = (input, init) => {
+  assertAllowedDestination(input);
   if (sourceFetchStandIn) return sourceFetchStandIn(input, init);
-  return session.fromPartition('funding-sources').fetch(input, init);
+  const sourceSession = session.fromPartition('funding-sources');
+  trackNetwork(sourceSession);
+  return sourceSession.fetch(input, init);
 };
 
 function build(): FundingPlatform {
