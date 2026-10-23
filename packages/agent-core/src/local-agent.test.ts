@@ -87,15 +87,27 @@ describe('the keyless assistant', () => {
       readPage: vi.fn(async () => ({ title: 'Source', url: currentUrl, text: 'Official grant requirements.' })),
       listLinks: vi.fn(async () => [1, 2, 3].map((id) => ({ text: `Program ${id}`, href: `https://agency.gov/program-${id}` }))),
     });
-    const result = await ask('Find grants for California schools', { researchMode: true, context });
+    const search = vi.fn(async () => ({ results: [1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `https://agency.gov/program-${id}` })) }));
+    const result = await ask('Find grants for California schools', { researchMode: true, context, extraTools: [{ name: 'web_search', description: 'Search', inputSchema: { type: 'object' }, requiresBrowseAccess: true, execute: search }] });
     expect(result.requestBrowseAccess).toHaveBeenCalledTimes(1);
-    expect(context.runtime.navigate).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledOnce();
+    expect(context.runtime.navigate).not.toHaveBeenCalled();
     expect(context.runtime.newTab).toHaveBeenCalledTimes(3);
     expect(context.runtime.switchTab).toHaveBeenCalledWith('tab-https://agency.gov/program-1');
     expect(result.reply).toContain('3 source pages');
     expect(context.runtime.newTab).toHaveBeenCalledWith('https://agency.gov/program-3');
     expect(result.reply).not.toContain('Official grant requirements.');
-    expect(result.steps.filter((step) => step.type === 'tool_result' && step.toolName === 'read_page')).toHaveLength(4);
+    expect(result.steps.filter((step) => step.type === 'tool_result' && step.toolName === 'read_page')).toHaveLength(3);
+  });
+
+  it('does not send API search queries when browsing access is declined', async () => {
+    const search = vi.fn(async () => ({ results: [] }));
+    await expect(ask('Find grants for schools', {
+      researchMode: true,
+      requestBrowseAccess: async () => false,
+      extraTools: [{ name: 'web_search', description: 'Search', inputSchema: { type: 'object' }, requiresBrowseAccess: true, execute: search }],
+    })).rejects.toThrow('declined');
+    expect(search).not.toHaveBeenCalled();
   });
 
   const fetchMock = vi.fn();

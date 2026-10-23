@@ -16,7 +16,7 @@ vi.mock('electron', () => ({ safeStorage: {
     return text.slice(7);
   },
 } }));
-import { getApiKey, setApiKey } from './secrets.js';
+import { clearApiKey, getApiKey, setApiKey } from './secrets.js';
 const key = 'sk-ant-test-key-with-more-than-forty-characters';
 beforeEach(() => { state.data = { keys: {}, apiKeyEncrypted: null }; state.available = true; });
 it('writes only OS-backed v2 credentials', () => {
@@ -43,4 +43,14 @@ it('refuses to save without secure storage', () => {
   state.available = false;
   expect(() => setApiKey(key)).toThrow('Secure credential storage is unavailable');
   expect(state.data.keys).toEqual({});
+});
+it('stores and removes a search key separately without changing model keys', () => {
+  setApiKey(key);
+  setApiKey('BSA-test-search-key', 'brave');
+  expect(state.data.keys.brave).toMatch(/^v2:/);
+  expect(getApiKey('brave')).toBe('BSA-test-search-key');
+  expect(getApiKey()).toBe(key);
+  clearApiKey('brave');
+  expect(state.data.keys.brave).toBeUndefined();
+  expect(getApiKey()).toBe(key);
 });

@@ -19,7 +19,7 @@
 // method awaits the matching /tool-result before returning.
 
 import http from 'node:http';
-import { runAgent } from '@bullebrowser/agent-core';
+import { runAgent, webSearchTool } from '@bullebrowser/agent-core';
 import { eeoTools } from './eeo-tools.mjs';
 import { verifyIdentity, ownsSession, canUseAccountApi } from './auth.mjs';
 
@@ -128,7 +128,7 @@ async function start(session, prompt, url, title) {
       systemPrompt: `${CRM_SYSTEM}\n\nThe user is currently on: ${title} — ${url}`,
       history: [],
       userMessage: prompt,
-      extraTools: canUseAccountApi(session.identity) ? API_TOOLS : [],
+      extraTools: [webSearchTool({ apiKey: process.env.BRAVE_SEARCH_API_KEY, signal: controller.signal }), ...(canUseAccountApi(session.identity) ? API_TOOLS : [])],
       context: { activeTabId: 'page', signal: controller.signal, runtime: makeRuntime(session) },
       onStep: (step) => {
         if (step.type === 'tool_call' && step.detail) send(session, { type: 'activity', text: step.detail });

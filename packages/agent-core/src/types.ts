@@ -232,6 +232,8 @@ export type AgentStepHandler = (step: AgentStep) => void;
 // server-side). This is how the agent operates a CRM through its API rather than
 // by driving the page.
 export interface ApiTool {
+  /** Search transmits queries off-device and must share browsing consent. */
+  requiresBrowseAccess?: boolean;
   name: string;
   description: string;
   /** JSON Schema (object) describing the arguments. */

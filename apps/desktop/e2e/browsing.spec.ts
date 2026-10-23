@@ -25,6 +25,7 @@ async function launch() {
     BULLEBROWSER_TEST_HOOKS: '1',
     ANTHROPIC_API_KEY: '',
     OPENAI_API_KEY: '',
+    BRAVE_SEARCH_API_KEY: 'fixture-search-key-not-real',
   };
   delete (env as NodeJS.ProcessEnv).ELECTRON_RUN_AS_NODE;
   let app: ElectronApplication | undefined;
@@ -381,6 +382,20 @@ test('each browser option asks a short app question instead of filling the compo
   } finally { await close(); }
 });
 
+test('search-key settings are visible, masked and separate from model keys', async () => {
+  const { win, close } = await launch();
+  try {
+    await win.getByRole('button', { name: 'Profile menu', exact: true }).click();
+    await win.getByRole('button', { name: 'Settings', exact: true }).click();
+    const section = win.getByRole('region', { name: 'Web search', exact: true });
+    await expect(section).toContainText('Search key configured');
+    await expect(section.getByLabel('Brave Search API key')).toHaveAttribute('type', 'password');
+    await expect(section.getByLabel('Brave Search API key')).toHaveValue('');
+    await expect(section.getByRole('button', { name: 'Save search key', exact: true })).toBeDisabled();
+    await expect(section).not.toContainText('fixture-search-key-not-real');
+  } finally { await close(); }
+});
+
 test('settings and about stay above browsing and restore the page when closed', async () => {
   const source = await fixture();
   const { app, win, close } = await launch();
@@ -409,11 +424,10 @@ test('a research prompt browses multiple real pages and shows live page counts',
   const { app, win, close } = await launch();
   try {
     await app.evaluate((_electron, fixtureUrl) => {
-      const runtime = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.runtime;
-      const prototype = Object.getPrototypeOf(runtime);
-      const navigate = prototype.navigate;
-      prototype.navigate = function (tabId: string, url: string, options: unknown) {
-        return navigate.call(this, tabId, url.startsWith('https://duckduckgo.com/') ? fixtureUrl : url, options);
+      const original = globalThis.fetch;
+      globalThis.fetch = async (input, init) => {
+        if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })) } }));
+        return original(input, init);
       };
     }, base);
     await win.locator('aside textarea').fill('Find grants for California schools');
@@ -425,7 +439,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await expect(activity).toBeVisible();
     await expect(activity.getByText(/pages? read/)).toBeVisible();
     await expect(win.locator('.md-prose')).toContainText('3 source pages', { timeout: 30_000 });
-    await expect(activity.getByText('4 pages read', { exact: true })).toBeVisible();
+    await expect(activity.getByText('3 pages read', { exact: true })).toBeVisible();
     await activity.getByRole('button').click();
     await expect(activity.getByRole('log')).toContainText('Reading the page');
     await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-1');
@@ -456,10 +470,10 @@ for (const option of [
       await enterAddress(win, base);
       await expectPage(app, win, base + '/', 'School grant programs');
       await app.evaluate((_electron, fixtureUrl) => {
-        const prototype = Object.getPrototypeOf((globalThis as unknown as { __bbTest: Hooks }).__bbTest.runtime);
-        const navigate = prototype.navigate;
-        prototype.navigate = function (id: string, url: string, options: unknown) {
-          return navigate.call(this, id, url.startsWith('https://duckduckgo.com/') ? fixtureUrl : url, options);
+        const original = globalThis.fetch;
+        globalThis.fetch = async (input, init) => {
+          if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })) } }));
+          return original(input, init);
         };
       }, base);
       await win.getByRole('button', { name: option.label, exact: true }).click();

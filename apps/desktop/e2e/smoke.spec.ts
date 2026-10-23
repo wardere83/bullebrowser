@@ -36,6 +36,7 @@ async function launch(
   delete env.ANTHROPIC_API_KEY;
   delete env.OPENAI_API_KEY;
   env.ANTHROPIC_API_KEY = '';
+  env.BRAVE_SEARCH_API_KEY = '';
   if (!openAiOnly && !withoutKeys) {
     env.ANTHROPIC_API_KEY = 'sk-ant-e2e-fixture-key-not-real-0000000000000000';
   }

@@ -199,14 +199,14 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
       : input.browserTask === 'research_funder' ? `${message} official grants programs eligibility`
       : input.browserTask === 'compare_grants' ? `grants funding eligibility ${message}` : message;
     if (exploring && explicitUrls[0]) await run('navigate', { url: explicitUrls[0] });
-    else if (!exploring) await run('navigate', { url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}` });
-    const firstPage = await run('read_page');
+    const search = !exploring ? await run('web_search', { query, count: 10 }) : null;
+    const firstPage = exploring ? await run('read_page') : { url: '', text: '' };
     if (exploring && !String(firstPage.text ?? '').trim()) {
       report = 'There is no readable page open. Enter a website URL and I’ll explore it.';
     } else {
-      const found = await run('listLinks');
+      const found = search ? { links: (Array.isArray(search.results) ? search.results : []).map((r) => ({ href: r.url, text: r.title })) } : await run('listLinks');
       const links = Array.isArray(found.links) ? found.links as Array<{ text?: string; href?: string }> : [];
-      const base = String(firstPage.url || 'https://duckduckgo.com/');
+      const base = String(firstPage.url || 'https://search.invalid/');
       const candidates = new Map<string, number>();
       const words = message.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3);
       for (const link of [...explicitUrls.map((href) => ({ href, text: message })), ...links]) {
@@ -243,7 +243,7 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
       report = options.length
         ? `I opened and read ${options.length} source pages in browser tabs. The top result is selected on the left. Review those options there; eligibility and deadlines still need verification.`
         : exploring ? 'I checked this page but found no readable linked options. The page remains open on the left.'
-          : 'The search is open on the left, but I could not read relevant linked sources. Try a more specific funding goal or an official website URL.';
+          : 'Search returned no readable verified source pages. Try a more specific funding goal or an official website URL.';
     }
   } else if (funding) {
     report = FUNDING_REPLIES[funding] + (summaryRequested ? PAGE_SUMMARY_HINT : '');

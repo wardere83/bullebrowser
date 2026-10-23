@@ -9,7 +9,7 @@ import { safeStorage } from 'electron';
 import { homedir, hostname, userInfo } from 'node:os';
 import { createStore } from './store.js';
 
-export type ProviderId = 'anthropic' | 'openai';
+export type ProviderId = 'anthropic' | 'openai' | 'brave';
 
 interface SecretSchema extends Record<string, unknown> {
   // Legacy: a safeStorage-encrypted Anthropic key from before this change.
@@ -61,10 +61,11 @@ const KEY_SHAPE: Record<ProviderId, { prefix: RegExp; label: string }> = {
   // sk-ant- also starts with sk-, so exclude it explicitly — otherwise an
   // Anthropic key pasted into the OpenAI/voice box passes and then 401s later.
   openai: { prefix: /^sk-(?!ant-)/, label: "an OpenAI key (starts with 'sk-', not 'sk-ant-')" },
+  brave: { prefix: /^\S+$/, label: 'a Brave Search API key without whitespace' },
 };
 
 function envKey(provider: ProviderId): string | null {
-  const name = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+  const name = provider === 'brave' ? 'BRAVE_SEARCH_API_KEY' : provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
   const value = process.env[name]?.trim();
   return value ? value : null;
 }
@@ -76,7 +77,7 @@ export function setApiKey(plain: string, provider: ProviderId = 'anthropic'): vo
   if (!shape.prefix.test(trimmed)) {
     throw new Error(`That doesn't look like ${shape.label}.`);
   }
-  if (trimmed.length < 40) throw new Error('API key is too short to be valid.');
+  if (provider !== 'brave' && trimmed.length < 40) throw new Error('API key is too short to be valid.');
   store.set('keys', { ...store.get('keys'), [provider]: encrypt(trimmed) });
 }
 

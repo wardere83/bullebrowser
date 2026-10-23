@@ -270,6 +270,9 @@ export async function executeToolCall(
   // endpoint still asks the user first.
   const apiTool = extraTools.get(name);
   if (apiTool) {
+    if (apiTool.requiresBrowseAccess && !(await gate.allowed())) {
+      return fail(new ToolError('USER_DECLINED', 'Web search access was declined.'));
+    }
     if (apiTool.destructive) {
       const approved = await context.runtime.confirmDestructive(
         `Confirm action: ${name} ${truncate(JSON.stringify(input), 300)}`,
@@ -531,7 +534,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   if (!input.apiKey) {
     onStep({ type: 'thinking', detail: 'BulleBrowser Agentic AI is working…' });
     return runLocalAgent(input, (name, args) => executeToolCall(
-      `local-${name}`, name, args, context, policy, onStep, gate, new Map(),
+      `local-${name}`, name, args, context, policy, onStep, gate, new Map((input.extraTools ?? []).map((t) => [t.name, t])),
       { onRecord: input.onToolRecord },
     ));
   }

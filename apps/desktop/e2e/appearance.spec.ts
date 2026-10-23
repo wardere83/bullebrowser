@@ -30,6 +30,7 @@ async function launch(accessibility?: Record<string, unknown>) {
     BULLEBROWSER_TEST_HOOKS: '1',
     ANTHROPIC_API_KEY: '',
     OPENAI_API_KEY: '',
+    BRAVE_SEARCH_API_KEY: '',
   };
   delete (env as NodeJS.ProcessEnv).ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({

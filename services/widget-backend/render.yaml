@@ -22,7 +22,10 @@ services:
       - key: WIDGET_AUTH_SECRET
         sync: false # >=32 characters; shared ONLY with the trusted CRM token issuer
       - key: EEO_BASE_URL
+        # Search API key stays on the backend, not in the embed script.
         value: https://projects.bulleconsulting.com/secure-api/
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
       - key: ALLOWED_ORIGINS
         # comma-separated: your CRM origin, plus any dashboard that embeds the widget
         value: https://projects.bulleconsulting.com

@@ -295,9 +295,9 @@ export interface BrowserBridge {
     set(patch: Partial<AppSettings>): Promise<AppSettings>;
   };
   secrets: {
-    hasApiKey(provider?: ProviderId): Promise<boolean>;
-    setApiKey(key: string, provider?: ProviderId): Promise<void>;
-    clearApiKey(provider?: ProviderId): Promise<void>;
+    hasApiKey(provider?: ProviderId | 'brave'): Promise<boolean>;
+    setApiKey(key: string, provider?: ProviderId | 'brave'): Promise<void>;
+    clearApiKey(provider?: ProviderId | 'brave'): Promise<void>;
   };
   conversations: {
     list(): Promise<ConversationSummary[]>;
