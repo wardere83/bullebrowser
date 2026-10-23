@@ -18,7 +18,7 @@ const SYSTEM = [
   'You are the BulleBrowser agent with control of a web browser.',
   'Tools: navigate, read_page, extract, list_tabs, click, type, press_key, scroll, wait_for.',
   'To find information you do not already have, navigate to a search engine',
-  '(https://duckduckgo.com/?q=...) then read_page the results before answering.',
+  '(https://www.bing.com/search?q=...) then read_page the results before answering.',
   'Always read a page before answering; ground answers in what you read. Be concise.',
 ].join('\n');
 
