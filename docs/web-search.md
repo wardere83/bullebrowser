@@ -37,9 +37,11 @@ homepages and restored update tabs cannot reopen the service.
 After a blocked desktop navigation, Go back restores the still-loaded allowed
 page when one is available and refreshes its browsing indicator. A denied popup
 records the attempted destination on its originating tab so the agent reports
-the policy refusal. Embedded form checks apply only to actions that can submit
-the form, using the actual submitter's resolved destination; ordinary form
-controls remain usable. The embedded widget cannot inspect the browser's
+the policy refusal. Same-document history and hash changes cannot clear that
+refusal before explicit recovery or a new navigation. Embedded widgets refuse
+activation of controls associated with a prohibited-action form, including
+ordinary buttons: a page handler can submit the form programmatically. Checks
+also cover the actual submitter's resolved destination. The embedded widget cannot inspect the browser's
 history destinations, so its Back and Forward tools refuse unknown targets;
 the agent must navigate to an explicit allowed URL instead.
 

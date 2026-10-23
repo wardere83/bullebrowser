@@ -128,7 +128,12 @@ function assertElementDestination(el: Element, action: 'click' | 'Enter' | 'Spac
   // A selector can resolve a span/icon inside the actual submit button.
   const control = el.closest('button, input') as FormControl | null;
   const form = control?.form;
-  if (!form || control.matches(':disabled')) return;
+  if (!form) return;
+  // Any control's handler can submit its form, regardless of its declared type
+  // or submitter override. Refuse a known blocked action before running it;
+  // queued form navigation can escape an immediate post-action URL check.
+  assertAllowedDestination(form.action);
+  if (control.matches(':disabled')) return;
 
   let submitter: FormControl | undefined;
   if (isSubmitControl(control)) {
