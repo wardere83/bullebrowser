@@ -80,6 +80,17 @@ export async function applyUpdate(version: string, saveSession: () => void = () 
   stageUpdate?.(version);
 }
 
+/** Explicit, user-consented activation. Electron must replace the native process. */
+export function finishUpdate(version: string): void {
+  const status = getUpdateStatus();
+  const prepared = status.state === 'ready' ? status.version : status.state === 'deferred' ? status.preparedVersion : null;
+  if (!app.isPackaged || prepared !== version) throw new Error('This update is not ready to install.');
+  if (process.platform === 'linux') throw new Error('Automatic installation is not supported for this Linux package.');
+  // The renderer saves chat drafts before invoking this handler. Native updater
+  // takes ownership of the controlled quit/install/relaunch sequence.
+  autoUpdater.quitAndInstall(false, true);
+}
+
 export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null; completedVersion: string | null } {
   return { installedVersion: app.getVersion(), activationIssue, completedVersion: getActivatedUpdateVersion() };
 }
