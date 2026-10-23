@@ -106,6 +106,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     const wc = this.wcFor(tabId);
     // Second line of defence behind the navigate schema's allowlist.
     assertWebUrl(url);
+    if (/(^|\\.)duckduckgo\\.com$/i.test(new URL(url).hostname)) throw new ToolError('NAVIGATION_BLOCKED', 'This search provider is disabled.');
     const mode = opts.wait ?? 'idle';
     let status: number | undefined;
     const onNavigate = (_e: unknown, _url: string, code: number) => {
