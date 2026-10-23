@@ -3,7 +3,7 @@ vi.mock('./store.js', () => ({ createStore: (_name: string, defaults: Record<str
   const data = { ...defaults };
   return { get: (key: string) => data[key], set: (key: string, value: unknown) => { data[key] = value; } };
 } }));
-import { recordPreparedUpdate, reconcilePreparedUpdate } from './update-receipt.js';
+import { getActivatedUpdateVersion, recordPreparedUpdate, reconcilePreparedUpdate } from './update-receipt.js';
 beforeEach(() => { recordPreparedUpdate('0.2.65', '0.2.64', '/Applications/BulleBrowser.app'); });
 describe('verified activation receipts', () => {
   it('does not confuse a completed download with an installed update', () => {
@@ -16,6 +16,10 @@ describe('verified activation receipts', () => {
   it('clears the receipt only when the running version proves activation', () => {
     expect(reconcilePreparedUpdate('0.2.65', '/Applications/BulleBrowser.app')).toBeNull();
     expect(reconcilePreparedUpdate('0.2.64', '/Applications/BulleBrowser.app')).toBeNull();
+  });
+  it('shows completion only after a verified running version', () => {
+    expect(reconcilePreparedUpdate('0.2.65', '/Applications/BulleBrowser.app')).toBeNull();
+    expect(getActivatedUpdateVersion()).toBe('0.2.65');
   });
   it('accepts a newer installed version without reporting a failed older update', () => {
     expect(reconcilePreparedUpdate('0.2.66', '/Applications/BulleBrowser.app')).toBeNull();
