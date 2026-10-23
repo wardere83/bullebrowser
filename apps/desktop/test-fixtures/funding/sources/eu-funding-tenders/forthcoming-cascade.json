@@ -1,0 +1,170 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=100&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "8"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "status": [
+                  "31094501"
+                ]
+              }
+            },
+            {
+              "range": {
+                "startDate": {
+                  "gte": "2026-10-06T00:00:00.000+0000"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "callccm2Id",
+        "order": "ASC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 15,
+    "totalResults": 1,
+    "pageNumber": 1,
+    "pageSize": 100,
+    "sort": "[callccm2Id:ASC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "15342COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/44087099",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "European Partnership on Innovative SMEs/Eurostars: joint transnational call for proposals (CALL 12 of Eurostars-3)",
+        "weight": 0,
+        "content": "European Partnership on Innovative SMEs/Eurostars: joint transnational call for proposals (CALL 12 of Eurostars-3)",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIE-2021-INNOVSMES-01-01"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-12-17T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2027-03-04T14:00:00.000+0000"
+          ],
+          "description": [],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "European Partnership on Innovative SMEs"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/44087099"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/44087099"
+          ],
+          "callccm2Id": [
+            "15342"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "15342COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "InnovativeSMEs"
+          ],
+          "callTitle": [
+            "European Partnership on Innovative SMEs/Eurostars: joint transnational call for proposals (CALL 12 of Eurostars-3)"
+          ],
+          "projectName": [
+            "European Partnership on Innovative SMEs"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-12-17T00:00:00.000+0000"
+          ],
+          "budget": [
+            "86439583"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094501"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "European Partnership on Innovative SMEs. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/44087099"
+      }
+    ],
+    "warnings": []
+  }
+}

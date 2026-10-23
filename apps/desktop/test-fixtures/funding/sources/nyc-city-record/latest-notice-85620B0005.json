@@ -1,0 +1,16 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.cityofnewyork.us/resource/dg92-zbpx.json?%24select=request_id%2Cstart_date%2Cagency_name%2Cpin%2Cdue_date%2Cshort_title&%24where=section_name%3D%27Procurement%27+AND+type_of_notice_description%3D%27Solicitation%27+AND+agency_name%3D%27Citywide+Administrative+Services%27+AND+pin%3D%2785620B0005%27&%24order=start_date+DESC%2C+request_id+DESC&%24limit=1"
+  },
+  "response": [
+    {
+      "request_id": "20200727109",
+      "start_date": "2020-10-19T00:00:00.000",
+      "agency_name": "Citywide Administrative Services",
+      "pin": "85620B0005",
+      "due_date": "9999-09-09T11:00:00.000",
+      "short_title": "Cancellation: LANDSCAPE MAINTENANCE"
+    }
+  ]
+}

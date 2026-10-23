@@ -1,0 +1,337 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.ca.gov/api/3/action/datastore_search?resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&filters=%7B%22Status%22%3A%5B%22active%22%2C%22forecasted%22%5D%7D&limit=1000"
+  },
+  "response": {
+    "help": "https://data.ca.gov/api/3/action/help_show?name=datastore_search",
+    "success": true,
+    "result": {
+      "filters": {
+        "Status": [
+          "active",
+          "forecasted"
+        ]
+      },
+      "include_total": true,
+      "limit": 1000,
+      "records_format": "objects",
+      "resource_id": "111c8c88-21f6-453c-ae2c-b4785a0624f5",
+      "total_estimation_threshold": null,
+      "records": [
+        {
+          "_id": 1,
+          "PortalID": "191046",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2026-10-01 14:12:38",
+          "ChangeNotes": "Applications are to be submitted electronically via the Online Grants Application (OLGA).",
+          "AgencyDept": "Department of Parks and Recreation",
+          "Title": "The Recreational Trails Program (RTP) – R27",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Education; Environment & Water; Parks & Recreation",
+          "CategorySuggestion": null,
+          "Purpose": "The purpose of the Recreational Trails Program is to provide for well managed OHV Recreation by providing financial assistance to eligible agencies and organizations that develop, maintain, operate, expand, support, or contribute to well managed, high-quality, OHV Recreation areas, roads, and trails, and to responsibly maintain the wildlife, soils, and habitat of Project Areas in a manner that will sustain long-term OHV Recreation.",
+          "Description": "The Recreational Trails Program (RTP) provides funds to develop and maintain Recreational Trails and trail-related facilities for motorized Recreational Trail uses. This includes acquisition, development and rehabilitation of trails and facilities, construction and maintenance of trails, purchase or lease of equipment, trail conditions assessments, and the development and distribution of educational messages.",
+          "ApplicantType": "Nonprofit; Public Agency",
+          "ApplicantTypeNotes": "Cities, counties, districts, state and federal agencies, and 501(c)(3) nonprofit organizations. ",
+          "Geography": "All Projects shall reside on public lands within the State of California.",
+          "FundingSource": "Federal",
+          "FundingSourceNotes": "Bipartisan Infrastructure Law.",
+          "MatchingFunds": "12%",
+          "MatchingFundsNotes": "Matching funds must be at least 12% of total project costs. Eligible match sources are State funds (which may include Grants and Cooperative Agreement funds), local, and private funds, donated materials and services, value of donated land for acquisition Projects, and other federal funds. If using Other Federal Funds as a match, the total Federal funds claimed on a Project CANNOT exceed 95% of the total Project Costs.",
+          "EstAvailFunds": "$3,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2026-10-02 15:00:00",
+          "ApplicationDeadline": "2026-11-02 17:00:00",
+          "AwardPeriod": "1-3 years",
+          "ExpAwardDate": "January 6, 2027",
+          "ElecSubmission": "url: https://olga.ohv.parks.ca.gov/egrams_ohmvr/user/home.aspx;",
+          "GrantURL": "https://ohv.parks.ca.gov/?page_id=24881",
+          "AgencyURL": "https://ohv.parks.ca.gov/",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: OHV.grants@parks.ca.gov; tel: 1-916-324-4442;",
+          "AwardStats": null
+        },
+        {
+          "_id": 3,
+          "PortalID": "192057",
+          "GrantID": null,
+          "Status": "forecasted",
+          "LastUpdated": "2026-09-29 18:31:07",
+          "ChangeNotes": null,
+          "AgencyDept": "CA Department of Corrections and Rehabilitation",
+          "Title": "REHABILITATIVE INVESTMENT GRANTS FOR HEALING AND TRANSFORMATION (RIGHT) GRANT 4.0",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Health & Human Services",
+          "CategorySuggestion": "Rehabilitative Services",
+          "Purpose": "This Grant is to provide support to eligible community-based, nonprofit organizations for the purpose of delivering trauma-informed, rehabilitative and/or restorative justice programming in CDCR institutions.",
+          "Description": "RIGHT 4.0 funds may be used to sustain or expand a currently existing trauma-informed, rehabilitative and/or restorative justice program. Organizations may utilize funds to provide a new program within an institution where trauma-informed, rehabilitative and/or restorative justice the program is not currently offered.",
+          "ApplicantType": "Nonprofit",
+          "ApplicantTypeNotes": "I. Active Non-Profit Status  II. Prior Service Requirements  III. Existing Service Requirements  **Expanded eligibility requirements can be found within the Request for Application document for this grant**",
+          "Geography": "The Organization must have a physical office in California.  Funding awarded from this grant must be used within California State Prisons.",
+          "FundingSource": "State",
+          "FundingSourceNotes": "Appropriated via, SEC. 119. Item 5225-017-0001 of Section 2.00 of the Budget Act of 2026.",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": "N/A",
+          "EstAvailFunds": "$19,400,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advance(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "October 1, 2026",
+          "ApplicationDeadline": null,
+          "AwardPeriod": "7/1/2027-12/01/2029",
+          "ExpAwardDate": "February 2027",
+          "ElecSubmission": "url: https://cdcrca.sjc1.qualtrics.com/jfe/form/SV_4Z8isIprw8f0RL0;",
+          "GrantURL": "https://www.cdcr.ca.gov/rehabilitation/grants/",
+          "AgencyURL": "https://www.cdcr.ca.gov/rehabilitation/grants/",
+          "AgencySubscribeURL": "https://www.cdcr.ca.gov/rehabilitation/grants/",
+          "GrantEventsURL": "https://www.cdcr.ca.gov/rehabilitation/grants/",
+          "ContactInfo": null,
+          "AwardStats": null
+        },
+        {
+          "_id": 40,
+          "PortalID": "190194",
+          "GrantID": null,
+          "Status": "forecasted",
+          "LastUpdated": "2026-08-17 15:50:47",
+          "ChangeNotes": "Expected award amounts information updated  Grant description updated",
+          "AgencyDept": "Department of Water Resources",
+          "Title": "Watershed Resilience Conservation Implementation",
+          "Type": "Grant",
+          "LOI": "Yes",
+          "Categories": "Disadvantaged Communities; Environment & Water",
+          "CategorySuggestion": null,
+          "Purpose": "The Watershed Resilience Conservation Implementation grant program funds projects that reduce water use and improve water efficiency, helping communities save water and build resilience to drought and supply shortages.",
+          "Description": "The purpose of this program is to fund the implementation of practical water conservation projects that reduce water demand and improve efficiency at the watershed scale. The program supports grantees in carrying out actions such as irrigation efficiency upgrades, leak detection and repair, water-efficient landscaping conversions, metering and monitoring improvements, and other measures that directly reduce water consumption.  A concept proposal will be required ahead of a full applications. We anticipate accepting concepts in 2027.",
+          "ApplicantType": "Nonprofit; Public Agency; Tribal Government",
+          "ApplicantTypeNotes": null,
+          "Geography": "Statewide",
+          "FundingSource": "State",
+          "FundingSourceNotes": "Proposition 4",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": "$60,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2027",
+          "ApplicationDeadline": null,
+          "AwardPeriod": null,
+          "ExpAwardDate": null,
+          "ElecSubmission": null,
+          "GrantURL": "https://water.ca.gov/Work-With-Us/Grants-And-Loans/watershed-resilience-program",
+          "AgencyURL": "https://water.ca.gov",
+          "AgencySubscribeURL": "https://public.govdelivery.com/landing_pages/29426/596c0629d73f8e9662447e5491dfa041",
+          "GrantEventsURL": null,
+          "ContactInfo": "email: financialassistance@water.ca.gov; tel: 1-916-651-9613;",
+          "AwardStats": null
+        },
+        {
+          "_id": 97,
+          "PortalID": "171777",
+          "GrantID": null,
+          "Status": "forecasted",
+          "LastUpdated": "2026-08-27 17:00:36",
+          "ChangeNotes": "Added closing date of October 21 at 5pm.  Please visit the grant website for a detailed list of changes.",
+          "AgencyDept": "Department of Water Resources",
+          "Title": "Dam Safety and Climate Resilience Local Assistance",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Environment & Water",
+          "CategorySuggestion": "Dam Safety, Climate Change",
+          "Purpose": "Senate Bill 122 added Part 4, Section 6700 to the Water Code to create a new program, the Dam Safety and Climate Resilience Local Assistance Program, within DWR for the purpose of providing state funding for repairs, rehabilitation, enhancements, and other dam safety projects at existing state jurisdictional dams and associated facilities that were in service prior to January 1, 2023. ",
+          "Description": "Approximately 10 percent of the 1,236 State jurisdictional dams regulated by DWR’s Division of Safety of Dams (DSOD) have been assigned a condition assessment classification of less than “Satisfactory” (e.g., they have noted deficiencies that need remediation). In many cases, these dams pose a significant threat to communities downstream. As an interim risk reduction measure, more than 40 of these dams have had reservoir restrictions imposed. The loss of water storage from these reservoir restrictions is about 350,000 acre-feet. Many dam owners, even those with sources of funding, do not have the ability to secure funding for dam remediation or improvement projects. This program will provide much-needed grant funding for the repair, retrofit, and rehabilitation of these critical infrastructure facilities, reduce the unacceptable risks to the public, and regain lost storage capacity that is needed to face California’s climate-related water shortages.  ",
+          "ApplicantType": "Nonprofit; Public Agency; Tribal Government",
+          "ApplicantTypeNotes": "To be eligible for DSCR funds, the following conditions must be met:   - The dam must be a California State Jurisdictional Dam.   - The dam must have a downstream hazard classification, as determined by DSOD, of Significant, High,       or Extremely High.   - The dam owner must be in compliance with DSOD’s dam safety program.   - The dam owner must not have any delinquent annual DSOD fees.      ",
+          "Geography": "Projects must occur in California",
+          "FundingSource": "State",
+          "FundingSourceNotes": "These Guidelines govern the DSCR solicitation using funds authorized by the California Budget Act of 2025 (Stats. 2025, Ch. 6, Sec. 144.) (Budget Act) and funded by the Safe Drinking Water, Wildfire Prevention, Drought Preparedness, and Clean Air Bond Act of 2024 (Proposition 4; Public Resources Code, § 90000 et seq.). ",
+          "MatchingFunds": "50%",
+          "MatchingFundsNotes": "Applicants may propose a reduced local cost-share of up to 50% (making the project 0% local cost share) if the project would cause extreme financial hardship to the grant recipient and the dam poses an unacceptable public safety risk.",
+          "EstAvailFunds": "$228,200,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "September 2026",
+          "ApplicationDeadline": null,
+          "AwardPeriod": "2 years",
+          "ExpAwardDate": "February 2026",
+          "ElecSubmission": "email: DSCR@water.ca.gov;",
+          "GrantURL": "https://water.ca.gov/Work-With-Us/Grants-And-Loans/Dam-Safety-and-Enhancements-Program",
+          "AgencyURL": "https://water.ca.gov/Work-With-Us/Grants-And-Loans/Dam-Safety-and-Enhancements-Program",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": null,
+          "AwardStats": null
+        }
+      ],
+      "fields": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "PortalID",
+          "type": "text"
+        },
+        {
+          "id": "GrantID",
+          "type": "text"
+        },
+        {
+          "id": "Status",
+          "type": "text"
+        },
+        {
+          "id": "LastUpdated",
+          "type": "text"
+        },
+        {
+          "id": "ChangeNotes",
+          "type": "text"
+        },
+        {
+          "id": "AgencyDept",
+          "type": "text"
+        },
+        {
+          "id": "Title",
+          "type": "text"
+        },
+        {
+          "id": "Type",
+          "type": "text"
+        },
+        {
+          "id": "LOI",
+          "type": "text"
+        },
+        {
+          "id": "Categories",
+          "type": "text"
+        },
+        {
+          "id": "CategorySuggestion",
+          "type": "text"
+        },
+        {
+          "id": "Purpose",
+          "type": "text"
+        },
+        {
+          "id": "Description",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantType",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantTypeNotes",
+          "type": "text"
+        },
+        {
+          "id": "Geography",
+          "type": "text"
+        },
+        {
+          "id": "FundingSource",
+          "type": "text"
+        },
+        {
+          "id": "FundingSourceNotes",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFunds",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFundsNotes",
+          "type": "text"
+        },
+        {
+          "id": "EstAvailFunds",
+          "type": "text"
+        },
+        {
+          "id": "EstAwards",
+          "type": "text"
+        },
+        {
+          "id": "EstAmounts",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethod",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethodNotes",
+          "type": "text"
+        },
+        {
+          "id": "OpenDate",
+          "type": "text"
+        },
+        {
+          "id": "ApplicationDeadline",
+          "type": "text"
+        },
+        {
+          "id": "AwardPeriod",
+          "type": "text"
+        },
+        {
+          "id": "ExpAwardDate",
+          "type": "text"
+        },
+        {
+          "id": "ElecSubmission",
+          "type": "text"
+        },
+        {
+          "id": "GrantURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencyURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencySubscribeURL",
+          "type": "text"
+        },
+        {
+          "id": "GrantEventsURL",
+          "type": "text"
+        },
+        {
+          "id": "ContactInfo",
+          "type": "text"
+        },
+        {
+          "id": "AwardStats",
+          "type": "text"
+        }
+      ],
+      "_links": {
+        "start": "/api/3/action/datastore_search?filters=%7B%22Status%22%3A%5B%22active%22%2C%22forecasted%22%5D%7D&limit=1000&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5",
+        "next": "/api/3/action/datastore_search?filters=%7B%22Status%22%3A%5B%22active%22%2C%22forecasted%22%5D%7D&limit=1000&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&offset=1000"
+      },
+      "total": 4,
+      "total_was_estimated": false
+    }
+  }
+}

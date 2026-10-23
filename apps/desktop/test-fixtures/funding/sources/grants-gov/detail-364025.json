@@ -1,0 +1,166 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 364025
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 364025,
+   "revision": 1,
+   "opportunityNumber": "25-534",
+   "opportunityTitle": "Strengthening American Infrastructure (SAI)",
+   "owningAgencyCode": "NSF",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 364025,
+    "version": 2,
+    "agencyCode": "NSF",
+    "agencyName": "U.S. National Science Foundation",
+    "agencyPhone": "703-292-4203",
+    "agencyAddressDesc": "If you have any problems linking to this funding announcement, please contact the email address above.",
+    "agencyDetails": {
+     "code": "NSF",
+     "seed": "NSF",
+     "agencyName": "U.S. National Science Foundation",
+     "agencyCode": "NSF",
+     "topAgencyCode": "NSF"
+    },
+    "topAgencyDetails": {
+     "code": "NSF",
+     "seed": "NSF",
+     "agencyName": "U.S. National Science Foundation",
+     "agencyCode": "NSF",
+     "topAgencyCode": "NSF"
+    },
+    "agencyContactPhone": "703-292-4203",
+    "agencyContactName": "U.S. National Science Foundation",
+    "agencyContactDesc": "NSF grants.gov support\ngrantsgovsupport@nsf.gov",
+    "agencyContactEmail": "grantsgovsupport@nsf.gov",
+    "agencyContactEmailDesc": "If you have any problems linking to this funding announcement, please contact the email address above.",
+    "synopsisDesc": "<p>Strengthening American Infrastructure (SAI) is an NSF program seeking to stimulate human-centered, use-inspired, fundamental and potentially <a href=\"https://new.nsf.gov/funding/learn/research-types/transformative-research\">transformative</a> research aimed at strengthening America&rsquo;s infrastructure. Effective infrastructure provides a strong foundation for socioeconomic vitality and broad improvement in quality of life. Robust, reliable and effective infrastructure spurs private-sector innovation, grows the economy, creates jobs, makes public-sector service provision more efficient, strengthens communities, promotes equal opportunity, protects the natural environment, enhances national security and fuels American leadership. Achieving these objectives requires the integration of expertise from across all science and engineering disciplines. SAI focuses on how fundamental knowledge about human reasoning and decision-making, governance, and social and cultural processes enables the building and maintenance of effective infrastructure that improves lives and society and builds on advances in technology and engineering. Successful projects will represent a convergence of expertise in one or more social, behavioral or economic sciences, deeply integrated with other disciplines to support substantial and potentially pathbreaking fundamental research applied to strengthening a specific focal infrastructure.</p>\n<p><span>General inquiries regarding this funding opportunity should be sent to&nbsp;<a href=\"mailto:NSF-SAI@nsf.gov\">NSF-SAI@nsf.gov</a>.</span></p>",
+    "responseDateDesc": "Funding Opportunity is Archived, Proposals are not accepted",
+    "fundingDescLinkUrl": "http://www.nsf.gov/publications/pub_summ.jsp?ods_key=nsf25534",
+    "fundingDescLinkDesc": "NSF Publication 25-534",
+    "postingDate": "Oct 05, 2026 12:00:00 AM EDT",
+    "archiveDate": "Oct 06, 2026 12:00:00 AM EDT",
+    "costSharing": false,
+    "estimatedFunding": "9600000",
+    "estimatedFundingFormatted": "9,600,000",
+    "awardCeiling": "750000",
+    "awardCeilingFormatted": "750,000",
+    "awardFloor": "50000",
+    "awardFloorFormatted": "50,000",
+    "applicantEligibilityDesc": "*Who May Submit Proposals: Proposals may only be submitted by the following:\n  -For-profit organizations: U.S.-based commercial organizations, including small businesses, with strong capabilities in scientific or engineering research or education and a passion for innovation.\n  -Non-profit, non-academic organizations: Independent museums, observatories, research laboratories, professional societies and similar organizations located in the U.S. that are directly associated with educational or research activities.\n  -Institutions of Higher Education (IHEs): Two- and four-year IHEs (including community colleges) accredited in, and having a campus located in the US, acting on behalf of their faculty members. Special Instructions for International Branch Campuses of US IHEs: If the proposal includes funding to be provided to an international branch campus of a US institution of higher education (including through use of sub-awards and consultant arrangements), the proposer must explain the benefit(s) to the project of performance at the international branch campus, and justify why the project activities cannot be performed at the US campus.\n  -Tribal Nations: An American Indian or Alaska Native tribe, band, nation, pueblo, village, or community that the Secretary of the Interior acknowledges as a federally recognized tribe pursuant to the Federally Recognized Indian Tribe List Act of 1994, 25 U.S.C. &sect;&sect; 5130-5131.\n\n*Who May Serve as PI:\nPIs must hold appointments at U.S.-based campuses/offices of eligible organizations (IHEs, Non-profit, non-academic organizations, For-profit organizations, Tribal Nations). There are no restrictions on who may serve as co-PIs, Senior/Key Personnel, or Consultant.\n&amp;nbsp;",
+    "sendEmail": "Y",
+    "createTimeStamp": "Oct 05, 2026 01:28:09 PM EDT",
+    "modComments": "Updated Synopsis via NSF Grants Opportunity Sync",
+    "createdDate": "Oct 05, 2026 11:23:47 AM EDT",
+    "lastUpdatedDate": "Oct 05, 2026 01:28:09 PM EDT",
+    "applicantTypes": [
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "ST",
+      "description": "Science and Technology and other Research and Development"
+     }
+    ],
+    "postingDateStr": "2026-10-05-00-00-00",
+    "archiveDateStr": "2026-10-06-00-00-00",
+    "createTimeStampStr": "2026-10-05-13-28-09"
+   },
+   "agencyDetails": {
+    "code": "NSF",
+    "seed": "NSF",
+    "agencyName": "U.S. National Science Foundation",
+    "agencyCode": "NSF",
+    "topAgencyCode": "NSF"
+   },
+   "topAgencyDetails": {
+    "code": "NSF",
+    "seed": "NSF",
+    "agencyName": "U.S. National Science Foundation",
+    "agencyCode": "NSF",
+    "topAgencyCode": "NSF"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 435644,
+     "opportunityId": 364025,
+     "cfdaNumber": "47.041",
+     "programTitle": "Engineering"
+    },
+    {
+     "id": 435643,
+     "opportunityId": 364025,
+     "cfdaNumber": "47.049",
+     "programTitle": "Mathematical and Physical Sciences"
+    },
+    {
+     "id": 435642,
+     "opportunityId": 364025,
+     "cfdaNumber": "47.050",
+     "programTitle": "Geosciences"
+    },
+    {
+     "id": 435645,
+     "opportunityId": 364025,
+     "cfdaNumber": "47.074",
+     "programTitle": "Biological Sciences"
+    },
+    {
+     "id": 435646,
+     "opportunityId": 364025,
+     "cfdaNumber": "47.075",
+     "programTitle": "Social, Behavioral, and Economic Sciences"
+    },
+    {
+     "id": 435647,
+     "opportunityId": 364025,
+     "cfdaNumber": "47.076",
+     "programTitle": "STEM Education (formerly Education and Human Resources)"
+    },
+    {
+     "id": 435648,
+     "opportunityId": 364025
+    }
+   ],
+   "originalDueDateDesc": "Funding Opportunity is Archived, Proposals are not accepted",
+   "synopsisModifiedFields": [
+    "revision",
+    "version"
+   ],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

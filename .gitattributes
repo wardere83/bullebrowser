@@ -1,0 +1,2 @@
+apps/desktop/test-fixtures/**/*.pdf binary
+apps/desktop/test-fixtures/**/*.docx binary

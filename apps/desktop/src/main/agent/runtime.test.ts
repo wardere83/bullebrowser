@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('../tabs/manager.js', () => ({ tabManager: { getView: vi.fn() } }));
-import { CLICK_FN, TYPE_FN } from './runtime.js';
+import { CLICK_FN, TYPE_FN } from './browser/page-scripts.js';
 
 class Field {
   private content = '';
   get value() { return this.content; }
   set value(value: string) { this.content = value; }
   outerHTML = '<input>';
+  tagName = 'INPUT';
+  getBoundingClientRect() { return { left: 0, top: 0, width: 10, height: 10 }; }
   isContentEditable = false;
   click = vi.fn();
   focus = vi.fn();
@@ -20,6 +22,9 @@ beforeEach(() => {
   field = new Field();
   page = { __bbDeepQuery: () => field, __bbCursor: vi.fn() };
   vi.stubGlobal('window', page);
+  vi.stubGlobal('__bb', { FindClickable: () => field, FindField: () => field, GuardField: vi.fn(), Label: () => 'test' });
+  vi.stubGlobal('document', { hidden: false });
+  vi.stubGlobal('HTMLSelectElement', class {});
   vi.stubGlobal('HTMLInputElement', Field);
   vi.stubGlobal('HTMLTextAreaElement', class {});
 });

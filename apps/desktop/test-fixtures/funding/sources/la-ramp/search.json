@@ -1,0 +1,163 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.lacity.org/resource/hf3r-utnq.json?%24select=rampid%2Ctitle%2Cstagename%2Ccategory%2Ctype%2Cbidpost%2Cclosedate%2Cdepartment%2Curl&%24order=closedate+ASC%2C+rampid+ASC&%24limit=5000"
+  },
+  "response": [
+    {
+      "rampid": "232282",
+      "title": "MANUAL HEIGHT ADJUSTERS AND INSTALLATION",
+      "stagename": "Open",
+      "category": "Commodity",
+      "type": "RFQ - Request for Quote",
+      "bidpost": "2026-09-30T17:03:25.000",
+      "closedate": "2026-10-06T18:00:00.000",
+      "department": "General Services",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000mLP4bIAG"
+      }
+    },
+    {
+      "rampid": "232033",
+      "title": "146765 CONSUMABLES FOR ION AND LIQUID CHROMATOGRAPHS",
+      "stagename": "Amended",
+      "category": "Commodity",
+      "type": "IFB - Invitation for Bid",
+      "bidpost": "2026-09-29T19:19:40.000",
+      "closedate": "2026-10-06T21:00:00.000",
+      "department": "Water & Power",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000lfOEcIAM"
+      }
+    },
+    {
+      "rampid": "231831",
+      "title": "On-Call Professional Information Technology Services",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "RFP - Request For Proposal",
+      "bidpost": "2026-09-03T14:45:00.000",
+      "closedate": "2026-10-06T22:00:00.000",
+      "department": "Port of Long Beach",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000kxhHoIAI"
+      }
+    },
+    {
+      "rampid": "231906",
+      "title": "RFP2241293798 ENTERPRISE DOCUMENT MANAGEMENT SYSTEM",
+      "stagename": "Open",
+      "category": "None",
+      "type": "RFP - Request For Proposal",
+      "bidpost": "2026-09-09T19:00:00.000",
+      "closedate": "2026-10-08T21:00:00.000",
+      "department": "LAUSD",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000lHzK9IAK"
+      }
+    },
+    {
+      "rampid": "232195",
+      "title": "Self-Performing Construction Work Feasibility Study",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "RFP - Request For Proposal",
+      "bidpost": "2026-09-25T00:00:00.000",
+      "closedate": "2026-10-13T18:00:00.000",
+      "department": "Metro",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000m5B7FIAU"
+      }
+    },
+    {
+      "rampid": "232376",
+      "title": "LACDA26-089 - Senior Grant Program Construction Rehabilitation Services SG22-325 - Closing: 10/14/2026 3:00 PM",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "None",
+      "bidpost": "2026-10-06T02:30:00.000",
+      "closedate": "2026-10-14T22:00:00.000",
+      "department": "Los Angeles County",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000majhKIAQ"
+      }
+    },
+    {
+      "rampid": "231883",
+      "title": "Neighborhood Engagement Artist Residency (NEAR) and Creative Optimism-Uplifting Promises (CO-UP) Grants (2027-28)",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "RFP - Request For Proposal",
+      "bidpost": "2026-09-18T19:00:00.000",
+      "closedate": "2026-10-31T06:45:00.000",
+      "department": "Cultural Affairs",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000lDYK9IAO"
+      }
+    },
+    {
+      "rampid": "232319",
+      "title": "25-0047 - Partnerships for Families Services Request for Proposals #25-0047 - Closing: 12/18/2026 12:00 PM",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "None",
+      "bidpost": "2026-10-01T18:30:11.000",
+      "closedate": "2026-12-18T20:00:00.000",
+      "department": "Los Angeles County",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000mPGE3IAO"
+      }
+    },
+    {
+      "rampid": "217198",
+      "title": "DMH091521B1 - Request for Applications - 24-Hour Residential Treatment Contract and Acute Psychiatric Inpatient Contract",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "None",
+      "bidpost": "2024-09-28T04:30:01.000",
+      "closedate": "2031-06-30T19:00:00.000",
+      "department": "Los Angeles County",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000DuVbBIAV"
+      }
+    },
+    {
+      "rampid": "217104",
+      "title": "RFIC-IS-CMS23000002 - RFSQ GCS-10621-S  - Energy Services - Closing: 11/1/2031 12:00 PM",
+      "stagename": "Open",
+      "category": "Commodity",
+      "type": "None",
+      "bidpost": "2024-09-27T23:30:01.000",
+      "closedate": "2031-11-01T19:00:00.000",
+      "department": "Los Angeles County",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000DuNc4IAF"
+      }
+    },
+    {
+      "rampid": "30751",
+      "title": "Online Bidding Practice",
+      "stagename": "Amended",
+      "category": "Commodity",
+      "type": "RFB - Request For Bid",
+      "bidpost": "2019-08-16T18:36:18.000",
+      "closedate": "2037-06-30T20:00:00.000",
+      "department": "General Services",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=0066g00003WJCjpAAH"
+      }
+    },
+    {
+      "rampid": "229205",
+      "title": "*CANCELLED* BEST VALUE | RFQ/BID #2610075 | WESTCHESTER ENRICHED SCIENCES MAGNETS | SOFTBALL FIELD UPGRADES (BV)(PSA)",
+      "stagename": "Open",
+      "category": "Construction",
+      "type": "RFQ - Request for Quote",
+      "bidpost": "2026-04-13T22:00:00.000",
+      "department": "LAUSD",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000ck7WsIAI"
+      }
+    }
+  ]
+}

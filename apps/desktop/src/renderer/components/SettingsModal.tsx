@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { ConnectorsSettings } from './ConnectorsSettings.js';
+import { useEffect, useRef, useState } from 'react';
 import { ASSISTANTS, providerFor, type ModelId } from '@bullebrowser/agent-core';
 import { useBrowserStore } from '../state/browser-store.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import type { AppSettings } from '../../shared/ipc.js';
+import { takeAssistantSettingsRequest } from '../workspace/settings-intent.js';
 import { Modal } from './Modal.js';
 
 const MODELS = ASSISTANTS;
@@ -16,23 +18,32 @@ export function SettingsModal() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
-  // Voice transcription (OpenAI Whisper) needs its own key, independent of the
-  // assistant selected for chat, so it remains available across providers.
-  const [hasVoiceKey, setHasVoiceKey] = useState(false);
-  const [voiceDraft, setVoiceDraft] = useState('');
-  const [voiceSaving, setVoiceSaving] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
   const apiKeyActivity = useInputActivity({ disabled: hasKey || saving });
-  const checklistActivity = useInputActivity();
+  // The workspace's "connect an assistant" link opens Settings for one thing;
+  // show that section unfolded instead of leaving the user to find it.
+  const revealAssistant = useRef(false);
+  const assistantSection = useRef<HTMLDetailsElement>(null);
+  const loaded = settings !== null;
 
   useEffect(() => {
     void (async () => {
       const next = await window.bullebrowser.settings.get();
       setSettings(next);
       setHasKey(await window.bullebrowser.secrets.hasApiKey(providerFor(next.defaultModel)));
-      setHasVoiceKey(await window.bullebrowser.secrets.hasApiKey('openai'));
     })();
   }, []);
+
+  useEffect(() => {
+    if (takeAssistantSettingsRequest()) revealAssistant.current = true;
+  }, []);
+
+  useEffect(() => {
+    const section = assistantSection.current;
+    if (!loaded || !revealAssistant.current || !section) return;
+    revealAssistant.current = false;
+    section.open = true;
+    section.scrollIntoView({ block: 'nearest' });
+  }, [loaded]);
 
   if (!settings) {
     return (
@@ -83,40 +94,33 @@ export function SettingsModal() {
     setSavedAt(Date.now());
   };
 
-  const saveVoiceKey = async () => {
-    if (!voiceDraft.trim()) return;
-    setVoiceSaving(true);
-    setVoiceError(null);
-    try {
-      await window.bullebrowser.secrets.setApiKey(voiceDraft.trim(), 'openai');
-      setHasVoiceKey(true);
-      setVoiceDraft('');
-      setSavedAt(Date.now());
-    } catch (err) {
-      setVoiceError(err instanceof Error ? err.message : 'Failed to save the voice key.');
-    } finally {
-      setVoiceSaving(false);
-    }
-  };
-
-  const clearVoiceKey = async () => {
-    await window.bullebrowser.secrets.clearApiKey('openai');
-    setHasVoiceKey(false);
-    setSavedAt(Date.now());
-  };
-
   return (
     <Modal title="Settings" onClose={closeSettings} width={560}>
       <section className="space-y-4">
+        <ConnectorsSettings />
         <p className="text-xs leading-relaxed text-ink-secondary">
-          BulleBrowser works as one assistant — type or speak, and it reads,
-          compares, and acts across your tabs. The engine is chosen for you; the
-          controls below are optional.
+          BulleBrowser helps your organization find funding opportunities, understand funder
+          priorities, assess its alignment and develop proposals ethically. Everything on this
+          page is optional.
         </p>
 
-        <details open={!hasKey || !hasVoiceKey} className="rounded-lg border border-line/60 bg-surface-muted/20 px-3 py-2">
+        <p className="text-xs leading-relaxed text-ink-secondary">
+          Without a connected assistant, these still work: document search and verbatim passages
+          in the Organization Knowledge Hub, the funding finder, and text matches in funding
+          documents. Written analysis needs a connected assistant.
+        </p>
+
+        <p className="text-xs leading-relaxed text-ink-secondary">
+          Voice input and Voice Mode transcribe English on this device without a key. The speech
+          model downloads on first use; after that, transcription works offline.
+        </p>
+
+        <details
+          ref={assistantSection}
+          className="rounded-lg border border-line/60 bg-surface-muted/20 px-3 py-2"
+        >
           <summary className="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Developer / Advanced — engine &amp; keys
+            Connect an assistant (optional)
           </summary>
           <div className="mt-3 space-y-4">
         <div>
@@ -124,9 +128,10 @@ export function SettingsModal() {
             {assistantLabel} key
           </h3>
           <p className="mt-1 text-xs text-ink-secondary">
-            Encrypted using secure storage on this device. Your operating system may ask for permission. Used
-            only to call {assistantLabel} directly from your machine.
-            {provider === 'openai' && ' This same key also powers voice transcription.'}
+            Connect {assistantLabel} for written analysis: profile proposals, summaries of
+            funding documents, alignment assessments and proposal guides. Your key is encrypted
+            and stored on this device. When you ask for analysis, relevant excerpts of your
+            documents go directly to the provider you connect, under your own key.
           </p>
           {hasKey ? (
             <div className="mt-2 flex items-center gap-2">
@@ -160,6 +165,7 @@ export function SettingsModal() {
                     onFocus={apiKeyActivity.onFocus}
                     onBlur={apiKeyActivity.onBlur}
                     placeholder={keyPlaceholder}
+                    aria-label={`${assistantLabel} key`}
                     className="prompt-input-field prompt-input-field--singleline"
                     disabled={saving}
                   />
@@ -174,77 +180,26 @@ export function SettingsModal() {
                 </button>
               </div>
               {keyError && (
-                <div className="text-xs text-danger">{keyError}</div>
+                <div role="alert" className="text-xs text-red-700">
+                  {keyError}
+                </div>
               )}
             </div>
           )}
         </div>
 
-        {provider !== 'openai' && (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Voice (OpenAI Whisper) key
-          </h3>
-          <p className="mt-1 text-xs text-ink-secondary">
-            Powers the mic and Voice Mode. Uses your OpenAI key (starts with{' '}
-            <code className="rounded bg-surface-muted px-1">sk-</code>) for Whisper
-            transcription — separate from the assistant key above. Encrypted and
-            stored on this device only.
-          </p>
-          {hasVoiceKey ? (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                Key saved
-              </span>
-              <button
-                type="button"
-                onClick={clearVoiceKey}
-                className="rounded border border-line px-2 py-1 text-xs hover:bg-surface-muted"
-              >
-                Remove key
-              </button>
-            </div>
-          ) : (
-            <div className="mt-2 space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={voiceDraft}
-                  onChange={(e) => {
-                    setVoiceDraft(e.target.value);
-                    if (voiceError) setVoiceError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void saveVoiceKey();
-                  }}
-                  placeholder="sk-…"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="flex-1 rounded-md border border-line px-3 py-2 font-mono text-xs focus:border-primary focus:outline-none"
-                  disabled={voiceSaving}
-                />
-                <button
-                  type="button"
-                  onClick={saveVoiceKey}
-                  disabled={voiceSaving || !voiceDraft.trim()}
-                  className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
-                >
-                  {voiceSaving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-              {voiceError && <div className="text-xs text-danger">{voiceError}</div>}
-            </div>
-          )}
-        </div>
-        )}
-
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
             Assistant
           </h3>
+          <p className="mt-1 text-xs text-ink-secondary">
+            The assistant that writes analysis and answers in the chat panel. Each one uses its
+            own key.
+          </p>
           <select
             value={settings.defaultModel}
             onChange={(e) => update({ defaultModel: e.target.value as ModelId })}
+            aria-label="Assistant"
             className="mt-2 rounded border border-line px-2 py-1.5 text-sm"
           >
             {MODELS.map((m) => (
@@ -266,6 +221,7 @@ export function SettingsModal() {
             onChange={(e) =>
               update({ searchProvider: e.target.value as AppSettings['searchProvider'] })
             }
+            aria-label="Search behavior"
             className="mt-2 rounded border border-line px-2 py-1.5 text-sm"
           >
             <option value="bullebrowser">BulleBrowser</option>
@@ -273,34 +229,48 @@ export function SettingsModal() {
             <option value="bing">Bing</option>
           </select>
           <p className="mt-2 text-xs text-ink-secondary">
-            When you type a query, BulleBrowser will keep you on the BulleBrowser experience.
+            Where words typed into the address bar go: to the assistant, which is the BulleBrowser
+            choice, or to a search engine in the current tab.
           </p>
         </div>
 
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">
-            Compliance checklist
+            Agent
           </h3>
-          <p className="mt-1 text-xs text-ink-secondary">
-            Items the Compliance Review skill checks for. One per line.
-          </p>
-          <div
-            className={`mt-2 prompt-input-shell prompt-input-shell--${checklistActivity.state}`}
-            data-activity-state={checklistActivity.state}
-          >
-            <textarea
-              value={settings.complianceChecklist.join('\n')}
-              onChange={(e) => {
-                checklistActivity.onInputActivity();
-                void update({ complianceChecklist: e.target.value.split('\n').filter(Boolean) });
-              }}
-              onPaste={() => checklistActivity.onInputActivity()}
-              onFocus={checklistActivity.onFocus}
-              onBlur={checklistActivity.onBlur}
-              rows={5}
-              className="prompt-input-field w-full font-mono text-xs"
+          <label className="mt-2 flex items-center justify-between gap-3 text-sm">
+            <span>
+              Step budget per task
+              <span className="block text-xs text-ink-secondary">
+                How far the assistant may go when it browses for you, for example to read a
+                funder’s page. Navigating and screenshots cost more than quick look-ups, and a task
+                that runs out can continue with more.
+              </span>
+            </span>
+            <input
+              type="number"
+              min={5}
+              max={200}
+              value={settings.stepBudget}
+              onChange={(e) => void update({ stepBudget: Number(e.target.value) || 40 })}
+              className="w-20 rounded border border-line px-2 py-1 text-right text-sm"
+              aria-label="Step budget per task"
             />
-          </div>
+          </label>
+          <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+            <span>
+              Dismiss cookie banners
+              <span className="block text-xs text-ink-secondary">
+                Chooses the most private option (reject or necessary-only) on common consent banners.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.autoDismissConsent}
+              onChange={(e) => void update({ autoDismissConsent: e.target.checked })}
+              aria-label="Dismiss cookie banners"
+            />
+          </label>
         </div>
 
         <div>
@@ -314,6 +284,10 @@ export function SettingsModal() {
           >
             Clear browsing history
           </button>
+          <p className="mt-2 text-xs text-ink-secondary">
+            Removes the list of pages you have visited. Your organizations, documents and funding
+            work are not affected.
+          </p>
         </div>
 
         {savedAt && (

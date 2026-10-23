@@ -1,0 +1,162 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 355824
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 355824,
+   "revision": 6,
+   "opportunityNumber": "MP-CPI-25-001",
+   "opportunityTitle": "Making America Healthy Again by Addressing Dementia Disparities",
+   "owningAgencyCode": "HHS-OPHS",
+   "listed": "L",
+   "modifiedComments": "Title revision",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "agencyDetails": {
+    "code": "OPHS",
+    "seed": "HHS-OPHS",
+    "agencyName": "Office of the Assistant Secretary for Health",
+    "agencyCode": "HHS-OPHS",
+    "topAgencyCode": "HHS"
+   },
+   "topAgencyDetails": {
+    "code": "HHS",
+    "seed": "HHS",
+    "agencyName": "Department of Health and Human Services",
+    "agencyCode": "HHS",
+    "topAgencyCode": "HHS"
+   },
+   "forecast": {
+    "opportunityId": 355824,
+    "version": 7,
+    "postingDate": "Aug 01, 2024 12:00:00 AM EDT",
+    "costSharing": false,
+    "numberOfAwards": "9",
+    "estimatedFunding": "5000000",
+    "awardCeiling": "600000",
+    "awardFloor": "450000",
+    "agencyCode": "HHS-OPHS",
+    "sendEmail": "Y",
+    "estSynopsisPostingDate": "Apr 14, 2025 12:00:00 AM EDT",
+    "estApplicationResponseDate": "Jun 23, 2025 12:00:00 AM EDT",
+    "estApplicationResponseDateDesc": "Applications must be submitted electronically no later than 6:00 pm Eastern Time.",
+    "estAwardDate": "Sep 15, 2025 12:00:00 AM EDT",
+    "estProjectStartDate": "Sep 30, 2025 12:00:00 AM EDT",
+    "fiscalYear": 2025,
+    "modComments": "Title revision",
+    "createTimeStamp": "Mar 20, 2025 10:28:30 AM EDT",
+    "createdDate": "Aug 01, 2024 03:26:32 PM EDT",
+    "lastUpdatedDate": "Mar 20, 2025 10:28:30 AM EDT",
+    "agencyDetails": {
+     "code": "OPHS",
+     "seed": "HHS-OPHS",
+     "agencyName": "Office of the Assistant Secretary for Health",
+     "agencyCode": "HHS-OPHS",
+     "topAgencyCode": "HHS"
+    },
+    "estimatedFundingFormatted": "5,000,000",
+    "awardCeilingFormatted": "600,000",
+    "awardFloorFormatted": "450,000",
+    "applicantTypes": [
+     {
+      "id": "00",
+      "description": "State governments"
+     },
+     {
+      "id": "05",
+      "description": "Independent school districts"
+     },
+     {
+      "id": "02",
+      "description": "City or township governments"
+     },
+     {
+      "id": "08",
+      "description": "Public housing authorities/Indian housing authorities"
+     },
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "04",
+      "description": "Special district governments"
+     },
+     {
+      "id": "07",
+      "description": "Native American tribal governments (Federally recognized)"
+     },
+     {
+      "id": "13",
+      "description": "Nonprofits that do not have a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "06",
+      "description": "Public and State controlled institutions of higher education"
+     },
+     {
+      "id": "01",
+      "description": "County governments"
+     },
+     {
+      "id": "11",
+      "description": "Native American tribal organizations (other than Federally recognized tribal governments)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "HL",
+      "description": "Health"
+     }
+    ],
+    "postingDateStr": "2024-08-01-00-00-00",
+    "estSynopsisPostingDateStr": "2025-04-14-00-00-00",
+    "estApplicationResponseDateStr": "2025-06-23-00-00-00",
+    "estAwardDateStr": "2025-09-15-00-00-00",
+    "estProjectStartDateStr": "2025-09-30-00-00-00",
+    "createTimeStampStr": "2025-03-20-10-28-30"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 422868,
+     "opportunityId": 355824,
+     "cfdaNumber": "93.137",
+     "programTitle": "Community Programs to Improve Minority Health"
+    }
+   ],
+   "synopsisModifiedFields": [],
+   "forecastModifiedFields": [
+    "revision",
+    "version",
+    "opportunityTitle"
+   ],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "forecast",
+   "forecastHistCount": 6,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "FORECASTED"
+  }
+ }
+}

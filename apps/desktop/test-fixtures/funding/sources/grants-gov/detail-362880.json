@@ -1,0 +1,194 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 362880
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 362880,
+   "revision": 3,
+   "opportunityNumber": "OFH-2600-DC-021A",
+   "opportunityTitle": "Fair Housing Initiatives Program - Education and Outreach Initiative",
+   "owningAgencyCode": "HUD",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 362880,
+    "version": 2,
+    "agencyCode": "HUD",
+    "agencyName": "Department of Housing and Urban Development",
+    "agencyDetails": {
+     "code": "HUD",
+     "seed": "HUD",
+     "agencyName": "Department of Housing and Urban Development",
+     "agencyCode": "HUD",
+     "topAgencyCode": "HUD"
+    },
+    "topAgencyDetails": {
+     "code": "HUD",
+     "seed": "HUD",
+     "agencyName": "Department of Housing and Urban Development",
+     "agencyCode": "HUD",
+     "topAgencyCode": "HUD"
+    },
+    "synopsisDesc": "Congress in 1988 established the Fair Housing Initiatives Program (FHIP) with a purpose of providing funding to entities to work alongside HUD to \"prevent or eliminate discriminatory housing practices\" 42 USC § 3616a(a). FHIP provides funds to eligible organizations through competitive grants. under several initiatives.The overarching purpose of the FHIP Education and Outreach Initiative (EOI) is to educate the public, housing providers and other stakeholders about their rights and obligations under provisions of fair housing laws, through the development, implementation, carrying out and coordinating or education and outreach programs. 42 USC § 3616a(d)(1); 24 CFR 125.301(a).The National Media Campaign component (EOI-NMC) is \"designed to provide a centralized, coordinated effort for the development and dissemination of fair housing media products.\" 42 USC § 3616a(d)(1). A portion of NMC funds are specifically meant to increase participation in the annual national fair housing month. Under a cooperative agreement, HUD will exercise the right to approve, and have substantial involvement in, all proposed deliverables, as well as the Work Plan or Statement of Work (SOW).The General Component (EOI-GC) is designed to carry out projects programs that prevent or eliminate discriminatory housing practices by establishing or supporting regional, local, and community- based education and outreach activities, events, and programs. For grants and cooperative agreements, HUD will conduct monitoring reviews, request quarterly reports, and approve all proposed deliverables as documented in the applicant's Work Plan or SOW. Most EOI funds are awarded under grant agreements. However, national funds are awarded under cooperative agreements managed by Headquarters since the awards have a nationwide impact and therefore require more complex and frequent oversight as well as Departmental approval of deliverables.",
+    "responseDate": "Nov 02, 2026 12:00:00 AM EST",
+    "responseDateDesc": "Electronically submitted applications must be submitted no later than 11:59 p.m., ET, on the listed application due date.",
+    "fundingDescLinkUrl": "https://www.hud.gov/stat/fheo/initiatives-program",
+    "fundingDescLinkDesc": "https://www.hud.gov/stat/fheo/initiatives-program",
+    "postingDate": "Jul 02, 2026 12:00:00 AM EDT",
+    "costSharing": false,
+    "numberOfAwards": "34",
+    "estimatedFunding": "10750000",
+    "estimatedFundingFormatted": "10,750,000",
+    "awardCeiling": "2500000",
+    "awardCeilingFormatted": "2,500,000",
+    "awardFloor": "175000",
+    "awardFloorFormatted": "175,000",
+    "applicantEligibilityDesc": "Individuals are ineligible applicants. If you are applying with other organizations (co-applicants or members of a consortium), the lead organization needs to meet all eligibility requirements. If not, your application is not eligible for funding. Eligible Entities for National Media Campaign Component (EOI-NMC): Qualified Fair Housing Enforcement Organizations, Fair Housing Enforcement Organization, and Other nonprofit organizations representing groups of persons protected under the Fair Housing Act (which might include public interest litigation firms, religious liberty groups, trade associations, etc.) Experience Requirement: in order to be selected for an award under the National Media Campaign component, your organization must have at least 5 years of experience as an advertising, media or public relations organization with strong understanding of adult learning theory, instructional design, and design thinking; or must have a partnership with an advertising and media services organization with at least 5 years of experience as an advertising, media or public relations organization with strong understanding of adult learning theory, instructional design, and design thinking. You will indicate your experience requirement in the Applicant Certification (Appendix B). Eligible Entities for General Component (EOI-G): Qualified Fair Housing Enforcement Organizations, Fair Housing Enforcement Organizations, Other nonprofit organizations representing groups of persons protected under the Fair Housing Act, Agencies that participate in the Fair Housing Assistance Program (FHAP), Other agencies of State or local governments, and Other public or private entities that are formulating or carrying out programs to prevent or eliminate discriminatory housing practices (which might include public interest litigation firms, religious liberty groups, trade associations, etc.).  Individuals, foreign entities, and sole proprietorship organizations are not eligible to compete for, or receive, awards made under this announcement.",
+    "sendEmail": "Y",
+    "createTimeStamp": "Jul 06, 2026 12:08:59 PM EDT",
+    "modComments": "Updated Synopsis page",
+    "createdDate": "Jul 02, 2026 07:05:22 PM EDT",
+    "lastUpdatedDate": "Jul 06, 2026 12:08:59 PM EDT",
+    "applicantTypes": [
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "ED",
+      "description": "Education"
+     }
+    ],
+    "responseDateStr": "2026-11-02-00-00-00",
+    "postingDateStr": "2026-07-02-00-00-00",
+    "createTimeStampStr": "2026-07-06-12-08-59"
+   },
+   "agencyDetails": {
+    "code": "HUD",
+    "seed": "HUD",
+    "agencyName": "Department of Housing and Urban Development",
+    "agencyCode": "HUD",
+    "topAgencyCode": "HUD"
+   },
+   "topAgencyDetails": {
+    "code": "HUD",
+    "seed": "HUD",
+    "agencyName": "Department of Housing and Urban Development",
+    "agencyCode": "HUD",
+    "topAgencyCode": "HUD"
+   },
+   "forecast": {
+    "opportunityId": 362880,
+    "version": 2,
+    "postingDate": "Jun 18, 2026 12:00:00 AM EDT",
+    "archiveDate": "Jul 01, 2026 12:00:00 AM EDT",
+    "forecastDesc": "<p>Congress in 1988 established the Fair Housing Initiatives Program (FHIP) with a purpose of providing funding to entities to work alongside HUD to \"prevent or eliminate discriminatory housing practices\" 42 USC § 3616a(a).&nbsp;<br>FHIP provides funds to eligible organizations through competitive grants. under several initiatives.</p><p>The overarching purpose of the FHIP Education and Outreach Initiative (EOI) is to educate the public, housing providers and other stakeholders about their rights and obligations under provisions of fair housing laws, through the development, implementation, carrying out and coordinating or education and outreach programs. 42 USC § 3616a(d)(1); 24 CFR 125.301(a).</p><p>The National Media Campaign component (EOI-NMC) is \"designed to provide a centralized, coordinated effort for the development and dissemination of fair housing media products.\" 42 USC § 3616a(d)(1). A portion of NMC funds are specifically meant to increase participation in the annual national fair housing month. Under a cooperative agreement, HUD will exercise the right to approve, and have substantial involvement in, all proposed deliverables, as well as the Work Plan or Statement of Work (SOW).</p><p>The General Component (EOI-GC) is designed to carry out projects programs that prevent or eliminate discriminatory housing practices by establishing or supporting regional, local, and community- based education and outreach activities, events, and programs. For grants and cooperative agreements, HUD will conduct monitoring reviews, request quarterly reports, and approve all proposed deliverables as documented in the applicant's Work Plan or SOW. Most EOI funds are awarded under grant agreements. However, national funds are awarded under cooperative agreements managed by Headquarters since the awards have a nationwide impact and therefore require more complex and frequent oversight as well as Departmental approval of deliverables.&nbsp;</p>",
+    "costSharing": false,
+    "numberOfAwards": "34",
+    "estimatedFunding": "10750000",
+    "awardCeiling": "2500000",
+    "awardFloor": "175000",
+    "fundingDescLinkUrl": "https://www.hud.gov/stat/fheo/initiatives-program",
+    "fundingDescLinkDesc": "https://www.hud.gov/stat/fheo/initiatives-program",
+    "agencyCode": "HUD",
+    "applicantEligibilityDesc": "Individuals are ineligible applicants.If you are applying with other organizations (co-applicants or members of a consortium), each organization needs to meet all eligibility requirements. If not, your application is not eligible for funding. a. Eligible Entities for Each EOI ComponentNational Media Campaign Component (EOI-NMC):Qualified Fair Housing Enforcement Organizations,Fair Housing Enforcement Organization, andOther nonprofit organizations representing groups of persons protected under the Fair Housing Act (which might include public interest litigation firms, religious liberty groups, trade associations, etc.)Experience Requirement: in order to be selected for an award under the National Media Campaign component, your organization must have at least 5 years of experience as an advertising, media or public relations organization with strong understanding of adult learning theory, instructional design, and design thinking; or must have a partnership with an advertising and media services organization with at least 5 years of experience as an advertising, media or public relations organization with strong understanding of adult learning theory, instructional design, and design thinking. You will indicate your experience requirement in the Applicant Certification (Appendix B).General Component (EOI-G)Qualified Fair Housing Enforcement Organizations, Fair Housing Enforcement Organizations,Other nonprofit organizations representing groups of persons protected under the Fair Housing Act,Agencies that participate in the Fair Housing Assistance Program (FHAP)Other agencies of State or local governmentsOther public or private entities that are formulating or carrying out programs to prevent or eliminate discriminatory housing practices (which might include public interest litigation firms, religious liberty groups, trade associations, etc.).  Individuals, foreign entities, and sole proprietorship organizations are not eligible to compete for, or receive, awards made under this announcement.",
+    "estSynopsisPostingDate": "Jul 02, 2026 12:00:00 AM EDT",
+    "estApplicationResponseDate": "Nov 02, 2026 12:00:00 AM EST",
+    "estApplicationResponseDateDesc": "Electronically submitted applications must be submitted no later than 11:59 p.m., ET, on the listed application due date.",
+    "estAwardDate": "Feb 28, 2027 12:00:00 AM EST",
+    "estProjectStartDate": "Jul 01, 2027 12:00:00 AM EDT",
+    "fiscalYear": 2026,
+    "modComments": "Updated Archive Date",
+    "createTimeStamp": "Jul 06, 2026 09:57:22 AM EDT",
+    "createdDate": "Jun 18, 2026 10:37:22 AM EDT",
+    "lastUpdatedDate": "Jul 06, 2026 09:57:22 AM EDT",
+    "agencyDetails": {
+     "code": "HUD",
+     "seed": "HUD",
+     "agencyName": "Department of Housing and Urban Development",
+     "agencyCode": "HUD",
+     "topAgencyCode": "HUD"
+    },
+    "estimatedFundingFormatted": "10,750,000",
+    "awardCeilingFormatted": "2,500,000",
+    "awardFloorFormatted": "175,000",
+    "applicantTypes": [
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "ED",
+      "description": "Education"
+     }
+    ],
+    "postingDateStr": "2026-06-18-00-00-00",
+    "archiveDateStr": "2026-07-01-00-00-00",
+    "estSynopsisPostingDateStr": "2026-07-02-00-00-00",
+    "estApplicationResponseDateStr": "2026-11-02-00-00-00",
+    "estAwardDateStr": "2027-02-28-00-00-00",
+    "estProjectStartDateStr": "2027-07-01-00-00-00",
+    "createTimeStampStr": "2026-07-06-09-57-22"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 434200,
+     "opportunityId": 362880,
+     "cfdaNumber": "14.416",
+     "programTitle": "Education and Outreach Initiatives"
+    }
+   ],
+   "originalDueDate": "Nov 02, 2026 12:00:00 AM EST",
+   "originalDueDateDesc": "Electronically submitted applications must be submitted no later than 11:59 p.m., ET, on the listed application due date.",
+   "synopsisModifiedFields": [
+    "revision",
+    "version",
+    "applicantEligibilityDesc"
+   ],
+   "forecastModifiedFields": [
+    "revision",
+    "version",
+    "archiveDate",
+    "modComments",
+    "createTimeStamp"
+   ],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 1,
+   "synopsisHistCount": 1,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

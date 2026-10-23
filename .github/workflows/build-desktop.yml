@@ -110,11 +110,13 @@ jobs:
           # Sanity-check: electron-builder reads this one for installer filenames + latest*.yml
           node -p "require('./apps/desktop/package.json').version"
 
+      # No release may bypass failed quality checks or renderer builds.
       - name: Type-check, lint, and test
         run: |
           pnpm -r typecheck
           pnpm -r lint
-          pnpm -r test
+          pnpm --filter @bullebrowser/agent-core test
+          pnpm --filter @bullebrowser/desktop test
           node --test services/widget-backend/auth.test.mjs
 
       - name: Build desktop renderer + main
@@ -241,6 +243,8 @@ jobs:
             echo "Preflight passed — ready to sign and notarize."
           fi
 
+      # Publish only from the final release job, after every platform succeeds.
+      # electron-builder otherwise publishes per-platform as soon as it finishes.
       - name: Build, sign & notarize macOS installer
         if: matrix.target == 'mac'
         # Fail the job on a release run if signing/notarization fails; tolerate
@@ -270,7 +274,7 @@ jobs:
             echo "$APPLE_API_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
             export APPLE_API_KEY="$RUNNER_TEMP/AuthKey.p8"
           fi
-          pnpm --filter @bullebrowser/desktop package:mac
+          pnpm --filter @bullebrowser/desktop package:mac --publish never
           rm -f "$RUNNER_TEMP/AuthKey.p8"
 
       # Independent post-build check on the produced .app bundles (the afterSign
@@ -315,6 +319,7 @@ jobs:
 
       - name: Build & sign Windows installer
         if: matrix.target == 'win'
+        continue-on-error: ${{ env.IS_RELEASE != '1' }}
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
@@ -327,13 +332,14 @@ jobs:
             $env:CSC_LINK = "$PWD/cert.pfx"
             $env:CSC_KEY_PASSWORD = $env:WINDOWS_CERTIFICATE_PASSWORD
           }
-          pnpm --filter @bullebrowser/desktop package:win
+          pnpm --filter @bullebrowser/desktop package:win --publish never
 
       - name: Build Linux installers
         if: matrix.target == 'linux'
+        continue-on-error: ${{ env.IS_RELEASE != '1' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter @bullebrowser/desktop package:linux
+        run: pnpm --filter @bullebrowser/desktop package:linux --publish never
 
       - name: Compute SHA-256 checksums
         if: always()
@@ -360,6 +366,7 @@ jobs:
             apps/desktop/release/*.exe
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.deb
+            apps/desktop/release/*.blockmap
             apps/desktop/release/checksums-*.txt
             apps/desktop/release/latest*.yml
           if-no-files-found: warn
@@ -368,6 +375,9 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      actions: write
     # No always(): if the build job fails (e.g. macOS signing/notarization did
     # not pass on a release run), this job is skipped and nothing is published —
     # so a partial or un-notarized release can never go out.
@@ -398,7 +408,7 @@ jobs:
           set -euo pipefail
           shopt -s globstar nullglob
           mkdir -p release-assets
-          find dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.zip' -o -name 'latest*.yml' \) -exec cp {} release-assets/ \;
+          find dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.zip' -o -name 'latest*.yml' -o -name '*.blockmap' \) -exec cp {} release-assets/ \;
           checksum_files=(dist/**/checksums-*.txt)
           if (( ${#checksum_files[@]} > 0 )); then
             cat "${checksum_files[@]}" > release-assets/checksums.txt
@@ -439,3 +449,11 @@ jobs:
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Refresh website downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy-web.yml --ref main --repo "$GITHUB_REPOSITORY"

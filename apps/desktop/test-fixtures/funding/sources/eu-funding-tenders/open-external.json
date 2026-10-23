@@ -1,0 +1,230 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=100&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "2"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "status": [
+                  "31094502"
+                ]
+              }
+            },
+            {
+              "range": {
+                "deadlineDate": {
+                  "gte": "2026-10-06T00:00:00.000+0000"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "callIdentifier",
+        "order": "ASC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 27,
+    "totalResults": 2,
+    "pageNumber": 1,
+    "pageSize": 100,
+    "sort": "[callIdentifier:ASC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "186411PROSPECTSEN",
+        "url": "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=186411",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "EU-China Think Tank Engagement on Green Governance",
+        "weight": 0,
+        "content": "EU-China Think Tank Engagement on Green Governance",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "EuropeAid/186411/DD/ACT/CN"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-07-17T08:00:19.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-10-30T09:00:15.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "EU-China Think Tank Engagement on Green Governance"
+          ],
+          "type": [
+            "2"
+          ],
+          "url": [
+            "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=186411"
+          ],
+          "esST_URL": [
+            "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=186411"
+          ],
+          "callIdentifier": [
+            "186411"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "186411PROSPECTSEN"
+          ],
+          "currency": [
+            "EUR"
+          ],
+          "frameworkProgramme": [
+            "111111"
+          ],
+          "startDate": [
+            "2026-07-17T08:00:19.000+0000"
+          ],
+          "budget": [
+            "500000"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "EU-China Think Tank Engagement on Green Governance. Available at: https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=186411"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "187027PROSPECTSEN",
+        "url": "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187027",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Borderlands V - West Africa",
+        "weight": 0,
+        "content": "Borderlands V - West Africa",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "EuropeAid/187027/DD/ACT/Multi"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-07-30T18:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2026-10-06T18:00:11.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Borderlands V - West Africa"
+          ],
+          "type": [
+            "2"
+          ],
+          "url": [
+            "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187027"
+          ],
+          "esST_URL": [
+            "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187027"
+          ],
+          "callIdentifier": [
+            "187027"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "187027PROSPECTSEN"
+          ],
+          "currency": [
+            "EUR"
+          ],
+          "frameworkProgramme": [
+            "111111"
+          ],
+          "startDate": [
+            "2026-07-30T18:00:00.000+0000"
+          ],
+          "budget": [
+            "25000000"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Borderlands V - West Africa. Available at: https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187027"
+      }
+    ],
+    "warnings": []
+  }
+}

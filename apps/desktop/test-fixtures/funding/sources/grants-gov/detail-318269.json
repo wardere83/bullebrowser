@@ -1,0 +1,125 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 318269
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 318269,
+   "revision": 3,
+   "opportunityNumber": "ONAA-7J-2019-01",
+   "opportunityTitle": "Native American Micro Enterprise Business Services",
+   "owningAgencyCode": "SBA",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 318269,
+    "version": 3,
+    "agencyCode": "SBA",
+    "agencyDetails": {
+     "code": "SBA",
+     "seed": "SBA",
+     "agencyName": "Small Business Administration",
+     "agencyCode": "SBA",
+     "topAgencyCode": "SBA"
+    },
+    "topAgencyDetails": {
+     "code": "SBA",
+     "seed": "SBA",
+     "agencyName": "Small Business Administration",
+     "agencyCode": "SBA",
+     "topAgencyCode": "SBA"
+    },
+    "synopsisDesc": "<p><font face=\"Times New Roman\" size=\"3\"> <font face=\"Times New Roman\" size=\"3\">Funding Opportunity No. ONAA-7j-2019-01, U.S. Small Business Administration/Office of Business Development (BD) OPENING DATE: July 10, 2019 CLOSING DATE: August 5, 2019. The U.S. Small Business Administration (SBA) issues Funding Opportunity No. ONAA-7j-2019-01, as authorized by the Small Business Act, Section 7j; 15 U.S.C.A. Section 636(j); 13 C.F.R. Sections 701-704, to invite proposals for funding of unique and innovative efforts to provide management and technical assistance to eligible firms and individuals.<span style=\"mso-spacerun: yes;\">&nbsp; </span>The assigned NAICS code is 541611. </font></font></p> \n<p><font face=\"Times New Roman\" size=\"3\"> <font face=\"Times New Roman\" size=\"3\">The Office of Native American Affairs (ONAA) mission is to ensure that American Indian, Alaska Natives and Native Hawaiians (referred to collectively as Native American) seeking to create, develop and expand small businesses have full access to the business development and expansion tools available through the Agency’s entrepreneurial development, lending and procurement programs.<span style=\"mso-spacerun: yes;\">&nbsp; </span>ONAA’s overarching goal is to promote and support American Indians, Alaska Natives and Native Hawaiian entrepreneurs.<span style=\"mso-spacerun: yes;\">&nbsp; </span>In recent years, ONAA has successfully sponsored and managed nation-wide contractor-led workshops and roundtables, co-sponsored agreements, interagency agreements, and tribal consultations; developed and distributed promotional materials; and attended and participated in national and regional economic development conferences as subject matter experts for these groups.<span style=\"mso-spacerun: yes;\">&nbsp; </span></font></font></p>\n<p><font face=\"Times New Roman\" size=\"3\"><font face=\"Times New Roman\" size=\"3\"><span style=\"mso-spacerun: yes;\"></span>Our vision for this program initiative is not to encourage duplication of what ONAA has traditionally done in the past, but to solicit new innovative approaches to meet the needs of these targeted groups at the microenterprise level of business ownership.<span style=\"mso-spacerun: yes;\">&nbsp; </span>The focus of this program initiative is to target specific Native American business operations in underserved markets throughout the country including underserved microenterprise Native American firms to further expand their business development offerings.<span style=\"mso-spacerun: yes;\">&nbsp; </span>Additionally, ONAA’s vision is to support microenterprises that serve their communities and the surrounding communities.<span style=\"mso-spacerun: yes;\">&nbsp; </span>Such empowerment will serve to maximize economic impact and improve quality of life for the targeted underserved communities. </font></font></p> \n<p><font face=\"Times New Roman\" size=\"3\"> <font face=\"Times New Roman\" size=\"3\">Section 7(j) of the Small Business Act authorizes the U.S. Small Business Administration to provide management and technical assistance to eligible individuals and businesses.<span style=\"mso-spacerun: yes;\">&nbsp; </span>To be eligible for 7(j) services, a client must be:<span style=\"mso-spacerun: yes;\">&nbsp; </span>a socially and economically disadvantaged individual whose firm is a participant in the 8(a) Business Development Program; a business that is eligible to receive 8(a) contracts; or a business which qualifies as small under 13 CFR subpart 121 – Small Business size Regulations, and which is located in an urban or rural area with a high proportion of unemployed or low-income individuals, or which is owned by low-income individuals.<span style=\"mso-spacerun: yes;\">&nbsp; </span>The term “high proportion of unemployed” means the urban or rural county’s unemployment rate is not less than 140 percent of average unemployment rate for the United States or for the State in which such county is located, whichever is less, based on the most recent data available in the annual Local Area Unemployment Statistics report from the U.S. Department of Labor, Bureau of Labor Statistics.<span style=\"mso-spacerun: yes;\">&nbsp; </span>The term “low-income individual” means an individual whose family’s taxable income for the preceding year did not exceed 150 percent of the poverty level amount established by the Bureau of Census, U.S. Department of Commerce, for determining poverty status.</font></font></p> \n<p><font face=\"Times New Roman\" size=\"3\"> <font face=\"Times New Roman\" size=\"3\"><font face=\"Times New Roman\" size=\"3\">Since its inception in 1953, SBA has served to aid, counsel, assist and protect the interests of small businesses.<span style=\"mso-spacerun: yes;\">&nbsp; </span>While SBA is best known for its financial support of small businesses through its many lending programs, the Agency also plays a critical role in providing funding to organizations that deliver technical assistance in the form of counseling and training to small business concerns and nascent entrepreneurs in order to promote growth, expansion, innovation, increased productivity and management improvement.<span style=\"mso-spacerun: yes;\">&nbsp; </span>The mission of SBA’s Office of Business Development, which bears responsibility for administering the Management and Technical Assistance Program, is to administer the section 8(a) program, which offers business development assistance to over 9,000 small government contractors that, in addition to meeting other criteria, are certified by SBA as owned and controlled at least 51% by socially and economically disadvantaged individuals.<span style=\"mso-spacerun: yes;\">&nbsp; </span>As a component of BD, the Office of Management and Technical Assistance (OMTA)&nbsp; </font></font></font></p> \n<font face=\"Times New Roman\" size=\"3\"><p> <span style=\"line-height: 115%; font-family: Times New Roman,serif; font-size: 12pt;\">ONAA has consistently taken steps to bring business training and information sessions to local American Indian, Alaska Native and Native Hawaiian communities through contractor-led empowerment and enterprise workshops.<span style=\"mso-spacerun: yes;\">&nbsp; </span>Such national contractor-led and ONAA’s Assistant Administrator roundtables, American Supplier Initiative, co-sponsoring agreements, interagency agreements, and tribal consultations include such as business empowerment workshops, (8a) Business Development Program assistance, emerging business assistance, Moneysmart workshops, incubator workshops, business matchmaking sessions and updates that pertain to these groups.</span></p><p><span style=\"line-height: 115%; font-family: Times New Roman,serif; font-size: 12pt;\">The purpose of this Funding Opportunity Announcement is to invite proposals for funding from capable<span style=\"color: rgb(31, 73, 125);\"> </span>Applicants to eligible small business concerns under the U.S. Small Business Administration's Program to promote the development, success and long-term strength of small businesses providing specialized management and technical assistance, entrepreneurial education and training in delivering of vital business development services to Native American business communities across the country.</span></p><p> <span style=\"line-height: 115%; font-family: Times New Roman,serif; font-size: 12pt;\">Proposals must be&nbsp;unique and innovative in the substance of the assistance to be provided beneficiaries, and/or the methodology by which assistance is to be provided.<span style=\"mso-spacerun: yes;\">&nbsp; </span>Applicants may not propose efforts which merely duplicate any or all of SBA’s ongoing array of management and technical assistance service, in substance and/or method of delivery.<span style=\"mso-spacerun: yes;\">&nbsp; </span>Accordingly, SBA is seeking proposal of efforts that center around unique and innovative approaches to addressing the many challenges facing Native American firms and other 7(j) eligible firms today, including, but not limited to teaming with other businesses, mastering the processing of procuring a Federal government contract, reversing declines and re-energizing small businesses.</span></p><p><strong> </strong> </p><p style=\"margin: 0in 0in 10pt 0.5in;\"><span style=\"line-height: 115%; font-family: Times New Roman,serif; font-size: 12pt;\"><br></span></p><p> </p><p style=\"margin: 0in 0in 10pt 0.5in;\"><span style=\"line-height: 115%; font-family: Times New Roman,serif; font-size: 12pt;\"><br></span></p><p> <br></p></font> \n<p></p> \n<p><font face=\"Times New Roman\" size=\"3\"><span style=\"line-height: 115%; font-family: Garamond,serif; font-size: 11pt; mso-fareast-font-family: Times New Roman; mso-bidi-font-family: Times New Roman; mso-ansi-language: EN-US; mso-fareast-language: EN-US; mso-bidi-language: AR-SA;\"><br></span></font></p>",
+    "responseDate": "Aug 05, 2019 12:00:00 AM EDT",
+    "postingDate": "Jul 10, 2019 12:00:00 AM EDT",
+    "archiveDate": "Aug 06, 2019 12:00:00 AM EDT",
+    "costSharing": false,
+    "numberOfAwards": "7",
+    "estimatedFunding": "700000",
+    "estimatedFundingFormatted": "700,000",
+    "awardCeiling": "100000",
+    "awardCeilingFormatted": "100,000",
+    "awardFloor": "0",
+    "awardFloorFormatted": "0",
+    "applicantEligibilityDesc": "In order to be an eligible Applicant for this funding opportunity an Applicant: may be a for-profit or not-for-profit entity (including, but not limited to small businesses, other-than small businesses, trade and professional associations, and educational institutions); must have been in existence continually for at least the past three years; must demonstrate substantive experience dealing with issues relating to small business; and, must demonstrates that it has the capacity to provide assistance to small business concerns.  (See Section 3.2 of the Announcement entitled &quot;Eligibility Information&rdquo; for clarification.)  An application submitted by an entity that does not meet the above stated criteria will not be considered. The following organizations will automatically be considered ineligible and their applications will be rejected without being evaluated: any entity that owes an outstanding and unresolved financial obligation to the federal government; any entity that is currently suspended, debarred or otherwise prohibited from receiving awards of contracts or grants from the federal government; any entity that has an outstanding and unresolved material deficiency reported under the requirements of the Single Audit Act or OMB Circular A-133 within the past three years;  any entity that has had a grant or cooperative agreement involuntarily terminated or non-renewed by SBA for cause; any entity that has filed for bankruptcy within the past five years; and/or any entity that proposes to serve as a pass-through and permit another organization to manage the day-to-day operations of the project.",
+    "sendEmail": "N",
+    "createTimeStamp": "Jul 10, 2019 05:56:13 PM EDT",
+    "modComments": "Changes made to Program Synopsis.",
+    "createdDate": "Jul 10, 2019 05:17:52 PM EDT",
+    "lastUpdatedDate": "Jul 10, 2019 05:56:13 PM EDT",
+    "applicantTypes": [
+     {
+      "id": "99",
+      "description": "Unrestricted (i.e., open to any type of entity above), subject to any clarification in text field entitled \"Additional Information on Eligibility\""
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "BC",
+      "description": "Business and Commerce"
+     }
+    ],
+    "responseDateStr": "2019-08-05-00-00-00",
+    "postingDateStr": "2019-07-10-00-00-00",
+    "archiveDateStr": "2019-08-06-00-00-00",
+    "createTimeStampStr": "2019-07-10-17-56-13"
+   },
+   "agencyDetails": {
+    "code": "SBA",
+    "seed": "SBA",
+    "agencyName": "Small Business Administration",
+    "agencyCode": "SBA",
+    "topAgencyCode": "SBA"
+   },
+   "topAgencyDetails": {
+    "code": "SBA",
+    "seed": "SBA",
+    "agencyName": "Small Business Administration",
+    "agencyCode": "SBA",
+    "topAgencyCode": "SBA"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 370833,
+     "opportunityId": 318269,
+     "cfdaNumber": "59.007",
+     "programTitle": "7(j) Technical Assistance"
+    }
+   ],
+   "originalDueDate": "Aug 05, 2019 12:00:00 AM EDT",
+   "synopsisModifiedFields": [
+    "revision",
+    "version",
+    "synopsisDesc"
+   ],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 2,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "ARCHIVED"
+  }
+ }
+}

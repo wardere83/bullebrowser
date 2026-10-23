@@ -27,12 +27,8 @@ export interface Downloads {
   publishedAt: string | null;
   /** Best available installer per platform, newest-first across releases. */
   forPlatform: Partial<Record<Platform, ReleaseAsset>>;
-  /** checksums.txt from the newest release that has one. */
+  /** The newest release's checksum file, when it has one. */
   checksumsUrl: string | null;
-  /** True when the newest release is at or above the agentic AI baseline. */
-  agentReady: boolean;
-  /** Minimum tag expected for the production agentic AI foundation. */
-  agentMinTag: string;
   /** HTML page URL for the newest published release. */
   latestReleaseUrl: string | null;
   /** True only if the GitHub API could not be reached at all. */
@@ -46,7 +42,6 @@ export const REPO_NAME =
   (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_REPO_NAME) ||
   'bullebrowser';
 export const RELEASES_PAGE = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases`;
-export const AGENT_MIN_TAG = 'v0.2.0';
 const LOCAL_MANIFEST_PATH = `${basePath}/releases-manifest.json`;
 
 interface RawAsset {
@@ -66,21 +61,6 @@ interface RawRelease {
 interface ReleaseManifest {
   generatedAt: string;
   releases: RawRelease[];
-}
-
-function semverParts(tag: string): [number, number, number] | null {
-  const match = tag.trim().match(/^v?(\d+)\.(\d+)\.(\d+)/i);
-  if (!match) return null;
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-function semverGte(tag: string, minimum: string): boolean {
-  const t = semverParts(tag);
-  const m = semverParts(minimum);
-  if (!t || !m) return false;
-  if (t[0] !== m[0]) return t[0] > m[0];
-  if (t[1] !== m[1]) return t[1] > m[1];
-  return t[2] >= m[2];
 }
 
 function classify(name: string): Platform | null {
@@ -128,8 +108,6 @@ function downloadsFromReleases(releases: RawRelease[], apiUnavailable: boolean):
     publishedAt: latest?.published_at ?? null,
     forPlatform,
     checksumsUrl,
-    agentReady: latestTag ? semverGte(latestTag, AGENT_MIN_TAG) : false,
-    agentMinTag: AGENT_MIN_TAG,
     latestReleaseUrl: latest?.html_url ?? null,
     apiUnavailable,
   };
@@ -160,28 +138,6 @@ export async function fetchDownloads(): Promise<Downloads> {
   } catch {
     return downloadsFromReleases([], true);
   }
-}
-
-export function detectPlatform(userAgent: string): Platform {
-  const ua = userAgent.toLowerCase();
-  // macOS user-agents report "Intel" even on Apple Silicon, so we can't tell
-  // the arch from UA. Default to Apple Silicon (the common case today) and let
-  // the UI surface the Intel option alongside it.
-  if (ua.includes('mac')) return 'mac-arm64';
-  if (ua.includes('win')) return ua.includes('arm') ? 'win-arm64' : 'win-x64';
-  if (ua.includes('linux') && ua.includes('aarch64')) return 'linux-arm64';
-  if (ua.includes('android')) return 'linux-arm64'; // best-effort; mobile unsupported
-  return 'linux-x64';
-}
-
-export function platformFamily(p: Platform): 'mac' | 'win' | 'linux' {
-  if (p.startsWith('mac')) return 'mac';
-  if (p.startsWith('win')) return 'win';
-  return 'linux';
-}
-
-export function isMobileUA(userAgent: string): boolean {
-  return /android|iphone|ipad|ipod|mobile/i.test(userAgent);
 }
 
 export function formatBytes(bytes: number): string {

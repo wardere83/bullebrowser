@@ -1,3 +1,6 @@
+import { AccessibilityModal } from './components/AccessibilityModal.js';
+import { useAccessibilityStore } from './state/accessibility-store.js';
+import { accessibilityZoom } from '../shared/accessibility.js';
 import { useEffect, useRef } from 'react';
 import { spacing } from '@bullebrowser/brand-tokens';
 import { TopBar } from './components/TopBar.js';
@@ -7,10 +10,13 @@ import { SettingsModal } from './components/SettingsModal.js';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { AboutModal } from './components/AboutModal.js';
 import { Splash } from './components/Splash.js';
+import { BrowserPane } from './components/BrowserPane.js';
 import { useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
+import { isStartPageUrl, useWorkspaceConnection } from './state/workspace-store.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import { AGENT_PROMPT_EVENT } from './lib/url.js';
+import { refreshVoiceConversation } from './lib/voice-agent.js';
 
 export function App() {
   const tabs = useBrowserStore((s) => s.tabs);
@@ -19,6 +25,11 @@ export function App() {
   const setAiPanelOpen = useBrowserStore((s) => s.setAiPanelOpen);
   const setSearchProvider = useBrowserStore((s) => s.setSearchProvider);
   const showSettings = useBrowserStore((s) => s.showSettings);
+  const showAccessibility = useBrowserStore((s) => s.showAccessibility);
+  const preferences = useAccessibilityStore((s) => s.preferences);
+  const setAccessibility = useAccessibilityStore((s) => s.setPreferences);
+  const zoom = accessibilityZoom(preferences);
+  const showUpdates = useBrowserStore((s) => s.showUpdates);
   const showAbout = useBrowserStore((s) => s.showAbout);
   const appendStep = useAgentStore((s) => s.appendStep);
   const finishRun = useAgentStore((s) => s.finishRun);
@@ -27,13 +38,13 @@ export function App() {
   const initialized = useRef(false);
 
   useKeyboardShortcuts();
+  // Keep organization context available to the assistant.
+  useWorkspaceConnection();
 
-  // The start page shows when there's nothing to browse yet: no tabs at all,
-  // or the active tab is still sitting on the start page. Must agree with
-  // isStartPage() in the tab manager, which hides the page view to match.
   const activeTab = tabs.find((t) => t.active);
-  const showStartPage =
-    tabs.length === 0 || !activeTab?.url || activeTab.url === 'about:blank';
+  const showIntro = !activeTab || isStartPageUrl(activeTab.url);
+  const pendingConfirm = useAgentStore((s) => s.pendingConfirm);
+  const modalOpen = showUpdates || showSettings || showAbout || showAccessibility || pendingConfirm?.kind === 'destructive';
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -41,6 +52,7 @@ export function App() {
     initialized.current = true;
     (async () => {
       const settings = await window.bullebrowser.settings.get();
+      setAccessibility(settings.accessibility);
       setAiPanelOpen(settings.aiPanelOpen);
       setSearchProvider(settings.searchProvider);
       const list = await window.bullebrowser.tabs.list();
@@ -50,7 +62,7 @@ export function App() {
         setTabs(list);
       }
     })();
-  }, [setAiPanelOpen, setTabs, setSearchProvider]);
+  }, [setAiPanelOpen, setTabs, setSearchProvider, setAccessibility]);
 
   // Subscribe to tab updates.
   useEffect(() => {
@@ -60,41 +72,43 @@ export function App() {
   // Subscribe to agent steps.
   useEffect(() => {
     return window.bullebrowser.agent.onStep(({ runId, step }) => {
-      if (useAgentStore.getState().runId !== runId) return;
-      const conversationId = useAgentStore.getState().current?.id;
-      appendStep(step);
+      if (!appendStep(step, runId)) return;
+      const conversationId = useAgentStore.getState().runConversationId;
+      // Only a run-level error (no toolName) ends the run. A tool error — a
+      // click that matched nothing, a declined confirmation — is reported back
+      // to the model, which carries on and usually recovers; treating it as
+      // fatal hid the Stop button while the agent was still driving the page.
+      const runFailed = step.kind === 'error' && !step.toolName;
       if (step.kind === 'done') finishRun();
-      const terminalError = step.kind === 'error' && !step.toolName;
-      if (terminalError) setError(step.message);
+      if (runFailed) setError(step.message);
       // When a run finishes, the main process has saved the assistant's
       // reply to the conversation store. Refetch so the response appears
       // in the AI panel — without this, only the user's optimistic message
       // shows and the assistant's text never makes it into the visible
       // conversation history.
-      if (step.kind === 'done' || terminalError) {
-        const cur = useAgentStore.getState().current;
-        if (cur?.id) {
-          void window.bullebrowser.conversations.get(cur.id).then((updated) => {
-            // refreshCurrent updates messages without resetting steps/
-            // status — so the visible error/feed survives the refresh.
-            const state = useAgentStore.getState();
-            if (updated && state.current?.id === conversationId && !state.runId) {
-              state.refreshCurrent(updated);
-            }
+      if (step.kind === 'done' || runFailed) {
+        if (useAgentStore.getState().pendingConfirm?.runId === runId) {
+          setPendingConfirm(null);
+        }
+        if (conversationId) {
+          void refreshVoiceConversation(window.bullebrowser, conversationId, {
+            current: () => useAgentStore.getState().current,
+            // Retain progress and errors, and preserve a newer prompt or chat
+            // selected while this saved answer is being read.
+            refresh: (updated) => useAgentStore.getState().refreshCurrent(updated),
           });
         }
       }
     });
-  }, [appendStep, finishRun, setError]);
+  }, [appendStep, finishRun, setError, setPendingConfirm]);
 
   // Consent requests from a run. Browsing access is answered inline in the
   // chat (AiPanel); destructive actions get the modal. Both go through
   // pendingConfirm — nothing is auto-approved on the user's behalf.
   useEffect(() => {
-    return window.bullebrowser.agent.onConfirmRequest((req) => {
-      if (useAgentStore.getState().runId === req.runId) setPendingConfirm(req);
-      else void window.bullebrowser.agent.replyConfirm(req.runId, req.id, false);
-    });
+    return window.bullebrowser.agent.onConfirmRequest((req) =>
+      setPendingConfirm(req),
+    );
   }, [setPendingConfirm]);
 
   // Right-click → "Ask BulleBrowser" comes in over IPC. Open the AI
@@ -112,9 +126,12 @@ export function App() {
 
   // Push layout bounds to main so the WebContentsView fits.
   useEffect(() => {
-    const top = spacing.topBarHeight + spacing.tabStripHeight;
-    const right = aiPanelOpen ? spacing.aiPanelWidth : 0;
-    void window.bullebrowser.layout.setBounds({ topInset: top, rightInset: right });
+    const top = Math.round((spacing.topBarHeight + spacing.tabStripHeight) * zoom);
+    const right = aiPanelOpen ? Math.round(spacing.aiPanelWidth * zoom) : 0;
+    void window.bullebrowser.layout.setBounds({ topInset: top, rightInset: right, modalOpen });
+  }, [aiPanelOpen, modalOpen, zoom]);
+
+  useEffect(() => {
     void window.bullebrowser.settings.set({ aiPanelOpen });
   }, [aiPanelOpen]);
 
@@ -123,15 +140,17 @@ export function App() {
       <TopBar />
       <TabStrip />
       <div className="flex flex-1 overflow-hidden">
-        {/* The active WebContentsView is laid out by main and covers this
-            area — except on the start page, where main hides the view so the
-            branded start page below shows through. */}
-        <div className="flex-1 bg-surface-light">
-          {showStartPage && <Splash />}
+        {/* The left pane is the intro until a browsing task opens a page. */}
+        <div className="flex min-w-0 flex-1 flex-col bg-surface-light">
+          <div className="min-h-0 flex-1">
+            {showIntro && <Splash />}
+            <BrowserPane tab={activeTab} />
+          </div>
         </div>
         {aiPanelOpen && <AiPanel />}
       </div>
       <ConfirmDialog />
+      {showAccessibility && <AccessibilityModal />}
       {showSettings && <SettingsModal />}
       {showAbout && <AboutModal />}
     </div>

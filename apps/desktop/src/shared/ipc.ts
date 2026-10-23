@@ -1,9 +1,12 @@
+import type { ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
+import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessibility.js';
 // Single source of truth for IPC channel names and the typed bridge
 // surface. Both the preload script and the renderer consume this so we
 // never duplicate string literals across processes.
 
-import type { ModelId, ProviderId } from '@bullebrowser/agent-core';
+import type { BrowserTaskId, ModelId, ProviderId } from '@bullebrowser/agent-core';
 import type { AgentStepEvent } from './agent-events.js';
+import type { FundingBridge } from './funding.js';
 
 export const IPC = {
   // Tabs
@@ -25,6 +28,12 @@ export const IPC = {
   BOOKMARK_LIST: 'bookmark:list',
   BOOKMARK_ADD: 'bookmark:add',
   BOOKMARK_REMOVE: 'bookmark:remove',
+  // Browser-backed connectors (app chrome only)
+  CONNECTOR_LIST: 'connector:list',
+  CONNECTOR_SET: 'connector:set',
+  CONNECTOR_OPEN: 'connector:open',
+  CONNECTOR_ADD: 'connector:add',
+  CONNECTOR_REMOVE: 'connector:remove',
   // Settings / secrets
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
@@ -35,6 +44,7 @@ export const IPC = {
   AGENT_RUN: 'agent:run',
   AGENT_CANCEL: 'agent:cancel',
   AGENT_STEP: 'agent:step', // main → renderer stream
+  AGENT_RESULT: 'agent:result', // main → renderer final task result
   AGENT_CONFIRM_REQUEST: 'agent:confirm-request', // main → renderer
   AGENT_CONFIRM_REPLY: 'agent:confirm-reply',
   AGENT_CAPTURE: 'agent:capture', // screenshot the active tab for an attachment
@@ -49,6 +59,10 @@ export const IPC = {
   PROJECT_ATTACH_FILES: 'project:attach-files',
   PROJECT_DELETE: 'project:delete',
   VOICE_TRANSCRIBE: 'voice:transcribe',
+  VOICE_PREPARE_SPEECH: 'voice:prepare-speech',
+  VOICE_SYNTHESIZE: 'voice:synthesize',
+  VOICE_CONNECT_REALTIME: 'voice:connect-realtime',
+  VOICE_DISCONNECT_REALTIME: 'voice:disconnect-realtime',
   // Conversations
   CONVERSATION_LIST: 'conversation:list',
   CONVERSATION_GET: 'conversation:get',
@@ -60,9 +74,20 @@ export const IPC = {
   // Updates
   UPDATE_STATUS: 'update:status', // main → renderer
   UPDATE_GET_STATUS: 'update:get-status',
-  UPDATE_INSTALL: 'update:install',
+  UPDATE_PREPARE: 'update:prepare',
+  UPDATE_APPLY: 'update:apply',
+  UPDATE_FINISH: 'update:finish',
+  UPDATE_RETRY: 'update:retry',
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DETAILS: 'update:details',
+  UPDATE_DISMISS: 'update:dismiss',
   // UI events from main → renderer
   UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
+  // Funding platform. One typed call channel instead of one channel per method:
+  // the method table in shared/funding.ts is the allowlist, and main checks the
+  // sender, the active organization and the method's permission in one place.
+  FUNDING_CALL: 'funding:call',
+  FUNDING_EVENT: 'funding:event', // main → renderer
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -78,19 +103,29 @@ export interface AgentConfirmRequest {
   kind: 'browse_access' | 'destructive';
 }
 
-// Where an update has got to. `version` is the version being offered, which is
-// what the "Relaunch to update" button names — a bare "an update is ready" tells
-// the user nothing about what they're getting.
+export interface AgentResultEvent {
+  runId: string;
+  conversationId: string;
+  status: 'completed' | 'failed' | 'cancelled';
+  text: string;
+  error?: string;
+}
+
+// A published release is prepared without interrupting the current session.
+// Its binaries become active after the user's next normal quit and reopen.
 export type UpdateStatus =
   | { state: 'idle' }
-  | { state: 'downloading'; version: string }
-  | { state: 'ready'; version: string };
+  | { state: 'downloading'; version: string; percent?: number; phase?: 'preparing' }
+  | { state: 'ready'; version: string; scheduled?: boolean }
+  | { state: 'deferred'; version: string; preparedVersion: string }
+  | { state: 'error'; version: string; message: string; retryable?: boolean };
 
 export interface TabState {
   id: string;
   title: string;
   url: string;
   loading: boolean;
+  loadError?: { code: number; message: string };
   canGoBack: boolean;
   canGoForward: boolean;
   faviconUrl?: string;
@@ -98,28 +133,31 @@ export interface TabState {
 }
 
 export interface LayoutBounds {
+  modalOpen?: boolean; // hide native pages while a renderer dialog is open
   topInset: number; // pixels reserved at the top for chrome
   rightInset: number; // pixels reserved on the right for the AI panel (0 when closed)
 }
 
 export interface AppSettings {
+  accessibility?: AccessibilityPreferences;
   defaultModel: ModelId;
   aiPanelOpen: boolean;
   searchProvider: 'bullebrowser' | 'google' | 'bing';
   homepageUrl: string;
-  complianceChecklist: string[];
+  /** Press the least-permissive option on common cookie banners. */
+  autoDismissConsent: boolean;
+  /** Default step budget per agent task (weighted; raise per task). */
+  stepBudget: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  accessibility: DEFAULT_ACCESSIBILITY,
   defaultModel: 'claude-opus-4-7',
   aiPanelOpen: true,
   searchProvider: 'bullebrowser',
   homepageUrl: 'about:blank',
-  complianceChecklist: [
-    'EEO: Equal Employment Opportunity references and required language',
-    'FERPA: Family Educational Rights and Privacy Act references',
-    'ADA: Americans with Disabilities Act and accessibility obligations',
-  ],
+  autoDismissConsent: true,
+  stepBudget: 40,
 };
 
 export interface HistoryEntry {
@@ -145,6 +183,13 @@ export interface ConversationSummary {
 
 export interface ConversationDetail extends ConversationSummary {
   messages: { role: 'user' | 'assistant'; content: string; timestamp: number }[];
+  /**
+   * The organization this chat belongs to. A chat is bound to the organization
+   * that was active when it was first used and is only listed, read or
+   * continued under that organization. Absent on chats from before
+   * organizations existed, which stay visible until they are next used.
+   */
+  organizationId?: string | null;
 }
 
 // A file the user uploaded into the current session. Bytes live under
@@ -176,6 +221,8 @@ export interface ProjectDetail extends ProjectSummary {
   // task run "in" this project.
   instructions: string;
   fileIds: string[];
+  /** The organization the project belongs to; absent on projects from before organizations. */
+  organizationId?: string | null;
 }
 
 // What the user attached to a single run. The renderer sends only references
@@ -187,7 +234,7 @@ export type RunAttachment =
   | { kind: 'screenshot'; url: string };
 
 export interface AgentRunRequest {
-  runId?: string;
+  browserTask?: BrowserTaskId;
   conversationId: string;
   userMessage: string;
   model: ModelId;
@@ -195,6 +242,10 @@ export interface AgentRunRequest {
   // Optional context the user attached via the "+" menu. Additive: an empty or
   // absent list runs exactly as before.
   attachments?: RunAttachment[];
+  /** Step budget for this task; defaults to the Settings value. */
+  budget?: number;
+  /** The funding document the user has open, so answers can be about it. */
+  focusRfpId?: string;
 }
 
 export interface AppInfo {
@@ -208,6 +259,13 @@ export interface AppInfo {
 
 // The shape exposed by preload as window.bullebrowser
 export interface BrowserBridge {
+  connectors: {
+    list(): Promise<ConnectorState[]>;
+    add(name: string, url: string): Promise<ConnectorState[]>;
+    remove(id: string): Promise<ConnectorState[]>;
+    set(id: ConnectorId, enabled: boolean): Promise<ConnectorState[]>;
+    open(id: ConnectorId): Promise<TabState>;
+  };
   tabs: {
     list(): Promise<TabState[]>;
     create(url?: string): Promise<TabState>;
@@ -253,6 +311,7 @@ export interface BrowserBridge {
     onStep(
       cb: (event: { runId: string; step: AgentStepEvent }) => void,
     ): () => void;
+    onResult(cb: (event: AgentResultEvent) => void): () => void;
     onConfirmRequest(cb: (event: AgentConfirmRequest) => void): () => void;
     replyConfirm(runId: string, id: string, approved: boolean): Promise<void>;
     // Capture the active tab as a PNG so the composer can show a thumbnail and
@@ -274,9 +333,14 @@ export interface BrowserBridge {
     delete(id: string): Promise<void>;
   };
   voice: {
-    // Transcribe one recorded clip via the user's OpenAI key (Whisper). The
-    // audio rides as raw bytes; mime is the recorder's container type.
-    transcribe(audio: ArrayBuffer, mime: string): Promise<{ text: string }>;
+    // Local Whisper transcription of mono 16 kHz PCM. No API key needed.
+    transcribe(audio: Float32Array): Promise<{ text: string }>;
+    // Bundled local neural speech. Audio and text stay on the device.
+    prepareSpeech(): Promise<void>;
+    synthesize(text: string): Promise<{ audio: Float32Array; sampleRate: number }>;
+    // Main exchanges WebRTC SDP using the saved key; credentials stay in main.
+    connectRealtime(offerSdp: string): Promise<{ answerSdp: string; callId: string }>;
+    disconnectRealtime(callId: string): Promise<void>;
   };
   app: {
     info(): Promise<AppInfo>;
@@ -285,11 +349,19 @@ export interface BrowserBridge {
   updates: {
     status(): Promise<UpdateStatus>;
     onStatus(cb: (status: UpdateStatus) => void): () => void;
-    install(): Promise<void>;
+    prepare(version: string): Promise<void>;
+    apply(version: string): Promise<void>;
+    finish(version: string): Promise<void>;
+    retry(): Promise<void>;
+    check(): Promise<void>;
+    details(): Promise<{ installedVersion: string; activationIssue: string | null; completedVersion: string | null }>;
+    dismiss(version: string): Promise<void>;
   };
   ui: {
     onAskAgent(cb: (prompt: string) => void): () => void;
   };
+  // Organizations, the Knowledge Hub, opportunities, RFP analysis and the guide.
+  funding: FundingBridge;
 }
 
 declare global {

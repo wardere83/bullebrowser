@@ -1,0 +1,259 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.ca.gov/api/3/action/datastore_search?resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&filters=%7B%22Status%22%3A%5B%22closed%22%5D%7D&limit=300&sort=ApplicationDeadline+desc"
+  },
+  "response": {
+    "help": "https://data.ca.gov/api/3/action/help_show?name=datastore_search",
+    "success": true,
+    "result": {
+      "filters": {
+        "Status": [
+          "closed"
+        ]
+      },
+      "include_total": true,
+      "limit": 300,
+      "records_format": "objects",
+      "resource_id": "111c8c88-21f6-453c-ae2c-b4785a0624f5",
+      "sort": "ApplicationDeadline desc",
+      "total_estimation_threshold": null,
+      "records": [
+        {
+          "_id": 38,
+          "PortalID": "190497",
+          "GrantID": null,
+          "Status": "closed",
+          "LastUpdated": "2026-08-12 20:05:35",
+          "ChangeNotes": null,
+          "AgencyDept": "State Treasurer's Office",
+          "Title": "California Investment and Innovation Program (Cal IIP) 2027",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Disadvantaged Communities; Housing, Community and Economic Development",
+          "CategorySuggestion": "Business Financing",
+          "Purpose": "Cal IIP was established to provide grants to enhance the capacity and ability of community development financial institutions (CDFIs) to provide programs including technical assistance and access to capital to economically disadvantaged communities throughout California. ",
+          "Description": "The Legislature designed Cal IIP to provide grants enhancing the capacity and ability of community development financial institutions (CDFIs) to provide programs including technical assistance and access to capital to economically disadvantaged communities throughout California. CDFIs can use the grants to fund services and operations that contribute to the CDFIs overall community development mission and goals. CDFIs can also use the grants to supplement their net assets and increase the capacity to attract additional funding.",
+          "ApplicantType": "Business",
+          "ApplicantTypeNotes": "The applicant must be a CDFI and have current certification by the Code of Federal Regulations, a minimum net worth of $25,000, and 5 loans in the 12 months prior to application submittal.  The CDFI must have an office in CA and officers living in California or a record of lending in California, based on at least 25% of applicant's loan portfolio to CA projects, and provided financial assistance in CA totaling $10 million in the 3 years prior.",
+          "Geography": "The CDFI must have a record of lending in California. ",
+          "FundingSource": "State",
+          "FundingSourceNotes": "Per legislation, 20% of funds available will be for small and emerging CDFIs. This funding will be divided among applicants that are small and emerging CDFIs. The size of the grant awards shall be based on the total amount of loans closed by each applicant in the last fiscal year. Funding shall be awarded on a tier system. The funding amounts per tier may be less than the grant award depending on availability and number of qualified applicants. ",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": "$10,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advance(s)",
+          "FundingMethodNotes": "Checks will be disbursed to awardees after the grant has been approved by the CPCFA Board and the grant agreement has been signed by all parties. ",
+          "OpenDate": "2026-08-12 19:58:00",
+          "ApplicationDeadline": "2026-10-01 17:00:00",
+          "AwardPeriod": "3 years",
+          "ExpAwardDate": "February 1, 2027",
+          "ElecSubmission": "email: applications.caliip@treasurer.ca.gov;",
+          "GrantURL": "https://www.treasurer.ca.gov/cpcfa/caliip/application.asp",
+          "AgencyURL": "https://www.treasurer.ca.gov/cpcfa/caliip/application.asp",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: caliip@treasurer.ca.gov; tel: 1-916-654-5610;",
+          "AwardStats": null
+        },
+        {
+          "_id": 92,
+          "PortalID": "173037",
+          "GrantID": null,
+          "Status": "closed",
+          "LastUpdated": "2026-05-28 23:38:43",
+          "ChangeNotes": "Corrected FY in grant title and submission deadline.",
+          "AgencyDept": "Strategic Growth Council",
+          "Title": "Transformative Climate Communities Round 6 PLANNING Grant (FY 25-26)",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Disadvantaged Communities; Employment, Labor & Training; Energy; Environment & Water; Health & Human Services; Housing, Community and Economic Development; Parks & Recreation; Transportation",
+          "CategorySuggestion": null,
+          "Purpose": "The Transformative Climate Communities Program furthers the purposes of AB 32 (Nunez, 2006) and AB 2722 (Burke, 2016) by funding projects that reduce greenhouse gas emissions (GHG) through the development and implementation of neighborhood-level transformative climate community plans that include multiple coordinated GHG emissions reduction projects that provide local economic, environmental, and health benefits to disadvantaged communities.",
+          "Description": "The Transformative Climate Communities (TCC) Program, established by AB 2722 (Burke, 2016), invests in community-led climate resilience projects in the state’s most overburdened communities. The program objectives are to reduce greenhouse gas emissions, improve public health and the environment, and support economic opportunity and shared prosperity.  The Planning Grants intend to support planning activities to prepare prepare low-income, disadvantaged, and Tribal communities for future implementation of programs aligned with TCC Program Objectives. Planning activities should address community priorities and directly benefit these communities.   TCC Implementation Grants and Project Development Grants support holistic neighborhood-level projects and pre-development activities, respectively, to advance community-led goals and projects. Please see separate Grants Portal entries for more information.  Some examples of eligible activities include:  -Building internal and partner capacity to support collaborative partnerships that align land use with environmental, economic, and social justice priorities  -Evaluating, updating, and streamlining policies and codes administered by the Planning Department and other local departments (e.g., public works, health and safety, fire, parks, and open space)  -Conducting fiscal analyses to assess long-term service costs of future development and inform fee structures Preparing climate action and climate adaptation plans  -Conducting inclusive community engagement that incorporates input from local residents and supports and prepares for the future development of innovative and meaningful programs and practices  -Preparing for future funding opportunities, including TCC Implementation Grants or similar programs, through activities such as community needs assessments, community health needs assessments, partnership development, engagement to inform project selection, and development or formalization of a shared governance structure (e.g., a Collaborative Governance Structure)  -Activities that support development of a Collaborative Governance Structure are strongly encouraged for applicants anticipating a future TCC Implementation Grant  -Defining Health Equity and establishing related goals for the Project Area using available resources from the California Department of Public Health and other place-based sources  -Identifying and preparing project sites for future community-serving uses, including feasibility studies, site identification (e.g., community land trusts or climate resilience projects), and planning for project implementation  At least one Co-Applicant is required. Applicants from Tribal Communities, Tribally-owned non-profits, and with Project Areas in Disadvantaged Unincorporated Communities are prioritized for Application Technical Assistance. July 31, 2026, is the priority deadline to request Application Technical Assistance via the TA Application Request Form. Application TA services may be available to additional applicants depending on funding availability and TA provider capacity after the July 31st deadline.",
+          "ApplicantType": "Business; Nonprofit; Public Agency; Tribal Government",
+          "ApplicantTypeNotes": "Eligible Lead Applicants may be: California Native American Tribes, Tribally-owned nonprofits, IRC 501 (c)(3) tax-exempt nonprofit organizations, public agencies, local agencies, special districts, joint powers authorities, public utilities, local publicly owned utilities, or mutual water companies.",
+          "Geography": "Project Areas must be designated as disadvantaged communities per the TCC Guidelines. The Guidelines contain multiple options for establishing Project Area eligibility. Project Areas for Planning Grants must be contiguous and may be any size and shape. See Section 3.3, Project Area Eligibility, of the Guidelines for more information on Project Area requirements.",
+          "FundingSource": "State",
+          "FundingSourceNotes": "Funding for Round 6 comes from Proposition 4, the Safe Drinking Water, Wildfire Prevention, Drought Preparedness, and Clean Air Bond Act of 2024.",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": null,
+          "EstAwards": "Exactly 3",
+          "EstAmounts": "$300,000.00",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": "Grantees may request reimbursement from SGC on a quarterly basis (every three months). Advance payments are available to Tribal and 501(c)(3) applicants. SGC may approve advance payments under this grant at its sole discretion.",
+          "OpenDate": "2026-05-29 21:00:00",
+          "ApplicationDeadline": "2026-09-30 23:59:00",
+          "AwardPeriod": "2 years",
+          "ExpAwardDate": "Spring 2027",
+          "ElecSubmission": "url: https://cagovopr-tcc.submittable.com/submit/357004/tcc-round-6-planning-grant-application;",
+          "GrantURL": "https://sgc.ca.gov/wp-content/uploads/20260414-TCC-R6FinalGuidelines-Draft.pdf",
+          "AgencyURL": "https://sgc.ca.gov/grant-programs/tcc/",
+          "AgencySubscribeURL": "https://lp.constantcontactpages.com/sl/9S6I7kU",
+          "GrantEventsURL": null,
+          "ContactInfo": "email: tcc@sgc.ca.gov; tel: 1-916-324-9775;",
+          "AwardStats": null
+        }
+      ],
+      "fields": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "PortalID",
+          "type": "text"
+        },
+        {
+          "id": "GrantID",
+          "type": "text"
+        },
+        {
+          "id": "Status",
+          "type": "text"
+        },
+        {
+          "id": "LastUpdated",
+          "type": "text"
+        },
+        {
+          "id": "ChangeNotes",
+          "type": "text"
+        },
+        {
+          "id": "AgencyDept",
+          "type": "text"
+        },
+        {
+          "id": "Title",
+          "type": "text"
+        },
+        {
+          "id": "Type",
+          "type": "text"
+        },
+        {
+          "id": "LOI",
+          "type": "text"
+        },
+        {
+          "id": "Categories",
+          "type": "text"
+        },
+        {
+          "id": "CategorySuggestion",
+          "type": "text"
+        },
+        {
+          "id": "Purpose",
+          "type": "text"
+        },
+        {
+          "id": "Description",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantType",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantTypeNotes",
+          "type": "text"
+        },
+        {
+          "id": "Geography",
+          "type": "text"
+        },
+        {
+          "id": "FundingSource",
+          "type": "text"
+        },
+        {
+          "id": "FundingSourceNotes",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFunds",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFundsNotes",
+          "type": "text"
+        },
+        {
+          "id": "EstAvailFunds",
+          "type": "text"
+        },
+        {
+          "id": "EstAwards",
+          "type": "text"
+        },
+        {
+          "id": "EstAmounts",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethod",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethodNotes",
+          "type": "text"
+        },
+        {
+          "id": "OpenDate",
+          "type": "text"
+        },
+        {
+          "id": "ApplicationDeadline",
+          "type": "text"
+        },
+        {
+          "id": "AwardPeriod",
+          "type": "text"
+        },
+        {
+          "id": "ExpAwardDate",
+          "type": "text"
+        },
+        {
+          "id": "ElecSubmission",
+          "type": "text"
+        },
+        {
+          "id": "GrantURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencyURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencySubscribeURL",
+          "type": "text"
+        },
+        {
+          "id": "GrantEventsURL",
+          "type": "text"
+        },
+        {
+          "id": "ContactInfo",
+          "type": "text"
+        },
+        {
+          "id": "AwardStats",
+          "type": "text"
+        }
+      ],
+      "_links": {
+        "start": "/api/3/action/datastore_search?filters=%7B%22Status%22%3A%5B%22closed%22%5D%7D&limit=300&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&sort=ApplicationDeadline+desc",
+        "next": "/api/3/action/datastore_search?filters=%7B%22Status%22%3A%5B%22closed%22%5D%7D&limit=300&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&sort=ApplicationDeadline+desc&offset=300"
+      },
+      "total": 2,
+      "total_was_estimated": false
+    }
+  }
+}

@@ -20,7 +20,7 @@ export function ConfirmDialog() {
           The agent wants to perform an action that may have a permanent
           effect. Approve only if you trust this step.
         </p>
-        <div className="rounded border border-line bg-surface-muted p-3 font-mono text-xs">
+        <div className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded border border-line bg-surface-muted p-3 font-mono text-xs">
           {pending.message}
         </div>
         <div className="flex justify-end gap-2">

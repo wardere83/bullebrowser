@@ -1,0 +1,414 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.ca.gov/api/3/action/datastore_search?resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&filters=%7B%22Status%22%3A%5B%22active%22%5D%7D&limit=1000"
+  },
+  "response": {
+    "help": "https://data.ca.gov/api/3/action/help_show?name=datastore_search",
+    "success": true,
+    "result": {
+      "filters": {
+        "Status": [
+          "active"
+        ]
+      },
+      "include_total": true,
+      "limit": 1000,
+      "records_format": "objects",
+      "resource_id": "111c8c88-21f6-453c-ae2c-b4785a0624f5",
+      "total_estimation_threshold": null,
+      "records": [
+        {
+          "_id": 1,
+          "PortalID": "191046",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2026-10-01 14:12:38",
+          "ChangeNotes": "Applications are to be submitted electronically via the Online Grants Application (OLGA).",
+          "AgencyDept": "Department of Parks and Recreation",
+          "Title": "The Recreational Trails Program (RTP) – R27",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Education; Environment & Water; Parks & Recreation",
+          "CategorySuggestion": null,
+          "Purpose": "The purpose of the Recreational Trails Program is to provide for well managed OHV Recreation by providing financial assistance to eligible agencies and organizations that develop, maintain, operate, expand, support, or contribute to well managed, high-quality, OHV Recreation areas, roads, and trails, and to responsibly maintain the wildlife, soils, and habitat of Project Areas in a manner that will sustain long-term OHV Recreation.",
+          "Description": "The Recreational Trails Program (RTP) provides funds to develop and maintain Recreational Trails and trail-related facilities for motorized Recreational Trail uses. This includes acquisition, development and rehabilitation of trails and facilities, construction and maintenance of trails, purchase or lease of equipment, trail conditions assessments, and the development and distribution of educational messages.",
+          "ApplicantType": "Nonprofit; Public Agency",
+          "ApplicantTypeNotes": "Cities, counties, districts, state and federal agencies, and 501(c)(3) nonprofit organizations. ",
+          "Geography": "All Projects shall reside on public lands within the State of California.",
+          "FundingSource": "Federal",
+          "FundingSourceNotes": "Bipartisan Infrastructure Law.",
+          "MatchingFunds": "12%",
+          "MatchingFundsNotes": "Matching funds must be at least 12% of total project costs. Eligible match sources are State funds (which may include Grants and Cooperative Agreement funds), local, and private funds, donated materials and services, value of donated land for acquisition Projects, and other federal funds. If using Other Federal Funds as a match, the total Federal funds claimed on a Project CANNOT exceed 95% of the total Project Costs.",
+          "EstAvailFunds": "$3,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2026-10-02 15:00:00",
+          "ApplicationDeadline": "2026-11-02 17:00:00",
+          "AwardPeriod": "1-3 years",
+          "ExpAwardDate": "January 6, 2027",
+          "ElecSubmission": "url: https://olga.ohv.parks.ca.gov/egrams_ohmvr/user/home.aspx;",
+          "GrantURL": "https://ohv.parks.ca.gov/?page_id=24881",
+          "AgencyURL": "https://ohv.parks.ca.gov/",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: OHV.grants@parks.ca.gov; tel: 1-916-324-4442;",
+          "AwardStats": null
+        },
+        {
+          "_id": 4,
+          "PortalID": "192465",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2026-10-01 21:41:06",
+          "ChangeNotes": null,
+          "AgencyDept": "Governor's Office of Emergency Services",
+          "Title": "FY 2025 Next Generation Warning System (NGWS) for Early Earthquake Warning (EEW) Grant Program CFO",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Disaster Prevention & Relief",
+          "CategorySuggestion": null,
+          "Purpose": "Next Generation Early Warning streaming projects",
+          "Description": "Incident or disaster early warning for community and public using streaming services",
+          "ApplicantType": "Business",
+          "ApplicantTypeNotes": "Streaming company or affiliates",
+          "Geography": "Statewide",
+          "FundingSource": "Federal",
+          "FundingSourceNotes": null,
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": "$15,000,000.00",
+          "EstAwards": "Between 1 and 2",
+          "EstAmounts": "Between $1.00 and $750,000.00",
+          "FundingMethod": "Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2026-10-01 07:00:00",
+          "ApplicationDeadline": "2026-11-25 17:00:00",
+          "AwardPeriod": "01/01/27 – 06/30/28",
+          "ExpAwardDate": "12/21/26",
+          "ElecSubmission": "url: https://caloes.intelligrants.com/;",
+          "GrantURL": "https://caloes.intelligrants.com",
+          "AgencyURL": "https://www.caloes.ca.gov/office-of-the-director/policy-administration/finance-administration/grants-management/search-for-grants/",
+          "AgencySubscribeURL": "https://login.constantcontact.com/login",
+          "GrantEventsURL": null,
+          "ContactInfo": "name: NGWSgrantprogram@caloes.ca.gov; email: NGWSgrantprogram@caloes.ca.gov; tel: 1-650-218-9422;",
+          "AwardStats": null
+        },
+        {
+          "_id": 39,
+          "PortalID": "190254",
+          "GrantID": "7612",
+          "Status": "active",
+          "LastUpdated": "2026-08-07 21:06:21",
+          "ChangeNotes": "Transition to active",
+          "AgencyDept": "CA Department of Education",
+          "Title": "California Serves Grant Program 2026-27",
+          "Type": "Grant",
+          "LOI": "Yes",
+          "Categories": "Education",
+          "CategorySuggestion": null,
+          "Purpose": "Funding for the annual grant program is intended to support expanding access for high school graduates to the State Seal of Civic Engagement through high quality service-learning programs. Emphasis shall be on programs that demonstrate rich civic engagement and learning in pursuit of a State Seal of Civic Engagement specifically through service-learning.",
+          "Description": null,
+          "ApplicantType": "Public Agency",
+          "ApplicantTypeNotes": "Eligibility is limited to local educational agencies, defined as a school district, county office of education, or charter school, within the State of California that serves students in grade twelve.  At least 55% of the pupils enrolled in the local educational agency shall be unduplicated pupils. Please review the California Serves Eligibility spreadsheet at https://www.cde.ca.gov/ci/pl/californiaserves.asp. ",
+          "Geography": null,
+          "FundingSource": "State",
+          "FundingSourceNotes": "The Assembly Bill 181, Section 71, Budget Act of 2022 authorized the California Serves Grant Program, which provides funding for an annual grant program. Funds available to each applicant are based on the content and quality of the submitted application and proposed activities. The total grant budget for this Request for Applications, as appropriated in AB 181, Section 71 of the General Fund, is up to $5 million annually.",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": "$5,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "$500,000.00",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2026-08-07 20:57:00",
+          "ApplicationDeadline": "2026-10-05 16:00:00",
+          "AwardPeriod": "7/1/2027 - 6/30/2030",
+          "ExpAwardDate": "February 8, 2027",
+          "ElecSubmission": null,
+          "GrantURL": "https://www.cde.ca.gov/fg/fo/r12/caserves26-27.asp",
+          "AgencyURL": "https://www.cde.ca.gov/ci/pl/californiaserves.asp",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": null,
+          "AwardStats": null
+        },
+        {
+          "_id": 228,
+          "PortalID": "152751",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2025-11-05 23:33:27",
+          "ChangeNotes": null,
+          "AgencyDept": "CA Department of Education",
+          "Title": "2025–26 After School Education and Safety grant program (Round 2)",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Disadvantaged Communities; Education",
+          "CategorySuggestion": null,
+          "Purpose": "The purpose of the After School Education and Safety Program is to create incentives for establishing locally-driven Expanded Learning programs, including after school programs that partner with public schools and communities to provide academic and literacy support, and safe, constructive alternatives for youth.",
+          "Description": "The After School Education and Safety (ASES) Program is the result of the 2002 voter-approved initiative, Proposition 49. These programs are created through partnerships between schools and local community resources to provide literacy, academic enrichment and safe, constructive alternatives for students in kindergarten through ninth grade. Funding is designed to: (1) maintain existing before and after school program funding; and (2) provide eligibility to all elementary and middle schools that submit quality applications throughout California. This is round 2 of the 2025-26 ASES Request for Applications.",
+          "ApplicantType": "Public Agency",
+          "ApplicantTypeNotes": null,
+          "Geography": null,
+          "FundingSource": "State",
+          "FundingSourceNotes": null,
+          "MatchingFunds": "33%",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": "$30,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Between $50,000.00 and $203,500.00",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2025-11-05 08:00:00",
+          "ApplicationDeadline": "2026-12-03 00:00:00",
+          "AwardPeriod": "Ongoing",
+          "ExpAwardDate": "January 2026",
+          "ElecSubmission": null,
+          "GrantURL": "https://www.cde.ca.gov/fg/fo/r27/ases25rfaround2.asp",
+          "AgencyURL": "https://www.cde.ca.gov/ls/ex/",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: ExpandedLearning@cde.ca.gov; tel: 1-916-319-0923;",
+          "AwardStats": null
+        },
+        {
+          "_id": 315,
+          "PortalID": "117471",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2026-08-18 20:40:21",
+          "ChangeNotes": null,
+          "AgencyDept": "Santa Monica Mountains Conservancy",
+          "Title": "The California Drought, Water, Parks, Climate, Coastal Protection and Outdoor Access for All Act of 2018 (Proposition 68) SMMC Grant Program – (Prop 68 River – Severely Disadvantaged Community)",
+          "Type": "Grant; Loan",
+          "LOI": "No",
+          "Categories": "Environment & Water",
+          "CategorySuggestion": null,
+          "Purpose": "The California Drought, Water, Parks, Climate, Coastal Protection and Outdoor Access for All Act of 2018 (Proposition 68) SMMC Grant Program.      ",
+          "Description": "This program supports The California Drought, Water, Parks, Climate, Coastal Protection and Outdoor Access for All Act of 2018 is codified as Division 45 (commencing with section 80000) and sections 5096.611 and 75089.5 of the public resources code and section 79772.5 of the water code. Prop 68 authorizes $4 billion in general obligation to finance a drought, water, parks, climate, coastal protection and outdoor access for all program. The Santa Monica Mountains conservancy's (\"Conservancy\") Proposition 68 Grant Program Guidelines (\"Guidelines\") Specifically pertain to grants funded by proposition 68 and administered by the Conservancy.   Prop 68 River – Severely Disadvantaged Community",
+          "ApplicantType": "Nonprofit; Public Agency; Tribal Government",
+          "ApplicantTypeNotes": null,
+          "Geography": "Projects must be within the Santa Monica Mountains Conservancy Zone.",
+          "FundingSource": "State",
+          "FundingSourceNotes": "The California Drought, Water, Parks, Climate, Coastal Protection and Outdoor Access for All Act of 2018 is codified as Division 45 (commencing with section 80000) and sections 5096.611 and 75089.5 of the public resources code and section 79772.5 of the water code.",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": "$1,475,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2025-06-11 07:00:00",
+          "ApplicationDeadline": "Ongoing",
+          "AwardPeriod": "Encumber by 6/30/26",
+          "ExpAwardDate": "TBA",
+          "ElecSubmission": "email: grants@smmc.ca.gov;",
+          "GrantURL": "https://smmc.ca.gov/grants-redo/",
+          "AgencyURL": "https://smmc.ca.gov/",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: grants@smmc.ca.gov; tel: 1-310-589-2899;",
+          "AwardStats": "[{\"fiscalYear\":\"2024-2025\",\"applicationsSubmitted\":0,\"grantsAwarded\":0},{\"fiscalYear\":\"2025-2026\",\"applicationsSubmitted\":4,\"grantsAwarded\":4}]"
+        },
+        {
+          "_id": 1890,
+          "PortalID": "3300",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2026-07-28 21:47:09",
+          "ChangeNotes": "Updated funds available and categories.",
+          "AgencyDept": "Department of Resources Recycling and Recovery",
+          "Title": "Recycling Market Development Zone Revolving Loan Program",
+          "Type": "Loan",
+          "LOI": "No",
+          "Categories": "Environment & Water",
+          "CategorySuggestion": "Recycling",
+          "Purpose": "The Recycling Market Development Zone (RMDZ) program combines recycling with economic development to fuel new businesses, expand existing ones, create jobs, and divert waste from landfills.   ",
+          "Description": "The Department of Resources Recycling and Recovery (CalRecycle) administers a Recycling Market Development Zone Loan Program to encourage California-based recycling businesses located within California financing businesses that prevent, reduce, or recycle recovered waste materials through value-added processing or manufacturing.  The purpose and importance of the RMDZ Program is set forth in Section 42001 of the California Public Resources Code:   “The purpose of this chapter [is] to stimulate the use of postconsumer waste materials and secondary waste materials generated in California as raw materials used as feedstock by private business, industry, and commerce.”",
+          "ApplicantType": "Business; Nonprofit; Public Agency",
+          "ApplicantTypeNotes": "Eligible Applicants:  1) Private, for-profit entities  2) Nonprofit organizations (except private schools)  3) Local government entities  Cities, counties, and cities and counties Regional or local sanitation agencies, waste agencies, and joint powers authority  ",
+          "Geography": "All projects must be located in California, preferably in a CalRecycle designated RMDZ, which can be determined by entering the project physical address into the CalRecycle RMDZ Zone Search, Map, and Profiles section of the web site.",
+          "FundingSource": "State",
+          "FundingSourceNotes": "State Revolving Loan Fund",
+          "MatchingFunds": "Not Required",
+          "MatchingFundsNotes": null,
+          "EstAvailFunds": null,
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advance(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2020-08-03 07:00:00",
+          "ApplicationDeadline": "Ongoing",
+          "AwardPeriod": "Continuous",
+          "ExpAwardDate": "N/A",
+          "ElecSubmission": null,
+          "GrantURL": "https://www.calrecycle.ca.gov/RMDZ/loans",
+          "AgencyURL": "https://www.calrecycle.ca.gov/",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: loans@calrecycle.ca.gov; tel: 1-916-341-6199;",
+          "AwardStats": "[{\"fiscalYear\":\"2020-2021\",\"applicationsSubmitted\":8,\"grantsAwarded\":5},{\"fiscalYear\":\"2021-2022\",\"applicationsSubmitted\":8,\"grantsAwarded\":4},{\"fiscalYear\":\"2022-2023\",\"applicationsSubmitted\":10,\"grantsAwarded\":6},{\"fiscalYear\":\"2023-2024\",\"applicationsSubmitted\":3,\"grantsAwarded\":3},{\"fiscalYear\":\"2024-2025\",\"applicationsSubmitted\":5,\"grantsAwarded\":2},{\"fiscalYear\":\"2025-2026\",\"applicationsSubmitted\":4,\"grantsAwarded\":3}]"
+        }
+      ],
+      "fields": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "PortalID",
+          "type": "text"
+        },
+        {
+          "id": "GrantID",
+          "type": "text"
+        },
+        {
+          "id": "Status",
+          "type": "text"
+        },
+        {
+          "id": "LastUpdated",
+          "type": "text"
+        },
+        {
+          "id": "ChangeNotes",
+          "type": "text"
+        },
+        {
+          "id": "AgencyDept",
+          "type": "text"
+        },
+        {
+          "id": "Title",
+          "type": "text"
+        },
+        {
+          "id": "Type",
+          "type": "text"
+        },
+        {
+          "id": "LOI",
+          "type": "text"
+        },
+        {
+          "id": "Categories",
+          "type": "text"
+        },
+        {
+          "id": "CategorySuggestion",
+          "type": "text"
+        },
+        {
+          "id": "Purpose",
+          "type": "text"
+        },
+        {
+          "id": "Description",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantType",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantTypeNotes",
+          "type": "text"
+        },
+        {
+          "id": "Geography",
+          "type": "text"
+        },
+        {
+          "id": "FundingSource",
+          "type": "text"
+        },
+        {
+          "id": "FundingSourceNotes",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFunds",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFundsNotes",
+          "type": "text"
+        },
+        {
+          "id": "EstAvailFunds",
+          "type": "text"
+        },
+        {
+          "id": "EstAwards",
+          "type": "text"
+        },
+        {
+          "id": "EstAmounts",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethod",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethodNotes",
+          "type": "text"
+        },
+        {
+          "id": "OpenDate",
+          "type": "text"
+        },
+        {
+          "id": "ApplicationDeadline",
+          "type": "text"
+        },
+        {
+          "id": "AwardPeriod",
+          "type": "text"
+        },
+        {
+          "id": "ExpAwardDate",
+          "type": "text"
+        },
+        {
+          "id": "ElecSubmission",
+          "type": "text"
+        },
+        {
+          "id": "GrantURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencyURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencySubscribeURL",
+          "type": "text"
+        },
+        {
+          "id": "GrantEventsURL",
+          "type": "text"
+        },
+        {
+          "id": "ContactInfo",
+          "type": "text"
+        },
+        {
+          "id": "AwardStats",
+          "type": "text"
+        }
+      ],
+      "_links": {
+        "start": "/api/3/action/datastore_search?filters=%7B%22Status%22%3A%5B%22active%22%5D%7D&limit=1000&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5",
+        "next": "/api/3/action/datastore_search?filters=%7B%22Status%22%3A%5B%22active%22%5D%7D&limit=1000&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&offset=1000"
+      },
+      "total": 6,
+      "total_was_estimated": false
+    }
+  }
+}

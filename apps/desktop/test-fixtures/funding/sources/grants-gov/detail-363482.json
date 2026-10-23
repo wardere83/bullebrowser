@@ -1,0 +1,218 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 363482
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 363482,
+   "revision": 1,
+   "opportunityNumber": "AC-08-20-2026",
+   "opportunityTitle": "Fiscal Year (FY) 2027 AmeriCorps Seniors RSVP Competition",
+   "owningAgencyCode": "AC",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 363482,
+    "version": 9,
+    "agencyCode": "AC",
+    "agencyDetails": {
+     "code": "AC",
+     "seed": "AC",
+     "agencyName": "AmeriCorps",
+     "agencyCode": "AC",
+     "topAgencyCode": "AC"
+    },
+    "topAgencyDetails": {
+     "code": "AC",
+     "seed": "AC",
+     "agencyName": "AmeriCorps",
+     "agencyCode": "AC",
+     "topAgencyCode": "AC"
+    },
+    "synopsisDesc": "<p>AmeriCorps improves lives, strengthens communities, and fosters civic engagement through service and volunteering. AmeriCorps brings people together to tackle some of the country’s most pressing challenges through national service and volunteerism. AmeriCorps members and AmeriCorps Seniors volunteers serve with organizations dedicated to the improvement of communities and those serving. AmeriCorps helps make service a cornerstone of our national culture.&nbsp;This funding announcement is an opportunity for communities to apply for funding to engage adults ages 55 and older in tackling the community’s most pressing needs through the AmeriCorps Seniors RSVP program. This is an open competition across all states and territories.&nbsp;</p><p><br></p><p><br></p><p><br></p>",
+    "responseDate": "Oct 20, 2026 12:00:00 AM EDT",
+    "responseDateDesc": "",
+    "fundingDescLinkUrl": "https://www.americorps.gov/funding-opportunity/fy-2027-americorps-seniors-rsvp",
+    "fundingDescLinkDesc": "Full competition information and resources",
+    "postingDate": "Aug 20, 2026 12:00:00 AM EDT",
+    "archiveDate": "Oct 21, 2026 12:00:00 AM EDT",
+    "fundingActivityCategoryDesc": "Economic Opportunity, Veterans and Military Families",
+    "costSharing": true,
+    "awardCeiling": "none",
+    "awardFloor": "none",
+    "applicantEligibilityDesc": "State Service Commission and/or States and US TerritoriesFor the category of private institutions of higher education, only non-profit institutions of higher education are eligible.",
+    "sendEmail": "Y",
+    "createTimeStamp": "Sep 15, 2026 10:18:10 AM EDT",
+    "modComments": "Updated NOFO URL",
+    "createdDate": "Aug 06, 2026 10:35:08 AM EDT",
+    "lastUpdatedDate": "Sep 15, 2026 10:18:10 AM EDT",
+    "applicantTypes": [
+     {
+      "id": "20",
+      "description": "Private institutions of higher education"
+     },
+     {
+      "id": "07",
+      "description": "Native American tribal governments (Federally recognized)"
+     },
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "13",
+      "description": "Nonprofits that do not have a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "02",
+      "description": "City or township governments"
+     },
+     {
+      "id": "11",
+      "description": "Native American tribal organizations (other than Federally recognized tribal governments)"
+     },
+     {
+      "id": "04",
+      "description": "Special district governments"
+     },
+     {
+      "id": "06",
+      "description": "Public and State controlled institutions of higher education"
+     },
+     {
+      "id": "00",
+      "description": "State governments"
+     },
+     {
+      "id": "01",
+      "description": "County governments"
+     },
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "CD",
+      "description": "Community Development"
+     },
+     {
+      "id": "CP",
+      "description": "Consumer Protection"
+     },
+     {
+      "id": "DPR",
+      "description": "Disaster Prevention and Relief"
+     },
+     {
+      "id": "ED",
+      "description": "Education"
+     },
+     {
+      "id": "ELT",
+      "description": "Employment, Labor and Training"
+     },
+     {
+      "id": "ENV",
+      "description": "Environment"
+     },
+     {
+      "id": "FN",
+      "description": "Food and Nutrition"
+     },
+     {
+      "id": "HL",
+      "description": "Health"
+     },
+     {
+      "id": "HO",
+      "description": "Housing"
+     },
+     {
+      "id": "ISS",
+      "description": "Income Security and Social Services"
+     },
+     {
+      "id": "O",
+      "description": "Other (see text field entitled \"Explanation of Other Category of Funding Activity\" for clarification)"
+     },
+     {
+      "id": "T",
+      "description": "Transportation"
+     }
+    ],
+    "responseDateStr": "2026-10-20-00-00-00",
+    "postingDateStr": "2026-08-20-00-00-00",
+    "archiveDateStr": "2026-10-21-00-00-00",
+    "createTimeStampStr": "2026-09-15-10-18-10"
+   },
+   "agencyDetails": {
+    "code": "AC",
+    "seed": "AC",
+    "agencyName": "AmeriCorps",
+    "agencyCode": "AC",
+    "topAgencyCode": "AC"
+   },
+   "topAgencyDetails": {
+    "code": "AC",
+    "seed": "AC",
+    "agencyName": "AmeriCorps",
+    "agencyCode": "AC",
+    "topAgencyCode": "AC"
+   },
+   "synopsisDocumentURLs": [
+    {
+     "id": 1456,
+     "opportunityId": 363482,
+     "docUrl": "https://www.americorps.gov/funding-opportunity/fy-2027-americorps-seniors-rsvp",
+     "description": "FY2027_ASC_RSVP_Notice_of_Funding_Opportunity",
+     "createdDate": "Aug 20, 2026 12:09:04 PM EDT"
+    }
+   ],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 434918,
+     "opportunityId": 363482,
+     "cfdaNumber": "94.002",
+     "programTitle": "AmeriCorps Seniors Retired and Senior Volunteer Program (RSVP) 94.002"
+    }
+   ],
+   "originalDueDate": "Oct 20, 2026 12:00:00 AM EDT",
+   "originalDueDateDesc": "",
+   "synopsisModifiedFields": [
+    "revision",
+    "version",
+    "fundingDescLinkUrl",
+    "createTimeStamp"
+   ],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

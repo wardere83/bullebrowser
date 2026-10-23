@@ -111,6 +111,6 @@ Preset **Skills**:
 | Windows: SmartScreen blocks it | More info → Run anyway. |
 | AI panel asks for a key | Add your Anthropic API key in Settings — the agent needs it to browse and answer. |
 | Agent can't read a page | Some PDFs/non-HTML pages aren't readable; paste the text or use an HTML version. |
-| Updates | BulleBrowser checks GitHub Releases and updates itself on the next launch. |
+| Updates | Verified updates download in the background. Click **Update** to install and automatically reopen your tabs and chat. Native updates require a brief restart. |
 
 Questions? <hello@bulleconsulting.com>

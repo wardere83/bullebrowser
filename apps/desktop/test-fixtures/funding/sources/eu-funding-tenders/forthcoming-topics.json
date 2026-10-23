@@ -1,0 +1,254 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=100&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "1"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "status": [
+                  "31094501"
+                ]
+              }
+            },
+            {
+              "range": {
+                "startDate": {
+                  "gte": "2026-10-06T00:00:00.000+0000"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "identifier",
+        "order": "ASC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 96,
+    "totalResults": 2,
+    "pageNumber": 1,
+    "pageSize": 100,
+    "sort": "[identifier:ASC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "52692782TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMDIST",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "European Film Distribution",
+        "weight": 0,
+        "content": "European Film Distribution",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "CREA-MEDIA-2027-FILMDIST"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-12-03T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2027-04-08T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "European Film Distribution"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMDIST"
+          ],
+          "typesOfAction": [
+            "CREA Project Grants"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMDIST"
+          ],
+          "callIdentifier": [
+            "CREA-MEDIA-2027-FILMDIST"
+          ],
+          "callccm2Id": [
+            "52692806"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "52692782TOPICSen"
+          ],
+          "callTitle": [
+            "European Film Distribution"
+          ],
+          "frameworkProgramme": [
+            "43251814"
+          ],
+          "startDate": [
+            "2026-12-03T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2027\"],\"budgetTopicActionMap\":{\"115982\":[{\"action\":\"CREA-MEDIA-2027-FILMDIST - CREA-PJG CREA Project Grants\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2027\":\"38000000\"},\"plannedOpeningDate\":\"2026-12-03\",\"deadlineModel\":\"single-stage\",\"deadlineDates\":[\"2027-04-08\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Objective:</p><p></p><table>  <tbody>   <tr>    <td> <p><u>Expected results:</u></p> <p>- Improvement in the trans-national distribution of recent non-national European films.</p> <p>- Increase in the investment in the production, acquisition, promotion, theatrical and online distribution of non-national European films.</p> <p>- Develop links between the production and distribution sector thus improving the competitive position of non-national European films.</p> <p>There are two phases for the funded activities:</p> <p>1. The generation of a potential fund which will be attributed according to the performance of the company on the European market.</p> <p>2. The implementation of the action - the potential fund thus generated by each company must be reinvested in:</p> <p>- the co-production of eligible non-national European films;</p> <p>- the acquisition of distribution rights, for example by means of minimum guarantees, of eligible non-national European films;</p> <p>- promotion, marketing and advertising on the market of eligible non-national European films both for theatrical and online releases.</p> </td>   </tr>  </tbody> </table>"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094501"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "European Film Distribution. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMDIST"
+      },
+      {
+        "apiVersion": "2.155",
+        "reference": "52642893TOPICSen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMSALES",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "European Film sales agent",
+        "weight": 0,
+        "content": "European Film sales agent",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "CREA-MEDIA-2027-FILMSALES"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2027-04-29T00:00:00.000+0000"
+          ],
+          "deadlineDate": [
+            "2027-06-17T00:00:00.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "European Film sales agent"
+          ],
+          "type": [
+            "1"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMSALES"
+          ],
+          "typesOfAction": [
+            "CREA Project Grants"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMSALES"
+          ],
+          "callIdentifier": [
+            "CREA-MEDIA-2027-FILMSALES"
+          ],
+          "callccm2Id": [
+            "52642911"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "52642893TOPICSen"
+          ],
+          "callTitle": [
+            "European Film Sales"
+          ],
+          "frameworkProgramme": [
+            "43251814"
+          ],
+          "startDate": [
+            "2027-04-29T00:00:00.000+0000"
+          ],
+          "budgetOverview": [
+            "{\"budgetYearsColumns\":[\"2027\"],\"budgetTopicActionMap\":{\"115861\":[{\"action\":\"CREA-MEDIA-2027-FILMSALES - CREA-PJG CREA Project Grants\",\"expectedGrants\":0,\"minContribution\":0,\"maxContribution\":0,\"budgetYearMap\":{\"2027\":\"6000000\"},\"plannedOpeningDate\":\"2027-04-29\",\"deadlineModel\":\"single-stage\",\"deadlineDates\":[\"2027-06-17\"]}]}}"
+          ],
+          "descriptionByte": [
+            "<p class=\"topicdescriptionkind\">Objective:</p><p><strong>Expected results:</strong></p><p>-Improvement in the trans-national distribution of recent non-national European films.</p><p>-Increase in the investment in the production, acquisition, promotion, theatrical and online distribution of non-national European films.</p><p>-Develop links between the production and distribution sector thus improving the competitive position of non-national European films.</p><p><strong>Description of the activities:</strong></p><p>There are two phases for the funded activities:</p><p>1. The generation of a potential fund which will be attributed according to the performance of the company on markets in countries participating in the Media programme as well as in other geographical markets.</p><p>2. The implementation of the action - the potential fund thus generated by each company must be reinvested in:</p><p>-minimum guarantees or advances paid for the international sales rights on eligible non-national European films;</p><p>-the promotion, marketing and advertising on the market of eligible non-national European films.</p>"
+          ],
+          "deadlineModel": [
+            "single-stage"
+          ],
+          "status": [
+            "31094501"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "European Film sales agent. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/CREA-MEDIA-2027-FILMSALES"
+      }
+    ],
+    "warnings": []
+  }
+}

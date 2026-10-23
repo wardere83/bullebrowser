@@ -1,0 +1,90 @@
+name: mobile
+on:
+  pull_request:
+    paths: ['apps/mobile/**', 'packages/agent-core/**', 'pnpm-lock.yaml', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @bullebrowser/mobile typecheck
+      - run: pnpm --filter @bullebrowser/mobile lint
+      - run: pnpm --filter @bullebrowser/mobile test
+      - run: pnpm --filter @bullebrowser/mobile build
+      - name: Mobile UI and real browser adapter checks
+        run: pnpm --filter @bullebrowser/desktop exec playwright test -c playwright.mobile.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-ui-test-evidence
+          path: |
+            apps/desktop/test-results/
+            docs/mobile/evidence/
+  android:
+    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: pnpm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @bullebrowser/mobile build
+      - run: pnpm --filter @bullebrowser/mobile native:init android
+      - run: ./gradlew assembleDebug --no-daemon
+        working-directory: apps/mobile/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-for-qa-not-store-release
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+      - name: Enable KVM for Android device tests
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: cd apps/mobile/android && ./gradlew :app:connectedDebugAndroidTest --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-native-device-test-results
+          path: apps/mobile/android/app/build/reports/androidTests/
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: pnpm }
+      - run: xcodebuild -version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @bullebrowser/mobile build
+      - run: pnpm --filter @bullebrowser/mobile native:init ios
+      - run: xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/bullebrowser-ios CODE_SIGNING_ALLOWED=NO build
+        working-directory: apps/mobile/ios/App
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-for-qa-not-store-release
+          path: /tmp/bullebrowser-ios/Build/Products/Debug-iphonesimulator/App.app

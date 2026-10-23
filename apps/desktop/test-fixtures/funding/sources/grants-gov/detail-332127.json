@@ -1,0 +1,176 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 332127
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 332127,
+   "revision": 6,
+   "opportunityNumber": "EDA-SEA-TA-SRO-2021-2006853",
+   "opportunityTitle": "Seattle FY 2021 &ndash; FY 2023 EDA Planning and Local Technical Assistance",
+   "owningAgencyCode": "DOC",
+   "listed": "L",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 332127,
+    "version": 7,
+    "agencyCode": "DOC",
+    "agencyDetails": {
+     "code": "DOC",
+     "seed": "DOC",
+     "agencyName": "Department of Commerce",
+     "agencyCode": "DOC",
+     "topAgencyCode": "DOC"
+    },
+    "topAgencyDetails": {
+     "code": "DOC",
+     "seed": "DOC",
+     "agencyName": "Department of Commerce",
+     "agencyCode": "DOC",
+     "topAgencyCode": "DOC"
+    },
+    "synopsisDesc": "<p><strong style=\"color: rgb(230, 0, 0);\">UPDATED NOTICE - PLEASE READ: April 6, 2023</strong></p> \n<p>EDA is excited to announce the launch of its new grants management platform: the <strong>Economic Development Grants Experience (EDGE).</strong> EDGE was developed to streamline the application and grants management process by implementing a <strong>single platform</strong> with increased transparency, improved user experience, higher data quality, and more efficiency throughout the entire grant lifecycle.</p> \n<p>&nbsp;</p> \n<p><strong>As of April 6th, 2023,</strong> applications can no longer be submitted on Grants.gov, and will ONLY be accepted through EDGE. To apply in EDGE, please go to: <a href=\"https://sfgrants.eda.gov.\" target=\"_blank\">sfgrants.eda.gov.</a> More information on how to apply is provided in the full NOFO.</p> \n<p>&nbsp;</p> \n<p><strong><u>PARTNERSHIP PLANNING program instructions: Please note that applicants will be invited to submit applications through EDGE for the Partnership Planning program.&nbsp;For more information, please reach out to your EDA point of contact.</u></strong></p> \n<p><br></p> \n<p><br></p> \n<p><strong>Program Description:</strong></p> \n<p>EDA makes planning and local technical assistance investments to support economic development, foster job creation, and attract private investment in economically distressed areas of the United States.</p> \n<p><br></p> \n<p>Under the Planning program, EDA makes Partnership Planning, Short-Term Planning, and State Planning awards to eligible recipients to create and implement regional economic development plans designed to build capacity and guide the economic prosperity and resiliency of an area or region. More specifically, EDA makes Partnership Planning investments to designated planning organizations (i.e., District Organizations) serving EDA-designated Economic Development Districts and to Indian Tribes to facilitate the development, implementation, revision, or replacement of Comprehensive Economic Development Strategies (CEDS), which articulate and prioritize the strategic economic goals of recipients’ respective regions. EDA also makes Short-Term and State Planning awards for economic development planning activities that guide the eventual creation and retention of high-quality jobs, particularly for the unemployed and underemployed in the Nation’s most economically distressed regions.</p> \n<p><br></p> \n<p>Under the Local Technical Assistance program, EDA makes awards to strengthen the capacity of local or State organizations, institutions of higher education, and other eligible entities to undertake and promote effective economic development programs through projects such as feasibility studies, impact analyses, disaster resiliency plans, and project planning.</p> \n<p><br></p> \n<p><span style=\"color: rgb(230, 0, 0);\">**Please note: While the published Notice of Funding Opportunity (available under \"Related Documents\") states that the ED900A form and the SF424B form are both required&nbsp;for a complete application, these forms are no longer required and have therefore been removed from the package template.</span></p>",
+    "responseDateDesc": "Applications are accepted on a continuing basis and processed as received. This Planning and Local Technical Assistance opportunity will remain in effect until superseded by a future announcement.",
+    "fundingDescLinkUrl": "https://www.eda.gov/funding/funding-opportunities",
+    "fundingDescLinkDesc": "https://www.eda.gov/funding/funding-opportunities",
+    "postingDate": "Mar 15, 2021 12:00:00 AM EDT",
+    "fundingActivityCategoryDesc": "Regional planning and local technical assistance",
+    "costSharing": true,
+    "awardCeiling": "300000",
+    "awardCeilingFormatted": "300,000",
+    "awardFloor": "0",
+    "awardFloorFormatted": "0",
+    "applicantEligibilityDesc": "Pursuant to section 3 of the Public Works and Economic Development Act of 1965 (42 U.S.C. &sect; 3122) (PWEDA) and EDA&rsquo;s regulation at 13 C.F.R. &sect; 300.3, the following types of entities are eligible to receive funding assistance from EDA: 1. District Organizations (as defined in 13 C.F.R. &sect; 300.3); 2. Indian Tribes or a consortium of Indian Tribes; 3. States, cities, or other political subdivisions of a State, including a special purpose unit of a State or local government engaged in economic or infrastructure development activities, or a consortium of political subdivisions; 4. Institutions of higher education or a consortium of institutions of higher education; or 5. Public or private non-profit organizations or associations acting in cooperation with officials of a political subdivision of a State.",
+    "sendEmail": "Y",
+    "createTimeStamp": "Jun 28, 2023 08:51:23 AM EDT",
+    "modComments": "Partnership Planning instructions added",
+    "createdDate": "Mar 15, 2021 06:51:43 PM EDT",
+    "lastUpdatedDate": "Jun 28, 2023 08:51:23 AM EDT",
+    "applicantTypes": [
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     },
+     {
+      "id": "02",
+      "description": "City or township governments"
+     },
+     {
+      "id": "01",
+      "description": "County governments"
+     },
+     {
+      "id": "04",
+      "description": "Special district governments"
+     },
+     {
+      "id": "06",
+      "description": "Public and State controlled institutions of higher education"
+     },
+     {
+      "id": "13",
+      "description": "Nonprofits that do not have a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "00",
+      "description": "State governments"
+     },
+     {
+      "id": "07",
+      "description": "Native American tribal governments (Federally recognized)"
+     },
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "CA",
+      "description": "Cooperative Agreement"
+     },
+     {
+      "id": "G",
+      "description": "Grant"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "O",
+      "description": "Other (see text field entitled \"Explanation of Other Category of Funding Activity\" for clarification)"
+     }
+    ],
+    "postingDateStr": "2021-03-15-00-00-00",
+    "createTimeStampStr": "2023-06-28-08-51-23"
+   },
+   "agencyDetails": {
+    "code": "DOC",
+    "seed": "DOC",
+    "agencyName": "Department of Commerce",
+    "agencyCode": "DOC",
+    "topAgencyCode": "DOC"
+   },
+   "topAgencyDetails": {
+    "code": "DOC",
+    "seed": "DOC",
+    "agencyName": "Department of Commerce",
+    "agencyCode": "DOC",
+    "topAgencyCode": "DOC"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [
+    {
+     "id": {
+      "opportunityId": 332127,
+      "attType": "D",
+      "createdDate": "Mar 06, 2023 12:54:11 PM EST",
+      "attTypeDesc": "Related Documents",
+      "commentsDate": "Mar 06, 2023"
+     },
+     "changeComments": "Please read the UPDATED NOTICE in the updated “Description” section of this NOFO posting regarding a change to the grant application process using EDA’s new grants management platform. "
+    }
+   ],
+   "cfdas": [
+    {
+     "id": 389407,
+     "opportunityId": 332127,
+     "cfdaNumber": "11.302",
+     "programTitle": "Economic Development Support for Planning Organizations"
+    },
+    {
+     "id": 389406,
+     "opportunityId": 332127,
+     "cfdaNumber": "11.303",
+     "programTitle": "Economic Development Technical Assistance"
+    }
+   ],
+   "originalDueDateDesc": "Applications are accepted on a continuing basis and processed as received. This Planning and Local Technical Assistance opportunity will remain in effect until superseded by a future announcement.",
+   "synopsisModifiedFields": [
+    "revision",
+    "version",
+    "synopsisDesc",
+    "createTimeStamp"
+   ],
+   "forecastModifiedFields": [],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 0,
+   "synopsisHistCount": 6,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

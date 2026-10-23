@@ -1,4 +1,4 @@
-import type { PlanStep, PolicyDecision } from './types.js';
+import type { PlanStep, PolicyDecision, TargetFacts } from './types.js';
 
 // Blocking a typing action outright is a hard stop with no user override, so
 // this has to be precise. The old pattern was bare substrings: `card` blocked
@@ -14,6 +14,7 @@ const SENSITIVE_FIELD_RE =
 // decision above needed to become precise.
 const REDACT_KEY_RE = /(password|passcode|token|secret|ssn|social|credit|card|cvv)/i;
 
+export const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
 
 export interface PolicyEngine {
   evaluateToolStep(step: PlanStep): PolicyDecision;
@@ -39,17 +40,34 @@ export class PrivacyPolicyEngine implements PolicyEngine {
       return { allowed: true, requiresConfirmation: false };
     }
 
+    // _facts is what the runtime found on the page for this action (see
+    // inspectTarget): the element's real label and whether it submits a form
+    // carrying the user's data. Judge that, not only the model's wording.
+    const facts = step.input._facts as TargetFacts | undefined;
+
     if (step.toolName === 'clickElement' || step.toolName === 'click') {
+      const target = String(step.input.target ?? '');
       return {
         allowed: true,
-        // A selector says nothing about the action behind it. Until the
-        // runtime has a trusted semantic classifier, confirm every click.
-        requiresConfirmation: true,
+        requiresConfirmation:
+          !facts ||
+          HIGH_RISK_TARGET_RE.test(target) ||
+          HIGH_RISK_TARGET_RE.test(facts?.label ?? '') ||
+          facts?.submitsForm === true,
       };
     }
 
-    if (step.toolName === 'press_key' && step.input.key === 'Enter') {
-      return { allowed: true, requiresConfirmation: true };
+    // Enter in a sign-up, checkout or message form submits it just as the
+    // button would, and Enter or Space on a focused button presses it. A lone
+    // search box does not count (submitsForm is false).
+    if (step.toolName === 'press_key' && (step.input.key === 'Enter' || step.input.key === 'Space')) {
+      return {
+        allowed: true,
+        requiresConfirmation:
+          !facts ||
+          facts?.submitsForm === true ||
+          (facts?.activates === true && HIGH_RISK_TARGET_RE.test(facts.label)),
+      };
     }
 
     if (step.toolName === 'close_tab') {

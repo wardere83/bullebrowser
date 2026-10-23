@@ -1,0 +1,70 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/search2",
+  "body": {
+   "keyword": "algerian AND collaboration",
+   "oppStatuses": "posted",
+   "eligibilities": "",
+   "fundingCategories": "",
+   "sortBy": "",
+   "rows": 5000,
+   "startRecordNum": 0
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "searchParams": {
+    "resultType": "json",
+    "searchOnly": false,
+    "oppNum": "",
+    "cfda": "",
+    "sortBy": "",
+    "oppStatuses": "posted",
+    "startRecordNum": 0,
+    "eligibilities": "",
+    "fundingInstruments": "",
+    "fundingCategories": "",
+    "agencies": "",
+    "rows": 5000,
+    "keyword": "algerian AND collaboration",
+    "keywordEncoded": true
+   },
+   "hitCount": 0,
+   "startRecord": 0,
+   "oppHits": [],
+   "oppStatusOptions": [
+    {
+     "label": "posted",
+     "value": "posted",
+     "count": 0
+    },
+    {
+     "label": "closed",
+     "value": "closed",
+     "count": 9
+    },
+    {
+     "label": "archived",
+     "value": "archived",
+     "count": 16
+    },
+    {
+     "label": "forecasted",
+     "value": "forecasted",
+     "count": 0
+    }
+   ],
+   "dateRangeOptions": [],
+   "suggestion": "",
+   "eligibilities": [],
+   "fundingCategories": [],
+   "fundingInstruments": [],
+   "agencies": [],
+   "accessKey": "",
+   "errorMsgs": []
+  }
+ }
+}

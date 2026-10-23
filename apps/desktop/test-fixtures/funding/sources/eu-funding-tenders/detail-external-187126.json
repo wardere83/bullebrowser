@@ -1,0 +1,163 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=10&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "2"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "callIdentifier": [
+                  "187126"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "deadlineDate",
+        "order": "DESC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE",
+        "topicConditions",
+        "furtherInformation",
+        "beneficiaryAdministration",
+        "duration",
+        "links",
+        "publicationDocuments"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 15,
+    "totalResults": 1,
+    "pageNumber": 1,
+    "pageSize": 10,
+    "sort": "[deadlineDate:DESC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "187126PROSPECTSEN",
+        "url": "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187126",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Inclusive approaches and stakeholder participation",
+        "weight": 0,
+        "content": "Inclusive approaches and stakeholder participation",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "EuropeAid/187126/DD/ACT/VN"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-09-17T10:00:44.000+0000"
+          ],
+          "beneficiaryAdministration": [],
+          "publicationDocuments": [
+            "[{\"nameDoc\":\"CfP 187126 - Q & A No.1\",\"typeDoc\":\"xlsx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-10-06 12:00:16.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230126&lang=EN\"},{\"nameDoc\":\"Guidelines\",\"typeDoc\":\"pdf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:47.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230109&lang=EN\"},{\"nameDoc\":\"Annex A2 - Applicant form full applicant\",\"typeDoc\":\"rtf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:06.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230115&lang=EN\"},{\"nameDoc\":\"Annex A1 - Application form concept note\",\"typeDoc\":\"rtf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:28.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230108&lang=EN\"},{\"nameDoc\":\"Annex B - Budget\",\"typeDoc\":\"xlsx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:55.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230112&lang=EN\"},{\"nameDoc\":\"Annex C - Logical framework\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:41.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230117&lang=EN\"},{\"nameDoc\":\"Annex D - Identification Form (public law bodies)\",\"typeDoc\":\"pdf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:10.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230120&lang=EN\"},{\"nameDoc\":\"Annex D - Identification Form (private or public with legal form)\",\"typeDoc\":\"pdf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:45.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230116&lang=EN\"},{\"nameDoc\":\"Annex D - Identification Form (natural person)\",\"typeDoc\":\"pdf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:47.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230114&lang=EN\"},{\"nameDoc\":\"Annex F - PADOR offline registration form\",\"typeDoc\":\"pdf\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:45.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230113&lang=EN\"},{\"nameDoc\":\"Annex G - Standard grant contract\",\"typeDoc\":\"zip\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:46.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230118&lang=EN\"},{\"nameDoc\":\"Annex H - Declaration of honour on exclusion and selection criteria\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:17.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230111&lang=EN\"},{\"nameDoc\":\"Annex K - Clarifications on financing not linked to costs\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:17.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230107&lang=EN\"},{\"nameDoc\":\"Annex J - Information on the tax regime applicable to grant contracts\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:44.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230119&lang=EN\"},{\"nameDoc\":\"Appendix - Derogations international organisations\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:07.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230110&lang=EN\"},{\"nameDoc\":\"Annex L - Self-evaluation questionnaire on SEA-H\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:17.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230106&lang=EN\"},{\"nameDoc\":\"e-Calls PADOR privacy statement\",\"typeDoc\":\"docx\",\"languageDoc\":\"EN\",\"finalPublicDocDate\":\"2026-09-17 12:00:02.0\",\"docUrl\":\"https://webgate.ec.europa.eu/prospect/internal/noauth/externalDocumentDownload.htm?id=2230121&lang=EN\"}]"
+          ],
+          "deadlineDate": [
+            "2026-11-03T11:00:51.000+0000"
+          ],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "Inclusive approaches and stakeholder participation"
+          ],
+          "type": [
+            "2"
+          ],
+          "url": [
+            "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187126"
+          ],
+          "esST_URL": [
+            "https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187126"
+          ],
+          "callIdentifier": [
+            "187126"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "187126PROSPECTSEN"
+          ],
+          "currency": [
+            "EUR"
+          ],
+          "frameworkProgramme": [
+            "111111"
+          ],
+          "startDate": [
+            "2026-09-17T10:00:44.000+0000"
+          ],
+          "budget": [
+            "2290000"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "Inclusive approaches and stakeholder participation. Available at: https://webgate.ec.europa.eu/prospect/external/publishedcalls.htm?callId=187126"
+      }
+    ],
+    "warnings": []
+  }
+}

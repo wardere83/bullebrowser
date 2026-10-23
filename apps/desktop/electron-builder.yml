@@ -8,6 +8,11 @@ directories:
   buildResources: resources
 
 afterPack: ./scripts/after-pack.cjs
+extraResources:
+  - from: resources/speech-models
+    to: speech-models
+    filter:
+      - "**/*"
 # Notarize (via Apple's notarytool), staple, and Gatekeeper-validate the signed
 # .app. No-op on non-mac and on unsigned/ad-hoc builds; hard-fails a tagged
 # release that isn't properly Developer ID–signed. See scripts/notarize.cjs.
@@ -21,6 +26,12 @@ files:
   - "!**/coverage/**"
   - "!**/{test,tests,__tests__,.vitest}/**"
   - "!**/{tsconfig.json,tsconfig.*.json,vitest.config.*,.eslintrc*,eslint.config.*}"
+  # pdf.js is used only to read text from PDFs. Ship its Node build and
+  # character maps; leave out the viewer, the script sandbox, fonts and WASM
+  # decoders, none of which are loaded.
+  - "!**/node_modules/pdfjs-dist/{build,web,wasm,image_decoders,standard_fonts,iccs,types}/**"
+  - "!**/node_modules/pdfjs-dist/legacy/web/**"
+  - "!**/node_modules/pdfjs-dist/legacy/build/{pdf.min.mjs,pdf.worker.min.mjs,pdf.sandbox.mjs,pdf.sandbox.min.mjs}"
 
 asar: false
 npmRebuild: false
@@ -34,8 +45,8 @@ mac:
   # Paired with com.apple.security.device.audio-input in the entitlements.
   extendInfo:
     NSMicrophoneUsageDescription: >-
-      BulleBrowser uses the microphone only while you use voice input, to
-      transcribe what you say into a prompt for the agent.
+      BulleBrowser uses the microphone while you use dictation or Voice Mode
+      to transcribe your speech and have a live spoken conversation.
   # We run our own spctl/stapler Gatekeeper check after notarization (a signed
   # but not-yet-notarized app fails spctl, so an in-pack assess would break the
   # build before notarization even runs). See scripts/notarize.cjs.
@@ -71,6 +82,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  runAfterFinish: true
   artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
 
 linux:

@@ -1,36 +1,48 @@
 # BulleBrowser
 
-> The agentic browser for grants, RFPs, and compliance work.
+> Strategic funding for businesses and CBOs.
 
-BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) with a built-in Claude-powered AI agent purpose-built for grants research, RFP comparison, and compliance review workflows. Bring your own Anthropic API key — your prompts go directly to your provider, never to Bulle Consulting.
+BulleBrowser is a desktop browser by [Bulle Consulting](https://bulleconsulting.com) that connects official funding opportunities with your organization’s mission, priorities and documented strengths.
 
 **Website:** [bullebrowser.com](https://bullebrowser.com)
 
----
+## Visible browser research
 
-## What it does
+Blank tabs show the shared product video introduction. The browser stays on the left and Your Assistant on the right, with four browsing options:
 
-The agent operates the active browser tab — same pages, same logins, same data you’d see — through a focused set of actions: navigate, read, click & type, extract, manage tabs, and wait.
+- **Find grants for me** — explore relevant funding sources for your location and goal.
+- **Research a funder** — read the funder’s own priorities and guidance.
+- **Compare grant opportunities** — inspect sources across retained tabs.
+- **Explore this page** — investigate the page you are viewing.
 
-### Preset Skills
+Selecting an option asks one short clarifying question. Answer to start browsing, or type your request directly. Follow the visible cursor, navigation and reading activity; use Stop to interrupt. Basic source discovery works without a provider key. Connect your own AI provider in Settings for model-powered research and analysis. Relevant page content, conversation history and attachments may be sent directly to that provider.
 
-| Skill | What it does |
-|---|---|
-| **Grant scanner** | Searches SAM.gov and Grants.gov, follows listings into detail pages, returns a comparison table sorted by deadline with award ceilings and links. |
-| **RFP comparator** | Paste 2–4 RFP links. Reads each end to end and returns a side-by-side of deadline, scope, eligibility, contract value, and evaluation criteria. |
-| **Compliance review** | Flags clauses against EEO, FERPA, and ADA — plus any checklist items you add — and quotes each clause with its section reference. |
+The marketing site and desktop introduction share a generated, clearly labeled illustrated walkthrough. Its source and renderer live in `packages/brand-tokens/film`; no sample page is presented as a verified grant result.
 
 ### Control & Trust
 
 - A live “Agent is working” indicator shows each step; a **Stop** button cancels instantly.
-- Every task is hard-capped at 25 actions.
+- Every task runs on a weighted step budget (default 40): it warns at 75%, stops at the limit, and can be raised per task.
 - Form submissions and downloads require explicit confirmation.
 - Choose Claude Opus, Sonnet, or Haiku per task.
 
+### Voice
+
+The microphone button dictates a single message. **Voice Mode** starts a live
+spoken conversation: hear replies, interrupt playback, and ask the assistant
+to work in your browser. Both buttons sit on the right of the message composer.
+Browser tasks retain their normal progress feed and confirmation controls.
+
+Voice uses local English Whisper transcription and a natural-sounding female
+voice that ships with the app, with no speech API key. Replies are generated on
+your device; the recognition model downloads on first use and works offline afterward.
+Mute pauses capture; **Stop Voice Mode** releases the microphone and cancels its
+browser task. Without a cloud key, spoken browser commands use the local assistant.
+
 ### Privacy
 
-- Your prompts go straight to Anthropic — never to Bulle Consulting.
-- Your API key is encrypted in your OS keychain.
+- Local mode processes page summaries on your device; optional cloud mode sends prompts directly to the selected provider.
+- Optional provider keys are encrypted and stored on your device.
 - History, bookmarks, and conversations stay on your device.
 - No analytics. No telemetry.
 

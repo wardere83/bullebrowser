@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SessionMemoryStore } from './memory.js';
 
 describe('memory safety', () => {
@@ -8,11 +8,20 @@ describe('memory safety', () => {
     expect(memory.get('password')).toBeUndefined();
   });
 
-  it('stores safe values and supports ttl', async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // A controlled clock: with a real 1ms TTL, a slow CI runner could cross the
+  // millisecond between put and the first get, and the test failed at random.
+  it('stores safe values and supports ttl', () => {
+    vi.useFakeTimers();
     const memory = new SessionMemoryStore();
-    memory.put('allowed_domain', 'example.com', 1);
+    memory.put('allowed_domain', 'example.com', 1000);
     expect(memory.get('allowed_domain')).toBe('example.com');
-    await new Promise((r) => setTimeout(r, 5));
+    vi.advanceTimersByTime(999);
+    expect(memory.get('allowed_domain')).toBe('example.com');
+    vi.advanceTimersByTime(1);
     expect(memory.get('allowed_domain')).toBeUndefined();
   });
 });

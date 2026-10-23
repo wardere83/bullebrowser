@@ -1,0 +1,24 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.cityofnewyork.us/resource/dg92-zbpx.json?%24select=request_id%2Cstart_date%2Cend_date%2Cagency_name%2Ctype_of_notice_description%2Ccategory_description%2Cshort_title%2Cselection_method_description%2Csection_name%2Cspecial_case_reason_description%2Cpin%2Cdue_date%2Caddress_to_request%2Ccontact_name%2Ccontact_phone%2Cemail%2Ccontract_amount%2Cadditional_description_1%2Cadditional_description_2%2Cadditional_description_3%2Cother_info_1%2Cother_info_2%2Cother_info_3%2Cdocument_links&%24where=section_name%3D%27Procurement%27+AND+type_of_notice_description%3D%27Solicitation%27+AND+request_id%3D20260924014&%24order=request_id+ASC&%24limit=2"
+  },
+  "response": [
+    {
+      "request_id": "20260924014",
+      "start_date": "2026-10-01T00:00:00.000",
+      "end_date": "2026-10-01T00:00:00.000",
+      "agency_name": "NYC Health + Hospitals",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Human Services/Client Services",
+      "short_title": "Medical Malpractice Defense Services",
+      "selection_method_description": "Request for Proposals",
+      "section_name": "Procurement",
+      "pin": "2872",
+      "due_date": "2026-11-02T17:00:00.000",
+      "address_to_request": "50 Water Street, 5th Floor, New York, NY 10004",
+      "email": "rfp_contacts@nychhc.org",
+      "additional_description_1": "<p style='text-align:justify'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>NYC Health + Hospitals seeks to obtain proposals from law firms that specialize in the defense of medical malpractice claims. The successfully awarded firms will defend NYC Health + Hospitals and its medical staff in high exposure medical malpractice claims.  Defense counsel may also be assigned to represent physicians insured by NYC Health + Hospitals' captive insurance company, the HHC Insurance Company (HHCIC) and its medical staff in regulatory matters.  Defense counsel is also expected to provide legal assistance concerning NYC Health + Hospitals Risk Management and Quality Assurance programs, be available to consult on regulatory matters, assist hospital risk managers and conduct in-service lectures.</span></span></span></p><p> </p><p><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>NYC Health + Hospitals will award two types of contracts: </span></span></span><br><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'> </span></span></span></p><p style='margin-left:48px'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>(1) major defense firm contracts will be assigned a high volume of matters from the initial filing of the Notice of Claim through final disposition, including trial; </span></span></span><br> </p><p style='margin-left:48px'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>(2) contracts will also be awarded to specialty firms with exceptional legal expertise in a particular area of trial practice, medical malpractice, health care law, insurance, or similar area.  Such firms will be assigned matters on an as needed basis. </span></span></span></p><p> </p><p><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>Law firms participating in the RFP may ask to be considered in one or both categories</span></span></span></p>"
+    }
+  ]
+}

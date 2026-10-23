@@ -8,6 +8,12 @@ import {
   type AppSettings,
   type BrowserBridge,
 } from '../shared/ipc.js';
+import {
+  FUNDING_METHODS,
+  type FundingBridge,
+  type FundingEvent,
+  type FundingNamespace,
+} from '../shared/funding.js';
 
 const subscribe = <T>(channel: string, cb: (payload: T) => void) => {
   const handler = (_e: unknown, payload: T) => cb(payload);
@@ -15,7 +21,29 @@ const subscribe = <T>(channel: string, cb: (payload: T) => void) => {
   return () => ipcRenderer.off(channel, handler);
 };
 
+// The funding platform goes through one call channel. Each method listed in the
+// shared table becomes a function here; main checks the name, the sender, the
+// active organization and the permission again before anything runs.
+const fundingCalls = Object.fromEntries(
+  (Object.keys(FUNDING_METHODS) as FundingNamespace[]).map((namespace) => [
+    namespace,
+    Object.fromEntries(
+      Object.keys(FUNDING_METHODS[namespace]).map((method) => [
+        method,
+        (...args: unknown[]) => ipcRenderer.invoke(IPC.FUNDING_CALL, namespace, method, args),
+      ]),
+    ),
+  ]),
+) as unknown as Omit<FundingBridge, 'onEvent'>;
+
 const bridge: BrowserBridge = {
+  connectors: {
+    list: () => ipcRenderer.invoke(IPC.CONNECTOR_LIST),
+    add: (name, url) => ipcRenderer.invoke(IPC.CONNECTOR_ADD, name, url),
+    remove: (id) => ipcRenderer.invoke(IPC.CONNECTOR_REMOVE, id),
+    set: (id, enabled) => ipcRenderer.invoke(IPC.CONNECTOR_SET, id, enabled),
+    open: (id) => ipcRenderer.invoke(IPC.CONNECTOR_OPEN, id),
+  },
   tabs: {
     list: () => ipcRenderer.invoke(IPC.TAB_LIST),
     create: (url) => ipcRenderer.invoke(IPC.TAB_CREATE, url),
@@ -59,6 +87,7 @@ const bridge: BrowserBridge = {
     run: (req: AgentRunRequest) => ipcRenderer.invoke(IPC.AGENT_RUN, req),
     cancel: (runId) => ipcRenderer.invoke(IPC.AGENT_CANCEL, runId),
     onStep: (cb) => subscribe(IPC.AGENT_STEP, cb),
+    onResult: (cb) => subscribe(IPC.AGENT_RESULT, cb),
     onConfirmRequest: (cb) => subscribe(IPC.AGENT_CONFIRM_REQUEST, cb),
     replyConfirm: (runId, id, approved) =>
       ipcRenderer.invoke(IPC.AGENT_CONFIRM_REPLY, runId, id, approved),
@@ -78,12 +107,22 @@ const bridge: BrowserBridge = {
     delete: (id) => ipcRenderer.invoke(IPC.PROJECT_DELETE, id),
   },
   voice: {
-    transcribe: (audio, mime) => ipcRenderer.invoke(IPC.VOICE_TRANSCRIBE, audio, mime),
+    transcribe: (audio) => ipcRenderer.invoke(IPC.VOICE_TRANSCRIBE, audio),
+    prepareSpeech: () => ipcRenderer.invoke(IPC.VOICE_PREPARE_SPEECH),
+    synthesize: (text) => ipcRenderer.invoke(IPC.VOICE_SYNTHESIZE, text),
+    connectRealtime: (offerSdp) => ipcRenderer.invoke(IPC.VOICE_CONNECT_REALTIME, offerSdp),
+    disconnectRealtime: (callId) => ipcRenderer.invoke(IPC.VOICE_DISCONNECT_REALTIME, callId),
   },
   updates: {
     status: () => ipcRenderer.invoke(IPC.UPDATE_GET_STATUS),
     onStatus: (cb) => subscribe(IPC.UPDATE_STATUS, cb),
-    install: () => ipcRenderer.invoke(IPC.UPDATE_INSTALL),
+    prepare: (version) => ipcRenderer.invoke(IPC.UPDATE_PREPARE, version),
+    apply: (version) => ipcRenderer.invoke(IPC.UPDATE_APPLY, version),
+    finish: (version) => ipcRenderer.invoke(IPC.UPDATE_FINISH, version),
+    retry: () => ipcRenderer.invoke(IPC.UPDATE_RETRY),
+    check: () => ipcRenderer.invoke(IPC.UPDATE_CHECK),
+    details: () => ipcRenderer.invoke(IPC.UPDATE_DETAILS),
+    dismiss: (version) => ipcRenderer.invoke(IPC.UPDATE_DISMISS, version),
   },
   app: {
     info: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
@@ -91,6 +130,10 @@ const bridge: BrowserBridge = {
   },
   ui: {
     onAskAgent: (cb) => subscribe(IPC.UI_ASK_AGENT, cb),
+  },
+  funding: {
+    ...fundingCalls,
+    onEvent: (cb) => subscribe<FundingEvent>(IPC.FUNDING_EVENT, cb),
   },
 };
 

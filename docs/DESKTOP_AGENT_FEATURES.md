@@ -4,9 +4,10 @@ The in-product agent panel (`apps/desktop`) is where the Comet-style features
 run for real — against the live agent, not a demo. This documents the
 capabilities added so they operate 100% functionally, and how they're wired.
 
-Everything here is **additive and localized to the desktop app**: `agent-core`
-and the agent loop are untouched. An ordinary run with no attachments behaves
-byte-for-byte as before.
+The desktop app uses the shared agent loop. Without cloud credentials it runs
+local summaries and explicit browser commands; configured cloud engines keep
+their existing model-driven loop. Both paths use the same tool validation,
+browser approvals, per-site permissions, cancellation, and run records.
 
 ## What was already real (unchanged)
 
@@ -46,17 +47,75 @@ the user scrolls up, a pointer button appears to jump back down (`AiPanel.tsx`).
 ### Brand-mark home
 The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 
-### Voice — mic + continuous Voice Mode (`VoiceOverlay.tsx`, `main/voice.ts`)
-- **Mic (one-shot):** record one utterance; on stop it transcribes and sends.
-- **Soundwave (continuous):** keeps listening, cuts a segment on trailing
-  silence (a lightweight VAD over a Web Audio `AnalyserNode`), transcribes each,
-  and sends it — click the icon again to stop, and the wave fades out.
-- The soundwave reacts to the real mic level. Transcription runs in **main**
-  against **OpenAI Whisper using the user's stored OpenAI key** (the key never
-  reaches the renderer). No key → a clear inline message to add one.
-- macOS: `NSMicrophoneUsageDescription` (builder `extendInfo`) +
-  `com.apple.security.device.audio-input` (both entitlement plists) so a
-  packaged, hardened-runtime build can access the mic.
+### Keyless local assistant
+
+No setup key is needed to summarize a page, list tabs, show page details, list
+links, extract page data, open a URL, click a quoted target, or type quoted text
+into a quoted field. Unsupported requests show the local command capabilities;
+they do not produce invented model answers. Cloud keys are optional in the
+collapsed Settings section for open-ended reasoning and cloud-specific skills.
+
+### Voice — dictation and spoken Voice Mode
+
+- Dictation records a prompt, transcribes locally, and sends it to the selected
+  assistant. Without a cloud key, its transcript runs through the local assistant.
+- Voice Mode keeps the existing inline controls, captions, mute, stop, and
+  browser-task approvals. Local speech recognition sends each utterance through
+  the selected assistant; the bundled neural voice reads its actual result.
+  Stop, Cancel browser task, or a spoken cancellation cancels the task owned by
+  that voice session. Silent timed clips are ignored. Interrupt stops a spoken
+  reply; capture pauses during playback to avoid feedback commands.
+- Both use **Whisper tiny.en via Transformers.js** in main. Mono 16 kHz audio
+  stays on the device, and speech needs no OpenAI key. The English model
+  downloads on first use into `userData/voice-models` and works offline afterward.
+  Local summaries and explicit browser commands need no key. Cloud synthesis is optional.
+- Replies are spoken by a **bundled Supertonic neural voice** (`main/speech.ts`),
+  a US English female preset generated on the device at 44.1 kHz with no key,
+  download, or network call. `shared/speech.ts` turns the Markdown reply into
+  plain sentences (no URLs, code, or symbols) and splits it into clips: a short
+  opening clip so speech starts quickly, then clips of up to 300 characters cut
+  at sentence or clause boundaries. The next clip is generated while the current
+  one plays, and each clip is levelled and edge-faded, so a long answer flows
+  without gaps, clicks, or volume jumps. If the bundled voice cannot load, an
+  installed US English female system voice is used instead.
+- The voice is selected by `voice` in `scripts/prepare-speech-model.mjs` and
+  `DEFAULT_VOICE` in `main/speech.ts` (presets `F1`–`F5` all ship; default `F1`).
+  The publisher documents presets by gender only, so no preset can be described
+  as a verified accent, dialect, or ethnicity; choose by listening.
+- `pnpm prepare:speech` downloads the pinned, SHA-256-verified model (about
+  263 MB) into the git-ignored `resources/speech-models`, and every `package*`
+  script runs it first. electron-builder ships it as `speech-models` beside the
+  app and the `afterPack` hook fails the build if any file is missing or the
+  wrong size. The weights are under the BigScience Open RAIL-M license; its
+  text and use restrictions ship in `speech-models/LICENSE-MODELS.txt`.
+- The previous hosted realtime implementation remains available internally but
+  is no longer used by the Voice Mode UI.
+- macOS microphone permissions and the existing hardened-runtime entitlements
+  continue to apply.
+
+### Updating the installed app
+
+Published releases download in the background. The top bar shows the version,
+download progress and any retryable interruption. Click **Update App** once it is
+ready to prepare it without closing the window; the notice disappears for that
+version. Keep working normally. The new version takes effect after the next
+normal quit and reopen. The app checks at launch and every five minutes while
+open, including when an earlier update is prepared, so a later release gets a
+new notice. Downloaded installers remain available through unrelated feed errors
+and the same version is not repeatedly downloaded. A commit becomes an available
+app update only after the signed release workflow publishes it.
+
+macOS keeps one verified native update prepared per running session. If a later
+release appears, its notice names both versions; the later release downloads
+after the prepared version takes effect on the next normal launch. This avoids
+replacing Squirrel's pending bundle while the user is still working. Native
+preparation timeouts leave the app open and ask for a normal reopen, rather than
+starting another native installation over an unconfirmed attempt.
+
+These changes reach installed users only after the PR is merged and the existing
+signed release workflow successfully publishes its installers and update manifests.
+Voice input and Voice Mode then use local transcription and system speech without
+a speech API key; the first use downloads the English model.
 
 ## Files
 
@@ -100,23 +159,54 @@ The logic that can't be driven headlessly is covered directly instead:
   arbitrary file.
 - `main/storage/projects.test.ts` — de-duping, missing-project guards, and
   read-side reconciliation of file counts against expired files.
-- `main/voice.test.ts` — the transcription contract: bearer auth, empty-clip
-  short-circuit, the no-key path (must not call out), 401 mapping, provider
-  error messages, and non-JSON error bodies.
+- `main/voice.test.ts` — keyless inference, silent clips, input validation,
+  model reuse, command ordering, and recovery after failures.
+- `renderer/lib/local-voice.test.ts` — local recording, transcription, verified
+  spoken results, mute, task cancellation, and late microphone permissions.
+- `main/speech.test.ts` — local-only model loading, bundle validation, input
+  limits, clip levelling, request ordering, load shedding, and recovery.
+- `shared/speech.test.ts` — Markdown-to-speech text and sentence/clause clips.
 
-### Still not covered: the GUI
+### Desktop verification
 
-The Playwright Electron harness (`e2e/`) **cannot launch on this toolchain**:
-Playwright passes `--remote-debugging-port=0` ahead of the app path, where
-Electron 39 parses it as a Node flag and dies with `bad option`. Bumping
-Playwright to 1.61.1 does not fix it. Separately, all three specs assert UI copy
-that no longer exists ("Running in local-first mode.", "Open Settings", the old
-key-validation string) — they rotted in earlier commits. So the e2e job is red
-for reasons that predate this work, and these remain unverified end-to-end:
+The Electron Playwright smoke suite exercises the composer, both voice controls
+without OpenAI keys or any assistant keys, and a real synthetic MediaStream →
+MediaRecorder → PCM → transcription IPC → browser approval → spoken result flow.
+Provider transcription and assistant results are mocked in this UI check.
 
-- record → transcribe → send, and continuous Voice Mode segmentation
-- the file picker and screenshot capture round-trip
-- jump-to-latest and the attachment chips under real interaction
+For real model inference, build the app and run from `apps/desktop`:
 
-Fixing e2e means resolving the Playwright/Electron incompatibility and
-rewriting the stale assertions — worth doing, but it is its own task.
+```sh
+node scripts/check-local-voice.mjs /path/to/speech.wav
+```
+
+An optional second argument selects a packaged executable. The check recognizes
+a real WAV without provider keys, restarts, and repeats with network blocked.
+First use requires the recognition model download. Live microphone quality, how the
+voice sounds to a listener, live assistant responses, and Windows/Linux packages need manual checks.
+
+Additional regression checks cover silence during long tasks, spoken cancellation
+while a task is pending, recovery from playback/provider failures, and immediate
+microphone release after dictation Send. Voice Mode waits 0.9 seconds of silence
+before ending an utterance, and trims leading and trailing silence from each clip.
+
+To hear and verify the bundled voice, from `apps/desktop`:
+
+```sh
+pnpm prepare:speech && pnpm build
+node scripts/check-neural-voice.mjs sample.wav
+```
+
+It generates speech through the real Electron IPC with no key, passes it back
+through local Whisper to confirm every key phrase is intelligible, checks that
+generation is faster than real time, and writes `sample.wav` to listen to. In
+development the app reads the voice from `resources/speech-models`; without
+`pnpm prepare:speech` it falls back to the installed system voice.
+
+The manual checks `scripts/check-live-voice.mjs speech.wav [expected-text]` and
+`scripts/check-voice-output.mjs` exercise real recorder/VAD/model recognition and
+the fallback system speech output. The live check fixtures only the assistant response.
+
+Native speech dependencies install both x64 and arm64 variants for the host OS.
+CI checks installation and host imports on macOS, Windows, and Linux; the
+packaging hook rejects artifacts missing a target architecture's runtime.

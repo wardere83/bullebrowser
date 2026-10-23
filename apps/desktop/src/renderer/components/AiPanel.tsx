@@ -1,17 +1,30 @@
+import { clearUpdateChat, SAVE_UPDATE_CHAT_EVENT, takeUpdateChat, type UpdateChatSnapshot } from '../lib/update-session.js';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { product } from '@bullebrowser/brand-tokens';
-import { providerFor, type ModelId } from '@bullebrowser/agent-core';
+import { BROWSER_TASKS, providerFor, type BrowserTaskId, type ModelId } from '@bullebrowser/agent-core';
 import { useAgentStore } from '../state/agent-store.js';
 import { useBrowserStore } from '../state/browser-store.js';
+import {
+  activeOrganization,
+  focusedRfpId,
+  useWorkspaceStore,
+} from '../state/workspace-store.js';
+import { Icon } from '../workspace/ui/icons.js';
 import { AGENT_PROMPT_EVENT } from '../lib/url.js';
 import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { VoiceOverlay } from './VoiceOverlay.js';
+import { RealtimeVoice } from './RealtimeVoice.js';
+import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
+import { BrowserProgress, TaskActivity } from './TaskActivity.js';
+import { liveAssistantText } from './task-activity.js';
 import type {
   AppSettings,
+  BrowserBridge,
+  ConversationDetail,
   ConversationSummary,
   RunAttachment,
 } from '../../shared/ipc.js';
@@ -22,6 +35,7 @@ import type { AgentStepEvent } from '../../shared/agent-events.js';
 interface QueuedTask {
   text: string;
   attachments: UiAttachment[];
+  browserTask?: BrowserTaskId;
 }
 
 // UI attachment references → the wire shape the agent run accepts.
@@ -36,14 +50,15 @@ function toRunAttachments(list: UiAttachment[]): RunAttachment[] {
 }
 
 export const FOCUS_AI_PANEL_EVENT = 'bullebrowser:focus-ai-panel';
+const NO_STEPS: AgentStepEvent[] = [];
 
-function browserBridge(): any {
-  return (window as unknown as { bullebrowser: any }).bullebrowser;
+function browserBridge(): BrowserBridge {
+  return window.bullebrowser;
 }
 
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
-  const openSettings = useBrowserStore((s) => s.openSettings);
+  const awaitingBrowseAccess = useAgentStore((s) => s.pendingConfirm?.kind === 'browse_access');
   const showSettings = useBrowserStore((s) => s.showSettings);
   const setCurrent = useAgentStore((s) => s.setCurrent);
   // The history list renders from this; without the selector the identifier is
@@ -51,11 +66,31 @@ export function AiPanel() {
   const conversations = useAgentStore((s) => s.conversations);
   const setConversations = useAgentStore((s) => s.setConversations);
   const startRun = useAgentStore((s) => s.startRun);
+  const prepareRun = useAgentStore((s) => s.prepareRun);
   const status = useAgentStore((s) => s.status);
-  const steps = useAgentStore((s) => s.steps);
-  const currentStep = useAgentStore((s) => s.currentStep);
+  const activity = useAgentStore((s) => s.current ? s.activities[s.current.id] : undefined);
+  const steps = activity?.steps ?? NO_STEPS;
+  const activityStatus = activity?.status ?? 'idle';
+  const currentStep = activity?.currentStep ?? '';
+  const liveReply = activityStatus === 'running' ? liveAssistantText(steps) : '';
   const runId = useAgentStore((s) => s.runId);
-  const [draft, setDraft] = useState('');
+  const [resumeChat] = useState(takeUpdateChat);
+  const [draft, setDraft] = useState(resumeChat?.draft ?? '');
+  const [selectedTask, setSelectedTask] = useState<BrowserTaskId | null>(null);
+  const restoredTask = useRef(false);
+  useEffect(() => {
+    if (resumeChat?.conversationId === current?.id && !restoredTask.current) {
+      restoredTask.current = true;
+      setSelectedTask(resumeChat?.browserTask ?? null);
+    } else setSelectedTask(null);
+  }, [current?.id, resumeChat]);
+  useEffect(() => {
+    const save = (event: Event) => {
+      if (current) (event as CustomEvent<UpdateChatSnapshot>).detail.chat = { conversationId: current.id, draft, browserTask: selectedTask ?? undefined };
+    };
+    window.addEventListener(SAVE_UPDATE_CHAT_EVENT, save);
+    return () => window.removeEventListener(SAVE_UPDATE_CHAT_EVENT, save);
+  }, [current, draft, selectedTask]);
   // Tasks the user submitted while a run was already going. They run one after
   // another as each finishes, so the user can queue up work instead of waiting.
   const [queued, setQueued] = useState<QueuedTask[]>([]);
@@ -66,9 +101,6 @@ export function AiPanel() {
   const [voiceMode, setVoiceMode] = useState<'once' | 'continuous' | null>(null);
   const [skillId, setSkillId] = useState<string>('');
   const [model, setModel] = useState<ModelId>('claude-opus-4-7');
-  // null = not checked yet, so we render neither the chat nor the connect
-  // form until we know, instead of flashing the wrong one.
-  const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const runInProgress = status === 'running';
@@ -82,6 +114,14 @@ export function AiPanel() {
   // Held while a queued task is being dispatched, so the drain effect starts
   // exactly one run at a time (see the drain effect below).
   const drainingRef = useRef(false);
+  // A run's handle arrives asynchronously. Reserve this interval as well as
+  // the running state so voice and typed prompts cannot start two tasks.
+  const dispatchingRef = useRef(false);
+  const [dispatchRevision, setDispatchRevision] = useState(0);
+  const queuedRef = useRef(queued);
+  queuedRef.current = queued;
+  const voiceContextRef = useRef({ model, skillId, attachments, browserTask: selectedTask });
+  voiceContextRef.current = { model, skillId, attachments, browserTask: selectedTask };
   const onMessagesScroll = () => {
     const el = messagesRef.current;
     if (!el) return;
@@ -102,9 +142,8 @@ export function AiPanel() {
         bridge.secrets.hasApiKey('openai'),
       ]);
       const configuredKeyPresent = configuredProvider === 'openai' ? hasOpenAi : hasAnthropic;
-      // Auto-pick an engine whose key is actually present, in EITHER direction,
-      // so a user holding only one provider's key isn't stranded on "add your
-      // key" just because the persisted default points at the other provider.
+      // Prefer an optional cloud engine that is configured. When neither has
+      // a key, the main process selects the local assistant.
       let effectiveSettings = settings;
       if (!configuredKeyPresent) {
         if (configuredProvider !== 'openai' && hasOpenAi) {
@@ -114,9 +153,6 @@ export function AiPanel() {
         }
       }
       setModel(effectiveSettings.defaultModel);
-      setHasKey(
-        effectiveSettings.defaultModel === settings.defaultModel ? configuredKeyPresent : true,
-      );
       // Opening the app lands on a NEW session rather than resuming the last
       // one — a browser you just opened shouldn't drop you back into whatever
       // you were mid-way through, and the previous chats are a click away under
@@ -124,6 +160,16 @@ export function AiPanel() {
       // reuse it, so relaunching repeatedly doesn't litter History with blank
       // rows nobody asked for.
       const list = await bridge.conversations.list();
+      if (resumeChat && list.some((chat) => chat.id === resumeChat.conversationId)) {
+        const restored = await bridge.conversations.get(resumeChat.conversationId);
+        if (restored) {
+          setConversations(list);
+          setCurrent(restored);
+          clearUpdateChat();
+          return;
+        }
+      }
+      if (resumeChat) clearUpdateChat();
       const newest = list[0];
       const newestDetail = newest ? await bridge.conversations.get(newest.id) : null;
       if (newestDetail && newestDetail.messages.length === 0) {
@@ -135,55 +181,71 @@ export function AiPanel() {
         setConversations(await bridge.conversations.list());
       }
     })();
-  }, [setConversations, setCurrent]);
+  }, [setConversations, setCurrent, resumeChat]);
 
-  const sendMessage = async (text: string, atts: UiAttachment[] = []) => {
+  const sendMessage = async (text: string, atts: UiAttachment[] = [], budget?: number, browserTask?: BrowserTaskId) => {
     const raw = text.trim();
     if (!raw || !current) return;
-    // Slash commands expand client-side into a fully formed agent prompt so
-    // the model sees a plain task and the user sees what they typed.
-    const expanded = expandSlashCommand(raw);
-    if (expanded?.echo === 'help') {
+    dispatchingRef.current = true;
+    try {
+      // Slash commands expand client-side into a fully formed agent prompt so
+      // the model sees a plain task and the user sees what they typed.
+      const expanded = expandSlashCommand(raw);
+      if (expanded?.echo === 'help') {
+        setCurrent({
+          ...current,
+          messages: [
+            ...current.messages,
+            { role: 'user', content: raw, timestamp: Date.now() },
+            {
+              role: 'assistant',
+              content: slashHelpText(),
+              timestamp: Date.now(),
+            },
+          ],
+        });
+        return;
+      }
+      const message = expanded?.prompt ?? raw;
       setCurrent({
         ...current,
         messages: [
           ...current.messages,
           { role: 'user', content: raw, timestamp: Date.now() },
-          {
-            role: 'assistant',
-            content: slashHelpText(),
-            timestamp: Date.now(),
-          },
         ],
       });
-      return;
-    }
-    const message = expanded?.prompt ?? raw;
-    setCurrent({
-      ...current,
-      messages: [
-        ...current.messages,
-        { role: 'user', content: raw, timestamp: Date.now() },
-      ],
-    });
-    const bridge = browserBridge();
-    const skill = skillId || undefined;
-    const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
-    const requestedRunId = crypto.randomUUID();
-    startRun(requestedRunId);
-    try {
-      await bridge.agent.run({
-        runId: requestedRunId,
-        conversationId: current.id,
-        userMessage: message,
-        model,
-        ...(skill ? { skillId: skill } : {}),
-        ...(runAttachments ? { attachments: runAttachments } : {}),
+      const bridge = browserBridge();
+      const skill = skillId || undefined;
+      const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
+      // The funding document open in the workspace, so the answer can be about it.
+      const focusRfpId = focusedRfpId(useWorkspaceStore.getState());
+      prepareRun(current.id);
+      // Product answers can finish before IPC returns their handle. Track
+      // terminal events first so a completed reply cannot leave Stop stuck on.
+      const finished = new Set<string>();
+      const detach = bridge.agent.onStep(({ runId, step }: { runId: string; step: AgentStepEvent }) => {
+        if (step.kind === 'done' || (step.kind === 'error' && !step.toolName)) finished.add(runId);
       });
-    } catch (error) {
-      if (useAgentStore.getState().runId === requestedRunId) {
-        useAgentStore.getState().setError(error instanceof Error ? error.message : 'Could not start task');
+      try {
+        const { runId } = await bridge.agent.run({
+          conversationId: current.id,
+          userMessage: message,
+          ...(browserTask ? { browserTask } : {}),
+          model,
+          ...(skill ? { skillId: skill } : {}),
+          ...(runAttachments ? { attachments: runAttachments } : {}),
+          ...(budget ? { budget } : {}),
+          ...(focusRfpId ? { focusRfpId } : {}),
+        });
+        if (!finished.has(runId)) startRun(runId, current.id);
+      } catch (error) {
+        useAgentStore.getState().setError(error instanceof Error ? error.message : 'The task could not start. Try again.');
+      } finally {
+        detach();
       }
+    } finally {
+      dispatchingRef.current = false;
+      setDispatchRevision((revision) => revision + 1);
     }
   };
 
@@ -193,61 +255,116 @@ export function AiPanel() {
   // running check reads live store state rather than a render snapshot, because
   // voice transcripts fire from a long-lived overlay closure that would
   // otherwise see a stale value and start a second, concurrent run.
-  const submit = async (text: string, atts: UiAttachment[] = []) => {
+  const submit = async (text: string, atts: UiAttachment[] = [], browserTask?: BrowserTaskId) => {
     const t = text.trim();
     if (!t) return;
+    setSelectedTask(null);
     const running = useAgentStore.getState().status === 'running';
-    if (running || queued.length > 0) {
-      setQueued((q) => [...q, { text: t, attachments: atts }]);
+    if (running || dispatchingRef.current || drainingRef.current || queuedRef.current.length > 0) {
+      const next = [...queuedRef.current, { text: t, attachments: atts, browserTask }];
+      queuedRef.current = next;
+      setQueued(next);
       return;
     }
-    await sendMessage(t, atts);
+    await sendMessage(t, atts, undefined, browserTask);
   };
 
   const send = async () => {
     const t = draft.trim();
     if (!t) return;
-    // The assistant is always reachable; the one required setup step (a key) is
-    // surfaced here, when it's actually needed, rather than as an up-front wall.
-    if (hasKey === false) {
-      openSettings();
-      return;
-    }
     const atts = attachments;
     setDraft('');
     setAttachments([]);
     promptActivity.reset();
-    await submit(t, atts);
+    const task = selectedTask ?? undefined;
+    setSelectedTask(null);
+    await submit(t, atts, task);
   };
 
   // Drain the queue: whenever the agent goes idle and something is waiting,
   // start the next task. sendMessage flips status back to running, so this
   // won't double-fire until the next task finishes.
   useEffect(() => {
-    // `status` only flips to 'running' once agent.run() resolves. Without a
-    // synchronous guard this effect re-fires the moment setQueued changes the
-    // list — status is still 'idle' — and dispatches the whole queue at once
-    // instead of one task after another.
-    if (status !== 'idle' || queued.length === 0 || !current || drainingRef.current) return;
-    const [next, ...rest] = queued;
+    // Keep a synchronous dispatch guard as well as the running state, so an
+    // immediate terminal event cannot dispatch the queue before IPC returns.
+    if (status !== 'idle' || queued.length === 0 || !current || drainingRef.current || dispatchingRef.current) return;
+    const [next, ...rest] = queuedRef.current;
     if (!next) return;
     drainingRef.current = true;
+    queuedRef.current = rest;
     setQueued(rest);
-    void sendMessage(next.text, next.attachments).finally(() => {
+    void sendMessage(next.text, next.attachments, undefined, next.browserTask).finally(() => {
       drainingRef.current = false;
+      setDispatchRevision((revision) => revision + 1);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, queued, current]);
+  }, [status, queued, current, dispatchRevision]);
 
-  // A transcript from the voice overlay arrives as a finished prompt: fill the
-  // composer and send it straight away (one-shot closes the overlay; continuous
-  // stays listening for the next command).
+  // Dictation submits the recorded prompt. Live voice delegates browser tasks
+  // through its tool callback instead, so transcripts never run a task twice.
   const onVoiceTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
-    void submit(t, attachments);
+    void submit(t, attachments, selectedTask ?? undefined);
     setAttachments([]);
     setDraft('');
+  };
+
+  const onVoiceBrowserTask = async (
+    prompt: string,
+    signal: AbortSignal,
+  ): Promise<VoiceBrowserTaskResult> => {
+    if (signal.aborted) return { status: 'cancelled', text: 'The browser task was stopped.' };
+    if (
+      useAgentStore.getState().status === 'running' || dispatchingRef.current ||
+      drainingRef.current || queuedRef.current.length > 0
+    ) {
+      return {
+        status: 'failed',
+        text: 'A browser task is already running. Wait or stop it before starting another.',
+      };
+    }
+    const conversation = useAgentStore.getState().current;
+    const message = prompt.trim();
+    if (!conversation || !message) {
+      return { status: 'failed', text: 'The assistant is still connecting. Try again shortly.' };
+    }
+    const context = voiceContextRef.current;
+    setSelectedTask(null);
+    const focusRfpId = focusedRfpId(useWorkspaceStore.getState());
+    dispatchingRef.current = true;
+    setCurrent({
+      ...conversation,
+      messages: [...conversation.messages, { role: 'user', content: message, timestamp: Date.now() }],
+    });
+    setDraft('');
+    setAttachments([]);
+    prepareRun(conversation.id);
+    try {
+      const result = await runVoiceBrowserTask(window.bullebrowser, {
+        conversationId: conversation.id,
+        userMessage: message,
+        model: context.model,
+        ...(context.browserTask ? { browserTask: context.browserTask } : {}),
+        ...(context.skillId ? { skillId: context.skillId } : {}),
+        ...(context.attachments.length > 0 ? { attachments: toRunAttachments(context.attachments) } : {}),
+        ...(focusRfpId ? { focusRfpId } : {}),
+      }, signal, (id) => {
+        startRun(id, conversation.id);
+        dispatchingRef.current = false;
+      });
+      await refreshVoiceConversation(window.bullebrowser, conversation.id, {
+        current: () => useAgentStore.getState().current,
+        refresh: (saved) => useAgentStore.getState().refreshCurrent(saved),
+      });
+      if (result.status === 'failed' && useAgentStore.getState().status === 'running') {
+        useAgentStore.getState().setError(result.error ?? result.text);
+      }
+      return result;
+    } finally {
+      dispatchingRef.current = false;
+      setDispatchRevision((revision) => revision + 1);
+    }
   };
 
   // "Control Browser": give the agent a live tab to drive if there isn't one,
@@ -259,16 +376,7 @@ export function AiPanel() {
     textareaRef.current?.focus();
   };
 
-  // Whisper always uses the OpenAI credential, independently of the
-  // assistant selected for chat. Check it before the browser requests the
-  // microphone so a missing key sends the user straight to the right setting
-  // instead of recording speech that cannot be transcribed.
-  const startVoice = async (nextMode: 'once' | 'continuous') => {
-    const hasVoiceKey = await browserBridge().secrets.hasApiKey('openai');
-    if (!hasVoiceKey) {
-      openSettings();
-      return;
-    }
+  const startVoice = (nextMode: 'once' | 'continuous') => {
     setVoiceMode(nextMode);
   };
 
@@ -319,31 +427,8 @@ export function AiPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
 
-  useEffect(() => {
-    if (!current || current.messages.length > 0 || status === 'running') return;
-    textareaRef.current?.focus();
-  }, [current, status]);
-
-  // Each assistant has its own credential, so switching engines has to
-  // re-check — otherwise picking one whose key isn't saved would show a
-  // working chat that fails auth on send.
-  useEffect(() => {
-    let cancelled = false;
-    void browserBridge()
-      .secrets.hasApiKey(providerFor(model))
-      .then((present: boolean) => {
-        if (!cancelled) setHasKey(present);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [model]);
-
-  // Both the key and the engine are chosen in the Settings modal — a separate
-  // component — so when it closes the panel re-syncs from persisted settings.
-  // Without this, a saved key never clears the "add your key" state (the panel
-  // keeps asking even though Settings said "saved"), and changing the engine
-  // has no effect until the next launch.
+  // Re-sync the optional cloud engine when Settings closes. Without its key,
+  // the same composer uses the local assistant automatically.
   const settingsWasOpen = useRef(false);
   useEffect(() => {
     if (settingsWasOpen.current && !showSettings) {
@@ -351,7 +436,6 @@ export function AiPanel() {
         const bridge = browserBridge();
         const next: AppSettings = await bridge.settings.get();
         setModel(next.defaultModel);
-        setHasKey(await bridge.secrets.hasApiKey(providerFor(next.defaultModel)));
       })();
     }
     settingsWasOpen.current = showSettings;
@@ -363,23 +447,65 @@ export function AiPanel() {
     [...(current?.messages ?? [])].reverse().find((m) => m.role === 'user')
       ?.content ?? '';
 
-  // A key can be revoked or deleted while the app is open; when a run dies on
-  // an auth error, drop back to the connect form rather than leaving the user
-  // retrying a chat that cannot work.
-  useEffect(() => {
-    if (status !== 'error') return;
-    if (!/api key|401|Settings and paste/i.test(currentStep)) return;
-    void browserBridge()
-      .secrets.hasApiKey(providerFor(model))
-      .then((present: boolean) => setHasKey(present));
-  }, [status, currentStep, model]);
-
   // Follow the conversation as it grows / streams, but only when already
   // pinned to the bottom, so scrolling up to re-read isn't yanked back down.
   useEffect(() => {
     const el = messagesRef.current;
     if (el && atBottom) el.scrollTop = el.scrollHeight;
   }, [current?.messages, steps, status, atBottom]);
+
+  // A workflow chosen from the empty state applies to the chat it was chosen
+  // in. Another chat (a new one, or one opened from History) starts without
+  // one, so its rules never carry over to an unrelated conversation.
+  const conversationId = current?.id;
+  useEffect(() => {
+    setSkillId('');
+  }, [conversationId]);
+
+  // A chat belongs to the organization it was used in: main only lists, reads
+  // and continues it under that organization. So when the user moves from one
+  // organization to another (or the one they were in is deleted), the chat that
+  // was open must not stay on screen. Land on a new session for the
+  // organization now active, exactly as opening the app does: the newest chat
+  // when it is still empty, a fresh one otherwise. What was queued or attached
+  // for the previous organization goes with it. Creating the first organization
+  // is not a move: the chat open then belongs to none yet.
+  const activeOrganizationId = useWorkspaceStore(
+    (state) => activeOrganization(state.identity)?.id ?? null,
+  );
+  const identityConfirmed = useWorkspaceStore((state) => state.identityStatus === 'ready');
+  const chatOrganization = useRef<string | null | undefined>(undefined);
+  const sessionRequest = useRef(0);
+  useEffect(() => {
+    if (!identityConfirmed) return;
+    const previous = chatOrganization.current;
+    chatOrganization.current = activeOrganizationId;
+    if (typeof previous !== 'string' || previous === activeOrganizationId) return;
+    sessionRequest.current += 1;
+    const request = sessionRequest.current;
+    queuedRef.current = [];
+    setQueued([]);
+    setAttachments([]);
+    setShowHistory(false);
+    // Keep focus where the user left it; loading a session is not an input action.
+    const show = (conversation: ConversationDetail) => setCurrent(conversation);
+    void (async () => {
+      const bridge = browserBridge();
+      const list = await bridge.conversations.list();
+      const newest = list[0];
+      const newestDetail = newest ? await bridge.conversations.get(newest.id) : null;
+      if (request !== sessionRequest.current) return;
+      if (newestDetail && newestDetail.messages.length === 0) {
+        setConversations(list);
+        show(newestDetail);
+        return;
+      }
+      const fresh = await bridge.conversations.create();
+      if (request !== sessionRequest.current) return;
+      show(fresh);
+      setConversations(await bridge.conversations.list());
+    })();
+  }, [identityConfirmed, activeOrganizationId, setConversations, setCurrent]);
 
   const createConversation = async () => {
     const bridge = browserBridge();
@@ -409,26 +535,23 @@ export function AiPanel() {
   };
 
   return (
-    <aside className="relative flex w-[440px] flex-col border-l border-line/25 bg-surface-light">
-      {voiceMode && (
+    <aside aria-label="Assistant chat" className="chat-panel relative flex w-[440px] flex-col border-l">
+      {voiceMode === 'once' && (
         <VoiceOverlay
-          mode={voiceMode}
+          mode="once"
           onTranscript={onVoiceTranscript}
           onClose={() => setVoiceMode(null)}
         />
       )}
-      <header className="flex items-center justify-between gap-2 px-4 py-3">
-        <div className="text-[13px] font-semibold tracking-tight text-ink-primary">
-          BulleBrowser Agent
-        </div>
-        <div className="flex items-center gap-1">
+      <header className="flex items-center justify-end gap-2 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-end gap-1">
           <button
             type="button"
             onClick={async () => {
               setConversations(await browserBridge().conversations.list());
               setShowHistory((v) => !v);
             }}
-            className={`rounded-md px-2 py-1 text-xs transition-colors ${
+            className={`whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
               showHistory ? 'text-ink-primary' : 'text-ink-secondary hover:text-ink-primary'
             }`}
           >
@@ -437,12 +560,20 @@ export function AiPanel() {
           <button
             type="button"
             onClick={createConversation}
-            className="rounded-md px-2 py-1 text-xs text-ink-secondary transition-colors hover:text-ink-primary"
+            className="whitespace-nowrap rounded-md px-2 py-1 text-xs text-ink-secondary transition-colors hover:text-ink-primary"
           >
             New chat
           </button>
         </div>
       </header>
+      {activityStatus === 'running' && <BrowserProgress steps={steps} awaitingAccess={awaitingBrowseAccess} />}
+
+      {voiceMode === 'continuous' && (
+        <RealtimeVoice
+          onBrowserTask={onVoiceBrowserTask}
+          onClose={() => setVoiceMode(null)}
+        />
+      )}
 
       {showHistory && (
         <HistoryList
@@ -458,24 +589,26 @@ export function AiPanel() {
       <div
         ref={messagesRef}
         onScroll={onMessagesScroll}
-        className="flex-1 overflow-y-auto px-5 py-5"
+        // The whole conversation is selectable, margins included: a drag that
+        // starts beside a reply (how most people select) began on an
+        // unselectable container and selected nothing.
+        className="selectable flex-1 overflow-y-auto px-5 py-5"
       >
         {current && current.messages.length === 0 && (
-          <EmptyState
-            onAction={(text, skill) => {
-              setDraft(text);
-              setSkillId(skill ?? '');
-              textareaRef.current?.focus();
-            }}
-            onSpeak={() => void startVoice('once')}
-          />
+          <EmptyState selectedTask={selectedTask} onBrowse={(task) => {
+            setSelectedTask(task);
+            setDraft('');
+            textareaRef.current?.focus();
+          }} />
         )}
         {current?.messages.map((m, i) => (
           <Bubble key={i} role={m.role} content={m.content} />
         ))}
-        {(status === 'running' || status === 'error') && (
-          <ActivityFeed steps={steps} status={status} currentStep={currentStep} />
+        {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call')) && (
+          <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} />
         )}
+        {liveReply && <Bubble role="assistant" content={liveReply} live />}
+        {status !== 'running' && <BudgetSpent steps={steps} onContinue={(b) => void sendMessage('Continue the task from where you stopped.', [], b)} />}
       </div>
 
         {/* Pointer arrow → jump to the latest message. Shown only when the
@@ -500,20 +633,6 @@ export function AiPanel() {
       <AllowAccess task={lastUserMessage} />
 
       <footer className="border-t border-line/25 p-3">
-        {hasKey === false && (
-          <button
-            type="button"
-            onClick={openSettings}
-            className="mb-2 flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/[0.06] px-3 py-2 text-left text-[12px] text-ink-primary transition-colors hover:bg-primary/10"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="8" cy="15" r="4" />
-              <path d="m10.9 12.1 8.1-8.1M17 5l2 2M14 8l2 2" />
-            </svg>
-            <span className="flex-1">Add your key to start — it stays on this device.</span>
-            <span className="font-medium text-primary">Open Settings →</span>
-          </button>
-        )}
         {draft.startsWith('/') && !draft.includes(' ') && (
           <div className="mb-1 max-h-32 overflow-y-auto rounded border border-line bg-white text-[11px]">
             {SLASH_COMMANDS.filter((c) => c.name.startsWith(draft.toLowerCase())).map(
@@ -552,7 +671,11 @@ export function AiPanel() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setQueued((list) => list.filter((_, j) => j !== i))}
+                  onClick={() => {
+                    const next = queuedRef.current.filter((_, j) => j !== i);
+                    queuedRef.current = next;
+                    setQueued(next);
+                  }}
                   className="shrink-0 text-ink-secondary hover:text-danger"
                   title="Remove from queue"
                 >
@@ -603,6 +726,9 @@ export function AiPanel() {
                 }
               }}
             >
+              <svg className="prompt-border-track" aria-hidden="true" focusable="false">
+                <rect className="prompt-border-train" x="0" y="0" width="100%" height="100%" rx="14" pathLength="100" />
+              </svg>
               <textarea
                 ref={textareaRef}
                 value={draft}
@@ -620,8 +746,7 @@ export function AiPanel() {
                     : 'Ask BulleBrowser to do something. It will browse, read, compare, and report back.'
                 }
                 rows={3}
-                className="prompt-input-field"
-                autoFocus={current?.messages.length === 0}
+                className="prompt-input-field prompt-input-field--dark"
               />
             </div>
           </div>
@@ -654,7 +779,7 @@ export function AiPanel() {
         </div>
 
         {/* Control row: "+" attachment menu, brand-mark home, one-shot mic,
-            and the continuous Voice Mode toggle. */}
+            and the live Voice Mode toggle. */}
         <div className="mt-2 flex items-center gap-1">
           <AttachMenu
             onAttach={(a) => setAttachments((list) => [...list, a])}
@@ -675,38 +800,40 @@ export function AiPanel() {
             </svg>
           </button>
 
-          <button
-            type="button"
-            onClick={() => void startVoice('once')}
-            aria-label="Voice input"
-            title="Speak a prompt"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-              voiceMode === 'once' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="3" width="6" height="11" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-            </svg>
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => void startVoice('once')}
+              aria-label="Voice input"
+              title="Speak a prompt"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                voiceMode === 'once' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+              </svg>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (voiceMode === 'continuous') setVoiceMode(null);
-              else void startVoice('continuous');
-            }}
-            aria-label="Voice Mode"
-            aria-pressed={voiceMode === 'continuous'}
-            title="Continuous Voice Mode"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-              voiceMode === 'continuous' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
-              <path d="M4 11v2M8 8v8M12 5v14M16 8v8M20 11v2" />
-            </svg>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (voiceMode === 'continuous') setVoiceMode(null);
+                else void startVoice('continuous');
+              }}
+              aria-label="Voice Mode"
+              aria-pressed={voiceMode === 'continuous'}
+              title="Live voice conversation"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                voiceMode === 'continuous' ? 'bg-primary/10 text-primary' : 'text-ink-secondary hover:bg-surface-muted hover:text-ink-primary'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round">
+                <path d="M4 11v2M8 8v8M12 5v14M16 8v8M20 11v2" />
+              </svg>
+            </button>
+          </div>
         </div>
       </footer>
     </aside>
@@ -784,81 +911,6 @@ function HistoryList({
   );
 }
 
-// What the agent is doing, as one quiet line you can open. The raw tool calls
-// are still there — they're just not the default view, because a wall of
-// navigate({"url":…}) is noise to everyone except the person debugging it.
-function ActivityFeed({
-  steps,
-  status,
-  currentStep,
-}: {
-  steps: AgentStepEvent[];
-  status: 'idle' | 'running' | 'error';
-  currentStep: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const actions = steps.filter((s) => s.kind === 'tool_call');
-  const failed = status === 'error';
-  const summary = failed
-    ? currentStep || 'The task stopped.'
-    : (humanStep(steps[steps.length - 1]) ?? 'Working…');
-
-  return (
-    <div
-      className={`mb-5 overflow-hidden rounded-lg border text-[12px] ${
-        failed ? 'border-danger/30 bg-danger/5' : 'border-line/50 bg-surface-muted/30'
-      }`}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left"
-        aria-expanded={open}
-      >
-        {!failed && status === 'running' && (
-          <span className="activity-pulse h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-        )}
-        <span className={`flex-1 truncate ${failed ? 'text-danger' : 'text-ink-primary'}`}>
-          {summary}
-        </span>
-        {actions.length > 0 && (
-          <span className="shrink-0 text-[11px] text-ink-secondary">
-            {actions.length} {actions.length === 1 ? 'step' : 'steps'}
-          </span>
-        )}
-        <span className={`shrink-0 text-ink-secondary transition-transform ${open ? 'rotate-90' : ''}`}>
-          ›
-        </span>
-      </button>
-
-      {open && (
-        <div className="max-h-56 overflow-y-auto border-t border-line/40 px-3 py-2">
-          {steps.length === 0 ? (
-            <div className="text-ink-secondary">Nothing recorded yet.</div>
-          ) : (
-            <ol className="space-y-1.5">
-              {steps.map((s, i) => {
-                const line = humanStep(s);
-                if (!line) return null;
-                return (
-                  <li key={i} className={s.kind === 'error' ? 'text-danger' : 'text-ink-secondary'}>
-                    <div>{line}</div>
-                    {s.kind === 'tool_call' && s.detail && (
-                      <div className="mt-0.5 truncate font-mono text-[10.5px] text-ink-secondary/70">
-                        {s.detail}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // The once-per-task browsing consent, answered in the chat next to the task it
 // belongs to rather than in a modal over the page.
 function AllowAccess({ task }: { task: string }) {
@@ -900,85 +952,115 @@ function AllowAccess({ task }: { task: string }) {
   );
 }
 
-// Plain-language actions instead of a list of internal "skills". Each seeds the
-// composer with a natural-language prompt (and quietly selects the matching
-// skill under the hood, so the orchestration is unchanged); "Speak" opens the
-// same voice flow as the mic. The user thinks in verbs, not tools.
-function EmptyState({
-  onAction,
-  onSpeak,
-}: {
-  onAction: (text: string, skillId?: string) => void;
-  onSpeak: () => void;
-}) {
-  const ACTIONS: { label: string; text: string; skillId?: string; icon: React.ReactNode }[] = [
-    {
-      label: 'Summarize this page',
-      text: 'Summarize this page',
-      skillId: 'page_assistant',
-      icon: <path d="M4 6h16M4 12h16M4 18h10" />,
-    },
-    {
-      label: 'Compare options',
-      text: 'Compare the options across my open tabs and recommend one',
-      skillId: 'workflow_automator',
-      icon: <path d="M4 5h6v14H4zM14 5h6v14h-6z" />,
-    },
-    {
-      label: 'Act on this',
-      text: 'Act on this page: ',
-      skillId: 'site_navigator',
-      icon: <path d="M13 3 4 14h7l-1 7 9-11h-7z" />,
-    },
-  ];
-  const chip =
-    'flex items-center gap-2.5 rounded-lg border border-line px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-primary/40 hover:bg-surface-muted';
+function EmptyState({ selectedTask, onBrowse }: { selectedTask: BrowserTaskId | null; onBrowse: (task: BrowserTaskId) => void }) {
+  const selected = BROWSER_TASKS.find((task) => task.id === selectedTask);
   return (
     <div className="space-y-5 pt-1 text-sm">
-      <p className="text-[15px] font-semibold tracking-tight text-ink-primary">
-        What can I help you with?
-      </p>
+      <h2 className="text-[15px] font-semibold tracking-tight text-ink-primary">
+        Where should we browse?
+      </h2>
       <p className="leading-relaxed text-ink-secondary">
-        Ask in plain language — or pick one. I can read, compare, and act across
-        your tabs, and you can talk to me instead of typing.
+        Let your assistant browse websites, research funders and find grants.
+        Choose a task, answer one quick question, and I’ll browse for you.
       </p>
       <div className="grid gap-2">
-        {ACTIONS.map((a) => (
-          <button key={a.label} type="button" onClick={() => onAction(a.text, a.skillId)} className={chip}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-              {a.icon}
-            </svg>
-            {a.label}
+        {BROWSER_TASKS.map((task) => (
+          <button key={task.label} type="button" onClick={() => onBrowse(task.id)} aria-pressed={selectedTask === task.id}
+            className="flex w-full items-start gap-2.5 rounded-lg border border-line px-3 py-2 text-left text-[13px] text-ink-primary transition-colors hover:border-primary/40 hover:bg-surface-muted">
+            <Icon name={task.icon} className="mt-0.5 text-primary" />
+            <span>{task.label}</span>
           </button>
         ))}
-        <button type="button" onClick={onSpeak} className={chip}>
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-          </svg>
-          Speak
-        </button>
       </div>
+      {selected && <p role="status" className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-3 font-medium text-ink-primary">{selected.question}</p>}
     </div>
   );
 }
 
-function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string }) {
+function MarkdownLink({ href, title, children }: React.ComponentProps<'a'>) {
+  return (
+    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
+// Keep link component identities stable across task events and saved-answer
+// refreshes, so an update cannot replace the anchor the keyboard user focused.
+const CHAT_MARKDOWN_COMPONENTS = { a: MarkdownLink };
+
+function Bubble({ role, content, live = false }: { role: 'user' | 'assistant'; content: string; live?: boolean }) {
+  const prose = useRef<HTMLDivElement>(null);
   if (role === 'user') {
     return (
       <div className="mb-6 flex justify-end">
-        <div className="max-w-[85%] rounded-2xl bg-primary px-3.5 py-2 text-sm leading-relaxed text-white">
+        <div className="chat-user-message selectable max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed">
           {content}
         </div>
       </div>
     );
   }
   // Assistant replies read as plain prose — no card, no border — for a calm,
-  // document-like feel.
+  // document-like feel. Selectable, with a one-click copy of the whole reply.
   return (
-    <div className="mb-6 md-prose">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <div className="group mb-6" aria-label={live ? 'Assistant response in progress' : undefined} aria-live={live ? 'polite' : undefined}>
+      {live && <p className="mb-2 text-xs text-ink-secondary">Response in progress</p>}
+      <div ref={prose} className="md-prose selectable">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={CHAT_MARKDOWN_COMPONENTS}
+        >{content}</ReactMarkdown>
+      </div>
+      {!live && <CopyButton source={prose} />}
     </div>
+  );
+}
+
+// Copies the reply as it reads, not as Markdown source: formatted (headings,
+// bold, lists, tables) for Word, Docs and email, with clean plain text for
+// anywhere else. Copying the raw Markdown pasted as **asterisks** and
+// |table|pipes|, which reads as broken.
+function CopyButton({ source }: { source: React.RefObject<HTMLDivElement | null> }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    const el = source.current;
+    if (!el) return;
+    const html = el.innerHTML;
+    const text = el.innerText.trim();
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+    } catch {
+      // The async clipboard can be unavailable (window not focused); copy a
+      // selection of the reply instead, which carries the formatting too.
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      document.execCommand('copy');
+      sel?.removeAllRanges();
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      aria-label="Copy reply"
+      className="mt-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-ink-secondary opacity-70 transition-opacity hover:bg-surface-muted hover:opacity-100 group-hover:opacity-100"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+      </svg>
+      {copied ? 'Copied' : 'Copy'}
+    </button>
   );
 }
 
@@ -997,66 +1079,22 @@ function slashHelpText(): string {
   ].join('\n');
 }
 
-// Plain-English name for each browser action. The tool name and its raw
-// arguments are still shown underneath when the feed is expanded; this is the
-// line a person reads.
-const ACTION_VERB: Record<string, string> = {
-  navigate: 'Opening',
-  read_page: 'Reading the page',
-  getPageMetadata: 'Checking the page',
-  extract: 'Pulling data off the page',
-  listLinks: 'Looking at the links',
-  getSelection: 'Reading the selection',
-  click: 'Clicking',
-  type: 'Typing',
-  press_key: 'Pressing a key',
-  scroll: 'Scrolling',
-  wait_for: 'Waiting for the page',
-  screenshot: 'Taking a screenshot',
-  new_tab: 'Opening a new tab',
-  switch_tab: 'Switching tabs',
-  close_tab: 'Closing a tab',
-  list_tabs: 'Checking open tabs',
-  go_back: 'Going back',
-  go_forward: 'Going forward',
-  reload: 'Reloading',
-};
-
-// Pull the interesting argument out of the raw call so the summary can name
-// what it acted on ("Opening example.com") instead of just the verb.
-function describeTarget(step: AgentStepEvent): string {
-  if (step.kind !== 'tool_call') return '';
-  const input = step.input as Record<string, unknown> | undefined;
-  const url = typeof input?.url === 'string' ? input.url : '';
-  if (url) {
-    try {
-      return new URL(url).hostname.replace(/^www\./, '');
-    } catch {
-      return url;
-    }
-  }
-  const target = typeof input?.target === 'string' ? input.target : '';
-  return target ? `“${target}”` : '';
-}
-
-function humanStep(step: AgentStepEvent | undefined): string | null {
-  if (!step) return null;
-  switch (step.kind) {
-    case 'thinking':
-      return 'Thinking…';
-    case 'tool_call': {
-      const verb = ACTION_VERB[step.toolName] ?? step.toolName;
-      const target = describeTarget(step);
-      return target ? `${verb} ${target}` : verb;
-    }
-    // Results and the final text are not their own line: the action already
-    // said what was happening, and the answer renders as a message.
-    case 'tool_result':
-    case 'text':
-      return null;
-    case 'error':
-      return step.message;
-    case 'done':
-      return 'Done';
-  }
+// A task that used its whole step budget stops with a partial answer. Offer to
+// carry on with a bigger budget, rather than making the user rephrase it.
+function BudgetSpent({ steps, onContinue }: { steps: AgentStepEvent[]; onContinue: (budget: number) => void }) {
+  const spent = steps.find((s): s is Extract<AgentStepEvent, { kind: 'budget' }> => s.kind === 'budget' && s.exhausted);
+  if (!spent) return null;
+  const next = Math.min(200, spent.total + Math.max(20, Math.round(spent.total / 2)));
+  return (
+    <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-[12px] text-ink-primary">
+      <span>This task used its whole step budget ({spent.total} steps).</span>
+      <button
+        type="button"
+        onClick={() => onContinue(next)}
+        className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-primary-hover"
+      >
+        Continue with {next} steps
+      </button>
+    </div>
+  );
 }

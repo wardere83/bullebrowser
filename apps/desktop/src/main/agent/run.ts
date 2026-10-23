@@ -1,3 +1,5 @@
+import { connectorTools } from '@bullebrowser/agent-core';
+import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
 // (skill-aware), wires the ToolContext to the active tab, runs the loop,
 // and forwards every step over IPC to the renderer.
@@ -6,15 +8,20 @@ import { randomUUID } from 'node:crypto';
 import { type BrowserWindow } from 'electron';
 import {
   DEFAULT_MODEL,
+  BROWSER_SYSTEM as BASE_SYSTEM,
+  FUNDING_GENERAL,
+  FUNDING_WORKFLOW_IDS,
   findSkill,
   providerFor,
   runAgent,
   type AgentStep,
+  type ActionPreview,
   type ToolContext,
 } from '@bullebrowser/agent-core';
 import {
   IPC,
   type AgentConfirmRequest,
+  type AgentResultEvent,
   type AgentRunRequest,
 } from '../../shared/ipc.js';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
@@ -27,6 +34,9 @@ import { getSettings } from '../storage/settings.js';
 import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError } from './errors.js';
 import { buildAttachmentAppendix, type AttachmentSources } from './attachments.js';
+import { groundChat, type ChatGrounding } from '../funding/grounding.js';
+import { fundingPlatform } from '../funding/platform.js';
+import { identityService } from '../identity/service.js';
 
 // The real, store-backed resolvers. buildAttachmentAppendix takes these by
 // injection so it can be unit-tested without booting Electron.
@@ -49,53 +59,13 @@ interface ActiveRun {
 
 const runs = new Map<string, ActiveRun>();
 
-const BASE_SYSTEM = [
-  "You are the BulleBrowser agent — an autonomous web agent with direct control",
-  "of the user's real desktop browser. You complete tasks by actually driving the",
-  'browser (navigating, reading, clicking, typing), the way a person would, not by',
-  'answering from memory.',
-  '',
-  'Tools: navigate, read_page (any tab via tabId), extract (structured data),',
-  'listLinks, getSelection, getPageMetadata, click, type, press_key',
-  '(Enter/Tab/Arrows), scroll, screenshot, wait_for, and tab management (new_tab,',
-  'switch_tab, close_tab, go_back, go_forward, reload, list_tabs).',
-  '',
-  'Method — work in a perceive → plan → act → observe loop:',
-  '1. Perceive: check where you are (the current tab is provided; use read_page or',
-  '   list_tabs to orient). Do not assume page contents — read them.',
-  '2. Plan the smallest sequence of real browser actions that satisfies the task.',
-  '3. Act one step at a time, then observe the tool result before the next step.',
-  '4. Adapt: if a page differs from what you expected, re-read and re-plan.',
-  '',
-  'Browsing effectively:',
-  '- To find information you do not already have, search: navigate to',
-  '  https://duckduckgo.com/?q=<query> (or google/bing), read_page the results,',
-  '  then open the most relevant results and read those pages before answering.',
-  '- After navigate or a click that loads new content, use wait_for',
-  '  (selector or networkIdle) before read_page when the page renders',
-  '  client-side, so you read the finished page rather than a loading state.',
-  '- Prefer read_page/extract over screenshot; use screenshot only when the task',
-  '  is genuinely visual (layout, charts, images).',
-  '- To type into a field: type the text, then press_key Enter to submit search',
-  '  boxes. Use extract for tables/lists/structured data.',
-  '- To compare or summarize several sources, open them in tabs and read_page each',
-  '  by tabId (no need to switch focus).',
-  '',
-  'Safety — these require the user to confirm first; do not do them unprompted:',
-  'submitting forms that send the user\'s data, completing purchases or payments,',
-  'deleting or sending anything, uploading files, or downloading files. If a step',
-  'needs one of these, the browser will prompt the user; respect their decision.',
-  '',
-  'Answering:',
-  '- Ground every factual claim in a page you actually read during this task. Do',
-  '  not answer from prior knowledge when the answer depends on current, live, or',
-  '  page-specific facts.',
-  '- When you have enough to answer, stop browsing and give a clear, well-',
-  '  structured reply in Markdown, citing the source URLs you used. Do not keep',
-  '  browsing past what the task needs.',
-  '- If you reach the 25 tool-call limit, summarize what you found so far and ask',
-  '  the user how to proceed.',
-].join('\n');
+
+const NO_GROUNDING = (now: number): ChatGrounding => ({
+  organizationId: null,
+  referenceContext: [],
+  tools: [],
+  systemNote: `Today's date on the user's device is ${new Date(now).toISOString().slice(0, 10)}.`,
+});
 
 export async function startAgentRun(
   win: BrowserWindow,
@@ -106,8 +76,24 @@ export async function startAgentRun(
   // confusing 401.
   const model = req.model ?? getSettings().defaultModel ?? DEFAULT_MODEL;
   const apiKey = getApiKey(providerFor(model));
-  const conversation = conversationStore.get(req.conversationId);
+
+  const controller = new AbortController();
+  // What the run may know about the active organization. A failure here must
+  // not stop the chat: the run then simply has no organization material.
+  const grounding = await groundChat(fundingPlatform(), identityService, {
+    ...(req.focusRfpId ? { focusRfpId: req.focusRfpId } : {}),
+    signal: controller.signal,
+    now: Date.now(),
+  }).catch((err: unknown) => {
+    console.error('[agent] could not ground the run in the organization', err);
+    return NO_GROUNDING(Date.now());
+  });
+
+  // A chat belongs to the organization it was first used under, and is not
+  // continued under another one.
+  const conversation = conversationStore.get(req.conversationId, grounding.organizationId);
   if (!conversation) throw new Error('Conversation not found');
+  if (grounding.organizationId) conversationStore.bind(req.conversationId, grounding.organizationId);
 
   // Store the user's message CLEAN (what they typed), but hand the model an
   // enriched version that folds in any attached file/project/screenshot
@@ -132,9 +118,7 @@ export async function startAgentRun(
     console.error('[agent] could not resolve attachments; running without them', err);
   }
 
-  const runId = req.runId ?? randomUUID();
-  if (runs.has(runId)) throw new Error('Run already exists');
-  const controller = new AbortController();
+  const runId = randomUUID();
   const pendingConfirms = new Map<string, (approved: boolean) => void>();
   runs.set(runId, { controller, pendingConfirms });
 
@@ -157,25 +141,41 @@ export async function startAgentRun(
     });
 
   const runtime = new DesktopToolRuntime({
-    request: (message: string) => ask(message, 'destructive'),
-  }, controller.signal);
+    request: (message: string, preview?: ActionPreview) => ask([
+      message,
+      preview?.summary,
+      preview?.url ? `Destination: ${preview.url}` : undefined,
+      ...(preview?.fields ?? []).map((field) => `${field.label}: ${field.value}`),
+      ...(preview?.files ?? []).map((file) => `File: ${file.name}`),
+      preview?.note,
+    ].filter(Boolean).join('\n'), 'destructive'),
+  }, (tabId) => {
+    // Consent is handled by the tool executor before the runtime touches the
+    // page. Late operations after Stop must not restore the browsing effect.
+    if (!controller.signal.aborted) {
+      // Each source being inspected is shown in the left browsing pane.
+      if (tabManager.getActiveId() !== tabId) tabManager.activate(tabId);
+      tabManager.setBrowsingActivity(runId, tabId);
+    }
+  }, 'default', controller.signal);
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
-  // The compliance skill now exists, so this reaches the user's checklist from
-  // Settings and appends it to the skill's own prompt.
-  const userChecklist =
-    skill?.id === 'compliance_review' ? getSettings().complianceChecklist : [];
-  const checklistAppendix =
-    userChecklist.length > 0
-      ? '\n\nUser-provided checklist items (run these in addition to the defaults above, using the same Status legend):\n' +
-        userChecklist.map((i) => `- ${i}`).join('\n')
-      : '';
-  const systemPrompt = skill
-    ? `${BASE_SYSTEM}\n\n${skill.systemPrompt}${checklistAppendix}`
-    : BASE_SYSTEM;
+  const isFundingWorkflow = !!skill && (FUNDING_WORKFLOW_IDS as readonly string[]).includes(skill.id);
+  const systemPrompt = [
+    BASE_SYSTEM,
+    skill ? skill.systemPrompt : '',
+    // A funding workflow carries the funding rules itself.
+    isFundingWorkflow ? '' : FUNDING_GENERAL,
+    grounding.systemNote,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const startTabId = activeTabId;
   const ctx: ToolContext = {
+    beforeBrowserAction: (name, args) => runtime.presentAction(
+      typeof args.tabId === 'string' ? args.tabId : ctx.activeTabId, name, controller.signal,
+    ),
     // A live getter, not a snapshot. new_tab and switch_tab change which tab is
     // really active, so a value captured at run start goes stale the moment the
     // agent opens a tab: it would go on reading the new tab (those tools take an
@@ -193,26 +193,41 @@ export async function startAgentRun(
   void (async () => {
     let assistantText = '';
     let lastText = '';
-    let terminal: AgentStepEvent = { kind: 'done', ts: Date.now() };
+    let status: AgentResultEvent['status'] = 'completed';
+    let error: string | undefined;
     try {
       assistantText = await runAgent({
         apiKey: apiKey ?? undefined,
+        researchMode: true,
+        browserTask: req.browserTask,
         model,
         systemPrompt,
         history: conversation.messages
           .filter((m) => m !== userMsg)
           .map((m) => ({ role: m.role, content: m.content })),
         userMessage: composedMessage,
+        userRequest: req.userMessage,
+        // Sealed by the loop as reference material; never part of the instructions.
+        ...(grounding.referenceContext.length > 0 ? { referenceContext: grounding.referenceContext } : {}),
+        extraTools: [...grounding.tools, ...connectorTools({
+          enabled: async () => enabledConnectors(),
+          catalog: async () => connectorCatalog(),
+          authorize: () => ask('Allow this task to open an enabled connector in your browser?', 'browse_access'),
+          open: async (_id, url) => tabManager.create(url),
+        })],
         context: ctx,
-        requestBrowseAccess: () => ask(req.userMessage, 'browse_access'),
+        // Choosing a browser task and submitting its answer explicitly starts browsing.
+        requestBrowseAccess: req.browserTask ? undefined : () => ask(req.userMessage, 'browse_access'),
+        budget: req.budget ?? getSettings().stepBudget,
         onStep: (step) => {
-          // Terminal notification must follow persistence, not precede it.
-          if (step.type === 'done') return;
           // Keep the model's own prose as it streams. If the run later dies
           // (context limit, network drop), the finally block can still persist
           // what it had actually worked out instead of throwing the whole
           // research away and leaving the conversation with only the question.
           if (step.type === 'text' && step.detail) lastText = step.detail;
+          // Publish completion after the final answer has been saved, so both
+          // the chat refresh and a waiting voice tool receive the same result.
+          if (step.type === 'done') return;
           win.webContents.send(IPC.AGENT_STEP, {
             runId,
             step: stepToEvent(step),
@@ -224,23 +239,44 @@ export async function startAgentRun(
       // an abort error. That's not a failure — don't alarm the user with a red
       // error, just keep whatever the agent had already written and end.
       if (isCancellation(err)) {
+        status = 'cancelled';
         if (lastText) assistantText = `${lastText}\n\n_(Stopped.)_`;
       } else {
+        status = 'failed';
+        error = describeAgentError(err);
         if (lastText) {
-          assistantText = `${lastText}\n\n_(This task stopped early: ${describeAgentError(err)})_`;
+          assistantText = `${lastText}\n\n_(This task stopped early: ${error})_`;
         }
-        terminal = { kind: 'error', message: describeAgentError(err), ts: Date.now() };
       }
     } finally {
-      if (assistantText) {
-        conversationStore.appendMessage(req.conversationId, {
-          role: 'assistant',
-          content: assistantText,
-          timestamp: Date.now(),
-        });
+      tabManager.clearBrowsingActivity(runId);
+      try {
+        if (assistantText) {
+          conversationStore.appendMessage(req.conversationId, {
+            role: 'assistant',
+            content: assistantText,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (err) {
+        console.error('[agent] could not save the final answer', err);
+        status = 'failed';
+        error = 'The task finished, but its answer could not be saved.';
       }
       runs.delete(runId);
-      if (!win.isDestroyed()) win.webContents.send(IPC.AGENT_STEP, { runId, step: terminal });
+      win.webContents.send(IPC.AGENT_STEP, {
+        runId,
+        step: status === 'failed'
+          ? { kind: 'error', message: error ?? 'The task could not finish.', ts: Date.now() }
+          : { kind: 'done', ts: Date.now() },
+      });
+      win.webContents.send(IPC.AGENT_RESULT, {
+        runId,
+        conversationId: req.conversationId,
+        status,
+        text: assistantText,
+        ...(error ? { error } : {}),
+      } satisfies AgentResultEvent);
     }
   })();
 
@@ -264,6 +300,7 @@ export function cancelAgentRun(runId: string) {
   const run = runs.get(runId);
   if (!run) return;
   run.controller.abort();
+  tabManager.clearBrowsingActivity(runId);
   // Deny anything still waiting on the user. Without this, a run cancelled
   // while an "Allow Access" prompt is open leaves that promise unresolved and
   // the agent loop parked on it forever.
@@ -306,8 +343,27 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
     case 'text':
       return { kind: 'text', text: step.detail ?? '', ts };
     case 'error':
-      return { kind: 'error', toolName: step.toolName, message: step.detail ?? '', ts };
+      return {
+        kind: 'error',
+        toolName: step.toolName,
+        message: step.detail ?? '',
+        ...((step.data as { code?: string } | undefined)?.code ? { code: (step.data as { code: string }).code } : {}),
+        ts,
+      };
+    case 'budget': {
+      const d = (step.data ?? {}) as { used?: number; total?: number; exhausted?: boolean };
+      return {
+        kind: 'budget',
+        detail: step.detail ?? '',
+        used: d.used ?? 0,
+        total: d.total ?? 0,
+        exhausted: !!d.exhausted,
+        ts,
+      };
+    }
     case 'done':
       return { kind: 'done', ts };
   }
 }
+
+export function hasActiveAgentRuns(): boolean { return runs.size > 0; }

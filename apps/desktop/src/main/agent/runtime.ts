@@ -1,25 +1,81 @@
-// ToolRuntime implementation that drives the active WebContentsView via
-// the Chrome DevTools Protocol (CDP). All of agent-core's tools are
-// implemented here in terms of CDP commands and renderer evaluations.
+import { presentationPause } from './browser/presentation.js';
+// ToolRuntime implementation that drives the active WebContentsView. Page
+// actions run as scripts injected with executeJavaScript (see the in-page
+// helpers at the bottom); keys go through sendInputEvent, and navigation
+// through the tab manager.
 
-import type { TabSummary, ToolRuntime } from '@bullebrowser/agent-core';
-import type { WebContents } from 'electron';
+import {
+  ToolError,
+  levelAllows,
+  type ActionPreview,
+  type KeyName,
+  type PermissionAsk,
+  type PermissionLevel,
+  type TabSummary,
+  type TargetFacts,
+  type ToolRuntime,
+} from '@bullebrowser/agent-core';
+import { originOf, sitePermissions } from '../storage/site-permissions.js';
+import type { WebContents, WebFrameMain } from 'electron';
 import { tabManager } from '../tabs/manager.js';
+import { assertWebUrl, evalPage, frameOffset, hostOf, inFrames, subFrames } from './browser/frames.js';
+import { pageQuiet, settleAfter, type WaitMode } from './browser/settle.js';
+import { waitForNetworkIdle } from './browser/net-activity.js';
+import { dismissConsent, describeConsent } from './browser/consent.js';
+import { recordRefs, refPrelude } from './browser/refs.js';
+import { KEY_DEFS, insertLines, pressWith, withInput } from './browser/input.js';
+import {
+  AGENT_CURSOR,
+  CLICK_FN,
+  CLICK_SPOT_FN,
+  EXTRACT_READABLE_TEXT,
+  EXTRACT_STRUCTURED,
+  LIST_LINKS,
+  PAGE_HELPERS,
+  QUERY_DOM_FN,
+  READABLE_TEXT_EXPR,
+  SCROLL_FN,
+  TYPE_FN,
+  WAIT_FOR_SELECTOR,
+  PREVIEW_FN,
+  type ClickSpot,
+} from './browser/page-scripts.js';
 
 export interface ConfirmDelegate {
-  request(message: string): Promise<boolean>;
+  /** A consequential action: approve or decline, with what it will send. */
+  request(message: string, preview?: ActionPreview): Promise<boolean>;
+  /** A site needs a higher permission level for this action. */
+  permission?(ask: {
+    origin: string;
+    level: PermissionLevel;
+    action: string;
+    preview?: ActionPreview;
+  }): Promise<'once' | 'always' | 'deny'>;
 }
 
-export class DesktopToolRuntime implements ToolRuntime {
-  private touched = new Set<WebContents>();
-  private readonly actionId = `${Date.now()}-${Math.random()}`;
+// Screenshots go to the model as images; a full-resolution Retina capture can
+// pass the API's per-image size limit and fail the whole request.
+const SCREENSHOT_MAX_WIDTH = 1280;
 
-  constructor(private confirmDelegate: ConfirmDelegate, private signal?: AbortSignal) {
+export class DesktopToolRuntime implements ToolRuntime {
+  private readonly touched = new Set<WebContents>();
+  private readonly actionId = `${Date.now()}-${Math.random()}`;
+  // Levels the user allowed for this task only ("Allow once").
+  private readingPresentation: { tabId: string; signal: AbortSignal } | undefined;
+  private readonly grantedForTask = new Map<string, PermissionLevel>();
+
+  constructor(
+    private confirmDelegate: ConfirmDelegate,
+    private onPageActivity?: (tabId: string) => void,
+    private readonly profile = 'default',
+    private readonly signal?: AbortSignal,
+  ) {
     signal?.addEventListener('abort', () => {
       for (const wc of this.touched) {
         if (wc.isDestroyed()) continue;
-        // Queue this in the same renderer before any pending action timer.
-        void wc.executeJavaScript(`window.__bbCancelledRun = ${JSON.stringify(this.actionId)}`).catch(() => {});
+        for (const frame of wc.mainFrame.framesInSubtree) {
+          void frame.executeJavaScript(`window.__bbCancelledRun = ${JSON.stringify(this.actionId)}`).catch(() => {});
+        }
         wc.stop();
       }
       this.touched.clear();
@@ -29,78 +85,297 @@ export class DesktopToolRuntime implements ToolRuntime {
   private wcFor(tabId: string): WebContents {
     if (this.signal?.aborted) throw new Error('cancelled');
     const view = tabManager.getView(tabId);
-    if (!view) throw new Error(`Tab not found: ${tabId}`);
+    if (!view || view.webContents.isDestroyed()) throw new ToolError('TARGET_CLOSED', `Tab not found: ${tabId}`);
+    this.onPageActivity?.(tabId);
     this.touched.add(view.webContents);
     return view.webContents;
   }
 
-  async navigate(tabId: string, url: string) {
+  async presentAction(tabId: string, name: string, signal: AbortSignal): Promise<void> {
+    if (signal.aborted) throw new Error('cancelled');
     const wc = this.wcFor(tabId);
-    // Second line of defence behind the navigate schema's allowlist: the agent
-    // drives a real browser holding the user's live sessions, so a file: or
-    // data: URL reaching this point (from a future caller, or a tool that skips
-    // validation) must still not open.
-    let scheme: string;
+    await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
+      const element = document.querySelector('main h1, article h1, h1, main p, article p');
+      const rect = element?.getBoundingClientRect();
+      if (rect && rect.top >= 0 && rect.bottom < innerHeight) window.__bbCursor(element, { halo: true });
+      else window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
+    })()` ).catch(() => {});
+    await presentationPause(380, signal);
+    this.readingPresentation = name === 'read_page' ? { tabId, signal } : undefined;
+  }
+
+  // What every targeted page call starts with: the helpers, this frame's ref
+  // state (numbering, and the fingerprint of a targeted ref) and the cursor.
+  private prelude(wc: WebContents, withCursor = true) {
+    return (frame: WebFrameMain, target: string) =>
+      `window.__bbRunId = ${JSON.stringify(this.actionId)}; ${PAGE_HELPERS}; ${refPrelude(wc, frame, target)}${withCursor ? `; ${AGENT_CURSOR}` : ''}`;
+  }
+
+  // After a page loads: clear any cookie banner, and say so.
+  private async afterLoad(wc: WebContents, mode: WaitMode): Promise<{ consent?: string }> {
+    if (mode === 'none') return {};
+    const hit = await dismissConsent(wc);
+    return hit ? { consent: describeConsent(hit) } : {};
+  }
+
+  async navigate(tabId: string, url: string, opts: { wait?: WaitMode } = {}) {
+    const wc = this.wcFor(tabId);
+    // Second line of defence behind the navigate schema's allowlist.
+    assertWebUrl(url);
+    const mode = opts.wait ?? 'idle';
+    let status: number | undefined;
+    const onNavigate = (_e: unknown, _url: string, code: number) => {
+      status = code;
+    };
+    wc.on('did-navigate', onNavigate);
     try {
-      scheme = new URL(url).protocol;
-    } catch {
-      throw new Error(`Not a valid URL: ${url}`);
-    }
-    if (scheme !== 'http:' && scheme !== 'https:') {
-      throw new Error(
-        `Refusing to open a ${scheme} URL. The agent may only open http:// and https:// pages.`,
+      await settleAfter(
+        wc,
+        async () => {
+          let timer: NodeJS.Timeout | undefined;
+          try {
+            await Promise.race([
+              wc.loadURL(url),
+              new Promise((_, reject) => {
+                timer = setTimeout(
+                  () => reject(new ToolError('NAVIGATION_TIMEOUT', `${url} did not finish loading within 30 seconds.`)),
+                  30_000,
+                );
+              }),
+            ]);
+          } catch (e) {
+            if (e instanceof ToolError) throw e;
+            // loadURL rejects with ERR_ABORTED on perfectly ordinary events: a
+            // redirect, a client-side navigation, a URL that turns into a
+            // download. What ended up on screen is what counts.
+            const code = (e as { code?: string }).code ?? '';
+            if (code === 'ERR_ABORTED') return;
+            if (code === 'ERR_NETWORK_CHANGED') throw new ToolError('NETWORK_CHANGED', `net::${code} while loading ${url}`);
+            throw new ToolError('NETWORK_ERROR', `Could not load ${url} (net::${code || 'error'}).`);
+          } finally {
+            clearTimeout(timer);
+          }
+        },
+        mode,
       );
+    } finally {
+      if (!wc.isDestroyed()) wc.off('did-navigate', onNavigate);
     }
-    // loadURL rejects with ERR_ABORTED (-3) on perfectly ordinary events: a
-    // redirect, a client-side navigation, or a URL that turns into a download.
-    // The rest of the codebase already ignores -3 (see tabs/manager.ts); this
-    // path used to propagate it, so the tool reported failure while the page
-    // sat loaded in the tab. Report what actually ended up on screen instead.
-    await wc.loadURL(url).catch(() => {});
-    // A page load wipes the overlay with the old document, so the agent would
-    // be invisible on a fresh page until its first click. Put the pointer back
-    // straight away, parked where a person's would be, so the user can see the
-    // agent is on the page and follow it from the first move rather than having
-    // a cursor appear from nowhere mid-action.
+    const extra = await this.afterLoad(wc, mode);
+    // A page load wipes the overlay with the old document; put the pointer
+    // back where a person's would be, so the user can follow the agent.
     await wc
       .executeJavaScript(
         `${AGENT_CURSOR}; window.__bbCursorTo(Math.round(window.innerWidth * 0.28), Math.round(window.innerHeight * 0.3));`,
       )
-      .catch(() => {
-        // about:blank, an error page, a PDF viewer — nothing to draw on, and
-        // the navigation itself still succeeded.
-      });
-    return { url: wc.getURL(), title: wc.getTitle() };
+      .catch(() => {});
+    if (status !== undefined && status >= 400) {
+      throw new ToolError(
+        'HTTP_ERROR',
+        `${wc.getURL()} answered HTTP ${status}${wc.getTitle() ? ` ("${wc.getTitle()}")` : ''}. The page is loaded; read_page shows what it says.`,
+      );
+    }
+    return { url: wc.getURL(), title: wc.getTitle(), ...(status ? { status } : {}), ...extra };
   }
 
   async readPage(tabId: string) {
+    const presentation = this.readingPresentation?.tabId === tabId ? this.readingPresentation : undefined;
+    this.readingPresentation = undefined;
     const wc = this.wcFor(tabId);
     const result = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as
       | { text: string }
       | { error: string };
-    if ('error' in result) {
+    // Embedded frames are read too: the body of Word/PowerPoint Online, Google
+    // Docs' editor, embedded forms and payment widgets all live in iframes the
+    // top page's text never includes.
+    const framed: string[] = [];
+    for (const { frame, index } of subFrames(wc).slice(0, 6)) {
+      try {
+        const r = await evalPage<{ text?: string }>(frame, '', READABLE_TEXT_EXPR);
+        if (r.text) framed.push(`\n\n--- Embedded frame ${index} (${hostOf(frame.url)}) ---\n${r.text}`);
+      } catch {
+        /* a frame mid-navigation or without a document — skip it */
+      }
+    }
+    if ('error' in result && framed.length === 0) {
       throw new Error(
         `${result.error} The read_page tool only supports HTML pages. ` +
           `For PDFs or other documents, ask the user to convert to HTML or paste the text directly.`,
       );
     }
-    return { title: wc.getTitle(), url: wc.getURL(), text: result.text };
+    const text = (('text' in result ? result.text : '') + framed.join('')).slice(0, 40_000);
+    if (presentation && text.trim()) {
+      if (presentation.signal.aborted) throw new Error('cancelled');
+      // Scan actual source content at a visible tempo. Respect reduced motion.
+      await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
+        const page = document.scrollingElement || document.documentElement;
+        if (page.scrollHeight > innerHeight * 1.3) window.scrollBy({ top: Math.round(innerHeight * .6), behavior: (window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'instant' : 'smooth' });
+        window.__bbCursorTo(Math.round(innerWidth * .42), Math.round(innerHeight * .55));
+      })()`).catch(() => {});
+      await presentationPause(550, presentation.signal);
+    }
+    return { title: wc.getTitle(), url: wc.getURL(), text };
   }
 
-  async click(tabId: string, target: string) {
+  async click(tabId: string, target: string, opts: { wait?: WaitMode } = {}) {
     const wc = this.wcFor(tabId);
-    const matched = (await wc.executeJavaScript(
-      `${DEEP_QUERY}; ${AGENT_CURSOR}; (${CLICK_FN.toString()})(${JSON.stringify(target)}, ${JSON.stringify(this.actionId)})`,
-    )) as string;
-    return { matched };
+    const mode = opts.wait ?? 'idle';
+    const before = wc.getURL();
+    let matched = '';
+    await settleAfter(wc, async () => {
+      // Find it, bring it into view and show the cursor on it...
+      const { value: spot, frame } = await inFrames<ClickSpot>(
+        wc,
+        target,
+        this.prelude(wc),
+        (t) => `(${CLICK_SPOT_FN.toString()})(${JSON.stringify(t)})`,
+      );
+      matched = spot.matched;
+      // ...then press it with the real mouse, like a person: editors such as
+      // Word Online place their cursor only on a real click, and many menus
+      // ignore synthetic events. That needs the element's place on screen,
+      // including the offset of any frame it sits in; if that can't be worked
+      // out, or something covers the element, click it directly instead.
+      const offset = spot.onTop ? await frameOffset(wc, frame) : null;
+      if (offset) {
+        if (this.signal?.aborted) throw new Error('cancelled');
+        const x = offset.x + spot.x;
+        const y = offset.y + spot.y;
+        await withInput(wc, async (send) => {
+          if (this.signal?.aborted) throw new Error('cancelled');
+          await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+        }, this.signal);
+      } else {
+        try {
+          // The element as marked a moment ago, or — if the page re-rendered
+          // since — the same target looked up afresh.
+          await evalPage<void>(
+            frame,
+            this.prelude(wc)(frame, target),
+            `(function (t) {
+              try { return (${CLICK_FN.toString()})(${JSON.stringify(spot.ref)}); }
+              catch (e) { return (${CLICK_FN.toString()})(t); }
+            })(${JSON.stringify(target.replace(/^\s*@\d+\.(\d+)\s*$/, '@$1'))})`,
+          );
+        } catch (e) {
+          // The click itself can tear down the document it ran in (it
+          // navigated). That is the click working, not failing — and it must
+          // not be retried.
+          if (!/context was destroyed|frame was disposed|Render frame was disposed/i.test((e as Error).message)) throw e;
+        }
+      }
+    }, mode);
+    const extra = wc.getURL() !== before ? await this.afterLoad(wc, mode) : {};
+    return { matched, url: wc.getURL(), ...extra };
   }
 
   async type(tabId: string, target: string, text: string) {
     const wc = this.wcFor(tabId);
-    const matched = (await wc.executeJavaScript(
-      `${DEEP_QUERY}; ${AGENT_CURSOR}; (${TYPE_FN.toString()})(${JSON.stringify(target)}, ${JSON.stringify(text)}, ${JSON.stringify(this.actionId)})`,
-    )) as string;
-    return { matched };
+    // Focus the tab first, so the element focused below becomes the page's
+    // focused element and native text input lands in it.
+    wc.focus();
+    // "focused": type where the cursor already is — typically right after
+    // clicking into a document — in whatever frame holds it.
+    if (/^\s*(focused|cursor|caret)\s*$/i.test(target)) {
+      if (text) await withInput(wc, (send) => insertLines(send, text), this.signal);
+      return { matched: 'the focused element' };
+    }
+    const { value } = await inFrames<{ matched: string; native: boolean }>(
+      wc,
+      target,
+      this.prelude(wc),
+      (t) => `(${TYPE_FN.toString()})(${JSON.stringify(t)}, ${JSON.stringify(text)})`,
+    );
+    // Rich editors (Word and PowerPoint Online, Google Docs, Gmail, Notion)
+    // keep their own document model and ignore text written into the DOM.
+    // This is real text input to the focused element, in whatever frame it
+    // lives — it goes through the editor's own input handling, at the cursor
+    // TYPE_FN placed. Line breaks are pressed as Enter, as a typist would.
+    if (value.native && text) await withInput(wc, (send) => insertLines(send, text), this.signal);
+    return { matched: value.matched };
+  }
+
+  async selectOption(tabId: string, target: string, option: string) {
+    const wc = this.wcFor(tabId);
+    const { value } = await inFrames<string>(wc, target, this.prelude(wc), (t) =>
+      `(function (t, o) {
+        var el = __bb.FindField(t);
+        el.scrollIntoView({ block: 'center' });
+        window.__bbCursor(el, { click: true });
+        return __bb.Select(el, o);
+      })(${JSON.stringify(t)}, ${JSON.stringify(option)})`,
+    );
+    return { matched: value };
+  }
+
+  async findElements(tabId: string, query?: string) {
+    const wc = this.wcFor(tabId);
+    const q = JSON.stringify(query ?? '');
+    type Found = { lines: string[]; fps: Record<string, Record<string, unknown>>; seq: number };
+    const list = async (frame: WebFrameMain): Promise<string[]> => {
+      const found = await evalPage<Found>(frame, this.prelude(wc, false)(frame, ''), `__bb.FindElements(${q})`);
+      recordRefs(wc, frame, found);
+      return found.lines;
+    };
+    const elements = await list(wc.mainFrame);
+    // Controls inside embedded frames get frame-qualified refs ("@12.7" is ref
+    // 7 in frame 12), and each frame is labelled with what it is for.
+    for (const { frame, index, purpose } of subFrames(wc)) {
+      if (purpose === 'ad') continue;
+      try {
+        const inner = await list(frame);
+        if (!inner.length) continue;
+        const alias = purpose === 'content' ? '' : ` — target it as "${purpose}:<name>"${purpose === 'editor' ? ', or type into "editor"' : ''}`;
+        elements.push(`— embedded frame ${index} [${purpose}] (${hostOf(frame.url)})${alias} —`);
+        for (const line of inner) elements.push(line.replace(/^@(\d+)/, `@${index}.$1`));
+      } catch {
+        /* unreadable frame — skip */
+      }
+    }
+    return { elements: elements.slice(0, 220) };
+  }
+
+  async inspectTarget(
+    tabId: string,
+    target: string | null,
+    key: 'Enter' | 'Space' = 'Enter',
+  ): Promise<TargetFacts> {
+    const wc = this.wcFor(tabId);
+    if (target === null) {
+      // A key goes to whichever frame holds focus. Embedded frames are asked
+      // first, and a document whose focused element is itself a frame is
+      // skipped: the top page "has focus" whenever a child frame does, so
+      // asking it first reported the <iframe>, not the sign-up form inside.
+      const frames = [...subFrames(wc).map((f) => f.frame).reverse(), wc.mainFrame];
+      let unreadable = false;
+      for (const frame of frames) {
+        try {
+          const facts = await evalPage<TargetFacts | null>(
+            frame,
+            PAGE_HELPERS,
+            `(function () {
+              if (!document.hasFocus()) return null;
+              var el = __bb.Focused();
+              if (/^(IFRAME|FRAME)$/.test(el.tagName)) return null;
+              return __bb.Facts(el, ${JSON.stringify(key)});
+            })()`,
+          );
+          if (facts) return facts;
+        } catch {
+          unreadable = true;
+        }
+      }
+      // Could not tell where the key would land: ask rather than guess.
+      if (unreadable) throw new Error('Could not inspect the focused element.');
+      return { label: '', submitsForm: false, activates: false };
+    }
+    return (
+      await inFrames<TargetFacts>(wc, target, this.prelude(wc, false), (t) =>
+        `__bb.Facts(__bb.FindClickable(${JSON.stringify(t)}), 'click')`,
+      )
+    ).value;
   }
 
   async extract(tabId: string, schema: Record<string, unknown>) {
@@ -145,12 +420,44 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async screenshot(tabId: string) {
     const wc = this.wcFor(tabId);
-    const image = await wc.capturePage();
-    return { pngBase64: image.toPNG().toString('base64') };
+    // Decorative activity must not obscure page evidence sent to the model.
+    return tabManager.withoutBrowsingCloud(tabId, async () => {
+      let image = await wc.capturePage();
+      if (image.getSize().width > SCREENSHOT_MAX_WIDTH) image = image.resize({ width: SCREENSHOT_MAX_WIDTH });
+      return { pngBase64: image.toPNG().toString('base64') };
+    });
   }
 
   async newTab(url?: string): Promise<TabSummary> {
-    const tab = await tabManager.create(url);
+    if (url) assertWebUrl(url);
+    // Opened from the tab the agent is on, so closing it returns the user there.
+    const tab = await tabManager.create(url, tabManager.getActiveId() ?? undefined);
+    // create() starts the load without waiting for it; the agent's next step
+    // is almost always read_page, which then read a blank or half-built page.
+    if (url) {
+      const wc = this.wcFor(tab.id);
+      if (wc.isLoading()) {
+        await new Promise<void>((resolve) => {
+          const done = () => {
+            clearTimeout(cap);
+            wc.off('did-finish-load', done);
+            wc.off('did-fail-load', onFail);
+            resolve();
+          };
+          // A failing ad or widget iframe is not the page failing.
+          const onFail = (_e: unknown, _c: number, _d: string, _u: string, isMainFrame: boolean) => {
+            if (isMainFrame) done();
+          };
+          const cap = setTimeout(done, 15_000);
+          wc.on('did-finish-load', done);
+          wc.on('did-fail-load', onFail);
+        });
+      }
+      await pageQuiet(wc);
+      const extra = await this.afterLoad(wc, 'idle');
+      const now = tabManager.list().find((t) => t.id === tab.id);
+      return { id: tab.id, title: now?.title ?? wc.getTitle(), url: wc.getURL(), active: true, ...extra };
+    }
     return { id: tab.id, title: tab.title, url: tab.url, active: tab.active };
   }
 
@@ -159,6 +466,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     const list = tabManager.list();
     const tab = list.find((t) => t.id === tabId);
     if (!tab) throw new Error(`Tab not found: ${tabId}`);
+    this.onPageActivity?.(tabId);
     return { id: tab.id, title: tab.title, url: tab.url, active: tab.active };
   }
 
@@ -230,509 +538,92 @@ export class DesktopToolRuntime implements ToolRuntime {
     return { scrolledTo: y };
   }
 
-  async pressKey(
-    tabId: string,
-    key:
-      | 'Enter'
-      | 'Tab'
-      | 'Escape'
-      | 'ArrowDown'
-      | 'ArrowUp'
-      | 'PageDown'
-      | 'PageUp',
-  ): Promise<{ pressed: string }> {
+  async pressKey(tabId: string, key: KeyName): Promise<{ pressed: string }> {
     const wc = this.wcFor(tabId);
-    // sendInputEvent with both keyDown and keyUp; "char" event covers Enter
-    // submitting forms in inputs that listen for keypress.
-    wc.focus();
-    wc.sendInputEvent({ type: 'keyDown', keyCode: key });
-    if (key === 'Enter') wc.sendInputEvent({ type: 'char', keyCode: '\r' });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: key });
+    // Enter can submit a form and load a new page, so wait for that like a click.
+    await settleAfter(wc, async () => {
+      wc.focus();
+      await withInput(wc, (send) => pressWith(send, KEY_DEFS[key]));
+    });
     return { pressed: key };
   }
 
   async waitFor(
     tabId: string,
-    condition: { selector?: string; networkIdle?: boolean; timeoutMs?: number },
+    condition: { selector?: string; text?: string; networkIdle?: boolean; timeoutMs?: number },
   ) {
     const wc = this.wcFor(tabId);
-    const timeout = Math.min(condition.timeoutMs ?? 10_000, 10_000);
+    const timeout = Math.min(condition.timeoutMs ?? 10_000, 15_000);
     if (condition.selector) {
-      const matched = (await wc.executeJavaScript(
+      const matched = await evalPage<boolean>(
+        wc,
+        PAGE_HELPERS,
         `(${WAIT_FOR_SELECTOR.toString()})(${JSON.stringify(condition.selector)}, ${timeout})`,
-      )) as boolean;
+      );
       return { matched };
     }
+    if (condition.text) {
+      // Text can appear anywhere: the page or any of its frames.
+      const needle = JSON.stringify(condition.text.toLowerCase());
+      const probe = `!!(document.body && (document.body.innerText || '').toLowerCase().indexOf(${needle}) !== -1)`;
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        for (const frame of [wc.mainFrame, ...subFrames(wc).map((f) => f.frame)]) {
+          if (await evalPage<boolean>(frame, '', probe).catch(() => false)) return { matched: true };
+        }
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      return { matched: false };
+    }
     if (condition.networkIdle) {
-      const reachedIdle = await new Promise<boolean>((resolve) => {
-        let settled = false;
-        let inFlight = 0;
-        let idleTimer: NodeJS.Timeout | null = null;
-        const wr = wc.session.webRequest;
-        // webRequest is session-wide, so without this every other tab's traffic
-        // counts too. One background tab long-polling (mail, chat, any SPA
-        // heartbeat) meant inFlight never hit zero and this always timed out.
-        const ours = (d: { webContentsId?: number }) => d.webContentsId === wc.id;
-
-        const finish = (idle: boolean) => {
-          if (settled) return;
-          settled = true;
-          if (idleTimer) clearTimeout(idleTimer);
-          clearTimeout(timeoutTimer);
-          // Pass null to detach the handlers; otherwise they leak on the
-          // session and intercept every subsequent request forever.
-          wr.onBeforeRequest(null);
-          wr.onCompleted(null);
-          wr.onErrorOccurred(null);
-          resolve(idle);
-        };
-        const armIdle = () => {
-          if (idleTimer) clearTimeout(idleTimer);
-          idleTimer = setTimeout(() => finish(true), 500);
-        };
-        const onStart = () => {
-          inFlight += 1;
-          if (idleTimer) clearTimeout(idleTimer);
-        };
-        const onEnd = () => {
-          inFlight = Math.max(0, inFlight - 1);
-          if (inFlight === 0) armIdle();
-        };
-
-        // Hard cap so we always clean up even if the page never goes idle.
-        // Timing out is NOT idle — saying otherwise sent the model off to read
-        // a half-rendered page believing it had settled.
-        const timeoutTimer = setTimeout(() => finish(false), timeout);
-        wr.onBeforeRequest({ urls: ['<all_urls>'] }, (d, cb) => {
-          if (ours(d)) onStart();
-          cb({});
-        });
-        wr.onCompleted({ urls: ['<all_urls>'] }, (d) => {
-          if (ours(d)) onEnd();
-        });
-        wr.onErrorOccurred({ urls: ['<all_urls>'] }, (d) => {
-          if (ours(d)) onEnd();
-        });
-        // Give the page a beat to actually start requesting before declaring
-        // idle. Arming immediately meant a navigate whose subresources hadn't
-        // begun within 500ms reported idle straight away.
-        setTimeout(() => {
-          if (inFlight === 0) armIdle();
-        }, 750);
-      });
-      return { matched: reachedIdle };
+      // Timing out is NOT idle — saying otherwise sent the model off to read a
+      // half-rendered page believing it had settled.
+      return { matched: await waitForNetworkIdle(wc, 500, timeout) };
     }
     return { matched: false };
   }
 
-  async confirmDestructive(message: string): Promise<boolean> {
-    return this.confirmDelegate.request(message);
+
+  async confirmDestructive(message: string, preview?: ActionPreview): Promise<boolean> {
+    return this.confirmDelegate.request(message, preview);
   }
-}
 
-// --- in-page helpers (stringified and injected) ---
-
-const EXTRACT_READABLE_TEXT = `
-  (function () {
-    const ct = (document.contentType || '').toLowerCase();
-    if (ct && !ct.includes('html') && !ct.includes('xml') && !ct.includes('text/plain')) {
-      return { error: 'Page content type is ' + ct + ' (not HTML).' };
+  async checkPermission(tabId: string, level: PermissionLevel, ask: PermissionAsk): Promise<'granted' | 'confirmed' | 'denied'> {
+    const origin = originOf(this.wcFor(tabId).getURL());
+    if (!origin) return 'granted'; // start page, about:blank — nothing to protect
+    const task = this.grantedForTask.get(origin);
+    if (levelAllows(sitePermissions.level(this.profile, origin), level) || (task && levelAllows(task, level))) {
+      return 'granted';
     }
-    if (!document.body) {
-      return { error: 'Document has no body to read.' };
-    }
-    // Read innerText off the LIVE document, not a clone. innerText is defined in
-    // terms of rendered output, so on a detached clone (which is never rendered)
-    // it silently degrades to textContent: every word boundary collapses
-    // ("Sign inRegisterPricing") and display:none content — mega-menus, cookie
-    // banners, unrendered SPA routes — gets pulled in. Reading the live node
-    // fixes both, and makes the old script/style/noscript stripping redundant:
-    // those aren't rendered, so innerText already skips them. Nothing is
-    // mutated, so the user's page is untouched.
-    const main = document.querySelector('main, article, [role="main"]') || document.body;
-    const text = (main.innerText || main.textContent || '').replace(/\\n{3,}/g, '\\n\\n').trim();
-    if (!text) {
-      return { error: 'Page is empty or rendered entirely client-side.' };
-    }
-    return { text: text.slice(0, 50_000) };
-  })();
-`;
-
-const EXTRACT_STRUCTURED = `
-  (function () {
-    const headings = Array.from(document.querySelectorAll('h1,h2,h3'))
-      .slice(0, 50)
-      .map((h) => ({ level: h.tagName, text: (h.innerText || '').trim() }));
-    const links = Array.from(document.querySelectorAll('a[href]'))
-      .slice(0, 200)
-      .map((a) => ({ text: (a.innerText || '').trim().slice(0, 120), href: a.href }));
-    const tables = Array.from(document.querySelectorAll('table'))
-      .slice(0, 10)
-      .map((t) => Array.from(t.rows).slice(0, 50).map((r) => Array.from(r.cells).map((c) => (c.innerText || '').trim())));
-    return { url: location.href, title: document.title, headings, links, tables };
-  })();
-`;
-
-const LIST_LINKS = `
-  (function () {
-    const out = [];
-    const seen = new Set();
-    for (const a of Array.from(document.querySelectorAll('a[href]'))) {
-      // Skip links the user cannot see and non-navigational hrefs, so the
-      // model isn't handed a mega-menu it can't act on.
-      const href = a.href;
-      if (!href || !/^https?:/i.test(href)) continue;
-      if (seen.has(href)) continue;
-      const rect = a.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) continue;
-      seen.add(href);
-      out.push({ text: (a.innerText || a.textContent || '').trim().slice(0, 120), href });
-      if (out.length >= 200) break;
-    }
-    return out;
-  })();
-`;
-
-function QUERY_DOM_FN(selector: string): number {
-  try {
-    return document.querySelectorAll(selector).length;
-  } catch {
-    throw new Error(`Invalid CSS selector: ${selector}`);
+    const answer = this.confirmDelegate.permission
+      ? await this.confirmDelegate.permission({ origin, level, action: ask.action, ...(ask.preview ? { preview: ask.preview } : {}) })
+      : await this.confirmDelegate.request(
+          `Allow ${ask.action} on ${origin} for this task?`, ask.preview,
+        ) ? 'once' : 'deny';
+    if (answer === 'deny') return 'denied';
+    if (answer === 'always') sitePermissions.set(this.profile, origin, level);
+    else this.grantedForTask.set(origin, level);
+    // The prompt showed this exact action (and its preview for a submit), so
+    // approving it also answers the confirmation.
+    return level === 'full' ? 'confirmed' : 'granted';
   }
-}
 
-// Walk the whole element tree including shadow roots. document.querySelector
-// does not pierce shadow DOM, so on any web-component site (YouTube's ytd-*,
-// Salesforce Lightning, most modern design systems) every click and type used
-// to fail with "No element matched" even though the control was right there.
-// Injected alongside CLICK_FN/TYPE_FN, which call it.
-// Assigned onto window so the injected CLICK_FN/TYPE_FN bodies can reach them
-// regardless of how the evaluated string is scoped.
-const DEEP_QUERY = `
-  window.__bbDeepAll = function (selector) {
-    const out = [];
-    const walk = (node) => {
-      if (!node) return;
-      let found;
-      try { found = node.querySelectorAll(selector); } catch (e) { return; }
-      for (const el of found) out.push(el);
-      // Recurse into every shadow root on this level.
-      let hosts;
-      try { hosts = node.querySelectorAll('*'); } catch (e) { return; }
-      for (const el of hosts) if (el.shadowRoot) walk(el.shadowRoot);
-    };
-    walk(document);
-    return out;
-  };
-  window.__bbDeepQuery = function (selector) {
-    const all = window.__bbDeepAll(selector);
-    return all.length ? all[0] : null;
-  };
-`;
-
-// A visible pointer for the agent's actions. The agent clicks and types through
-// the DOM, which is invisible — the page just changes and the user has no idea
-// what happened or where. This paints a cursor at the element, pulses a ring
-// where the click lands, and briefly outlines the element it acted on, so the
-// user can follow along on their own screen.
-//
-// Everything lives in a shadow root under a single host element so it cannot
-// inherit or leak page CSS, is skipped by the agent's own readers (it is added
-// after read_page runs, and carries aria-hidden), and can be torn down by
-// removing one node.
-const AGENT_CURSOR = `
-  window.__bbCursor = function (el, opts) {
-    opts = opts || {};
-    try {
-      var HOST_ID = '__bb_agent_cursor__';
-      var host = document.getElementById(HOST_ID);
-      if (!host) {
-        host = document.createElement('div');
-        host.id = HOST_ID;
-        host.setAttribute('aria-hidden', 'true');
-        host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
-        (document.body || document.documentElement).appendChild(host);
-        var root = host.attachShadow({ mode: 'open' });
-        root.innerHTML =
-          '<style>' +
-          ':host{all:initial}' +
-          '.ptr{position:fixed;width:22px;height:22px;margin:-2px 0 0 -2px;' +
-            'transition:transform .45s cubic-bezier(.22,1,.36,1);will-change:transform;' +
-            'filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}' +
-          '.ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;' +
-            'border:2px solid #20BAD1;opacity:0;pointer-events:none}' +
-          '.ring.go{animation:bb-ring .5s ease-out forwards}' +
-          '.halo{position:fixed;border:2px solid rgba(32, 186, 209,.9);border-radius:4px;' +
-            'box-shadow:0 0 0 3px rgba(32, 186, 209,.18);opacity:0;transition:opacity .2s}' +
-          '.halo.go{opacity:1}' +
-          '@keyframes bb-ring{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.2)}}' +
-          '@media (prefers-reduced-motion:reduce){.ptr{transition:none}.ring.go{animation:none}}' +
-          '</style>' +
-          '<svg class="ptr" viewBox="0 0 24 24" fill="none">' +
-            '<path d="M5 3l14 8.5-6.2 1.4L9.8 19 5 3z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/>' +
-          '</svg>' +
-          '<div class="ring"></div><div class="halo"></div>';
-      }
-      var root2 = host.shadowRoot;
-      var ptr = root2.querySelector('.ptr');
-      var ring = root2.querySelector('.ring');
-      var halo = root2.querySelector('.halo');
-
-      var x, y, r;
-      if (opts.at) {
-        // A bare point — used for gestures with no element, like scrolling.
-        x = opts.at.x;
-        y = opts.at.y;
-      } else {
-        r = el.getBoundingClientRect();
-        x = r.left + r.width / 2;
-        y = r.top + r.height / 2;
-      }
-
-      ptr.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-
-      if (r && opts.halo !== false) {
-        halo.style.left = r.left + 'px';
-        halo.style.top = r.top + 'px';
-        halo.style.width = r.width + 'px';
-        halo.style.height = r.height + 'px';
-        halo.classList.add('go');
-      } else {
-        halo.classList.remove('go');
-      }
-
-      if (opts.click) {
-        ring.style.left = x + 'px';
-        ring.style.top = y + 'px';
-        ring.classList.remove('go');
-        void ring.offsetWidth; // restart the animation
-        ring.classList.add('go');
-      }
-
-      clearTimeout(window.__bbCursorTimer);
-      // Only the halo fades. The pointer itself stays put, so the user can see
-      // where the agent is between actions instead of it teleporting out of
-      // nowhere on the next one.
-      window.__bbCursorTimer = setTimeout(function () {
-        halo.classList.remove('go');
-      }, opts.hold || 1400);
-    } catch (e) {
-      /* never let the overlay break the action it is illustrating */
+  async previewAction(tabId: string, target: string | null): Promise<ActionPreview> {
+    const wc = this.wcFor(tabId);
+    if (target !== null) {
+      return (
+        await inFrames<ActionPreview>(wc, target, this.prelude(wc, false), (t) => `(${PREVIEW_FN.toString()})(${JSON.stringify(t)})`)
+      ).value;
     }
-  };
-
-  // Move the pointer to a viewport point, no element involved.
-  window.__bbCursorTo = function (x, y) {
-    window.__bbCursor(null, { at: { x: x, y: y }, halo: false });
-  };
-`;
-
-export function CLICK_FN(target: string, actionId?: string): Promise<string> {
-  if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
-  let el: Element | null = null;
-  try {
-    el = (window as unknown as { __bbDeepQuery(s: string): Element | null }).__bbDeepQuery(target);
-  } catch {
-    /* not a selector */
-  }
-  if (!el) {
-    const tl = target.toLowerCase();
-    const deepAll = (window as unknown as { __bbDeepAll(s: string): Element[] }).__bbDeepAll;
-    const candidates = deepAll(
-      'a, button, [role="button"], input[type="submit"], input[type="button"], summary',
-    );
-    const visible = candidates.filter((n) => {
-      const r = n.getBoundingClientRect();
-      return r.width > 0 || r.height > 0;
-    });
-    const pool = visible.length ? visible : candidates;
-    const label = (n: Element) =>
-      ((n as HTMLElement).innerText || n.getAttribute('aria-label') || (n as HTMLInputElement).value || '')
-        .trim()
-        .toLowerCase();
-    el =
-      pool.find((n) => label(n) === tl) ??
-      pool.find((n) => label(n).includes(tl)) ??
-      null;
-  }
-  if (!el) throw new Error(`No element matched: ${target}`);
-  const node = el as HTMLElement;
-  node.scrollIntoView({ block: 'center' });
-  // Paint the cursor first, then dwell briefly before actually clicking.
-  // Without the pause the click fires in the same frame the cursor appears, so
-  // the page changes before the user's eye has anywhere to land — the whole
-  // point is to show them where it went.
-  const cursor = (window as unknown as {
-    __bbCursor(e: Element, o?: { click?: boolean }): void;
-  }).__bbCursor;
-  cursor(node, { click: true });
-  return new Promise<string>((resolve, reject) => {
-    setTimeout(() => {
-      if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) {
-        reject(new Error('cancelled'));
-        return;
-      }
-      node.click();
-      resolve(node.outerHTML.slice(0, 200));
-    }, 500);
-  });
-}
-
-export function TYPE_FN(target: string, text: string, actionId?: string): Promise<string> {
-  if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
-  let el: Element | null = null;
-  try {
-    el = (window as unknown as { __bbDeepQuery(s: string): Element | null }).__bbDeepQuery(target);
-  } catch {
-    /* not a selector */
-  }
-  if (!el) {
-    const tl = target.toLowerCase();
-    const labels = Array.from(document.querySelectorAll('label'));
-    const labelMatch = labels.find((l) =>
-      (l.innerText || '').toLowerCase().includes(tl),
-    );
-    if (labelMatch) {
-      const forId = labelMatch.getAttribute('for');
-      el = forId ? document.getElementById(forId) : labelMatch.querySelector('input, textarea');
+    // The focused element, in whichever frame holds focus (frames first).
+    for (const frame of [...subFrames(wc).map((f) => f.frame).reverse(), wc.mainFrame]) {
+      const p = await evalPage<ActionPreview | null>(
+        frame,
+        PAGE_HELPERS,
+        `document.hasFocus() && !/^(IFRAME|FRAME)$/.test(__bb.Focused().tagName) ? (${PREVIEW_FN.toString()})(null) : null`,
+      ).catch(() => null);
+      if (p) return p;
     }
-    if (!el) {
-      const inputs = (window as unknown as { __bbDeepAll(s: string): Element[] }).__bbDeepAll(
-        'input, textarea, [contenteditable=""], [contenteditable="true"]',
-      );
-      el =
-        inputs.find((i) => {
-          const ph = (i as HTMLInputElement).placeholder?.toLowerCase() ?? '';
-          const aria = i.getAttribute('aria-label')?.toLowerCase() ?? '';
-          const labelledBy = i.getAttribute('aria-labelledby');
-          let labelledText = '';
-          if (labelledBy) {
-            labelledText = labelledBy
-              .split(/\s+/)
-              .map((id) => document.getElementById(id)?.innerText?.toLowerCase() ?? '')
-              .join(' ');
-          }
-          const name = (i as HTMLInputElement).name?.toLowerCase() ?? '';
-          return (
-            ph.includes(tl) ||
-            aria.includes(tl) ||
-            labelledText.includes(tl) ||
-            name.includes(tl)
-          );
-        }) ?? null;
-    }
+    return { summary: 'Press a key on the page', pageUrl: wc.getURL() };
   }
-  if (!el) throw new Error(`No input matched: ${target}`);
-  const html = el as HTMLElement;
-  html.scrollIntoView({ block: 'center' });
-  (
-    window as unknown as { __bbCursor(e: Element | null, o?: Record<string, unknown>): void }
-  ).__bbCursor(html, { click: true, hold: 4000 });
-  html.focus();
-
-  const isCE = html.isContentEditable;
-  const input = el as HTMLInputElement | HTMLTextAreaElement;
-  const nativeSetter = isCE
-    ? null
-    : Object.getOwnPropertyDescriptor(
-        input instanceof HTMLTextAreaElement
-          ? HTMLTextAreaElement.prototype
-          : HTMLInputElement.prototype,
-        'value',
-      )?.set;
-
-  // Write the field one character at a time so the user can actually watch it
-  // being typed. Setting .value in one shot is instant and invisible — the
-  // field just changes, which is precisely the "what did it do?" problem the
-  // cursor exists to solve. Each keystroke dispatches its own input event, so
-  // controlled inputs (React et al) and live search suggestions behave exactly
-  // as they would for a human typist. Pace is capped so a long string doesn't
-  // turn into a wait.
-  const perChar = Math.max(8, Math.min(28, Math.round(1400 / Math.max(1, text.length))));
-
-  const write = (value: string) => {
-    if (isCE) {
-      html.textContent = value;
-      html.dispatchEvent(new InputEvent('input', { bubbles: true, data: value }));
-      return;
-    }
-    if (nativeSetter) nativeSetter.call(input, value);
-    else input.value = value;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  };
-
-  write('');
-  return new Promise<string>((resolve, reject) => {
-    let i = 0;
-    const tick = () => {
-      if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) {
-        reject(new Error('cancelled'));
-        return;
-      }
-      i += 1;
-      write(text.slice(0, i));
-      if (i < text.length) {
-        setTimeout(tick, perChar);
-        return;
-      }
-      // change fires once at the end, as it would when a person leaves a field.
-      if (!isCE) input.dispatchEvent(new Event('change', { bubbles: true }));
-      resolve(html.outerHTML.slice(0, 200));
-    };
-    if (text.length === 0) {
-      if (!isCE) input.dispatchEvent(new Event('change', { bubbles: true }));
-      resolve(html.outerHTML.slice(0, 200));
-      return;
-    }
-    setTimeout(tick, perChar);
-  });
-}
-
-function SCROLL_FN(
-  direction: 'up' | 'down' | 'top' | 'bottom',
-  amount: number,
-): number {
-  const doc = document.scrollingElement || document.documentElement;
-  // Park the pointer mid-viewport and let it drift the way the page is going,
-  // so a scroll reads as the agent doing something rather than the page moving
-  // on its own. No halo — there's no element being acted on.
-  const to = (window as unknown as { __bbCursorTo?(x: number, y: number): void }).__bbCursorTo;
-  if (to) {
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    const drift = direction === 'up' || direction === 'top' ? -60 : 60;
-    to(cx, cy - drift);
-    setTimeout(() => to(cx, cy + drift), 60);
-  }
-  switch (direction) {
-    case 'down':
-      window.scrollBy({ top: amount, behavior: 'smooth' });
-      break;
-    case 'up':
-      window.scrollBy({ top: -amount, behavior: 'smooth' });
-      break;
-    case 'top':
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      break;
-    case 'bottom':
-      window.scrollTo({ top: doc.scrollHeight, behavior: 'smooth' });
-      break;
-  }
-  return doc.scrollTop;
-}
-
-function WAIT_FOR_SELECTOR(selector: string, timeoutMs: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const tick = () => {
-      try {
-        if (document.querySelector(selector)) return resolve(true);
-      } catch {
-        return resolve(false);
-      }
-      if (Date.now() - start > timeoutMs) return resolve(false);
-      setTimeout(tick, 100);
-    };
-    tick();
-  });
 }

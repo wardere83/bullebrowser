@@ -1,0 +1,26 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.cityofnewyork.us/resource/dg92-zbpx.json?%24select=request_id%2Cstart_date%2Cend_date%2Cagency_name%2Ctype_of_notice_description%2Ccategory_description%2Cshort_title%2Cselection_method_description%2Csection_name%2Cspecial_case_reason_description%2Cpin%2Cdue_date%2Caddress_to_request%2Ccontact_name%2Ccontact_phone%2Cemail%2Ccontract_amount%2Cadditional_description_1%2Cadditional_description_2%2Cadditional_description_3%2Cother_info_1%2Cother_info_2%2Cother_info_3%2Cdocument_links&%24where=section_name%3D%27Procurement%27+AND+type_of_notice_description%3D%27Solicitation%27+AND+request_id%3D20200727109&%24order=request_id+ASC&%24limit=2"
+  },
+  "response": [
+    {
+      "request_id": "20200727109",
+      "start_date": "2020-10-19T00:00:00.000",
+      "end_date": "2020-10-19T00:00:00.000",
+      "agency_name": "Citywide Administrative Services",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Services (other than human services)",
+      "short_title": "Cancellation: LANDSCAPE MAINTENANCE",
+      "selection_method_description": "Competitive Sealed Bids",
+      "section_name": "Procurement",
+      "pin": "85620B0005",
+      "due_date": "9999-09-09T11:00:00.000",
+      "address_to_request": "1 Centre Street, 18th Floor, New York, NY 10007",
+      "additional_description_1": "<p>Requirements Contract for Furnishing All Labor, Materials and Equipment Necessary and required to perform Landscape maintenance at various \u001aFacilities\u001a Throughout the Five Boroughs of New York City. The contract term is 1095 CCDs.  There will be an optional Pre-Bid Meeting on Tuesday, August 25, 2020 from 11:00 am \u001a 1:00pm Via  Conference Call Bridge, Call Number: 1-646-992-2010  Attendee access code:  76059608 Pin: 1136  The last day for all RFIs will be Monday, August  31,  2020 at 11:00 A.M.   Bid documents can be  downloaded for free from the City Record online website http://www.nyc.gov/cityrecord  </p>",
+      "document_links": {
+        "url": "https://a856-cityrecord.nyc.gov/Search/GetFile?SectionID=6&amp;RequestStatus=Current&amp;RequestID=20200727109&amp;DocumentID=30276,https://a856-cityrecord.nyc.gov/Search/GetFile?SectionID=6&amp;RequestStatus=Current&amp;RequestID=20200727109&amp;DocumentID=30277,https://a856-cityrecord.nyc.gov/Search/GetFile?SectionID=6&amp;RequestStatus=Current&amp;RequestID=20200727109&amp;DocumentID=30598,https://a856-cityrecord.nyc.gov/Search/GetFile?SectionID=6&amp;RequestStatus=Current&amp;RequestID=20200727109&amp;DocumentID=30623,https://a856-cityrecord.nyc.gov/Search/GetFile?SectionID=6&amp;RequestStatus=Current&amp;RequestID=20200727109&amp;DocumentID=30708,https://a856-cityrecord.nyc.gov/Search/GetFile?SectionID=6&amp;RequestStatus=Current&amp;RequestID=20200727109&amp;DocumentID=30897"
+      }
+    }
+  ]
+}

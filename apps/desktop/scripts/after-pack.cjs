@@ -5,6 +5,7 @@
 const { execSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
+const { validatePackagedVoice } = require('./validate-native-voice.cjs');
 
 // A real Developer ID identity is configured (CI imports the cert into a
 // dedicated keychain and points electron-builder at it via CSC_KEYCHAIN, or a
@@ -18,6 +19,7 @@ function realIdentityConfigured() {
 }
 
 exports.default = async function afterPack(context) {
+  validatePackagedVoice(context);
   const platform = context.electronPlatformName;
   if (platform !== 'darwin') return;
   if (realIdentityConfigured()) {

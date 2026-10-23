@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolContext, ToolDefinition, ToolName } from '../types.js';
+import { KEY_NAMES, type KeyName, type ToolContext, type ToolDefinition, type ToolName } from '../types.js';
 
 const EmptyObject = z.object({}).strict();
 
@@ -46,11 +46,41 @@ const NavigateInput = z.object({
       }
       return normalized;
     }),
+  wait: z.enum(['idle', 'load', 'none']).optional().describe('How long to wait after loading: "idle" (default), "load", or "none".'),
 });
 const NavigateOutput = z.object({ url: z.string(), title: z.string() });
+const WaitInput = z
+  .enum(['idle', 'load', 'none'])
+  .optional()
+  .describe(
+    'How long to wait afterwards. "idle" (default): until loaded, the network is quiet and the page stops ' +
+      'changing. "load": the load event only. "none": do not wait — for pages that never go idle (chat, live dashboards).',
+  );
 const TabIdInput = z.object({ tabId: z.string().optional() });
-const ClickInput = z.object({ target: z.string().min(1) });
-const TypeInput = z.object({ target: z.string().min(1), text: z.string() });
+// The model names an element by an element ref from find_elements ("@12"),
+// a CSS selector, or its visible text / label. Refs are the reliable choice.
+const TARGET_DESCRIPTION =
+  'The element: a ref from find_elements like "@12" (most reliable), a CSS selector, or its visible text or label.';
+const ClickInput = z.object({ target: z.string().min(1).describe(TARGET_DESCRIPTION), wait: WaitInput });
+const TypeInput = z.object({
+  target: z.string().min(1).describe(TARGET_DESCRIPTION),
+  text: z
+    .string()
+    .describe(
+      'The text to enter. In a form field it replaces what the field holds; in a document ' +
+        'editor (Word Online, Google Docs, an email body) it is typed at the cursor, or at the end.',
+    ),
+});
+const SelectInput = z.object({
+  target: z.string().min(1).describe(TARGET_DESCRIPTION),
+  option: z.string().min(1).describe('The option to choose, by its visible label or its value.'),
+});
+const FindElementsInput = z.object({
+  query: z
+    .string()
+    .optional()
+    .describe('Optional words to filter by (matched against label, role and field type).'),
+});
 const ExtractInput = z.object({ schema: z.record(z.unknown()) });
 const LinkShape = z.object({ text: z.string(), href: z.string() });
 const TabShape = z.object({
@@ -67,7 +97,7 @@ const ExtractOut = z.object({ data: z.unknown() });
 const SelectionOut = z.object({ text: z.string() });
 const LinksOut = z.object({ links: z.array(LinkShape) });
 const QueryDomOut = z.object({ matches: z.number() });
-const ClickOut = z.object({ matched: z.string() });
+const ClickOut = z.object({ matched: z.string(), url: z.string().optional() });
 const TypeOut = z.object({ matched: z.string() });
 
 const SummarizeInput = z.object({
@@ -211,7 +241,8 @@ export const tools = {
     description: 'Navigate the active tab to a URL.',
     inputSchema: NavigateInput,
     outputSchema: NavigateOutput,
-    execute: (input, ctx) => ctx.runtime.navigate(ctx.activeTabId, input.url),
+    execute: (input, ctx) =>
+      ctx.runtime.navigate(ctx.activeTabId, input.url, ...(input.wait ? [{ wait: input.wait }] : [])),
   } satisfies ToolImpl<z.infer<typeof NavigateInput>, z.infer<typeof NavigateOutput>>,
 
   clickElement: {
@@ -220,7 +251,8 @@ export const tools = {
     inputSchema: ClickInput,
     outputSchema: ClickOut,
     destructive: true,
-    execute: (input, ctx) => ctx.runtime.click(ctx.activeTabId, input.target),
+    execute: (input, ctx) =>
+      ctx.runtime.click(ctx.activeTabId, input.target, ...(input.wait ? [{ wait: input.wait }] : [])),
   } satisfies ToolImpl<z.infer<typeof ClickInput>, z.infer<typeof ClickOut>>,
 
   typeIntoField: {
@@ -236,7 +268,9 @@ export const tools = {
   // Legacy aliases to preserve compatibility with existing prompts and UX copy.
   read_page: {
     name: 'read_page',
-    description: 'Legacy alias for getPageText.',
+    description:
+      'Read the readable text of a page (the active tab, or any tab by tabId). ' +
+      'Use find_elements instead when you need to act on buttons, fields or menus.',
     inputSchema: TabIdInput,
     outputSchema: z.object({ title: z.string(), url: z.string(), text: z.string() }),
     execute: async (input, ctx) => {
@@ -247,16 +281,24 @@ export const tools = {
 
   click: {
     name: 'click',
-    description: 'Legacy alias for clickElement.',
+    description:
+      'Click an element (link, button, checkbox, tab, menu item). Waits for any ' +
+      'navigation it triggers and returns the resulting URL.',
     inputSchema: ClickInput,
     outputSchema: ClickOut,
     destructive: true,
-    execute: (input, ctx) => ctx.runtime.click(ctx.activeTabId, input.target),
+    execute: (input, ctx) =>
+      ctx.runtime.click(ctx.activeTabId, input.target, ...(input.wait ? [{ wait: input.wait }] : [])),
   } satisfies ToolImpl<z.infer<typeof ClickInput>, z.infer<typeof ClickOut>>,
 
   type: {
     name: 'type',
-    description: 'Legacy alias for typeIntoField.',
+    description:
+      'Type into a text field, textarea, or a document editor such as Word Online or Google ' +
+      'Docs (including editors inside embedded frames — use the frame ref from find_elements, ' +
+      'like "@2.7"). Target "document" picks the page\'s main editor; target "focused" types ' +
+      'wherever the cursor already is (e.g. right after clicking into a document). For a ' +
+      '<select> dropdown use select_option.',
     inputSchema: TypeInput,
     outputSchema: TypeOut,
     destructive: true,
@@ -265,7 +307,8 @@ export const tools = {
 
   extract: {
     name: 'extract',
-    description: 'Legacy alias for extractStructuredData.',
+    description:
+      'Extract structured data (headings, links, tables and text) from the active page, shaped by the schema you describe.',
     inputSchema: ExtractInput,
     outputSchema: ExtractOut,
     execute: (input, ctx) => ctx.runtime.extract(ctx.activeTabId, input.schema),
@@ -281,8 +324,10 @@ export const tools = {
 
   new_tab: {
     name: 'new_tab',
-    description: 'Open a new tab.',
-    inputSchema: z.object({ url: z.string().url().optional() }),
+    description: 'Open a new tab (optionally at a URL) and make it active. Waits for the page to load.',
+    // Same allowlist as navigate: a new tab must not open file:, data: or
+    // javascript: URLs any more than navigate may.
+    inputSchema: z.object({ url: NavigateInput.shape.url.optional() }),
     outputSchema: TabShape,
     execute: (input, ctx) => ctx.runtime.newTab(input.url),
   } satisfies ToolImpl<{ url?: string }, z.infer<typeof TabShape>>,
@@ -297,7 +342,7 @@ export const tools = {
 
   list_tabs: {
     name: 'list_tabs',
-    description: 'Legacy alias for listTabs.',
+    description: 'List every open tab with its id, title, URL and whether it is active.',
     inputSchema: EmptyObject,
     outputSchema: z.object({ tabs: z.array(TabShape) }),
     execute: async (_input, ctx) => ({ tabs: await ctx.runtime.listTabs() }),
@@ -349,33 +394,56 @@ export const tools = {
 
   press_key: {
     name: 'press_key',
-    description: 'Dispatch keyboard event to focused element.',
-    inputSchema: z.object({
-      key: z.enum(['Enter', 'Tab', 'Escape', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp']),
-    }),
+    description:
+      'Press a key on the focused element — e.g. Enter to submit a search box, Tab to move ' +
+      'between fields, Escape to close a dialog, arrows to move through a menu.',
+    inputSchema: z.object({ key: z.enum(KEY_NAMES) }),
     outputSchema: z.object({ pressed: z.string() }),
     execute: (input, ctx) => ctx.runtime.pressKey(ctx.activeTabId, input.key),
-  } satisfies ToolImpl<
-    { key: 'Enter' | 'Tab' | 'Escape' | 'ArrowDown' | 'ArrowUp' | 'PageDown' | 'PageUp' },
-    { pressed: string }
-  >,
+  } satisfies ToolImpl<{ key: KeyName }, { pressed: string }>,
+
+  select_option: {
+    name: 'select_option',
+    description: 'Choose an option in a <select> dropdown, by the option\'s visible label or value.',
+    inputSchema: SelectInput,
+    outputSchema: TypeOut,
+    execute: async (input, ctx) => {
+      if (!ctx.runtime.selectOption) throw new Error('select_option is not available in this browser.');
+      return ctx.runtime.selectOption(ctx.activeTabId, input.target, input.option);
+    },
+  } satisfies ToolImpl<z.infer<typeof SelectInput>, z.infer<typeof TypeOut>>,
+
+  find_elements: {
+    name: 'find_elements',
+    description:
+      'List the visible interactive elements on the active page — links, buttons, fields, ' +
+      'dropdowns (with their options), checkboxes — each with a ref like "@12". Pass the ' +
+      'ref as the target of click, type or select_option: it is the most reliable way to act.',
+    inputSchema: FindElementsInput,
+    outputSchema: z.object({ elements: z.array(z.string()) }),
+    execute: async (input, ctx) => {
+      if (!ctx.runtime.findElements) throw new Error('find_elements is not available in this browser.');
+      return ctx.runtime.findElements(ctx.activeTabId, input.query);
+    },
+  } satisfies ToolImpl<z.infer<typeof FindElementsInput>, { elements: string[] }>,
 
   wait_for: {
     name: 'wait_for',
-    description: 'Wait for selector or network idle.',
+    description: 'Wait until a selector or a piece of text appears, or the network goes idle.',
     inputSchema: z
       .object({
-        selector: z.string().optional(),
+        selector: z.string().optional().describe('A CSS selector to wait for.'),
+        text: z.string().optional().describe('Text to wait for (anywhere on the page, including frames).'),
         networkIdle: z.boolean().optional(),
-        timeoutMs: z.number().int().positive().max(10_000).optional(),
+        timeoutMs: z.number().int().positive().max(15_000).optional(),
       })
-      .refine((v) => v.selector || v.networkIdle, {
-        message: 'Provide either selector or networkIdle: true',
+      .refine((v) => v.selector || v.text || v.networkIdle, {
+        message: 'Provide selector, text, or networkIdle: true',
       }),
     outputSchema: z.object({ matched: z.boolean() }),
     execute: (input, ctx) => ctx.runtime.waitFor(ctx.activeTabId, input),
   } satisfies ToolImpl<
-    { selector?: string; networkIdle?: boolean; timeoutMs?: number },
+    { selector?: string; text?: string; networkIdle?: boolean; timeoutMs?: number },
     { matched: boolean }
   >,
 } as const;

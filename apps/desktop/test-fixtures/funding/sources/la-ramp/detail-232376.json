@@ -1,0 +1,21 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.lacity.org/resource/hf3r-utnq.json?%24select=rampid%2Ctitle%2Cstagename%2Ccategory%2Ctype%2Cbidpost%2Cclosedate%2Cdepartment%2Curl&%24where=rampid%3D%27232376%27&%24order=rampid+ASC&%24limit=2"
+  },
+  "response": [
+    {
+      "rampid": "232376",
+      "title": "LACDA26-089 - Senior Grant Program Construction Rehabilitation Services SG22-325 - Closing: 10/14/2026 3:00 PM",
+      "stagename": "Open",
+      "category": "Personal Services",
+      "type": "None",
+      "bidpost": "2026-10-06T02:30:00.000",
+      "closedate": "2026-10-14T22:00:00.000",
+      "department": "Los Angeles County",
+      "url": {
+        "url": "https://www.rampla.org/s/opportunity-details?id=006Ql00000majhKIAQ"
+      }
+    }
+  ]
+}

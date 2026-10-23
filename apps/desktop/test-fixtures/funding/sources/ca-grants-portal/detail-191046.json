@@ -1,0 +1,219 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.ca.gov/api/3/action/datastore_search?resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&filters=%7B%22PortalID%22%3A%5B%22191046%22%5D%7D&limit=2"
+  },
+  "response": {
+    "help": "https://data.ca.gov/api/3/action/help_show?name=datastore_search",
+    "success": true,
+    "result": {
+      "filters": {
+        "PortalID": [
+          "191046"
+        ]
+      },
+      "include_total": true,
+      "limit": 2,
+      "records_format": "objects",
+      "resource_id": "111c8c88-21f6-453c-ae2c-b4785a0624f5",
+      "total_estimation_threshold": null,
+      "records": [
+        {
+          "_id": 1,
+          "PortalID": "191046",
+          "GrantID": null,
+          "Status": "active",
+          "LastUpdated": "2026-10-01 14:12:38",
+          "ChangeNotes": "Applications are to be submitted electronically via the Online Grants Application (OLGA).",
+          "AgencyDept": "Department of Parks and Recreation",
+          "Title": "The Recreational Trails Program (RTP) – R27",
+          "Type": "Grant",
+          "LOI": "No",
+          "Categories": "Education; Environment & Water; Parks & Recreation",
+          "CategorySuggestion": null,
+          "Purpose": "The purpose of the Recreational Trails Program is to provide for well managed OHV Recreation by providing financial assistance to eligible agencies and organizations that develop, maintain, operate, expand, support, or contribute to well managed, high-quality, OHV Recreation areas, roads, and trails, and to responsibly maintain the wildlife, soils, and habitat of Project Areas in a manner that will sustain long-term OHV Recreation.",
+          "Description": "The Recreational Trails Program (RTP) provides funds to develop and maintain Recreational Trails and trail-related facilities for motorized Recreational Trail uses. This includes acquisition, development and rehabilitation of trails and facilities, construction and maintenance of trails, purchase or lease of equipment, trail conditions assessments, and the development and distribution of educational messages.",
+          "ApplicantType": "Nonprofit; Public Agency",
+          "ApplicantTypeNotes": "Cities, counties, districts, state and federal agencies, and 501(c)(3) nonprofit organizations. ",
+          "Geography": "All Projects shall reside on public lands within the State of California.",
+          "FundingSource": "Federal",
+          "FundingSourceNotes": "Bipartisan Infrastructure Law.",
+          "MatchingFunds": "12%",
+          "MatchingFundsNotes": "Matching funds must be at least 12% of total project costs. Eligible match sources are State funds (which may include Grants and Cooperative Agreement funds), local, and private funds, donated materials and services, value of donated land for acquisition Projects, and other federal funds. If using Other Federal Funds as a match, the total Federal funds claimed on a Project CANNOT exceed 95% of the total Project Costs.",
+          "EstAvailFunds": "$3,000,000.00",
+          "EstAwards": "Dependant on number of submissions received, application process, etc.",
+          "EstAmounts": "Dependant on number of submissions received, application process, etc.",
+          "FundingMethod": "Advances & Reimbursement(s)",
+          "FundingMethodNotes": null,
+          "OpenDate": "2026-10-02 15:00:00",
+          "ApplicationDeadline": "2026-11-02 17:00:00",
+          "AwardPeriod": "1-3 years",
+          "ExpAwardDate": "January 6, 2027",
+          "ElecSubmission": "url: https://olga.ohv.parks.ca.gov/egrams_ohmvr/user/home.aspx;",
+          "GrantURL": "https://ohv.parks.ca.gov/?page_id=24881",
+          "AgencyURL": "https://ohv.parks.ca.gov/",
+          "AgencySubscribeURL": null,
+          "GrantEventsURL": null,
+          "ContactInfo": "email: OHV.grants@parks.ca.gov; tel: 1-916-324-4442;",
+          "AwardStats": null
+        }
+      ],
+      "fields": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "PortalID",
+          "type": "text"
+        },
+        {
+          "id": "GrantID",
+          "type": "text"
+        },
+        {
+          "id": "Status",
+          "type": "text"
+        },
+        {
+          "id": "LastUpdated",
+          "type": "text"
+        },
+        {
+          "id": "ChangeNotes",
+          "type": "text"
+        },
+        {
+          "id": "AgencyDept",
+          "type": "text"
+        },
+        {
+          "id": "Title",
+          "type": "text"
+        },
+        {
+          "id": "Type",
+          "type": "text"
+        },
+        {
+          "id": "LOI",
+          "type": "text"
+        },
+        {
+          "id": "Categories",
+          "type": "text"
+        },
+        {
+          "id": "CategorySuggestion",
+          "type": "text"
+        },
+        {
+          "id": "Purpose",
+          "type": "text"
+        },
+        {
+          "id": "Description",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantType",
+          "type": "text"
+        },
+        {
+          "id": "ApplicantTypeNotes",
+          "type": "text"
+        },
+        {
+          "id": "Geography",
+          "type": "text"
+        },
+        {
+          "id": "FundingSource",
+          "type": "text"
+        },
+        {
+          "id": "FundingSourceNotes",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFunds",
+          "type": "text"
+        },
+        {
+          "id": "MatchingFundsNotes",
+          "type": "text"
+        },
+        {
+          "id": "EstAvailFunds",
+          "type": "text"
+        },
+        {
+          "id": "EstAwards",
+          "type": "text"
+        },
+        {
+          "id": "EstAmounts",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethod",
+          "type": "text"
+        },
+        {
+          "id": "FundingMethodNotes",
+          "type": "text"
+        },
+        {
+          "id": "OpenDate",
+          "type": "text"
+        },
+        {
+          "id": "ApplicationDeadline",
+          "type": "text"
+        },
+        {
+          "id": "AwardPeriod",
+          "type": "text"
+        },
+        {
+          "id": "ExpAwardDate",
+          "type": "text"
+        },
+        {
+          "id": "ElecSubmission",
+          "type": "text"
+        },
+        {
+          "id": "GrantURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencyURL",
+          "type": "text"
+        },
+        {
+          "id": "AgencySubscribeURL",
+          "type": "text"
+        },
+        {
+          "id": "GrantEventsURL",
+          "type": "text"
+        },
+        {
+          "id": "ContactInfo",
+          "type": "text"
+        },
+        {
+          "id": "AwardStats",
+          "type": "text"
+        }
+      ],
+      "_links": {
+        "start": "/api/3/action/datastore_search?filters=%7B%22PortalID%22%3A%5B%22191046%22%5D%7D&limit=2&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5",
+        "next": "/api/3/action/datastore_search?filters=%7B%22PortalID%22%3A%5B%22191046%22%5D%7D&limit=2&resource_id=111c8c88-21f6-453c-ae2c-b4785a0624f5&offset=2"
+      },
+      "total": 1,
+      "total_was_estimated": false
+    }
+  }
+}

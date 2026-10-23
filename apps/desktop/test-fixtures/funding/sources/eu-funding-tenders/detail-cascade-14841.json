@@ -1,0 +1,179 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***&pageSize=10&pageNumber=1",
+    "form": {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "terms": {
+                "type": [
+                  "8"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "DATASOURCE": [
+                  "SEDIA"
+                ]
+              }
+            },
+            {
+              "terms": {
+                "callccm2Id": [
+                  "14841"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "languages": [
+        "en"
+      ],
+      "sort": {
+        "field": "deadlineDate",
+        "order": "DESC"
+      },
+      "displayFields": [
+        "identifier",
+        "title",
+        "type",
+        "status",
+        "startDate",
+        "deadlineDate",
+        "deadlineModel",
+        "frameworkProgramme",
+        "callIdentifier",
+        "callTitle",
+        "callccm2Id",
+        "url",
+        "descriptionByte",
+        "description",
+        "budgetOverview",
+        "budget",
+        "currency",
+        "typesOfAction",
+        "projectAcronym",
+        "projectName",
+        "DATASOURCE",
+        "topicConditions",
+        "furtherInformation",
+        "beneficiaryAdministration",
+        "duration",
+        "links",
+        "publicationDocuments"
+      ]
+    }
+  },
+  "response": {
+    "apiVersion": "2.155",
+    "terms": "***",
+    "responseTime": 16,
+    "totalResults": 1,
+    "pageNumber": 1,
+    "pageSize": 10,
+    "sort": "[deadlineDate:DESC]",
+    "groupByField": "sortStatus",
+    "queryLanguage": {
+      "language": "en",
+      "probability": 0
+    },
+    "bestBets": [],
+    "results": [
+      {
+        "apiVersion": "2.155",
+        "reference": "14841COMPETITIVE_CALLen",
+        "url": "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485",
+        "contentType": "text/plain",
+        "language": "en",
+        "databaseLabel": "SEDIA",
+        "database": "SEDIA",
+        "summary": "Co-Creation Accelerator 2026-2027",
+        "weight": 0,
+        "content": "Co-Creation Accelerator 2026-2027",
+        "accessRestriction": false,
+        "metadata": {
+          "identifier": [
+            "HORIZON-EIT-2025-MOC-IBA"
+          ],
+          "furtherInformation": [
+            "<p><a href=\"https://events.teams.microsoft.com/event/4a764fb4-5eaa-49a2-801e-c8bc59b350b8@7c3574d4-f2c2-4447-bd77-d3c3cc68be6e\" rel=\"noopener noreferrer\" target=\"_blank\">Register for the next Information Session</a> on 16 July 2026, 15:00 CEST.</p><p>Please note that the deadline for the second cut-off is indicative and will be confirmed in due course.</p>"
+          ],
+          "es_ContentType": [
+            "text/plain"
+          ],
+          "es_SortDate": [
+            "2026-07-01T00:00:00.000+0000"
+          ],
+          "beneficiaryAdministration": [
+            "<p>The full submission and evaluation process is described in the call document, accessible via the following website:</p><p>https://28digital.eu/co-creation-accelerator-2026-2027/</p>"
+          ],
+          "deadlineDate": [
+            "2026-09-08T17:00:00.000+0000",
+            "2027-04-30T17:00:00.000+0000"
+          ],
+          "description": [],
+          "language": [
+            "en"
+          ],
+          "title": [
+            "2026-2027 MOC Activities"
+          ],
+          "type": [
+            "8"
+          ],
+          "url": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485"
+          ],
+          "esST_URL": [
+            "https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485"
+          ],
+          "duration": [
+            "All proposals must have an execution timeframe of four 4 months (November 2026 – February 2027 for Cut-Off 1)"
+          ],
+          "callccm2Id": [
+            "14841"
+          ],
+          "DATASOURCE": [
+            "SEDIA"
+          ],
+          "REFERENCE": [
+            "14841COMPETITIVE_CALLen"
+          ],
+          "projectAcronym": [
+            "EIT Digital 2026-27"
+          ],
+          "callTitle": [
+            "Co-Creation Accelerator 2026-2027"
+          ],
+          "projectName": [
+            "EIT Digital 2026-2027 MoC Activities"
+          ],
+          "frameworkProgramme": [
+            "43108390"
+          ],
+          "startDate": [
+            "2026-07-01T00:00:00.000+0000"
+          ],
+          "deadlineModel": [
+            "multiple cut-off"
+          ],
+          "budget": [
+            "3200000"
+          ],
+          "status": [
+            "31094502"
+          ]
+        },
+        "enrichedMetadata": {},
+        "children": [],
+        "highlightedFragments": [],
+        "citation": "2026-2027 MOC Activities. Available at: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/competitive-calls-cs/49197485"
+      }
+    ],
+    "warnings": []
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useBrowserStore, activeTabSelector } from '../state/browser-store.js';
+import { useBrowserStore } from '../state/browser-store.js';
 import { FOCUS_AI_PANEL_EVENT } from '../components/AiPanel.js';
 
 export function useKeyboardShortcuts() {
@@ -10,19 +10,12 @@ export function useKeyboardShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
-      const active = activeTabSelector(useBrowserStore.getState());
-      if (e.key.toLowerCase() === 't') {
-        e.preventDefault();
-        void window.bullebrowser.tabs.create();
-      } else if (e.key.toLowerCase() === 'w') {
-        e.preventDefault();
-        if (active) void window.bullebrowser.tabs.close(active.id);
-      } else if (e.key.toLowerCase() === 'l') {
+      // New tab, close tab and reload are menu accelerators (main/menu.ts),
+      // so they work while a web page has focus too; handling them here as
+      // well would fire them twice.
+      if (e.key.toLowerCase() === 'l') {
         e.preventDefault();
         window.dispatchEvent(new Event('bullebrowser:focus-address'));
-      } else if (e.key.toLowerCase() === 'r') {
-        e.preventDefault();
-        if (active) void window.bullebrowser.tabs.reload(active.id);
       } else if (e.shiftKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         toggleAi();

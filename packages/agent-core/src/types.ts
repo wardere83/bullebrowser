@@ -1,4 +1,6 @@
+import type { BrowserTaskId } from './browser-tasks.js';
 import type { z } from 'zod';
+import type { ToolCallRecord } from './agent-loop.js';
 
 export type ProviderId = 'anthropic' | 'openai';
 
@@ -60,7 +62,17 @@ export type ToolName =
   | 'reload'
   | 'scroll'
   | 'press_key'
-  | 'wait_for';
+  | 'wait_for'
+  | 'select_option'
+  | 'find_elements'
+  | 'preview_action'
+  | 'write_file'
+  | 'read_file'
+  | 'list_files'
+  | 'upload_file'
+  | 'clipboard_copy'
+  | 'clipboard_read'
+  | 'clipboard_paste';
 
 export interface ToolDefinition<TInput, TOutput> {
   name: ToolName;
@@ -78,15 +90,18 @@ export interface TabSummary {
 }
 
 export interface ToolContext {
+  /** Host presentation after consent and policy checks, before a real browser action. */
+  beforeBrowserAction?: (name: string, input: Record<string, unknown>) => Promise<void>;
   activeTabId: string;
   signal: AbortSignal;
   runtime: ToolRuntime;
 }
 
 export interface ToolRuntime {
-  navigate(tabId: string, url: string): Promise<{ url: string; title: string }>;
+  navigate(tabId: string, url: string, opts?: { wait?: WaitMode }): Promise<{ url: string; title: string }>;
   readPage(tabId: string): Promise<{ title: string; url: string; text: string }>;
-  click(tabId: string, target: string): Promise<{ matched: string }>;
+  // `url` is where the page ended up once whatever the click triggered settled.
+  click(tabId: string, target: string, opts?: { wait?: WaitMode }): Promise<{ matched: string; url?: string }>;
   type(tabId: string, target: string, text: string): Promise<{ matched: string }>;
   extract(
     tabId: string,
@@ -104,21 +119,97 @@ export interface ToolRuntime {
     tabId: string,
     options: { direction: 'up' | 'down' | 'top' | 'bottom'; amount?: number },
   ): Promise<{ scrolledTo: number }>;
-  pressKey(
-    tabId: string,
-    key: 'Enter' | 'Tab' | 'Escape' | 'ArrowDown' | 'ArrowUp' | 'PageDown' | 'PageUp',
-  ): Promise<{ pressed: string }>;
+  pressKey(tabId: string, key: KeyName): Promise<{ pressed: string }>;
   waitFor(
     tabId: string,
-    condition: { selector?: string; networkIdle?: boolean; timeoutMs?: number },
+    condition: { selector?: string; text?: string; networkIdle?: boolean; timeoutMs?: number },
   ): Promise<{ matched: boolean }>;
-  confirmDestructive(message: string): Promise<boolean>;
+  /** Ask the user to approve a consequential action, showing what it does. */
+  confirmDestructive(message: string, preview?: ActionPreview): Promise<boolean>;
+
+  /**
+   * Per-site permission check. Each site has a level (read, click, type,
+   * full); when an action needs more than the site has, the runtime asks the
+   * user to upgrade it. 'confirmed' means the user approved this exact action
+   * in that prompt (so no second confirmation is needed).
+   */
+  checkPermission?(tabId: string, level: PermissionLevel, ask: PermissionAsk): Promise<'granted' | 'confirmed' | 'denied'>;
+
+  /** Describe what a consequential action would send (dry run / preview). */
+  previewAction?(tabId: string, target: string | null): Promise<ActionPreview>;
 
   // Optional richer browser adapters for future native wiring.
   getSelection?(tabId: string): Promise<{ text: string }>;
   listLinks?(tabId: string): Promise<{ text: string; href: string }[]>;
   queryDom?(tabId: string, selector: string): Promise<{ matches: number }>;
+
+  // Choose an option in a <select> (by its visible label or value).
+  selectOption?(tabId: string, target: string, option: string): Promise<{ matched: string }>;
+  // Visible interactive elements, each tagged with a stable ref ("@12") that
+  // click / type / select_option accept as their target.
+  findElements?(tabId: string, query?: string): Promise<{ elements: string[] }>;
+  // What a click (target) or a key press on the focused element (target null)
+  // would actually act on, so the consent policy judges the real element —
+  // not just the words the model happened to use to name it.
+  inspectTarget?(tabId: string, target: string | null, key?: 'Enter' | 'Space'): Promise<TargetFacts>;
 }
+
+export type PermissionLevel = 'read' | 'click' | 'type' | 'full';
+
+/**
+ * How long an action waits for the page afterwards. 'idle' (default): the
+ * load, then network quiet and a moment of DOM quiet. 'load': the load event
+ * only. 'none': return straight away (pages that never go idle).
+ */
+export type WaitMode = 'idle' | 'load' | 'none';
+
+export interface PermissionAsk {
+  /** Plain description of what the agent wants to do. */
+  action: string;
+  preview?: ActionPreview;
+}
+
+/** Exactly what a consequential action will send, shown before it runs. */
+export interface ActionPreview {
+  /** What will happen, e.g. 'Submit the "Create account" form'. */
+  summary: string;
+  pageUrl?: string;
+  /** Where the data goes (form action) and how. */
+  url?: string;
+  method?: string;
+  fields?: { label: string; value: string }[];
+  files?: { name: string; size?: number }[];
+  note?: string;
+}
+
+export interface TargetFacts {
+  /** Visible label of the element (text, aria-label, value). */
+  label: string;
+  /** True when acting on it submits a form that carries the user's data
+   *  (anything beyond a lone search box). */
+  submitsForm: boolean;
+  /** True when the gesture presses a control (a click, or Enter/Space on a
+   *  focused button or link), so its label is judged like a click's. */
+  activates?: boolean;
+}
+
+export const KEY_NAMES = [
+  'Enter',
+  'Tab',
+  'Escape',
+  'Backspace',
+  'Delete',
+  'Space',
+  'ArrowDown',
+  'ArrowUp',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'PageDown',
+  'PageUp',
+] as const;
+export type KeyName = (typeof KEY_NAMES)[number];
 
 export interface AgentMessage {
   role: 'user' | 'assistant';
@@ -127,7 +218,7 @@ export interface AgentMessage {
 }
 
 export interface AgentStep {
-  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done';
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget';
   toolName?: ToolName;
   detail?: string;
   data?: unknown;
@@ -150,12 +241,40 @@ export interface ApiTool {
   destructive?: boolean;
 }
 
+/**
+ * One piece of reference material for a run: an organization's approved
+ * profile, a passage from its documents, a funding document. `label` names the
+ * source and may use letters, digits and `_ : . / @ -` (anything else becomes
+ * `_`), e.g. "profile" or "knowledge:annual-report.pdf:p12".
+ */
+export interface ReferenceContextItem {
+  label: string;
+  text: string;
+}
+
 export interface AgentInput {
+  browserTask?: BrowserTaskId;
+  /** Require live multi-source research for research prompts. */
+  researchMode?: boolean;
   apiKey?: string;
+  /** Native host transport: credentials remain in the OS vault, outside page JavaScript. */
+  modelFetch?: typeof fetch;
   model: ModelId;
   systemPrompt: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   userMessage: string;
+  /**
+   * User's own words before host-added attachments; used for product questions
+   * and for the commands the keyless assistant understands.
+   */
+  userRequest?: string;
+  // Reference material the host supplies for this run. It comes from uploaded
+  // documents, so each item is sealed as untrusted data and travels with the
+  // user's message, never in the system prompt; keep it out of `userMessage`
+  // and `userRequest`. Items are sent whole, so the host decides how much one
+  // run should carry. Additive: an absent or empty list runs exactly as
+  // before. The keyless assistant does not read it.
+  referenceContext?: ReferenceContextItem[];
   context: ToolContext;
   onStep: AgentStepHandler;
   // Extra tools offered to the model alongside the built-in browser tools —
@@ -167,6 +286,10 @@ export interface AgentInput {
   // from its own knowledge instead of browsing. Omit to allow browsing
   // without asking (headless / test callers).
   requestBrowseAccess?: () => Promise<boolean>;
+  /** Step budget for this task (weighted; see budget.ts). Default 40. */
+  budget?: number;
+  /** Every executed tool call, for the run log. */
+  onToolRecord?: (record: ToolCallRecord) => void;
 }
 
 export interface PlanStep {
@@ -193,4 +316,5 @@ export interface PolicyDecision {
   requiresConfirmation: boolean;
 }
 
+/** @deprecated The flat cap is replaced by the weighted step budget (budget.ts). */
 export const MAX_TOOL_CALLS_PER_TASK = 25;

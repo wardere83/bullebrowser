@@ -1,0 +1,87 @@
+{
+  "recordedOn": "2026-10-06",
+  "request": {
+    "url": "https://data.cityofnewyork.us/resource/dg92-zbpx.json?%24select=request_id%2Cstart_date%2Cend_date%2Cagency_name%2Ctype_of_notice_description%2Ccategory_description%2Cshort_title%2Cselection_method_description%2Csection_name%2Cspecial_case_reason_description%2Cpin%2Cdue_date%2Caddress_to_request%2Ccontact_name%2Ccontact_phone%2Cemail%2Ccontract_amount%2Cadditional_description_1%2Cadditional_description_2%2Cadditional_description_3%2Cother_info_1%2Cother_info_2%2Cother_info_3%2Cdocument_links&%24where=section_name%3D%27Procurement%27+AND+type_of_notice_description%3D%27Solicitation%27+AND+category_description+in%28%27Human+Services%2FClient+Services%27%2C%27Services+%28other+than+human+services%29%27%2C%27Goods+and+Services%27%29+AND+due_date+%3C+%272026-10-06T00%3A00%3A00%27&%24order=due_date+DESC%2C+request_id+DESC&%24limit=200"
+  },
+  "response": [
+    {
+      "request_id": "20260825023",
+      "start_date": "2026-09-01T00:00:00.000",
+      "end_date": "2026-09-01T00:00:00.000",
+      "agency_name": "NYC Health + Hospitals",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Services (other than human services)",
+      "short_title": "Correction: Post Acute Care Debt Collection Services",
+      "selection_method_description": "Request for Proposals",
+      "section_name": "Procurement",
+      "pin": "2879",
+      "due_date": "2026-09-30T17:00:00.000",
+      "address_to_request": "50 Water Street, 5th Floor, New York, NY 10004",
+      "email": "rfp_contacts@nychhc.org",
+      "additional_description_1": "<p><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>This Request for Proposal ('RFP') is issued in order to obtain debt collection services for facilities of NYC Health + Hospitals Post-Acute Care (PAC) for delinquent accounts with balances owned by the Patient. The accounts with balances owed by the patient or responsible parties are accounts with balances remaining unpaid at least 180 days after the first self-pay statement date.</span></span></span></p><p><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>The vendor will be responsible for the successful collection of funds owed for:</span></span></span></p><ul>\t<li style='list-style-type:disc'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>Private Pay accounts</span></span></span></li>\t<li style='list-style-type:disc'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>Patient copays </span></span></span></li>\t<li style='list-style-type:disc'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>Patient deductibles </span></span></span></li>\t<li style='list-style-type:disc'><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>Net Available Monthly Income (\u001aNAMI\u001a) </span></span></span></li></ul><p><span style='font-size:11pt'><span style='font-family:Calibri,sans-serif'><span style='color:#000000'>Any of these payments are to be collected from either the Resident, their power of Attorney or Court Appointed Guardian. NYC Health + Hospitals Post-Acute Care is seeking contingency based reimbursement for this RFP.</span></span></span></p>"
+    },
+    {
+      "request_id": "20260811020",
+      "start_date": "2026-08-18T00:00:00.000",
+      "end_date": "2026-08-18T00:00:00.000",
+      "agency_name": "Campaign Finance Board",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Services (other than human services)",
+      "short_title": "Community and Stakeholder Mapping within Priority Neighborhoods",
+      "selection_method_description": "M/WBE Noncompetitive Small Purchase",
+      "section_name": "Procurement",
+      "pin": "004202700003",
+      "due_date": "2026-09-30T17:00:00.000",
+      "address_to_request": "100 Church Street, 12th Floor, New York, NY 10007",
+      "email": "contracts@nyccfb.info",
+      "additional_description_1": "<p><span style='font-size:12.0pt'>The NYC Campaign Finance Board (CFB) is seeking a vendor to provide services covering market researching, neighborhood surveying and community and stakeholder mapping within the agency\u001as identified priority neighborhoods to strengthen the agency\u001as voter, contributor, and candidate engagement strategies required to support the CFB\u001as Community Stakeholder Mapping project. </span></p>",
+      "other_info_1": "This procurement will be utilizing the M/WBE Noncompetitive Small Purchase method, in accordance with PPB Rule Section § 3-08(c)(1)(iv), and is open to businesses certified as NYC Minority- or Women-Owned Business Enterprises (M/WBEs) pursuant to New York City Charter Section 311 (i)(1)."
+    },
+    {
+      "request_id": "20260429002",
+      "start_date": "2026-05-05T00:00:00.000",
+      "end_date": "2026-05-05T00:00:00.000",
+      "agency_name": "Correction",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Services (other than human services)",
+      "short_title": "New Elevator Maintenance and Repair Service",
+      "selection_method_description": "Competitive Sealed Bids",
+      "section_name": "Procurement",
+      "pin": "07226B0002",
+      "due_date": "2026-05-27T11:00:00.000",
+      "additional_description_1": "<p>The New York City Department of Correction (\u001aDepartment\u001a or \u001aDOC\u001a) seeks a Contractor to provide at all Department facilities: full service elevator maintenance including monthly, semi-annual, annual, and other scheduled maintenance; all necessary inspections, tests and filings including violation notices, yearly and other inspections and safety tests as required by codes, regulations, laws, and or ordinances; other inspections, tests and filings as directed by the Department; on-call diagnostic, repair, and replacement services as needed; and all associated labor, materials, parts, and equipment.</p><p>Pre-bid Meeting Information (Friday, May 15th, 2026 @ 11AM)</p><p>Join Meeting ID: 266 632 330 760 209 Passcode: a7oU3wP2 Or call in (audio only) +1 646-893-7101,,257192408 United States, New York City Phone Conference ID: 257 192 408#</p><p>Bid Opening Information (Wednesday, May 27, 2026 11:30 AM) Join: https://teams.microsoft.com/meet/24509015738503?p=7j68au1jQ2fCYkMcgc Meeting ID: 245 090 157 385 03 Passcode: 4mN39J9S Or call in (audio only) +1 646-893-7101,,486769036# United States, New York City Phone Conference ID: 486 769 036#</p>",
+      "other_info_1": "Bid opening Location - Virtual Bid Opening"
+    },
+    {
+      "request_id": "20260319029",
+      "start_date": "2026-03-26T00:00:00.000",
+      "end_date": "2026-03-26T00:00:00.000",
+      "agency_name": "Citywide Administrative Services",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Services (other than human services)",
+      "short_title": "Cancellation: INTEGRATED PEST MANAGEMENT AND RELATED SERVICES, CITYWIDE",
+      "selection_method_description": "Competitive Sealed Bids",
+      "section_name": "Procurement",
+      "pin": "85725B0034",
+      "due_date": "2026-05-07T13:30:00.000",
+      "address_to_request": "N/A",
+      "contact_phone": "(000) 000-0000",
+      "additional_description_1": "<p>See attached notice of cancellation. </p>",
+      "other_info_1": "Pre bid conference location -Link: https://events.gcc.teams.microsoft.com/event/52625934-310a-40f7-be88-fe08005fa2d4@32f56fc7-5f81-4e22-a95b-15da66513bef Mandatory: noDate/Time - 2026-04-09 10:00:00"
+    },
+    {
+      "request_id": "20260227028",
+      "start_date": "2026-03-06T00:00:00.000",
+      "end_date": "2026-03-06T00:00:00.000",
+      "agency_name": "Correction",
+      "type_of_notice_description": "Solicitation",
+      "category_description": "Services (other than human services)",
+      "short_title": "Bid Extension: New Elevator Maintenance and Repair Service",
+      "selection_method_description": "Competitive Sealed Bids",
+      "section_name": "Procurement",
+      "pin": "07226B0002",
+      "due_date": "2026-04-20T11:30:00.000",
+      "address_to_request": "7520 Astoria Boulevard, Suite 320, East Elmhurst, NY 11370"
+    }
+  ]
+}

@@ -9,11 +9,11 @@
 // messages go straight into the chat, so scrub anything passed through.
 export function scrubVendorNames(text: string): string {
   return text
-    .replace(/\bthe Anthropic API\b/gi, 'the BulleBrowser AI service')
-    .replace(/\bAnthropic(?: API)?\b/gi, 'BulleBrowser AI')
-    .replace(/\bOpenAI(?: API)?\b/gi, 'BulleBrowser AI')
-    .replace(/\bChatGPT\b/gi, 'BulleBrowser AI')
-    .replace(/\bClaude\b/gi, 'BulleBrowser AI');
+    .replace(/\bthe Anthropic API\b/gi, 'the BulleBrowser Agentic AI service')
+    .replace(/\bAnthropic(?: API)?\b/gi, 'BulleBrowser Agentic AI')
+    .replace(/\bOpenAI(?: API)?\b/gi, 'BulleBrowser Agentic AI')
+    .replace(/\bChatGPT\b/gi, 'BulleBrowser Agentic AI')
+    .replace(/\bClaude\b/gi, 'BulleBrowser Agentic AI');
 }
 
 export function describeAgentError(err: unknown): string {

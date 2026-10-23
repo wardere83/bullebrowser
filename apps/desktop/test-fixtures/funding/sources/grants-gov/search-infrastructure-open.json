@@ -1,0 +1,1254 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/search2",
+  "body": {
+   "keyword": "strengthening AND american AND infrastructure",
+   "oppStatuses": "forecasted|posted",
+   "eligibilities": "",
+   "fundingCategories": "",
+   "sortBy": "",
+   "rows": 5000,
+   "startRecordNum": 0
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "searchParams": {
+    "resultType": "json",
+    "searchOnly": false,
+    "oppNum": "",
+    "cfda": "",
+    "sortBy": "",
+    "oppStatuses": "forecasted|posted",
+    "startRecordNum": 0,
+    "eligibilities": "",
+    "fundingInstruments": "",
+    "fundingCategories": "",
+    "agencies": "",
+    "rows": 5000,
+    "keyword": "strengthening AND american AND infrastructure",
+    "keywordEncoded": true
+   },
+   "hitCount": 80,
+   "startRecord": 0,
+   "oppHits": [
+    {
+     "id": "364025",
+     "number": "25-534",
+     "title": "Strengthening American Infrastructure (SAI)",
+     "agencyCode": "NSF",
+     "agency": "U.S. National Science Foundation",
+     "openDate": "10/05/2026",
+     "closeDate": "",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "47.075",
+      "47.041",
+      "47.074",
+      "47.076",
+      "47.049",
+      "47.050"
+     ]
+    },
+    {
+     "id": "364016",
+     "number": "G27AS00165",
+     "title": "Cooperative Agreement for Affiliated Partner with the Southern Appalachian Cooperative Ecosystem Studies Unit (CESU)",
+     "agencyCode": "DOI-USGS1",
+     "agency": "Geological Survey",
+     "openDate": "10/01/2026",
+     "closeDate": "10/30/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "15.808"
+     ]
+    },
+    {
+     "id": "363416",
+     "number": "CDC-RFA-TO-23-00010101SUPP27",
+     "title": "Strengthening Public Health Systems and Services in Indian Country",
+     "agencyCode": "HHS-CDC-CSTLTS",
+     "agency": "CENTERS FOR DISEASE CONTROL  CSTLTS",
+     "openDate": "07/31/2026",
+     "closeDate": "",
+     "oppStatus": "forecasted",
+     "docType": "forecast",
+     "cfdaList": [
+      "93.772"
+     ]
+    },
+    {
+     "id": "364006",
+     "number": "USDA-AMS-TM-DBI-G-26-0011",
+     "title": "Dairy Business Innovation Initiatives Program (DBI) Fiscal Year 2026",
+     "agencyCode": "USDA-AMS",
+     "agency": "Agricultural Marketing Service",
+     "openDate": "09/30/2026",
+     "closeDate": "12/01/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.176"
+     ]
+    },
+    {
+     "id": "363786",
+     "number": "DFOP0018819",
+     "title": "Egypt  Annual Program Statement",
+     "agencyCode": "DOS-NEA",
+     "agency": "Bureau of Near Eastern Affairs",
+     "openDate": "09/02/2026",
+     "closeDate": "01/01/2099",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.600"
+     ]
+    },
+    {
+     "id": "361754",
+     "number": "PA-FPH-27-001",
+     "title": "Title X Family Planning Services Grants",
+     "agencyCode": "HHS-OPHS",
+     "agency": "Office of the Assistant Secretary for Health",
+     "openDate": "04/03/2026",
+     "closeDate": "01/11/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.217"
+     ]
+    },
+    {
+     "id": "363047",
+     "number": "HHS-2026-ACF-ECD-TP-0039",
+     "title": "Preschool Development Grant Birth Through Five (PDG B-5) SMART Grant",
+     "agencyCode": "HHS-ACF",
+     "agency": "Administration for Children and Families",
+     "openDate": "09/21/2026",
+     "closeDate": "11/20/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.434"
+     ]
+    },
+    {
+     "id": "363657",
+     "number": "EPA-OW-OWM-26-03",
+     "title": "Innovative Water Infrastructure Workforce Development Grant",
+     "agencyCode": "EPA",
+     "agency": "Environmental Protection Agency",
+     "openDate": "08/19/2026",
+     "closeDate": "10/15/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "66.445"
+     ]
+    },
+    {
+     "id": "363732",
+     "number": "FHWA-PROT-26-001",
+     "title": "FYs 2024 through 2026 - Promoting Resilient Operations for Transformative, Efficient, and Cost-saving Transportation (PROTECT) Competitive Grant Program Notice of Funding Opportunity",
+     "agencyCode": "DOT-FHWA",
+     "agency": "DOT Federal Highway Administration ",
+     "openDate": "08/27/2026",
+     "closeDate": "10/09/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "20.284"
+     ]
+    },
+    {
+     "id": "360393",
+     "number": "PAR-28-062",
+     "title": "Cancer Advancement through Partnerships in Research and Infrastructure (CAPRI) (U54 Clinical Trial Optional)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "08/31/2026",
+     "closeDate": "01/25/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.399"
+     ]
+    },
+    {
+     "id": "362034",
+     "number": "NOAA-NMFS-AK-2026-33268",
+     "title": "2026 Alaska Marine Education and Training Mini-Grant Program",
+     "agencyCode": "DOC-DOCNOAAERA",
+     "agency": "DOC NOAA - ERA Production",
+     "openDate": "04/23/2026",
+     "closeDate": "05/01/2028",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "11.455"
+     ]
+    },
+    {
+     "id": "360883",
+     "number": "PAR-27-056",
+     "title": "Limited Competition: Institutional Development Award (IDeA) for Clinical &amp; Translational Research (CTR) (P30 - CT Optional)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "08/19/2026",
+     "closeDate": "05/30/2029",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.859"
+     ]
+    },
+    {
+     "id": "363590",
+     "number": "OFOP0003602",
+     "title": "Logistical Support for Citizen Security, counternarcotics, border security, criminal deterrence and Law Enforcement Projects in Honduras",
+     "agencyCode": "DOS-INL",
+     "agency": "Bureau of International Narcotics-Law Enforcement",
+     "openDate": "08/14/2026",
+     "closeDate": "10/16/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.705"
+     ]
+    },
+    {
+     "id": "364020",
+     "number": "USDA-NIFA-SBIR-012221",
+     "title": "Small Business Innovation Research and Small Business Technology Transfer Programs Phase II",
+     "agencyCode": "USDA-NIFA",
+     "agency": "National Institute of Food and Agriculture",
+     "openDate": "10/01/2026",
+     "closeDate": "11/17/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.212"
+     ]
+    },
+    {
+     "id": "360759",
+     "number": "CDC-RFA-JG-26-0178",
+     "title": "Strengthening Ghana Health Service laboratory services, diagnostic networks, and systems for a more effective, efficient, and sustainable response to HIV, TB, and other priority health threats",
+     "agencyCode": "HHS-CDC-GHC",
+     "agency": "Centers for Disease Control-GHC",
+     "openDate": "08/17/2026",
+     "closeDate": "10/16/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.067"
+     ]
+    },
+    {
+     "id": "363720",
+     "number": "USDA-NIFA-NLGCA-011938",
+     "title": "Capacity Building Grants for Non-Land-Grant Colleges of Agriculture Program",
+     "agencyCode": "USDA-NIFA",
+     "agency": "National Institute of Food and Agriculture",
+     "openDate": "08/26/2026",
+     "closeDate": "11/10/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.326"
+     ]
+    },
+    {
+     "id": "360613",
+     "number": "PAR-27-055",
+     "title": "Limited Competition: Centers of Biomedical Research Excellence: Expansion/Sustainability Phases (COBRE-E/S) (P30 - Clinical Trial Not Allowed)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "06/18/2026",
+     "closeDate": "05/25/2029",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.859"
+     ]
+    },
+    {
+     "id": "359648",
+     "number": "RFA-OD-25-010",
+     "title": "Resource-Related Research Projects for Development of Models and Related Materials for Studying Human Health and Diseases (R24 Clinical Trials Not Allowed)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "12/05/2025",
+     "closeDate": "09/28/2028",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.351"
+     ]
+    },
+    {
+     "id": "360611",
+     "number": "PAR-27-054",
+     "title": "Limited Competition: Centers of Biomedical Research Excellence: Development Phase (COBRE-D) (P30 - Clinical Trial Not Allowed)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "08/19/2026",
+     "closeDate": "05/26/2029",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.859"
+     ]
+    },
+    {
+     "id": "362850",
+     "number": "HT942526RCRPRCDA",
+     "title": "DoW Rare Cancers Resource and Community Development Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "06/17/2026",
+     "closeDate": "11/18/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362843",
+     "number": "2026-NTIA-TBCP",
+     "title": "Tribal Broadband Connectivity Program",
+     "agencyCode": "DOC-DOCNISTERA",
+     "agency": "DOC NIST ERA",
+     "openDate": "06/17/2026",
+     "closeDate": "11/17/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "11.029"
+     ]
+    },
+    {
+     "id": "363912",
+     "number": "DFOP0017890",
+     "title": "Advancing Global Health",
+     "agencyCode": "DOS-GHSD",
+     "agency": "Bureau of Global Health Security and Diplomacy",
+     "openDate": "09/21/2026",
+     "closeDate": "02/14/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.029"
+     ]
+    },
+    {
+     "id": "361526",
+     "number": "DE-FOA-0003612",
+     "title": "The Genesis Mission:  Transforming Science and Energy with AI",
+     "agencyCode": "PAMS-SC",
+     "agency": "Office of Science",
+     "openDate": "03/17/2026",
+     "closeDate": "12/17/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "81.049"
+     ]
+    },
+    {
+     "id": "362177",
+     "number": "HT942526ATRPTRA",
+     "title": "DoW Arthritis Translational Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/01/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "364012",
+     "number": "G27AS00164",
+     "title": "WATER RESOURCES RESEARCH ACT PROGRAM NATIONAL COMPETITIVE GRANTS FY2026 (104g General)",
+     "agencyCode": "DOI-USGS1",
+     "agency": "Geological Survey",
+     "openDate": "09/30/2026",
+     "closeDate": "11/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "15.805"
+     ]
+    },
+    {
+     "id": "343653",
+     "number": "W81XWH-22-DHAPP",
+     "title": "Department of Defense HIV/AIDS Prevention Program",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "09/19/2022",
+     "closeDate": "09/18/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.350"
+     ]
+    },
+    {
+     "id": "350338",
+     "number": "2023-NIST-CHIPS-SMME-01",
+     "title": "CHIPS Incentives Program &ndash; Facilities for Semiconductor Materials and Manufacturing Equipment",
+     "agencyCode": "DOC-NIST",
+     "agency": "National Institute of Standards and Technology",
+     "openDate": "09/29/2023",
+     "closeDate": "11/01/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "11.037"
+     ]
+    },
+    {
+     "id": "363796",
+     "number": "USDA-NIFA-CBGP-011698",
+     "title": "1890 Institution Teaching, Research, and Extension Capacity Building Grants Program",
+     "agencyCode": "USDA-NIFA",
+     "agency": "National Institute of Food and Agriculture",
+     "openDate": "09/03/2026",
+     "closeDate": "11/04/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.216"
+     ]
+    },
+    {
+     "id": "363660",
+     "number": "DFOP0019410",
+     "title": "U.S.-Africa Strategic Investment Program",
+     "agencyCode": "DOS-AF",
+     "agency": "Bureau of African Affairs",
+     "openDate": "08/19/2026",
+     "closeDate": "05/31/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.989"
+     ]
+    },
+    {
+     "id": "360205",
+     "number": "USDA-NIFA-AFRI-011134",
+     "title": "Agriculture and Food Research Initiative Competitive Grants Program Foundational and Applied Science Program",
+     "agencyCode": "USDA-NIFA",
+     "agency": "National Institute of Food and Agriculture",
+     "openDate": "08/01/2025",
+     "closeDate": "12/31/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.310"
+     ]
+    },
+    {
+     "id": "363815",
+     "number": "DE-FOA-0003647",
+     "title": "Accelerating Scale-up and Pre-piloting of Emerging Chemical Technologies (ASPECT)",
+     "agencyCode": "DOE-GFO",
+     "agency": "Golden Field Office",
+     "openDate": "09/04/2026",
+     "closeDate": "12/01/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "81.087"
+     ]
+    },
+    {
+     "id": "347414",
+     "number": "EDA-DISASTER-2023",
+     "title": "FY 2023 Disaster Supplemental",
+     "agencyCode": "DOC-EDA",
+     "agency": "Economic Development Administration",
+     "openDate": "04/24/2023",
+     "closeDate": "",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "11.307"
+     ]
+    },
+    {
+     "id": "363479",
+     "number": "USDA-NIFA-CGP-011315",
+     "title": "Higher Education Challenge   Grants Program",
+     "agencyCode": "USDA-NIFA",
+     "agency": "National Institute of Food and Agriculture",
+     "openDate": "08/05/2026",
+     "closeDate": "10/15/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.217"
+     ]
+    },
+    {
+     "id": "363594",
+     "number": "DE-FOA-0003215",
+     "title": "Annual Recurring University Training and Research",
+     "agencyCode": "DOE-NETL",
+     "agency": "National Energy Technology Laboratory",
+     "openDate": "08/14/2026",
+     "closeDate": "10/16/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "81.089"
+     ]
+    },
+    {
+     "id": "360364",
+     "number": "PAR-27-067",
+     "title": "Limited Competition: Instrumentation Grant Program for Resource-Limited Institutions (S10 - Clinical Trial Not Allowed)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "05/27/2026",
+     "closeDate": "01/26/2029",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.286",
+      "93.173",
+      "93.853",
+      "93.867",
+      "93.351",
+      "93.846",
+      "93.866",
+      "93.859",
+      "93.121",
+      "93.172",
+      "93.242"
+     ]
+    },
+    {
+     "id": "362787",
+     "number": "L26AS00064",
+     "title": "FY26 Bureau of Land Management Youth Conservation Corps - Bureau wide&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+     "agencyCode": "DOI-BLM",
+     "agency": "Bureau of Land Management",
+     "openDate": "06/12/2026",
+     "closeDate": "10/16/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "15.243"
+     ]
+    },
+    {
+     "id": "360655",
+     "number": "RFA-OD-27-005",
+     "title": "INCLUDE Project: Clinical Trials Phased Awards for Down syndrome Research (R61/R33 Clinical Trial Required)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "05/13/2026",
+     "closeDate": "06/15/2028",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.395",
+      "93.866",
+      "93.839",
+      "93.838",
+      "93.846",
+      "93.840",
+      "93.173",
+      "93.310",
+      "93.847",
+      "93.837",
+      "93.233",
+      "93.350",
+      "93.865"
+     ]
+    },
+    {
+     "id": "360199",
+     "number": "RFA-CK-26-035",
+     "title": "Emerging Infections Network - Research for Preventing, Detecting, and Managing Travel-associated Infectious Diseases",
+     "agencyCode": "HHS-CDC-HHSCDCERA",
+     "agency": "Centers for Disease Control and Prevention - ERA",
+     "openDate": "08/03/2026",
+     "closeDate": "11/05/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.084"
+     ]
+    },
+    {
+     "id": "359701",
+     "number": "PAR-26-106",
+     "title": "Development of Collaborative Research Facilities or Research-Resource Facilities (C06 Clinical Trial Not Allowed)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "03/06/2026",
+     "closeDate": "01/25/2028",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.352",
+      "93.310"
+     ]
+    },
+    {
+     "id": "361315",
+     "number": "USDA-FS-UCF-01-2026",
+     "title": "2026 National Urban and Community Forestry Challenge Cost Share Grant Program",
+     "agencyCode": "USDA-FS",
+     "agency": "Forest Service",
+     "openDate": "08/12/2026",
+     "closeDate": "10/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.675"
+     ]
+    },
+    {
+     "id": "360200",
+     "number": "RFA-CK-26-036",
+     "title": "US Travelers Health Research, Surveillance, Communication, and Outreach Network",
+     "agencyCode": "HHS-CDC-HHSCDCERA",
+     "agency": "Centers for Disease Control and Prevention - ERA",
+     "openDate": "08/05/2026",
+     "closeDate": "11/05/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.084"
+     ]
+    },
+    {
+     "id": "363998",
+     "number": "OST-OSDBU-2027-SBTTAC-REGION3-FY2027-1",
+     "title": "Small Business Transportation Technical Assistance Center (Region 3)",
+     "agencyCode": "DOT-OSDBU",
+     "agency": "69A350 OSDBU",
+     "openDate": "10/01/2026",
+     "closeDate": "10/31/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "20.910"
+     ]
+    },
+    {
+     "id": "363996",
+     "number": "OST-OSDBU-2027-SBTTAC-REGION1-FY2027-1",
+     "title": "Small Business Transportation Technical Assistance Center (Region 1)",
+     "agencyCode": "DOT-OSDBU",
+     "agency": "69A350 OSDBU",
+     "openDate": "10/01/2026",
+     "closeDate": "10/31/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "20.910"
+     ]
+    },
+    {
+     "id": "364004",
+     "number": "OST-OSDBU-2027-SBTTAC-REGION-4-FY2027-1",
+     "title": "Region 4 Small Business Transportation Technical Assistance Center (SBTTAC)",
+     "agencyCode": "DOT-OSDBU",
+     "agency": "69A350 OSDBU",
+     "openDate": "09/30/2026",
+     "closeDate": "10/31/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "20.910"
+     ]
+    },
+    {
+     "id": "361002",
+     "number": "CDC-RFA-DD-26-0222",
+     "title": "Long-term health outcomes of people living with spina bifida",
+     "agencyCode": "HHS-CDC-NCBDDD",
+     "agency": "Centers for Disease Control - NCBDDD",
+     "openDate": "08/26/2026",
+     "closeDate": "10/26/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.073"
+     ]
+    },
+    {
+     "id": "362607",
+     "number": "HT942526RTRPCA",
+     "title": "DoW Reconstructive Transplant, Concept Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "06/17/2026",
+     "closeDate": "11/04/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "359671",
+     "number": "PA-27-100",
+     "title": "NIH, CDC and FDA Small Business Innovation Research Grant (Parent SBIR [R43/R44] Clinical Trial Optional)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "05/28/2026",
+     "closeDate": "04/05/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.143",
+      "93.286",
+      "93.394",
+      "93.865",
+      "93.350",
+      "93.068",
+      "93.853",
+      "93.361",
+      "93.307",
+      "93.103",
+      "93.395",
+      "93.273",
+      "93.846",
+      "93.855",
+      "93.142",
+      "93.213",
+      "93.073",
+      "93.233",
+      "93.866",
+      "93.351",
+      "93.837",
+      "93.847",
+      "93.840",
+      "93.313",
+      "93.242",
+      "93.879",
+      "93.393",
+      "93.859",
+      "93.172",
+      "93.173",
+      "93.839",
+      "93.083",
+      "93.136",
+      "93.070",
+      "93.084",
+      "93.326",
+      "93.838",
+      "93.867",
+      "93.279",
+      "93.121",
+      "93.113"
+     ]
+    },
+    {
+     "id": "358380",
+     "number": "HQ003425NFOEASD03",
+     "title": "Department of War Cyber Service Academy (DoW CSA)",
+     "agencyCode": "DOD-WHS",
+     "agency": "Washington Headquarters Services",
+     "openDate": "01/23/2025",
+     "closeDate": "01/22/2030",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.902"
+     ]
+    },
+    {
+     "id": "363381",
+     "number": "DFOP0018770",
+     "title": "Program to End Modern Slavery Annual Program Statement",
+     "agencyCode": "DOS-GTIP",
+     "agency": "Office to Monitor-Combat Trafficking in Persons",
+     "openDate": "07/29/2026",
+     "closeDate": "01/01/2099",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "19.019"
+     ]
+    },
+    {
+     "id": "363455",
+     "number": "HT942526RTRPIIRA",
+     "title": "DoW Reconstructive Transplant, Investigator-Initiated Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "08/26/2026",
+     "closeDate": "11/04/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362849",
+     "number": "HT942526RCRPIDA",
+     "title": "DoW Rare Cancers Idea Development Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "06/17/2026",
+     "closeDate": "11/18/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362254",
+     "number": "HT942526MBRPDA",
+     "title": "DoW Military Burn, Discovery Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/21/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362174",
+     "number": "HT942526TBDRPTDRA",
+     "title": "DoW Tick-Borne Disease Therapeutic/Diagnostic Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "361876",
+     "number": "USDA-AMS-TM-SCMP-G-26-0020",
+     "title": "Specialty Crop Multi-State Grant Program 2026",
+     "agencyCode": "USDA-AMS",
+     "agency": "Agricultural Marketing Service",
+     "openDate": "04/13/2026",
+     "closeDate": "12/04/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "10.170"
+     ]
+    },
+    {
+     "id": "362880",
+     "number": "OFH-2600-DC-021A",
+     "title": "Fair Housing Initiatives Program - Education and Outreach Initiative",
+     "agencyCode": "HUD",
+     "agency": "Department of Housing and Urban Development",
+     "openDate": "07/02/2026",
+     "closeDate": "11/02/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "14.416"
+     ]
+    },
+    {
+     "id": "362304",
+     "number": "HT942526TERPIIRA",
+     "title": "DoW Toxic Exposures Investigator Initiated Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "11/19/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362171",
+     "number": "HT942526TBDRPIDA",
+     "title": "DoW Tick-Borne Disease Idea Development Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "363776",
+     "number": "ME-FY27",
+     "title": "Museums Empowered (2027)",
+     "agencyCode": "IMLS",
+     "agency": "Institute of Museum and Library Services",
+     "openDate": "09/01/2026",
+     "closeDate": "11/13/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "45.301"
+     ]
+    },
+    {
+     "id": "362857",
+     "number": "HT942526JWMRPMMRDA",
+     "title": "DoW Joint Warfighter Medical, Military Medical Research and Development Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "06/17/2026",
+     "closeDate": "11/16/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362305",
+     "number": "HT942526TERPTRA",
+     "title": "DoW Toxic Exposures Translational Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "11/19/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362302",
+     "number": "HT942526TERPCTA",
+     "title": "DoW Toxic Exposures Clinical Trial Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "11/19/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362248",
+     "number": "HT942526MBRPPCRA",
+     "title": "DoW Military Burn, Patient-Centered Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/21/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362175",
+     "number": "HT942526ATRPCRA",
+     "title": "DoW Arthritis Clinical Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/01/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362866",
+     "number": "HT942526PRPEIRA",
+     "title": "DoW Parkinson&rsquo;s, Early Investigator Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "06/18/2026",
+     "closeDate": "11/06/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362226",
+     "number": "HT942526SCIRPIIRA",
+     "title": "DoW Spinal Cord Injury, Investigator-Initiated Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "11/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362531",
+     "number": "HT942526ARPIDA",
+     "title": "DoW Autism Idea Development Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362271",
+     "number": "HT942526TBIPHRPHSRA",
+     "title": "DoW Traumatic Brain Injury and Psychological Health, Health Services Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/15/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362272",
+     "number": "HT942526TBIPHRPTRA",
+     "title": "DoW Traumatic Brain Injury and Psychological Health, Translational Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/15/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362225",
+     "number": "HT942526SCIRPCTRA",
+     "title": "DoW Spinal Cord Injury, Clinical Translation Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "11/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362868",
+     "number": "HT942526PRPIIRA",
+     "title": "DoW Parkinson&rsquo;s, Investigator-Initiated Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "06/18/2026",
+     "closeDate": "11/06/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362222",
+     "number": "HT942526SCIRPTRA",
+     "title": "DoW Spinal Cord Injury, Translational Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "11/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362224",
+     "number": "HT942526SCIRPCTA",
+     "title": "DoW Spinal Cord Injury, Clinical Trial Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "11/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362186",
+     "number": "HT942526VRPTRA",
+     "title": "DoW Vision, Translational Research Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/05/2026",
+     "closeDate": "11/12/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362529",
+     "number": "HT942526ARPCDA",
+     "title": "DoW Autism Career Development Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "362187",
+     "number": "HT942526TBIPHRPCTA",
+     "title": "DoW Traumatic Brain Injury and Psychological Health, Clinical Trial Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/15/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "363993",
+     "number": "DE-FOA-0003665",
+     "title": "FY 2027 Continuation of Solicitation for the Office of Science Financial Assistance Program",
+     "agencyCode": "PAMS-SC",
+     "agency": "Office of Science",
+     "openDate": "09/30/2026",
+     "closeDate": "09/30/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "81.049"
+     ]
+    },
+    {
+     "id": "345938",
+     "number": "HQ003423NFOEASD01",
+     "title": "NDEP STEM Open NFO",
+     "agencyCode": "DOD-WHS",
+     "agency": "Washington Headquarters Services",
+     "openDate": "02/09/2023",
+     "closeDate": "02/08/2028",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.006"
+     ]
+    },
+    {
+     "id": "362530",
+     "number": "HT942526ARPCTA",
+     "title": "DoW Autism Clinical Trial Award",
+     "agencyCode": "DOD-AMRAA",
+     "agency": "Defense Health Agency Contracting Activity - DHACA",
+     "openDate": "05/21/2026",
+     "closeDate": "10/22/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.420"
+     ]
+    },
+    {
+     "id": "360544",
+     "number": "RFA-DK-27-120",
+     "title": "Nutrition Obesity Research Centers (NORCs) (P30 Clinical Trial Optional)",
+     "agencyCode": "HHS-NIH11",
+     "agency": "National Institutes of Health",
+     "openDate": "06/30/2026",
+     "closeDate": "10/20/2026",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "93.847"
+     ]
+    },
+    {
+     "id": "344592",
+     "number": "W911NF-23-S-0001",
+     "title": "DEVCOM ARMY RESEARCH LABORATORY BROAD AGENCY ANNOUNCEMENT FOR FOUNDATIONAL RESEARCH",
+     "agencyCode": "DOD-AMC",
+     "agency": "Dept of the Army -- Materiel Command",
+     "openDate": "11/21/2022",
+     "closeDate": "11/20/2027",
+     "oppStatus": "posted",
+     "docType": "synopsis",
+     "cfdaList": [
+      "12.431"
+     ]
+    }
+   ],
+   "oppStatusOptions": [
+    {
+     "label": "posted",
+     "value": "posted",
+     "count": 79
+    },
+    {
+     "label": "closed",
+     "value": "closed",
+     "count": 930
+    },
+    {
+     "label": "archived",
+     "value": "archived",
+     "count": 3926
+    },
+    {
+     "label": "forecasted",
+     "value": "forecasted",
+     "count": 1
+    }
+   ],
+   "suggestion": "",
+   "accessKey": "",
+   "errorMsgs": []
+  }
+ }
+}

@@ -1,0 +1,295 @@
+{
+ "recordedOn": "2026-10-06",
+ "request": {
+  "url": "https://api.grants.gov/v1/api/fetchOpportunity",
+  "body": {
+   "opportunityId": 359123
+  }
+ },
+ "response": {
+  "errorcode": 0,
+  "msg": "Webservice Succeeds",
+  "data": {
+   "id": 359123,
+   "revision": 4,
+   "opportunityNumber": "RFA-DE-27-001",
+   "opportunityTitle": "Community Engagement Evaluation and Data Coordination (CEED) Hub to Advance Data and Practice Transformation for Optimizing Oral Health for All (U01, Clinical Trial Not Allowed)",
+   "owningAgencyCode": "HHS-NIH11",
+   "listed": "L",
+   "modifiedComments": "FON and NOFO Title updated to reflect final NOFO prior to publication.",
+   "flag2006": "N",
+   "opportunityCategory": {
+    "category": "D",
+    "description": "Discretionary"
+   },
+   "synopsis": {
+    "opportunityId": 359123,
+    "version": 1,
+    "agencyCode": "HHS-NIH11",
+    "agencyName": "National Institutes of Health",
+    "agencyPhone": "301-402-2541",
+    "agencyAddressDesc": "NIDCR-ADAPT@nih.gov",
+    "agencyDetails": {
+     "code": "NIH",
+     "seed": "HHS-NIH11",
+     "agencyName": "National Institutes of Health",
+     "agencyCode": "HHS-NIH11",
+     "topAgencyCode": "HHS"
+    },
+    "topAgencyDetails": {
+     "code": "HHS",
+     "seed": "HHS",
+     "agencyName": "Department of Health and Human Services",
+     "agencyCode": "HHS",
+     "topAgencyCode": "HHS"
+    },
+    "agencyContactPhone": "301-402-2541",
+    "agencyContactName": "National Institutes of Health",
+    "agencyContactDesc": "National Institute of Dental and Craniofacial Research (NIDCR)\nNIDCR-ADAPT@nih.gov",
+    "agencyContactEmail": "NIDCR-ADAPT@nih.gov",
+    "agencyContactEmailDesc": "NIDCR-ADAPT@nih.gov",
+    "synopsisDesc": "The purpose of this Notice of Funding Opportunity (NOFO) is to seek applications for a Community Engagement Evaluation and Data coordination hub (CEED) for the Community-Based Participatory Research (CBPR) consortium: Advancing Data and Practice Transformation (ADAPT) for Optimizing Oral Health for All. In addition to CEED, the ADAPT consortium will include separately funded CBPR projects, which will receive consultative services from the NIH Community Engagement Alliance Consultative Resource (CEACR) and join in the Science Collaborative for Health and Artificial Intelligence Reduction of Errors (SCHARE) platform for the overarching goal of promoting data use and transformational community engagement to optimize oral health for all people. The CEED hub will coordinate communications and various activities in support of CBPR projects and consortium functions in three domains:1) Data Planning, Consultation, and Technical Assistance for Research Methodology and Analytics; 2) Community Engagement Evaluation; and 3) ADAPT Infrastructure and Operational Support.",
+    "responseDate": "Oct 19, 2026 12:00:00 AM EDT",
+    "postingDate": "Apr 27, 2026 12:00:00 AM EDT",
+    "archiveDate": "Dec 18, 2026 12:00:00 AM EST",
+    "costSharing": false,
+    "numberOfAwards": "1",
+    "estimatedFunding": "1000000",
+    "estimatedFundingFormatted": "1,000,000",
+    "awardCeiling": "none",
+    "awardFloor": "none",
+    "applicantEligibilityDesc": "Refer to Section III. Eligibility Information in the NOFO for additional information on eligibility.Foreign Organizations/International CollaborationsNon-domestic (non-U.S.) Entities (Foreign Organizations) are not eligible to apply.Non-domestic (non-U.S.) components of U.S. Organizations are not eligible to apply.Foreign components, as defined in the NIH Grants Policy Statement, are not allowed.",
+    "createTimeStamp": "Apr 27, 2026 02:09:08 PM EDT",
+    "createdDate": "Apr 27, 2026 02:08:57 PM EDT",
+    "lastUpdatedDate": "Apr 27, 2026 02:08:57 PM EDT",
+    "applicantTypes": [
+     {
+      "id": "02",
+      "description": "City or township governments"
+     },
+     {
+      "id": "13",
+      "description": "Nonprofits that do not have a 501(c)(3) status with the IRS, other than institutions of higher education"
+     },
+     {
+      "id": "25",
+      "description": "Others (see text field entitled \"Additional Information on Eligibility\" for clarification)"
+     },
+     {
+      "id": "04",
+      "description": "Special district governments"
+     },
+     {
+      "id": "07",
+      "description": "Native American tribal governments (Federally recognized)"
+     },
+     {
+      "id": "23",
+      "description": "Small businesses"
+     },
+     {
+      "id": "01",
+      "description": "County governments"
+     },
+     {
+      "id": "00",
+      "description": "State governments"
+     },
+     {
+      "id": "05",
+      "description": "Independent school districts"
+     },
+     {
+      "id": "06",
+      "description": "Public and State controlled institutions of higher education"
+     },
+     {
+      "id": "08",
+      "description": "Public housing authorities/Indian housing authorities"
+     },
+     {
+      "id": "20",
+      "description": "Private institutions of higher education"
+     },
+     {
+      "id": "11",
+      "description": "Native American tribal organizations (other than Federally recognized tribal governments)"
+     },
+     {
+      "id": "22",
+      "description": "For profit organizations other than small businesses"
+     },
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "CA",
+      "description": "Cooperative Agreement"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "HL",
+      "description": "Health"
+     }
+    ],
+    "responseDateStr": "2026-10-19-00-00-00",
+    "postingDateStr": "2026-04-27-00-00-00",
+    "archiveDateStr": "2026-12-18-00-00-00",
+    "createTimeStampStr": "2026-04-27-14-09-08"
+   },
+   "agencyDetails": {
+    "code": "NIH",
+    "seed": "HHS-NIH11",
+    "agencyName": "National Institutes of Health",
+    "agencyCode": "HHS-NIH11",
+    "topAgencyCode": "HHS"
+   },
+   "topAgencyDetails": {
+    "code": "HHS",
+    "seed": "HHS",
+    "agencyName": "Department of Health and Human Services",
+    "agencyCode": "HHS",
+    "topAgencyCode": "HHS"
+   },
+   "forecast": {
+    "opportunityId": 359123,
+    "version": 4,
+    "postingDate": "May 27, 2025 12:00:00 AM EDT",
+    "archiveDate": "Apr 26, 2026 12:00:00 AM EDT",
+    "forecastDesc": "<p><span style=\"color: rgb(51, 51, 51);\">The National Institute of Dental and Craniofacial Research (NIDCR), with other NIH Institutes and Centers (ICs), intends to publish a Notice of Funding Opportunity (NOFO) to solicit applications for a Community Engagement Evaluation and Data coordination hub (CEED) for the Community Based Participatory Research (CBPR) Consortium—Advancing DAta and Practice Transformation (ADAPT) for Optimizing Oral Health for All Across the Lifespan. In addition to CEED, the consortium will include separately funded CBPR projects, which will receive consultative services from the NIH Community Engagement Alliance Consultative Resource (CEACR) and join in the Science Collaborative for Health disparities and Artificial intelligence Reduction of Errors (SCHARE) platform for the overarching goal of promoting data use and transformational community engagement to optimize oral health for all people. The CEED will coordinate communications and various activities in support of CBPR projects and consortium functions in three domains:1) Data Planning, Consultation, and Technical Assistance for Research Methodology and Analytics; 2) Community Engagement Evaluation; and 3) ADAPT Infrastructure and Operational Support. Applications are not being solicited at this time. Notice is being provided to allow potential applicants sufficient time to develop meaningful collaborations and responsive projects. This NOFO will utilize the U01 activity code. Investigators with expertise and insights in program evaluation, quality improvement, population data science and coordination are encouraged to begin to consider applying for this new NOFO.&nbsp;&nbsp;</span></p>",
+    "costSharing": false,
+    "agencyCode": "HHS-NIH11",
+    "applicantEligibilityDesc": "",
+    "estSynopsisPostingDate": "Jul 03, 2025 12:00:00 AM EDT",
+    "estApplicationResponseDate": "Oct 07, 2025 12:00:00 AM EDT",
+    "estApplicationResponseDateDesc": "",
+    "estAwardDate": "Jul 01, 2026 12:00:00 AM EDT",
+    "estProjectStartDate": "Jul 01, 2026 12:00:00 AM EDT",
+    "fiscalYear": 2026,
+    "modComments": "Updated Archive Date",
+    "createTimeStamp": "Apr 27, 2026 02:09:08 PM EDT",
+    "createdDate": "May 27, 2025 09:51:51 AM EDT",
+    "lastUpdatedDate": "Apr 27, 2026 02:09:08 PM EDT",
+    "agencyDetails": {
+     "code": "NIH",
+     "seed": "HHS-NIH11",
+     "agencyName": "National Institutes of Health",
+     "agencyCode": "HHS-NIH11",
+     "topAgencyCode": "HHS"
+    },
+    "applicantTypes": [
+     {
+      "id": "05",
+      "description": "Independent school districts"
+     },
+     {
+      "id": "06",
+      "description": "Public and State controlled institutions of higher education"
+     },
+     {
+      "id": "08",
+      "description": "Public housing authorities/Indian housing authorities"
+     },
+     {
+      "id": "20",
+      "description": "Private institutions of higher education"
+     },
+     {
+      "id": "11",
+      "description": "Native American tribal organizations (other than Federally recognized tribal governments)"
+     },
+     {
+      "id": "22",
+      "description": "For profit organizations other than small businesses"
+     },
+     {
+      "id": "07",
+      "description": "Native American tribal governments (Federally recognized)"
+     },
+     {
+      "id": "23",
+      "description": "Small businesses"
+     },
+     {
+      "id": "01",
+      "description": "County governments"
+     },
+     {
+      "id": "00",
+      "description": "State governments"
+     },
+     {
+      "id": "12",
+      "description": "Nonprofits having a 501(c)(3) status with the IRS, other than institutions of higher education"
+     }
+    ],
+    "fundingInstruments": [
+     {
+      "id": "CA",
+      "description": "Cooperative Agreement"
+     }
+    ],
+    "fundingActivityCategories": [
+     {
+      "id": "HL",
+      "description": "Health"
+     }
+    ],
+    "postingDateStr": "2025-05-27-00-00-00",
+    "archiveDateStr": "2026-04-26-00-00-00",
+    "estSynopsisPostingDateStr": "2025-07-03-00-00-00",
+    "estApplicationResponseDateStr": "2025-10-07-00-00-00",
+    "estAwardDateStr": "2026-07-01-00-00-00",
+    "estProjectStartDateStr": "2026-07-01-00-00-00",
+    "createTimeStampStr": "2026-04-27-14-09-08"
+   },
+   "synopsisDocumentURLs": [],
+   "synAttChangeComments": [],
+   "cfdas": [
+    {
+     "id": 428603,
+     "opportunityId": 359123,
+     "cfdaNumber": "93.121",
+     "programTitle": "Oral Diseases and Disorders Research"
+    },
+    {
+     "id": 432922,
+     "opportunityId": 359123,
+     "cfdaNumber": "93.310",
+     "programTitle": "Trans-NIH Research Support"
+    },
+    {
+     "id": 432923,
+     "opportunityId": 359123,
+     "cfdaNumber": "93.313",
+     "programTitle": "NIH Office of Research on Women's Health"
+    },
+    {
+     "id": 432924,
+     "opportunityId": 359123
+    }
+   ],
+   "originalDueDate": "Oct 19, 2026 12:00:00 AM EDT",
+   "synopsisModifiedFields": [],
+   "forecastModifiedFields": [
+    "revision",
+    "version",
+    "archiveDate",
+    "modComments"
+   ],
+   "errorMessages": [],
+   "synPostDateInPast": true,
+   "docType": "synopsis",
+   "forecastHistCount": 3,
+   "synopsisHistCount": 0,
+   "assistCompatible": false,
+   "assistURL": "",
+   "draftMode": "N",
+   "ost": "POSTED"
+  }
+ }
+}

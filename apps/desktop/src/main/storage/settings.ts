@@ -1,3 +1,4 @@
+import { normalizeAccessibility } from '../../shared/accessibility.js';
 import { DEFAULT_SETTINGS, type AppSettings } from '../../shared/ipc.js';
 import { createStore } from './store.js';
 
@@ -38,19 +39,26 @@ export function getSettings(): AppSettings {
       : storedHomepageUrl;
 
   return {
+    accessibility: normalizeAccessibility(store.get('accessibility')),
     defaultModel: store.get('defaultModel'),
     aiPanelOpen: store.get('aiPanelOpen'),
     searchProvider: resolvedSearchProvider,
     homepageUrl: normalizedHomepageUrl ?? DEFAULT_SETTINGS.homepageUrl,
-    complianceChecklist: store.get('complianceChecklist'),
+    autoDismissConsent: (store.get('autoDismissConsent') as boolean | undefined) ?? DEFAULT_SETTINGS.autoDismissConsent,
+    stepBudget: clampBudget(store.get('stepBudget') as number | undefined),
   };
 }
 
 export function setSettings(patch: Partial<AppSettings>): AppSettings {
   for (const [k, v] of Object.entries(patch)) {
     if (v !== undefined) {
-      (store as unknown as { set: (k: string, v: unknown) => void }).set(k, v);
+      (store as unknown as { set: (k: string, v: unknown) => void }).set(k, k === 'accessibility' ? normalizeAccessibility(v) : v);
     }
   }
   return getSettings();
+}
+
+function clampBudget(v: number | undefined): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_SETTINGS.stepBudget;
+  return Math.max(5, Math.min(200, Math.round(v)));
 }

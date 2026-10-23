@@ -11,3 +11,14 @@ export * from './memory.js';
 export * from './retrieval.js';
 export * from './openai-loop.js';
 export * from './dom-runtime.js';
+export * from './errors.js';
+export * from './untrusted.js';
+export * from './budget.js';
+export * from './permissions.js';
+export * from './product-identity.js';
+export * from './terminology.js';
+export * from './structured.js';
+
+export * from './browser-tasks.js';
+export * from './connectors.js';
+export * from './browser-host.js';
