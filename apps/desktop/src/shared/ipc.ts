@@ -76,6 +76,7 @@ export const IPC = {
   UPDATE_GET_STATUS: 'update:get-status',
   UPDATE_PREPARE: 'update:prepare',
   UPDATE_APPLY: 'update:apply',
+  UPDATE_FINISH: 'update:finish',
   UPDATE_RETRY: 'update:retry',
   UPDATE_CHECK: 'update:check',
   UPDATE_DETAILS: 'update:details',
@@ -350,6 +351,7 @@ export interface BrowserBridge {
     onStatus(cb: (status: UpdateStatus) => void): () => void;
     prepare(version: string): Promise<void>;
     apply(version: string): Promise<void>;
+    finish(version: string): Promise<void>;
     retry(): Promise<void>;
     check(): Promise<void>;
     details(): Promise<{ installedVersion: string; activationIssue: string | null; completedVersion: string | null }>;
