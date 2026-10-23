@@ -3,7 +3,7 @@ import { accessibilityManager } from './accessibility.js';
 import { normalizeAccessibility } from '../shared/accessibility.js';
 import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { ProviderId } from '@bullebrowser/agent-core';
-import { applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
+import { finishUpdate, applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,6 +122,7 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     return next;
   });
   handle(IPC.UPDATE_APPLY, (_e, version: string) => applyUpdate(version));
+  handle(IPC.UPDATE_FINISH, (_e, version: string) => finishUpdate(version));
   handle(IPC.UPDATE_GET_STATUS, () => getUpdateStatus());
   handle(IPC.UPDATE_PREPARE, (_e, version: string) => prepareUpdate(version));
   handle(IPC.UPDATE_RETRY, () => retryUpdate());

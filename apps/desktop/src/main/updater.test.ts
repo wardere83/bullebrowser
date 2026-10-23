@@ -81,6 +81,31 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+describe('explicit update activation', () => {
+  it('rejects finishing when no verified update is ready', async () => {
+    const api = await start();
+    expect(() => api.finishUpdate('0.2.38')).toThrow('not ready');
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it('allows a verified prepared update to restart only on explicit user action', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(() => api.finishUpdate('0.2.39')).toThrow('not ready');
+    api.finishUpdate('0.2.38');
+    expect(updater.quitAndInstall).toHaveBeenCalledWith(false, true);
+  });
+
+  it('does not offer unsupported native installation on Linux', async () => {
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    expect(() => api.finishUpdate('0.2.38')).toThrow('not supported');
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+  });
+});
+
 describe('background app updates', () => {
   it('stages an explicit click once, saves the session, and never quits or relaunches', async () => {
     const api = await start();
