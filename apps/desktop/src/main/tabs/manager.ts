@@ -9,6 +9,12 @@ import { historyStore } from '../storage/history.js';
 import { getSettings } from '../storage/settings.js';
 import { browsingCloudScript } from '../agent/browser/browsing-cloud.js';
 
+/** Do not load the retired search provider, including redirects and popup URLs. */
+function isRetiredSearchHost(url: string): boolean {
+  try { return /(^|\\.)duckduckgo\\.com$/i.test(new URL(url).hostname); }
+  catch { return false; }
+}
+
 function getDefaultHome(): string {
   return getSettings().homepageUrl;
 }
@@ -83,7 +89,7 @@ class TabManager {
       id,
       view,
       title: 'New Tab',
-      url: url ?? getDefaultHome(),
+      url: url && !isRetiredSearchHost(url) ? url : getDefaultHome(),
       loading: true,
       ...(openerId ? { openerId } : {}),
     };
@@ -157,6 +163,7 @@ class TabManager {
   async navigate(id: string, url: string): Promise<void> {
     const tab = this.find(id);
     if (!tab) return;
+    if (isRetiredSearchHost(url)) throw new Error('This search provider is disabled.');
     this.beginNavigation(tab, url);
     // Failed navigations show the chrome's retry page; don't reject.
     await tab.view.webContents.loadURL(url).catch(() => {});
@@ -312,7 +319,9 @@ class TabManager {
       this.relayout();
       this.broadcast();
     });
+    wc.on('will-navigate', (event, url) => { if (isRetiredSearchHost(url)) event.preventDefault(); });
     wc.setWindowOpenHandler(({ url }) => {
+      if (isRetiredSearchHost(url)) return { action: 'deny' };
       void this.create(url, tab.id);
       return { action: 'deny' };
     });
