@@ -132,7 +132,8 @@ export async function startAgentRun(
     console.error('[agent] could not resolve attachments; running without them', err);
   }
 
-  const runId = randomUUID();
+  const runId = req.runId ?? randomUUID();
+  if (runs.has(runId)) throw new Error('Run already exists');
   const controller = new AbortController();
   const pendingConfirms = new Map<string, (approved: boolean) => void>();
   runs.set(runId, { controller, pendingConfirms });
@@ -157,7 +158,7 @@ export async function startAgentRun(
 
   const runtime = new DesktopToolRuntime({
     request: (message: string) => ask(message, 'destructive'),
-  });
+  }, controller.signal);
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
   // The compliance skill now exists, so this reaches the user's checklist from
@@ -192,6 +193,7 @@ export async function startAgentRun(
   void (async () => {
     let assistantText = '';
     let lastText = '';
+    let terminal: AgentStepEvent = { kind: 'done', ts: Date.now() };
     try {
       assistantText = await runAgent({
         apiKey: apiKey ?? undefined,
@@ -204,6 +206,8 @@ export async function startAgentRun(
         context: ctx,
         requestBrowseAccess: () => ask(req.userMessage, 'browse_access'),
         onStep: (step) => {
+          // Terminal notification must follow persistence, not precede it.
+          if (step.type === 'done') return;
           // Keep the model's own prose as it streams. If the run later dies
           // (context limit, network drop), the finally block can still persist
           // what it had actually worked out instead of throwing the whole
@@ -221,18 +225,11 @@ export async function startAgentRun(
       // error, just keep whatever the agent had already written and end.
       if (isCancellation(err)) {
         if (lastText) assistantText = `${lastText}\n\n_(Stopped.)_`;
-        win.webContents.send(IPC.AGENT_STEP, {
-          runId,
-          step: { kind: 'done', ts: Date.now() } satisfies AgentStepEvent,
-        });
       } else {
         if (lastText) {
           assistantText = `${lastText}\n\n_(This task stopped early: ${describeAgentError(err)})_`;
         }
-        win.webContents.send(IPC.AGENT_STEP, {
-          runId,
-          step: { kind: 'error', message: describeAgentError(err), ts: Date.now() } satisfies AgentStepEvent,
-        });
+        terminal = { kind: 'error', message: describeAgentError(err), ts: Date.now() };
       }
     } finally {
       if (assistantText) {
@@ -243,6 +240,7 @@ export async function startAgentRun(
         });
       }
       runs.delete(runId);
+      if (!win.isDestroyed()) win.webContents.send(IPC.AGENT_STEP, { runId, step: terminal });
     }
   })();
 

@@ -1,113 +1,48 @@
-# BulleBrowser embed widget — CRM integration
+# BulleBrowser CRM widget backend
 
-Replaces a LiveChat-style chatbot with the BulleBrowser agent. A launcher bubble
-sits bottom-right of the CRM; clicking it opens a chat where users type a task,
-and the agent operates the CRM **in the user's own logged-in session**, on the
-page they're on — clicking, typing, reading, with a visible cursor.
+The widget operates the user's logged-in EEO Dashboard page. Model credentials
+belong only on the backend, never in page code.
 
-## Two pieces
+## Authentication prerequisite
 
-1. **The widget** — `apps/web/public/widget.js`, served from `https://bullebrowser.com/widget.js`.
-   Self-contained (shadow DOM, no framework, no CSS bleed). This is what you drop
-   into the CRM in place of the LiveChat snippet.
+Implement token issuance in the trusted CRM server after validating its user
+session. Sign an HS256 JWT with `WIDGET_AUTH_SECRET` (32+ random characters).
+Required claims: `sub` (globally unique authenticated user ID),
+`aud: "bullebrowser-widget"`, and `exp` (seconds, at most 15 minutes ahead).
+Supply this JWT as the widget's `data-token`; reinitialize with a fresh token
+after expiry. Never mint tokens in the browser or embed a static shared secret.
+Streams expire with the token. Task and tool-result routes verify ownership.
 
-2. **The backend** — `server.mjs` here, a runnable reference. It holds the API
-   key and runs the model loop. **An API key can never live in page JavaScript**,
-   which is the only reason a backend exists. Host it wherever your CRM's backend
-   lives; lock CORS to your CRM origin.
+Ordinary users have browser DOM tools subject to the CRM's page permissions.
+Account API tools require BOTH `role: "admin"` and
+`permissions: ["eeo:account"]`, granted only by trusted server authorization.
+These tools are not district-scoped; do not grant them to district users.
 
-## Embed (in the CRM, replacing LiveChat)
+## Deployment
 
-One self-configuring script tag (drop it where the LiveChat snippet was):
+Build: `node services/widget-backend/build.mjs`.
+Start: `node services/widget-backend/dist/server.mjs`.
 
-```html
-<script src="https://bullebrowser.com/widget.js"
-        data-endpoint="https://YOUR-BACKEND"
-        data-token="THE-SAME-VALUE-AS-WIDGET_TOKEN"
-        data-title="BulleBrowser"
-        data-accent="#2563EB"
-        data-greeting="Ask me to do anything in the dashboard."></script>
-```
+Environment settings:
 
-## Run the backend
+- `ANTHROPIC_API_KEY`: backend-only model credential.
+- `WIDGET_AUTH_SECRET`: JWT signing secret shared with the trusted CRM server.
+- `ALLOWED_ORIGINS`: comma-separated exact approved CRM origins.
+- Optional `EEO_PUBLIC_ID`, `EEO_SECRET_KEY`, `EEO_BASE_URL`: account API settings.
 
-```bash
-ANTHROPIC_API_KEY=sk-ant-… \
-EEO_PUBLIC_ID=…    \   # X-Public-ID  (from the EEO Dashboard → Manage Account → Secure API)
-EEO_SECRET_KEY=…   \   # X-Secret-Key (keep secret — env var only, never in code)
-node services/widget-backend/server.mjs                # :8787
-```
+`render.yaml` is a deployment template. `/health` is public. Use HTTPS and redact
+query strings in proxy logs: EventSource carries its short-lived token in its URL.
+GitHub Pages cannot host this backend.
 
-**API-first is wired.** With `EEO_PUBLIC_ID` + `EEO_SECRET_KEY` set, the agent
-gets the EEO Dashboard's Secure API as tools (`eeo_list_contacts`,
-`eeo_find_contact`, `eeo_create_contact`, `eeo_update_project`, …) — reads are
-instant, and creates/updates ask the user to confirm first. Leave those two
-unset and the agent falls back to operating the page through the widget.
+Embed `https://bullebrowser.com/widget.js` with `data-endpoint` pointing to the
+backend and `data-token` populated by the authenticated CRM server. Never put a
+permanent credential in a public dashboard or repository.
 
-The key is **account-level** (not per-user), so it stays only in this backend's
-env, and you should gate which endpoints/users may write. Base URL defaults to
-`https://projects.bulleconsulting.com/secure-api/` (override with `EEO_BASE_URL`).
+## Approval and verification
 
-It exposes exactly what the widget speaks:
+Destructive actions request confirmation through the active widget; rejection
+or missing confirmation denies the action. Confirmation expresses intent, not
+authorization, and does not replace server-side permission checks.
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/start` | begin a run: `{ sessionId, prompt, url, title }` |
-| GET | `/stream?sessionId=…` | SSE: `activity` \| `tool_call` \| `text` \| `done` \| `error` |
-| POST | `/tool-result` | resume: `{ sessionId, id, result }` (or `{ error }`) |
-
-The agent's tools run in the browser, so the backend's ToolRuntime is a proxy:
-each `tool_call` is pushed to the widget over SSE, and the run waits for the
-matching `/tool-result` before continuing.
-
-## Teaching it your CRM
-
-Edit `CRM_SYSTEM` in `server.mjs` — paste a guide to Bulle Cloud: the main
-sections, key pages, and the steps (with exact button/menu labels) to find,
-create, and update records. The quickest way to produce that guide is to ask the
-BulleBrowser desktop app — logged into the CRM — to explore and describe it, then
-paste its summary here.
-
-## Deploy from GitHub (Render)
-
-The backend bundles into one self-contained file, so hosting is small.
-
-```bash
-node services/widget-backend/build.mjs     # -> services/widget-backend/dist/server.mjs
-node services/widget-backend/dist/server.mjs
-```
-
-On **Render** (deploys from your GitHub repo — `render.yaml` here is a ready
-blueprint; copy it to the repo root or set these by hand):
-
-- **Build:** `corepack enable && pnpm install --frozen-lockfile && node services/widget-backend/build.mjs`
-- **Start:** `node services/widget-backend/dist/server.mjs`
-- **Env vars (secrets):** `ANTHROPIC_API_KEY`, `EEO_PUBLIC_ID`, `EEO_SECRET_KEY`, `WIDGET_TOKEN` (any long random string; the widget sends the same value)
-- **Env vars (plain):** `EEO_BASE_URL` (defaults to the EEO Secure API), `ALLOWED_ORIGINS`
-  — a comma-separated allowlist of every site that embeds the widget
-  (`https://projects.bulleconsulting.com`, plus any district dashboard origin).
-
-Railway / a VPS work the same way: `pnpm install`, run the build, start the
-bundle, set the env vars. GitHub Pages **cannot** host this — it's static only,
-and a secret key can never sit in a public static file.
-
-## ⚠️ Security: the EEO key is account-level
-
-The `X-Secret-Key` can read and write the **whole account**, not just one user's
-records. So:
-
-- Put the widget on **authenticated pages** (the EEO Dashboard), where the
-  backend can check the caller's session before running.
-- If you also embed it on a **public** page (a district dashboard on GitHub
-  Pages), anyone who opens that page could drive your CRM through the account
-  key. Don't do that without adding an auth check to `/start` first.
-- Writes already confirm with the user; keep it that way, and gate which
-  endpoints are exposed if some users shouldn't create/update records.
-
-## Not done yet / your call
-
-- **Auth**: the widget calls the backend with `credentials: 'include'`; put your
-  CRM's session/SSO check in front of `/start` so only signed-in users run tasks.
-- **Destructive actions**: `confirmDestructive` returns `true` in the reference.
-  Wire it to a real in-widget confirm before shipping.
-- **Hosting + CORS**: lock `Access-Control-Allow-Origin` to your CRM origin.
+Run `node --test services/widget-backend/auth.test.mjs`. Production rollout still
+requires CRM token issuance, hosting/CORS setup, and end-to-end role testing.

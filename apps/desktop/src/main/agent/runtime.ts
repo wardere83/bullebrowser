@@ -11,11 +11,26 @@ export interface ConfirmDelegate {
 }
 
 export class DesktopToolRuntime implements ToolRuntime {
-  constructor(private confirmDelegate: ConfirmDelegate) {}
+  private touched = new Set<WebContents>();
+  private readonly actionId = `${Date.now()}-${Math.random()}`;
+
+  constructor(private confirmDelegate: ConfirmDelegate, private signal?: AbortSignal) {
+    signal?.addEventListener('abort', () => {
+      for (const wc of this.touched) {
+        if (wc.isDestroyed()) continue;
+        // Queue this in the same renderer before any pending action timer.
+        void wc.executeJavaScript(`window.__bbCancelledRun = ${JSON.stringify(this.actionId)}`).catch(() => {});
+        wc.stop();
+      }
+      this.touched.clear();
+    }, { once: true });
+  }
 
   private wcFor(tabId: string): WebContents {
+    if (this.signal?.aborted) throw new Error('cancelled');
     const view = tabManager.getView(tabId);
     if (!view) throw new Error(`Tab not found: ${tabId}`);
+    this.touched.add(view.webContents);
     return view.webContents;
   }
 
@@ -75,7 +90,7 @@ export class DesktopToolRuntime implements ToolRuntime {
   async click(tabId: string, target: string) {
     const wc = this.wcFor(tabId);
     const matched = (await wc.executeJavaScript(
-      `${DEEP_QUERY}; ${AGENT_CURSOR}; (${CLICK_FN.toString()})(${JSON.stringify(target)})`,
+      `${DEEP_QUERY}; ${AGENT_CURSOR}; (${CLICK_FN.toString()})(${JSON.stringify(target)}, ${JSON.stringify(this.actionId)})`,
     )) as string;
     return { matched };
   }
@@ -83,7 +98,7 @@ export class DesktopToolRuntime implements ToolRuntime {
   async type(tabId: string, target: string, text: string) {
     const wc = this.wcFor(tabId);
     const matched = (await wc.executeJavaScript(
-      `${DEEP_QUERY}; ${AGENT_CURSOR}; (${TYPE_FN.toString()})(${JSON.stringify(target)}, ${JSON.stringify(text)})`,
+      `${DEEP_QUERY}; ${AGENT_CURSOR}; (${TYPE_FN.toString()})(${JSON.stringify(target)}, ${JSON.stringify(text)}, ${JSON.stringify(this.actionId)})`,
     )) as string;
     return { matched };
   }
@@ -512,7 +527,8 @@ const AGENT_CURSOR = `
   };
 `;
 
-function CLICK_FN(target: string): Promise<string> {
+export function CLICK_FN(target: string, actionId?: string): Promise<string> {
+  if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   let el: Element | null = null;
   try {
     el = (window as unknown as { __bbDeepQuery(s: string): Element | null }).__bbDeepQuery(target);
@@ -550,15 +566,20 @@ function CLICK_FN(target: string): Promise<string> {
     __bbCursor(e: Element, o?: { click?: boolean }): void;
   }).__bbCursor;
   cursor(node, { click: true });
-  return new Promise<string>((resolve) => {
+  return new Promise<string>((resolve, reject) => {
     setTimeout(() => {
+      if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) {
+        reject(new Error('cancelled'));
+        return;
+      }
       node.click();
       resolve(node.outerHTML.slice(0, 200));
     }, 500);
   });
 }
 
-function TYPE_FN(target: string, text: string): Promise<string> {
+export function TYPE_FN(target: string, text: string, actionId?: string): Promise<string> {
+  if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   let el: Element | null = null;
   try {
     el = (window as unknown as { __bbDeepQuery(s: string): Element | null }).__bbDeepQuery(target);
@@ -641,9 +662,13 @@ function TYPE_FN(target: string, text: string): Promise<string> {
   };
 
   write('');
-  return new Promise<string>((resolve) => {
+  return new Promise<string>((resolve, reject) => {
     let i = 0;
     const tick = () => {
+      if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) {
+        reject(new Error('cancelled'));
+        return;
+      }
       i += 1;
       write(text.slice(0, i));
       if (i < text.length) {

@@ -35,4 +35,15 @@ describe('policy decisions and redaction', () => {
     expect(redacted.token).toBe('[REDACTED]');
     expect(redacted.safe).toBe('ok');
   });
+
+  it('cannot bypass confirmation with opaque selectors or Enter', () => {
+    for (const target of ['#confirm', '.primary', '[data-action="x"]', 'Continue']) {
+      expect(policy.evaluateToolStep({ id: 'x', toolName: 'click', input: { target }, expected: '' })
+        .requiresConfirmation).toBe(true);
+    }
+    expect(policy.evaluateToolStep({ id: 'x', toolName: 'press_key', input: { key: 'Enter' }, expected: '' })
+      .requiresConfirmation).toBe(true);
+    expect(policy.evaluateToolStep({ id: 'x', toolName: 'press_key', input: { key: 'Tab' }, expected: '' })
+      .requiresConfirmation).toBe(false);
+  });
 });

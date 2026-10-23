@@ -1,21 +1,11 @@
 // API keys for the model providers.
 //
-// These are stored in the app's own data directory, encrypted at rest with a
-// key derived from the machine + user account. We deliberately do NOT use
-// Electron's safeStorage here: on macOS it backs onto the login keychain, which
-// makes the OS interrupt the user with a "BulleBrowser wants to use your
-// keychain" password prompt — and it re-prompts whenever the app's signature
-// changes (every upgrade from a differently-signed build).
-//
-// Tradeoff, stated plainly: this is weaker than the keychain. The ciphertext is
-// only as private as the user's home directory, because the derivation inputs
-// are readable by any process running as that user. It defeats casual reading
-// of the file and anything that scrapes backups or synced copies; it does not
-// defeat malware already running as you. The keychain would, at the cost of the
-// prompt. If that tradeoff is ever unwanted, restore safeStorage here — nothing
-// else needs to change.
+// New values use the OS credential service through safeStorage. The v1
+// machine-derived format is read only to migrate it; it is never written.
+// The OS may ask for permission. We do not bypass that protection.
 
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { createDecipheriv, scryptSync } from 'node:crypto';
+import { safeStorage } from 'electron';
 import { homedir, hostname, userInfo } from 'node:os';
 import { createStore } from './store.js';
 
@@ -37,14 +27,18 @@ function derivedKey(): Buffer {
 }
 
 function encrypt(plain: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', derivedKey(), iv);
-  const body = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `v1:${Buffer.concat([iv, tag, body]).toString('base64')}`;
+  if (!safeStorage.isEncryptionAvailable() ||
+      (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')) {
+    throw new Error('Secure credential storage is unavailable. Configure the OS credential store or use an environment variable.');
+  }
+  return `v2:${safeStorage.encryptString(plain).toString('base64')}`;
 }
 
 function decrypt(stored: string): string | null {
+  if (stored.startsWith('v2:')) {
+    try { return safeStorage.decryptString(Buffer.from(stored.slice(3), 'base64')); }
+    catch { return null; }
+  }
   if (!stored.startsWith('v1:')) return null;
   try {
     const raw = Buffer.from(stored.slice(3), 'base64');
@@ -90,7 +84,21 @@ export function getApiKey(provider: ProviderId = 'anthropic'): string | null {
   const stored = store.get('keys')?.[provider];
   if (stored) {
     const plain = decrypt(stored);
-    if (plain) return plain;
+    if (plain) {
+      if (stored.startsWith('v1:')) {
+        // Never silently retain the weak scheme when secure migration fails.
+        store.set('keys', { ...store.get('keys'), [provider]: encrypt(plain) });
+      }
+      return plain;
+    }
+  }
+  if (provider === 'anthropic' && store.get('apiKeyEncrypted')) {
+    try {
+      const legacy = safeStorage.decryptString(Buffer.from(store.get('apiKeyEncrypted')!, 'base64'));
+      store.set('keys', { ...store.get('keys'), anthropic: encrypt(legacy) });
+      store.set('apiKeyEncrypted', null);
+      return legacy;
+    } catch { /* Leave the original intact so recovery is possible. */ }
   }
   return envKey(provider);
 }

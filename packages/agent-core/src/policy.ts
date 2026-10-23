@@ -14,7 +14,6 @@ const SENSITIVE_FIELD_RE =
 // decision above needed to become precise.
 const REDACT_KEY_RE = /(password|passcode|token|secret|ssn|social|credit|card|cvv)/i;
 
-const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
 
 export interface PolicyEngine {
   evaluateToolStep(step: PlanStep): PolicyDecision;
@@ -41,11 +40,16 @@ export class PrivacyPolicyEngine implements PolicyEngine {
     }
 
     if (step.toolName === 'clickElement' || step.toolName === 'click') {
-      const target = String(step.input.target ?? '');
       return {
         allowed: true,
-        requiresConfirmation: HIGH_RISK_TARGET_RE.test(target),
+        // A selector says nothing about the action behind it. Until the
+        // runtime has a trusted semantic classifier, confirm every click.
+        requiresConfirmation: true,
       };
+    }
+
+    if (step.toolName === 'press_key' && step.input.key === 'Enter') {
+      return { allowed: true, requiresConfirmation: true };
     }
 
     if (step.toolName === 'close_tab') {

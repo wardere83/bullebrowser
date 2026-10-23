@@ -169,14 +169,22 @@ export function AiPanel() {
     const bridge = browserBridge();
     const skill = skillId || undefined;
     const runAttachments = atts.length > 0 ? toRunAttachments(atts) : undefined;
-    const { runId } = await bridge.agent.run({
-      conversationId: current.id,
-      userMessage: message,
-      model,
-      ...(skill ? { skillId: skill } : {}),
-      ...(runAttachments ? { attachments: runAttachments } : {}),
-    });
-    startRun(runId);
+    const requestedRunId = crypto.randomUUID();
+    startRun(requestedRunId);
+    try {
+      await bridge.agent.run({
+        runId: requestedRunId,
+        conversationId: current.id,
+        userMessage: message,
+        model,
+        ...(skill ? { skillId: skill } : {}),
+        ...(runAttachments ? { attachments: runAttachments } : {}),
+      });
+    } catch (error) {
+      if (useAgentStore.getState().runId === requestedRunId) {
+        useAgentStore.getState().setError(error instanceof Error ? error.message : 'Could not start task');
+      }
+    }
   };
 
   // Queue a task if one is already running (or waiting), else dispatch it now.

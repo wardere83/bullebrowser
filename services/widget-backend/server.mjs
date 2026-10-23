@@ -21,6 +21,7 @@
 import http from 'node:http';
 import { runAgent } from '@bullebrowser/agent-core';
 import { eeoTools } from './eeo-tools.mjs';
+import { verifyIdentity, ownsSession, canUseAccountApi } from './auth.mjs';
 
 const PORT = process.env.PORT || 8787;
 const MODEL = 'claude-opus-4-7';
@@ -110,7 +111,10 @@ function makeRuntime(session) {
     goBack: () => call('go_back', {}),
     goForward: () => call('go_forward', {}),
     reload: () => call('reload', {}),
-    confirmDestructive: async () => true, // wire to a real user confirm in production
+    confirmDestructive: async (message) => {
+      const result = await call('confirm_action', { message });
+      return result?.approved === true;
+    },
   };
 }
 
@@ -124,7 +128,7 @@ async function start(session, prompt, url, title) {
       systemPrompt: `${CRM_SYSTEM}\n\nThe user is currently on: ${title} — ${url}`,
       history: [],
       userMessage: prompt,
-      extraTools: API_TOOLS,
+      extraTools: canUseAccountApi(session.identity) ? API_TOOLS : [],
       context: { activeTabId: 'page', signal: controller.signal, runtime: makeRuntime(session) },
       onStep: (step) => {
         if (step.type === 'tool_call' && step.detail) send(session, { type: 'activity', text: step.detail });
@@ -165,19 +169,12 @@ const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-// A shared token the widget must present, so the account-key endpoint isn't
-// open to anyone who learns its URL (CORS only stops other-origin browsers, not
-// a direct request). Set WIDGET_TOKEN to any long random string, and pass the
-// same value to the widget (data-token). Because the CRM page is only served to
-// signed-in users, the token is only ever exposed to people who already have
-// CRM access. For true per-user scoping, have the CRM mint a short-lived signed
-// token per user and verify it here instead — that's the strong version.
-const WIDGET_TOKEN = process.env.WIDGET_TOKEN || '';
+// CRM-server-issued user identities only. No static shared-token fallback.
+const WIDGET_AUTH_SECRET = process.env.WIDGET_AUTH_SECRET || '';
 function authed(req, u, payload) {
-  if (!WIDGET_TOKEN) return true; // unset = dev; the README warns to set it
   const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const token = u.searchParams.get('token') || (payload && payload.token) || bearer;
-  return token === WIDGET_TOKEN;
+  return verifyIdentity(token, WIDGET_AUTH_SECRET);
 }
 
 http
@@ -192,20 +189,30 @@ http
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
 
     const u = new URL(req.url, 'http://x');
+    if (u.pathname === '/health' && req.method === 'GET') return res.writeHead(200).end('ok');
 
     if (u.pathname === '/stream') {
       // The endpoint wields an account-level key, so a caller must present the
       // widget token. EventSource can't send headers, so the token rides in the
       // query. See authed().
-      if (!authed(req, u)) return res.writeHead(401).end('unauthorized');
+      const identity = authed(req, u);
+      if (!identity) return res.writeHead(401).end('unauthorized');
       const id = u.searchParams.get('sessionId');
+      if (!id || id.length > 128 || sessions.has(id)) return res.writeHead(409).end('invalid or existing session');
       res.writeHead(200, {
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         connection: 'keep-alive',
       });
-      sessions.set(id, { id, res, pending: new Map(), seq: 0, abort: () => {} });
+      const expires = setTimeout(() => {
+        const session = sessions.get(id);
+        session?.abort();
+        res.end();
+        sessions.delete(id);
+      }, Math.max(0, identity.exp * 1000 - Date.now()));
+      sessions.set(id, { id, owner: identity.sub, identity, res, pending: new Map(), seq: 0, abort: () => {} });
       req.on('close', () => {
+        clearTimeout(expires);
         const s = sessions.get(id);
         if (s) s.abort();
         sessions.delete(id);
@@ -215,8 +222,15 @@ http
 
     if (u.pathname === '/start' && req.method === 'POST') {
       const payload = await body(req);
-      if (!authed(req, u, payload)) return res.writeHead(401).end('unauthorized');
+      const identity = authed(req, u, payload);
+      if (!identity) return res.writeHead(401).end('unauthorized');
       const { sessionId, prompt, url, title } = payload;
+      const session = sessions.get(sessionId);
+      if (!ownsSession(session, identity)) return res.writeHead(403).end('forbidden');
+      if (session.running) return res.writeHead(409).end('task already running');
+      if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 20000) return res.writeHead(400).end('invalid prompt');
+      session.running = true;
+      session.identity = identity;
       res.writeHead(200).end('ok');
       // Give the EventSource a tick to connect, then run.
       setTimeout(() => {
@@ -227,8 +241,12 @@ http
     }
 
     if (u.pathname === '/tool-result' && req.method === 'POST') {
-      const { sessionId, id, result, error } = await body(req);
+      const payload = await body(req);
+      const identity = authed(req, u, payload);
+      if (!identity) return res.writeHead(401).end('unauthorized');
+      const { sessionId, id, result, error } = payload;
       const s = sessions.get(sessionId);
+      if (!ownsSession(s, identity)) return res.writeHead(403).end('forbidden');
       const p = s?.pending.get(id);
       if (p) {
         s.pending.delete(id);

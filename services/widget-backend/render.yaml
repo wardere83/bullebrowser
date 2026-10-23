@@ -11,7 +11,7 @@ services:
     # agent-core's source and esbuild are present).
     buildCommand: corepack enable && pnpm install --frozen-lockfile && node services/widget-backend/build.mjs
     startCommand: node services/widget-backend/dist/server.mjs
-    healthCheckPath: /nope
+    healthCheckPath: /health
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false # set in the Render dashboard (secret)
@@ -19,8 +19,8 @@ services:
         sync: false # X-Public-ID from EEO Dashboard → Manage Account → Secure API
       - key: EEO_SECRET_KEY
         sync: false # X-Secret-Key (secret)
-      - key: WIDGET_TOKEN
-        sync: false # any long random string; the widget's data-token must match
+      - key: WIDGET_AUTH_SECRET
+        sync: false # >=32 characters; shared ONLY with the trusted CRM token issuer
       - key: EEO_BASE_URL
         value: https://projects.bulleconsulting.com/secure-api/
       - key: ALLOWED_ORIGINS

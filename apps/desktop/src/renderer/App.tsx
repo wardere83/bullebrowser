@@ -59,22 +59,28 @@ export function App() {
 
   // Subscribe to agent steps.
   useEffect(() => {
-    return window.bullebrowser.agent.onStep(({ step }) => {
+    return window.bullebrowser.agent.onStep(({ runId, step }) => {
+      if (useAgentStore.getState().runId !== runId) return;
+      const conversationId = useAgentStore.getState().current?.id;
       appendStep(step);
       if (step.kind === 'done') finishRun();
-      if (step.kind === 'error') setError(step.message);
+      const terminalError = step.kind === 'error' && !step.toolName;
+      if (terminalError) setError(step.message);
       // When a run finishes, the main process has saved the assistant's
       // reply to the conversation store. Refetch so the response appears
       // in the AI panel — without this, only the user's optimistic message
       // shows and the assistant's text never makes it into the visible
       // conversation history.
-      if (step.kind === 'done' || step.kind === 'error') {
+      if (step.kind === 'done' || terminalError) {
         const cur = useAgentStore.getState().current;
         if (cur?.id) {
           void window.bullebrowser.conversations.get(cur.id).then((updated) => {
             // refreshCurrent updates messages without resetting steps/
             // status — so the visible error/feed survives the refresh.
-            if (updated) useAgentStore.getState().refreshCurrent(updated);
+            const state = useAgentStore.getState();
+            if (updated && state.current?.id === conversationId && !state.runId) {
+              state.refreshCurrent(updated);
+            }
           });
         }
       }
@@ -85,9 +91,10 @@ export function App() {
   // chat (AiPanel); destructive actions get the modal. Both go through
   // pendingConfirm — nothing is auto-approved on the user's behalf.
   useEffect(() => {
-    return window.bullebrowser.agent.onConfirmRequest((req) =>
-      setPendingConfirm(req),
-    );
+    return window.bullebrowser.agent.onConfirmRequest((req) => {
+      if (useAgentStore.getState().runId === req.runId) setPendingConfirm(req);
+      else void window.bullebrowser.agent.replyConfirm(req.runId, req.id, false);
+    });
   }, [setPendingConfirm]);
 
   // Right-click → "Ask BulleBrowser" comes in over IPC. Open the AI

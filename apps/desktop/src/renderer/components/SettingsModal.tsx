@@ -124,7 +124,7 @@ export function SettingsModal() {
             {assistantLabel} key
           </h3>
           <p className="mt-1 text-xs text-ink-secondary">
-            Encrypted and stored on this device only — no keychain prompt. Used
+            Encrypted using secure storage on this device. Your operating system may ask for permission. Used
             only to call {assistantLabel} directly from your machine.
             {provider === 'openai' && ' This same key also powers voice transcription.'}
           </p>

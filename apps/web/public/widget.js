@@ -265,14 +265,15 @@
       return;
     }
     var base = CFG.endpoint.replace(/\/$/, '');
-    fetch(base + '/start', {
+    function startTask() { return fetch(base + '/start', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ sessionId: sessionId, prompt: prompt, url: location.href, title: document.title, token: CFG.token }),
-    }).catch(function () {});
+    }).then(function (response) { if (!response.ok) throw new Error('Task not authorized or could not start'); }).catch(function (error) { es.close(); ui.error(error.message); }); }
 
     var es = new EventSource(base + '/stream?sessionId=' + encodeURIComponent(sessionId) + '&token=' + encodeURIComponent(CFG.token), { withCredentials: true });
+    es.onopen = startTask;
     ui.onStop(function () { try { es.close(); } catch (e) {} });
 
     es.onmessage = function (ev) {
@@ -284,7 +285,10 @@
       else if (msg.type === 'error') { es.close(); ui.error(msg.message); }
       else if (msg.type === 'tool_call') {
         Promise.resolve()
-          .then(function () { return runTool(msg.name, msg.input); })
+          .then(function () {
+            if (msg.name === 'confirm_action') return { approved: window.confirm(msg.input.message) };
+            return runTool(msg.name, msg.input);
+          })
           .then(function (result) { post(base, sessionId, msg.id, { result: result }); })
           .catch(function (err) { post(base, sessionId, msg.id, { error: String(err && err.message || err) }); });
       }

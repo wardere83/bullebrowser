@@ -187,6 +187,7 @@ export type RunAttachment =
   | { kind: 'screenshot'; url: string };
 
 export interface AgentRunRequest {
+  runId?: string;
   conversationId: string;
   userMessage: string;
   model: ModelId;

@@ -145,6 +145,7 @@ export async function executeToolCall(
   gate: BrowseGate,
   extraTools: Map<string, ApiTool> = new Map(),
 ): Promise<ToolCallOutcome> {
+  if (context.signal.aborted) throw new Error('cancelled');
   const name = rawName as ToolName;
   const input = (rawInput ?? {}) as Record<string, unknown>;
   const fail = (detail: string): ToolCallOutcome => {
@@ -171,6 +172,7 @@ export async function executeToolCall(
       if (!approved) return fail(`User declined confirmation for ${name}.`);
     }
     try {
+      if (context.signal.aborted) throw new Error('cancelled');
       const output = await apiTool.execute(input);
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
       const text = typeof output === 'string' ? output : JSON.stringify(output);
@@ -205,6 +207,7 @@ export async function executeToolCall(
   }
 
   try {
+    if (context.signal.aborted) throw new Error('cancelled');
     const parsed = tool.inputSchema.parse(input);
     const output = await tool.execute(parsed, context);
     onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
