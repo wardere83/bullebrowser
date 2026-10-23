@@ -90,6 +90,18 @@ test('the composer exposes the attachment menu and voice controls', async () => 
 
 test('a saved OpenAI key enables the assistant and voice controls', async () => {
   const { app, win } = await launch({ openAiOnly: true });
+  const secureStorage = await app.evaluate(({ safeStorage }) =>
+    safeStorage.isEncryptionAvailable() &&
+    (process.platform !== 'linux' || safeStorage.getSelectedStorageBackend() !== 'basic_text'));
+  if (!secureStorage) {
+    // Headless Linux has no credential service. Refusing insecure persistence
+    // is the required behavior; do not weaken production encryption for CI.
+    await expect(win.evaluate(() => window.bullebrowser.secrets.setApiKey(
+      'sk-e2e-saved-openai-key-not-real-0000000000000000', 'openai',
+    ))).rejects.toThrow('Secure credential storage is unavailable');
+    await app.close();
+    return;
+  }
   const savedModel = await win.evaluate(async () => {
     await window.bullebrowser.secrets.setApiKey(
       'sk-e2e-saved-openai-key-not-real-0000000000000000',
@@ -370,14 +382,14 @@ test('updates expose real progress and stage without closing tabs or interruptin
       BrowserWindow.getAllWindows()[0].webContents.send('update:status', next);
     });
     await expect(dialog.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
-    await dialog.getByRole('button', { name: 'Keep browsing with update prepared' }).click();
-    await expect(update).toHaveText('Update ready');
-    await expect(dialog).toContainText('next normal quit and launch');
+    await dialog.getByRole('button', { name: 'Prepare update — restart later' }).click();
+    await expect(update).toHaveText('Restart required');
+    await expect(dialog).toContainText('Restart BulleBrowser when convenient');
     expect(await app.evaluate(() => (globalThis as Record<string, unknown>).__appliedVersions)).toEqual(['0.2.80']);
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(composer).toHaveValue('Keep my draft through this update.');
     await win.reload();
-    await expect(update).toHaveText('Update ready');
+    await expect(update).toHaveText('Restart required');
     await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
   } finally {
     await app.close();
