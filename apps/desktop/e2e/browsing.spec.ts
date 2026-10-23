@@ -413,7 +413,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
       const prototype = Object.getPrototypeOf(runtime);
       const navigate = prototype.navigate;
       prototype.navigate = function (tabId: string, url: string, options: unknown) {
-        return navigate.call(this, tabId, url.startsWith('https://duckduckgo.com/') ? fixtureUrl : url, options);
+        return navigate.call(this, tabId, url.startsWith('https://www.bing.com/') ? fixtureUrl : url, options);
       };
     }, base);
     await win.locator('aside textarea').fill('Find grants for California schools');
@@ -459,7 +459,7 @@ for (const option of [
         const prototype = Object.getPrototypeOf((globalThis as unknown as { __bbTest: Hooks }).__bbTest.runtime);
         const navigate = prototype.navigate;
         prototype.navigate = function (id: string, url: string, options: unknown) {
-          return navigate.call(this, id, url.startsWith('https://duckduckgo.com/') ? fixtureUrl : url, options);
+          return navigate.call(this, id, url.startsWith('https://www.bing.com/') ? fixtureUrl : url, options);
         };
       }, base);
       await win.getByRole('button', { name: option.label, exact: true }).click();
