@@ -8,6 +8,16 @@ const call = (toolName: string, input: unknown = {}): AgentStepEvent => ({ kind:
 const result = (toolName: string, output: unknown = {}): AgentStepEvent => ({ kind: 'tool_result', toolName, output, ts: 2 });
 
 describe('real browser task activity', () => {
+  it('renders an identical tool and run error once, while retaining distinct errors', () => {
+    const message = 'No usable search links were found.';
+    const steps: AgentStepEvent[] = [call('web_search'), { kind: 'error', toolName: 'web_search', message, ts: 2 }];
+    const html = renderToStaticMarkup(<TaskActivity steps={steps} status="error" currentStep={message} />);
+    expect(html.split(message)).toHaveLength(2);
+    expect(html).toContain('role="alert"');
+    const distinct = renderToStaticMarkup(<TaskActivity steps={steps} status="error" currentStep="Connection lost." />);
+    expect(distinct).toContain(message);
+    expect(distinct).toContain('Connection lost.');
+  });
   it('shows only pages that were actually read and deduplicates repeated reads', () => {
     const steps = [call('navigate', { url: 'https://agency.gov/one' }), result('navigate'), result('read_page', { url: 'https://agency.gov/one', text: 'Requirements' }), result('read_page', { url: 'https://agency.gov/one#deadline', text: 'Deadline' })];
     expect(pagesRead(steps)).toBe(1);

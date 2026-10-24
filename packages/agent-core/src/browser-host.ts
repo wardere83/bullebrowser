@@ -25,7 +25,7 @@ export const BROWSER_SYSTEM = [
   '',
   'Browsing effectively:',
   '- For discovery, plan focused queries and call web_search. Without a configured',
-  '  API key, supported hosts use visible browser search automatically. Report',
+  '  API key, supported hosts search Bing in the visible browser automatically. Report',
   '  blocked pages, consent screens or verification challenges honestly.',
   '  DuckDuckGo and its alternate domains are blocked. Never open or read them,',
   '  including links from old conversations, redirects, or search fallbacks.',

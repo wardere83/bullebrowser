@@ -1,6 +1,19 @@
 import type { ToolRuntime } from './types.js';
 import { assertAllowedDestination, isBlockedDestination } from './destinations.js';
 
+const isBing = (url: URL) => /(^|\.)bing\.com$/.test(url.hostname);
+
+/** Bing wraps organic links in /ck/a?u=a1<base64url>. Never cite the tracker. */
+function sourceUrl(href: string, base: string): URL {
+  const link = new URL(href, base);
+  if (!isBing(link) || link.pathname !== '/ck/a') return link;
+  const target = link.searchParams.get('u') ?? '';
+  if (!target.startsWith('a1')) return new URL(target);
+  const encoded = target.slice(2).replace(/-/g, '+').replace(/_/g, '/');
+  const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+  return new URL(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+}
+
 /** No hidden HTTP scraping: search is performed in the user's visible tab. */
 export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () => string; signal: AbortSignal; presentAction?: (tabId: string, action: string, signal: AbortSignal) => Promise<void> }) {
   return async (query: string, count: number) => {
@@ -8,7 +21,7 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
     check();
     const tabId = options.activeTabId();
     if (!tabId) throw new Error('Open a browser tab to search.');
-    const url = new URL('https://www.google.com/search');
+    const url = new URL('https://www.bing.com/search');
     url.searchParams.set('q', query);
     assertAllowedDestination(url);
     await options.presentAction?.(tabId, 'navigate', options.signal);
@@ -16,22 +29,36 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
     await options.runtime.navigate(tabId, url.href);
     check();
     await options.presentAction?.(tabId, 'read_page', options.signal);
-    const page = await options.runtime.readPage(tabId);
     check();
-    assertAllowedDestination(page.url);
-    const host = new URL(page.url).hostname;
-    if (!/(^|\.)google\.com$/.test(host)) throw new Error('The search redirected away from the search provider. Review the visible page before retrying.');
+    let page = await options.runtime.readPage(tabId);
+    check();
+    const validatePage = () => {
+      assertAllowedDestination(page.url);
+      if (!isBing(new URL(page.url))) throw new Error('The search redirected away from Bing. Review the visible page before retrying.');
+    };
+    validatePage();
     if (!options.runtime.listLinks) throw new Error('This browser cannot retrieve search result links.');
-    const links = await options.runtime.listLinks(tabId);
+    let links = await options.runtime.listLinks(tabId);
+    check();
+    // Results can arrive after the initial page load. Wait once, bounded, and
+    // revalidate the destination before reading. Never bypass consent/CAPTCHA.
+    if (!links.some((link) => {
+      try { const source = sourceUrl(link.href, page.url); return !isBing(source) && !isBlockedDestination(source); }
+      catch { return false; }
+    })) {
+      await options.runtime.waitFor(tabId, { selector: '#b_results .b_algo h2 a', timeoutMs: 4000 });
+      check();
+      page = await options.runtime.readPage(tabId);
+      check();
+      validatePage();
+      links = await options.runtime.listLinks(tabId);
+    }
     check();
     const results: Array<{ title: string; url: string; snippet: string }> = [];
     const seen = new Set<string>();
     for (const link of links) {
       try {
-        let source = new URL(link.href, page.url);
-        if (/(^|\.)google\.com$/.test(source.hostname) && source.pathname === '/url') {
-          source = new URL(source.searchParams.get('q') ?? source.searchParams.get('url') ?? '');
-        }
+        const source = sourceUrl(link.href, page.url);
         if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password || isBlockedDestination(source) || /(^|\.)(google\.[a-z.]+|bing\.com)$/.test(source.hostname)) continue;
         source.hash = '';
         if (seen.has(source.href) || !link.text?.trim()) continue;

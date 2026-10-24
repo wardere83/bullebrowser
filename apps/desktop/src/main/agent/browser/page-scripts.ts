@@ -59,7 +59,12 @@ export const LIST_LINKS = `
   (function () {
     const out = [];
     const seen = new Set();
-    for (const a of Array.from(document.querySelectorAll('a[href]'))) {
+    // Bing navigation, account and advertising links aren't organic sources.
+    // Limit search-page discovery to result headings, including tracked links
+    // whose actual destination is decoded by browserSearch.
+    const bingSearch = /(^|\\.)bing\\.com$/.test(location.hostname) && location.pathname === '/search';
+    const selector = bingSearch ? '#b_results .b_algo h2 a[href]' : 'a[href]';
+    for (const a of Array.from(document.querySelectorAll(selector))) {
       // Skip links the user cannot see and non-navigational hrefs, so the
       // model isn't handed a mega-menu it can't act on.
       const href = a.href;

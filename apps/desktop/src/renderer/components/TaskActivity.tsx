@@ -73,12 +73,12 @@ export function TaskActivity({
                   <p className="mt-0.5 text-[11px] text-ink-secondary">
                     {action.state === 'running' ? 'In progress' : action.state === 'completed' ? 'Done' : action.state === 'error' ? 'Could not complete' : 'Stopped'}
                   </p>
-                  {action.message && <p className="mt-1 break-words text-danger">{action.message}</p>}
+                  {action.message && <p role={action.state === 'error' ? 'alert' : undefined} className="mt-1 break-words text-danger">{action.message}</p>}
                 </div>
               </li>
             ))}
           </ol>
-          {failed && currentStep && <p role="alert" className="mt-2 break-words text-danger">{currentStep}</p>}
+          {failed && currentStep && !actions.some((action) => action.message?.trim() === currentStep.trim()) && <p role="alert" className="mt-2 break-words text-danger">{currentStep}</p>}
           {failed && /Web search is not configured/i.test(currentStep) && (
             <button type="button" onClick={() => useBrowserStore.getState().openSettings()}
               className="mt-3 rounded bg-primary px-3 py-2 text-sm text-white">Configure web search</button>
