@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TERMINOLOGY_INSTRUCTIONS } from './terminology.js';
+import { BROWSER_SYSTEM } from './browser-host.js';
 import type { AgentInput, AgentStep, ToolContext } from './types.js';
 
 // Mock the Anthropic SDK so the loop can be driven with scripted responses.
@@ -586,6 +587,26 @@ describe('product wording on every engine', () => {
 
   const sentToClaude = (call = 0) => createMock.mock.calls[call]![0] as SentToClaude;
   const sentToChatGpt = (call = 0) => JSON.parse(fetchMock.mock.calls[call]![1].body as string) as SentToChatGpt;
+
+  it('preserves earlier constraints and corrections for follow-ups on both engines', async () => {
+    createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Continuing the task.')] });
+    fetchMock.mockResolvedValueOnce(openAiText('Continuing the task.'));
+    const history: AgentInput['history'] = [
+      { role: 'user', content: 'Find California grants. Exclude expired programs and use a table.' },
+      { role: 'assistant', content: 'The first source was checked; the task stopped early.' },
+      { role: 'user', content: 'Focus on workforce programs, not arts.' },
+    ];
+    for (const model of [DEFAULT_MODEL, 'gpt-4o'] as const) {
+      await run({ model, systemPrompt: BROWSER_SYSTEM, history, userMessage: 'Continue', userRequest: 'Continue' });
+    }
+    for (const payload of [sentToClaude(), sentToChatGpt()]) {
+      const prior = payload.messages.filter((message) => history.some((turn) => turn.content === message.content));
+      expect(prior).toEqual(history);
+      expect(JSON.stringify(payload.messages.at(-1))).toContain('Continue');
+    }
+    expect(sentToClaude().system).toContain('Do not ask for details already supplied.');
+    expect(JSON.stringify(sentToChatGpt().messages[0])).toContain('Do not replay submissions');
+  });
 
   it('asks both engines for the acronym, in the system prompt', async () => {
     createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Hello.')] });

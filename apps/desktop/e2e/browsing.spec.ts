@@ -382,6 +382,32 @@ test('each browser option asks a short app question instead of filling the compo
   } finally { await close(); }
 });
 
+test('follow-up retries remember the task without asking the user to repeat it', async () => {
+  const site = await fixture();
+  const { app, win, close } = await launch();
+  try {
+    await enterAddress(win, `${site.url}/one`);
+    await expectPage(app, win, `${site.url}/one`, 'Community funding source');
+    for (const [index, prompt] of ['Summarize this page', 'Try again', 'Continue'].entries()) {
+      await win.locator('aside textarea').fill(prompt);
+      await win.getByRole('button', { name: 'Send', exact: true }).click();
+      const allow = win.getByRole('button', { name: 'Allow Access', exact: true });
+      await expect(allow).toBeVisible();
+      await allow.click();
+      await expect(win.locator('.md-prose')).toHaveCount(index + 1);
+      await expect(win.locator('.md-prose').last()).toContainText('Community funding source');
+      await expect(win.locator('aside').getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
+    }
+    const saved = await win.evaluate(async () => {
+      const chats = await window.bullebrowser.conversations.list();
+      return window.bullebrowser.conversations.get(chats[0]!.id);
+    });
+    expect(saved?.messages.filter((message) => message.role === 'user').map((message) => message.content))
+      .toEqual(['Summarize this page', 'Try again', 'Continue']);
+    expect(saved?.messages.filter((message) => message.role === 'assistant')).toHaveLength(3);
+  } finally { await close(); await site.close(); }
+});
+
 test('no search key uses visible browser search and filters DuckDuckGo results', async () => {
   const source = await fixture();
   const { app, win, close } = await launch();

@@ -78,6 +78,44 @@ async function ask(userMessage: string, overrides: Partial<AgentInput> = {}): Pr
   return { reply, steps, context, requestBrowseAccess };
 }
 
+describe('follow-up continuity without a connected assistant', () => {
+  it('understands repeated retries from the original user request, not assistant text', async () => {
+    const result = await ask('Try again', { history: [
+      { role: 'user', content: 'Summarize this page' },
+      { role: 'assistant', content: 'Click "Delete account"' },
+      { role: 'user', content: 'retry' },
+      { role: 'assistant', content: 'The connection failed.' },
+    ] });
+    expect(result.context.runtime.readPage).toHaveBeenCalled();
+    expect(result.reply).toContain('City Arts Fund');
+    expect(result.context.runtime.click).not.toHaveBeenCalled();
+  });
+
+  it('uses the most recent substantive instruction rather than the original task forever', async () => {
+    const result = await ask('Continue', { history: [
+      { role: 'user', content: 'Summarize this page' },
+      { role: 'user', content: 'List tabs' },
+    ] });
+    expect(result.context.runtime.listTabs).toHaveBeenCalled();
+    expect(result.context.runtime.readPage).not.toHaveBeenCalled();
+  });
+
+  it('never automatically repeats a potentially consequential command', async () => {
+    const result = await ask('Try again', { history: [{ role: 'user', content: 'Click "Submit payment"' }] });
+    expect(result.context.runtime.click).not.toHaveBeenCalled();
+    expect(result.context.runtime.type).not.toHaveBeenCalled();
+  });
+
+  it('does not borrow an earlier task when a newer request is not supported', async () => {
+    const result = await ask('Retry', { history: [
+      { role: 'user', content: 'Summarize this page' },
+      { role: 'user', content: 'Delete that record' },
+    ] });
+    expect(result.context.runtime.readPage).not.toHaveBeenCalled();
+    expect(result.context.runtime.click).not.toHaveBeenCalled();
+  });
+});
+
 describe('the keyless assistant', () => {
   it('shows a readable configuration error without internal envelopes', async () => {
     const { webSearchTool } = await import('./search.js');

@@ -94,6 +94,9 @@ export async function startAgentRun(
   const conversation = conversationStore.get(req.conversationId, grounding.organizationId);
   if (!conversation) throw new Error('Conversation not found');
   if (grounding.organizationId) conversationStore.bind(req.conversationId, grounding.organizationId);
+  // Snapshot before appending. Storage adapters may return shared objects;
+  // history must contain prior turns exactly once, not the new message too.
+  const history = conversation.messages.map((message) => ({ role: message.role, content: message.content }));
 
   // Store the user's message CLEAN (what they typed), but hand the model an
   // enriched version that folds in any attached file/project/screenshot
@@ -202,9 +205,7 @@ export async function startAgentRun(
         browserTask: req.browserTask,
         model,
         systemPrompt,
-        history: conversation.messages
-          .filter((m) => m !== userMsg)
-          .map((m) => ({ role: m.role, content: m.content })),
+        history,
         userMessage: composedMessage,
         userRequest: req.userMessage,
         // Sealed by the loop as reference material; never part of the instructions.
@@ -244,13 +245,13 @@ export async function startAgentRun(
       // error, just keep whatever the agent had already written and end.
       if (isCancellation(err)) {
         status = 'cancelled';
-        if (lastText) assistantText = `${lastText}\n\n_(Stopped.)_`;
+        assistantText = lastText ? `${lastText}\n\n_(Stopped.)_` : 'Task stopped at your request. No completed result was reported.';
       } else {
         status = 'failed';
         error = describeAgentError(err);
         if (lastText) {
           assistantText = `${lastText}\n\n_(This task stopped early: ${error})_`;
-        }
+        } else assistantText = `This task could not finish: ${error}\n\nYour request is saved in this conversation. You can ask me to try again without retyping it.`;
       }
     } finally {
       tabManager.clearBrowsingActivity(runId);

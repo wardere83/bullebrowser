@@ -61,6 +61,22 @@ const HELP =
 
 const SUMMARY_COMMAND = /^(?:please\s+)?(?:summari[sz]e|summary|read|what (?:does this page say|is this page about))\b/i;
 
+// The keyless command runner cannot infer arbitrary follow-ups. Resolve only
+// explicit retries from the user's own turns, never from page/assistant text.
+const RETRY = /^(?:please\s+)?(?:try again|retry|continue|carry on|resume|do that again)(?:\s+please)?[.!?]*$/i;
+function localRequest(input: AgentInput): string {
+  const latest = (input.userRequest ?? input.userMessage).trim();
+  if (!RETRY.test(latest)) return latest;
+  const previous = [...input.history].reverse().find((turn) => turn.role === 'user' && !RETRY.test(turn.content.trim()));
+  const request = previous?.content.trim();
+  // Never replay a potentially consequential command automatically. Research
+  // is limited below to simple discovery requests, not arbitrary task text.
+  if (request && (/^(?:please\s+)?(?:summari[sz]e|summary|read|list|show)\b/i.test(request)
+    || /^(?:please\s+)?(?:find|search(?: for)?|look for)\b/i.test(request))
+    && !/\b(?:submit|send|pay|buy|purchase|delete|remove|upload|download|click|type|enter|apply)\b/i.test(request)) return request;
+  return latest;
+}
+
 // "this page", "the current tab", "what I'm looking at": the tab in front of
 // the user. "The page limits in this RFP" is not a reference to it.
 const CURRENT_PAGE =
@@ -140,7 +156,7 @@ function fundingWork(request: string): FundingWork | null {
 export async function runLocalAgent(input: AgentInput, call: Call): Promise<string> {
   // The user's own words. Text the host attached must not turn "list tabs"
   // into an unknown request, or a browser command into funding work.
-  const message = (input.userRequest ?? input.userMessage).trim();
+  const message = localRequest(input);
   let report: string;
   const budget = new StepBudget(input.budget);
   const run = async (name: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> => {

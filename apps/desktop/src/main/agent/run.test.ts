@@ -7,7 +7,7 @@ import { IPC, type AgentResultEvent, type AgentRunRequest } from '../../shared/i
 const mocks = vi.hoisted(() => ({
   runAgent: vi.fn<(input: AgentInput) => Promise<string>>(),
   appendMessage: vi.fn(),
-  conversation: { id: 'conversation-1', messages: [] },
+  conversation: { id: 'conversation-1', messages: [] as Array<{ role: 'user' | 'assistant'; content: string }> },
   setBrowsingActivity: vi.fn(),
   activate: vi.fn(),
   clearBrowsingActivity: vi.fn(),
@@ -77,6 +77,39 @@ async function runTask() {
 }
 
 describe('agent task results for live voice', () => {
+  it('passes all previous constraints once even when storage mutates the shared message array', async () => {
+    mocks.conversation.messages = [
+      { role: 'user', content: 'Find grants in California. Exclude expired programs.' },
+      { role: 'assistant', content: 'I checked one source before the connection failed.' },
+    ];
+    mocks.appendMessage.mockImplementation((_id, message) => { mocks.conversation.messages.push(message); });
+    mocks.runAgent.mockResolvedValue('Continued the requested task.');
+    await runTask();
+    const input = mocks.runAgent.mock.calls[0]![0];
+    expect(input.history).toEqual([
+      { role: 'user', content: 'Find grants in California. Exclude expired programs.' },
+      { role: 'assistant', content: 'I checked one source before the connection failed.' },
+    ]);
+    expect(input.userRequest).toBe(request.userMessage);
+    expect(input.history.some((turn) => turn.content === request.userMessage)).toBe(false);
+  });
+
+  it('saves a failure before any prose so follow-ups retain the unfinished task', async () => {
+    mocks.runAgent.mockRejectedValue(new Error('Network connection failed.'));
+    const { result } = await runTask();
+    expect(result.status).toBe('failed');
+    expect(result.text).toContain('Your request is saved');
+    expect(mocks.appendMessage).toHaveBeenLastCalledWith(request.conversationId,
+      expect.objectContaining({ role: 'assistant', content: result.text }));
+  });
+
+  it('saves cancellation before any prose without claiming the task completed', async () => {
+    mocks.runAgent.mockRejectedValue(new Error('cancelled'));
+    const { result } = await runTask();
+    expect(result).toMatchObject({ status: 'cancelled', text: 'Task stopped at your request. No completed result was reported.' });
+    expect(mocks.appendMessage).toHaveBeenLastCalledWith(request.conversationId,
+      expect.objectContaining({ role: 'assistant', content: result.text }));
+  });
   it('brings a targeted source tab to the foreground while the agent reads it', async () => {
     mocks.runAgent.mockImplementation(async () => {
       mocks.pageActivity('tab-2');
