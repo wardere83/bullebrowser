@@ -221,7 +221,9 @@ test('the browsing cloud follows real keyless consent, completion and Stop witho
     await releaseRead(app);
     await expect(stop).toBeHidden();
     expect(await readPage(app, tabId, cloudProbe)).toBeNull();
-    await expect(win.locator('.md-prose')).toHaveCount(1);
+    // Cancellation is now saved for follow-up continuity, not silently lost.
+    await expect(win.locator('.md-prose')).toHaveCount(2);
+    await expect(win.locator('.md-prose').last()).toContainText('Task stopped at your request. No completed result was reported.');
   } finally {
     await releaseRead(app).catch(() => {});
     await app.close();
