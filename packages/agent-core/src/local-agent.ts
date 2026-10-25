@@ -5,6 +5,7 @@ import type { AgentInput } from './types.js';
 import { AGENT_IDENTITY, protectAssistantIdentity } from './product-identity.js';
 import { FUNDING_SCREENS, applyTerminology } from './terminology.js';
 import { isBlockedDestination } from './destinations.js';
+import { isFundingDiscoveryRequest, isGrantSearchService } from './funding-sources.js';
 
 type Call = (name: string, input: Record<string, unknown>) => Promise<ToolCallOutcome>;
 
@@ -229,6 +230,7 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
       for (const link of [...explicitUrls.map((href) => ({ href, text: message })), ...links]) {
         try {
           const url = new URL(link.href ?? '', base);
+          if ((isFundingDiscoveryRequest(message) || ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '')) && isGrantSearchService(url)) continue;
           if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || isBlockedDestination(url) || /(^|\.)(?:google\.[a-z.]+|bing\.com)$/.test(url.hostname)) continue;
           if (/\b(?:privacy|cookies?|login|sign in|terms of use)\b/i.test(link.text ?? '')) continue;
           url.hash = '';

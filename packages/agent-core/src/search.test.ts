@@ -1,6 +1,20 @@
 import { expect, it, vi } from 'vitest';
 import { webSearchTool } from './search.js';
 
+it('filters vendor results for funding and requests enough candidates to replace them', async () => {
+  const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ web: { results: [
+    { title: 'Search tool', url: 'https://instrumentl.com/grants' },
+    { title: 'Grant writing service', url: 'https://grantable.co/' },
+    { title: 'Government program', url: 'https://agency.gov/grants' },
+    { title: 'Foundation program', url: 'https://foundation.org/youth' },
+  ] } })));
+  const result = await webSearchTool({ apiKey: 'private', fundingOnly: true, fetch: request }).execute({ query: 'California youth', count: 2 });
+  expect(result).toMatchObject({ results: [{ url: 'https://agency.gov/grants' }, { url: 'https://foundation.org/youth' }] });
+  const sent = new URL(String(request.mock.calls[0]![0]));
+  expect(sent.searchParams.get('q')).toContain('-site:instrumentl.com');
+  expect(sent.searchParams.get('count')).toBe('10');
+});
+
 it('uses header authentication, filters unsafe and duplicate results, and labels snippets', async () => {
   const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ web: { results: [
     { title: 'Official', url: 'https://example.com/#a', description: 'Text' },

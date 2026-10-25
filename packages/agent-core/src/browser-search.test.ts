@@ -6,7 +6,7 @@ import type { ToolRuntime } from './types.js';
 const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
 
 function fixture(url = 'https://www.bing.com/search?q=grants') {
-  const navigate = vi.fn(async () => ({ url, title: 'Search' }));
+  const navigate = vi.fn(async (_tabId: string, _url: string) => ({ url, title: 'Search' }));
   const readPage = vi.fn(async () => ({ url, title: 'Search', text: 'Results' }));
   const listLinks = vi.fn(async () => [
     { text: 'Blocked', href: 'https://duckduckgo.com/' },
@@ -25,7 +25,10 @@ it('searches visibly without a key and filters prohibited or duplicate result UR
   const fetch = vi.fn<typeof globalThis.fetch>();
   const tool = webSearchTool({ browserSearch: f.search, fetch });
   expect(await tool.execute({ query: 'school grants', count: 2 })).toMatchObject({ mode: 'browser', results: [{ url: 'https://agency.gov/program' }, { url: 'https://school.edu/funding' }] });
-  expect(f.navigate).toHaveBeenCalledWith('tab', 'https://www.bing.com/search?q=school+grants');
+  const destination = new URL(f.navigate.mock.calls[0]![1]);
+  expect(destination.origin).toBe('https://www.bing.com');
+  expect(destination.searchParams.get('q')).toContain('school grants official grant program');
+  expect(destination.searchParams.get('q')).toContain('-site:instrumentl.com');
   expect(fetch).not.toHaveBeenCalled();
 });
 it('rejects a prohibited search redirect before reading links', async () => {
@@ -86,4 +89,27 @@ it('rechecks the destination after waiting for results', async () => {
     .mockResolvedValueOnce({ url: 'https://duck.com/', title: 'Redirect', text: 'Redirect' });
   await expect(f.search('grants', 3)).rejects.toThrow('blocked');
   expect(f.listLinks).toHaveBeenCalledTimes(1);
+});
+
+it('decodes and excludes grant-search vendors before accepting official funding results', async () => {
+  const f = fixture();
+  f.listLinks.mockResolvedValue([
+    { text: 'Find grants', href: tracked('https://www.instrumentl.com/grants') },
+    { text: 'Grant writing', href: tracked('https://app.grantable.co/') },
+    { text: 'Official program', href: tracked('https://foundation.org/grants/youth') },
+  ]);
+  const result = await f.search('youth grants', 3);
+  expect(result.results).toEqual([{ title: 'Official program', url: 'https://foundation.org/grants/youth', snippet: '' }]);
+});
+
+it('does not relabel a vendor-only search as verified grant opportunities', async () => {
+  const f = fixture();
+  f.listLinks.mockResolvedValue([{ text: 'Grants', href: tracked('https://grantable.co/') }]);
+  await expect(f.search('school grants', 3)).rejects.toThrow('Grant-search services are excluded');
+});
+
+it('keeps ordinary software research available', async () => {
+  const f = fixture();
+  f.listLinks.mockResolvedValue([{ text: 'Instrumentl', href: tracked('https://instrumentl.com/') }]);
+  expect((await f.search('Compare grant search software', 3)).results[0]?.url).toBe('https://instrumentl.com/');
 });

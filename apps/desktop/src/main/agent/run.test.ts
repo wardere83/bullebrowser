@@ -67,16 +67,27 @@ beforeEach(() => {
   mocks.conversation.messages = [];
 });
 
-async function runTask() {
+async function runTask(overrides: Partial<AgentRunRequest> = {}) {
   const send = vi.fn();
   const win = { webContents: { send } } as unknown as BrowserWindow;
-  const handle = await startAgentRun(win, request);
+  const handle = await startAgentRun(win, { ...request, ...overrides });
   await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
   const result = send.mock.calls.find(([channel]) => channel === IPC.AGENT_RESULT)![1] as AgentResultEvent;
   return { send, result, handle };
 }
 
 describe('agent task results for live voice', () => {
+  it('rejects grant-service destinations before presenting an automatic funding action', async () => {
+    mocks.runAgent.mockImplementation(async (input) => {
+      expect(() => input.context.beforeBrowserAction?.('new_tab', { url: 'https://app.grantable.co/' }))
+        .toThrow('Grant-search services are excluded');
+      expect(() => input.context.beforeBrowserAction?.('navigate', { url: 'https://www.instrumentl.com/grants' }))
+        .toThrow('Grant-search services are excluded');
+      return 'Finding direct program sources.';
+    });
+    await runTask({ userMessage: 'California workforce', browserTask: 'find_grants' });
+  });
+
   it('passes all previous constraints once even when storage mutates the shared message array', async () => {
     mocks.conversation.messages = [
       { role: 'user', content: 'Find grants in California. Exclude expired programs.' },

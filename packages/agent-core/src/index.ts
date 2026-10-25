@@ -25,3 +25,4 @@ export * from './browser-host.js';
 export * from './search.js';
 export * from './browser-search.js';
 export * from './destinations.js';
+export * from './funding-sources.js';

@@ -136,12 +136,18 @@ describe('the keyless assistant', () => {
       readPage: vi.fn(async () => ({ title: 'Source', url: currentUrl, text: 'Official grant requirements.' })),
       listLinks: vi.fn(async () => [1, 2, 3].map((id) => ({ text: `Program ${id}`, href: `https://agency.gov/program-${id}` }))),
     });
-    const search = vi.fn(async () => ({ results: [1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `https://agency.gov/program-${id}` })) }));
+    const search = vi.fn(async () => ({ results: [
+      { title: 'Grant search', url: 'https://instrumentl.com/grants' },
+      { title: 'Grant writing', url: 'https://grantable.co/' },
+      ...[1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `https://agency.gov/program-${id}` })),
+    ] }));
     const result = await ask('Find grants for California schools', { researchMode: true, context, extraTools: [{ name: 'web_search', description: 'Search', inputSchema: { type: 'object' }, requiresBrowseAccess: true, execute: search }] });
     expect(result.requestBrowseAccess).toHaveBeenCalledTimes(1);
     expect(search).toHaveBeenCalledOnce();
     expect(context.runtime.navigate).not.toHaveBeenCalled();
     expect(context.runtime.newTab).toHaveBeenCalledTimes(3);
+    expect(context.runtime.newTab).not.toHaveBeenCalledWith('https://instrumentl.com/grants');
+    expect(context.runtime.newTab).not.toHaveBeenCalledWith('https://grantable.co/');
     expect(context.runtime.switchTab).toHaveBeenCalledWith('tab-https://agency.gov/program-1');
     expect(result.reply).toContain('3 source pages');
     expect(context.runtime.newTab).toHaveBeenCalledWith('https://agency.gov/program-3');

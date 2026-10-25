@@ -4,6 +4,13 @@ import { StepBudget } from './budget.js';
 
 const read = (url: string, text = 'Source text') => ({ type: 'tool_result' as const, toolName: 'read_page' as const, data: { url, text } });
 describe('live research requirements', () => {
+  it('does not count search-service pages as verified funding sources', () => {
+    const progress = new ResearchProgress(true, true, true);
+    for (const url of ['https://instrumentl.com/grants', 'https://grantable.co/', 'https://grantwatch.com/']) progress.observe(read(url));
+    expect(progress.sources.size).toBe(0);
+    progress.observe(read('https://foundation.org/program'));
+    expect(progress.sources.size).toBe(1);
+  });
   it('recognizes research without turning simple page commands into broad searches', () => {
     expect(isResearchRequest('Find grants for California schools')).toBe(true);
     expect(isResearchRequest('Compare current funding opportunities')).toBe(true);

@@ -2,6 +2,7 @@ import { browserTask } from './browser-tasks.js';
 import { ResearchProgress, isResearchRequest } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 import { assertAllowedToolDestination } from './destinations.js';
+import { isFundingDiscoveryRequest } from './funding-sources.js';
 // The BulleBrowser agent loop.
 //
 // This is a real Claude tool-use loop: the model is given the browser tool
@@ -519,7 +520,8 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 
 export async function runAgent(input: AgentInput): Promise<string> {
   const context = input.context;
-  const research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage))), !input.browserTask);
+  const research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage))), !input.browserTask,
+    ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(input.userRequest ?? input.userMessage));
   const originalOnStep = input.onStep;
   const onStep: AgentStepHandler = (step) => { research.observe(step); originalOnStep(step); };
   input = { ...input, onStep };

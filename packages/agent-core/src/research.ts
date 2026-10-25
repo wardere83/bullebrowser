@@ -1,6 +1,7 @@
 import type { AgentStep } from './types.js';
 import type { StepBudget } from './budget.js';
 import { isBlockedDestination } from './destinations.js';
+import { isGrantSearchService } from './funding-sources.js';
 
 export function isResearchRequest(request: string): boolean {
   const simpleCommand = /^(?:please\s+)?(?:summari[sz]e|read|click|type|open|go to|navigate to|list tabs)\b/i.test(request);
@@ -13,7 +14,7 @@ export class ResearchProgress {
   readonly sources = new Set<string>();
   private denied = false;
   private reminders = 0;
-  constructor(readonly enabled: boolean, private readonly allowClarification = true) {}
+  constructor(readonly enabled: boolean, private readonly allowClarification = true, private readonly fundingOnly = false) {}
 
   readonly instructions = 'For research and grant discovery, actively browse multiple relevant sources. Search, open the results, follow official program and eligibility links, and read at least three distinct source pages when available. Search snippets alone are not evidence. Cross-check deadlines, eligibility and amounts against official sources. Explain gaps or blocked pages. Ask a brief clarification if essential criteria are missing. Respect the task budget and never claim unperformed browsing.';
 
@@ -24,6 +25,7 @@ export class ResearchProgress {
     if (!page?.text?.trim() || !page.url) return;
     try {
       const url = new URL(page.url);
+      if (this.fundingOnly && isGrantSearchService(url)) return;
       if (!['http:', 'https:'].includes(url.protocol) || isBlockedDestination(url) || /(^|\.)(?:google\.[a-z.]+|bing\.com)$/.test(url.hostname)) return;
       url.hash = '';
       this.sources.add(url.href);

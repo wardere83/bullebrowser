@@ -1,10 +1,12 @@
 import type { ApiTool } from './types.js';
 import { ToolError } from './errors.js';
 import { isBlockedDestination } from './destinations.js';
+import { fundingSearchQuery, isFundingDiscoveryRequest, isGrantSearchService } from './funding-sources.js';
 
 /** Runs only in the desktop main process or trusted widget backend. */
 export function webSearchTool(options: {
   apiKey?: string;
+  fundingOnly?: boolean;
   signal?: AbortSignal;
   fetch?: typeof fetch;
   browserSearch?: (query: string, count: number) => Promise<unknown>;
@@ -26,8 +28,11 @@ export function webSearchTool(options: {
       if (!options.apiKey?.trim() && options.browserSearch) return options.browserSearch(input.query.trim(), Number(input.count ?? 5));
       if (!options.apiKey?.trim()) throw new ToolError('SEARCH_NOT_CONFIGURED', 'Web search is not configured. Open Settings → Web search and save your search API key, then resend this task. Keys in a development .env file or GitHub Secrets do not configure the installed app.');
       const url = new URL('https://api.search.brave.com/res/v1/web/search');
-      url.searchParams.set('q', input.query.trim());
-      url.searchParams.set('count', String(input.count ?? 5));
+      const fundingOnly = options.fundingOnly || isFundingDiscoveryRequest(input.query);
+      url.searchParams.set('q', fundingSearchQuery(input.query.trim(), fundingOnly));
+      // Retrieve enough candidates to replace excluded vendors, without a
+      // second provider request or relaxing the caller's requested result count.
+      url.searchParams.set('count', String(fundingOnly ? 10 : input.count ?? 5));
       url.searchParams.set('safesearch', 'moderate');
       const controller = new AbortController();
       const abort = () => controller.abort();
@@ -57,6 +62,7 @@ export function webSearchTool(options: {
           if (typeof item.url !== 'string') continue;
           try {
             const source = new URL(item.url);
+            if (fundingOnly && isGrantSearchService(source)) continue;
             if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password || isBlockedDestination(source)) continue;
             source.hash = '';
             if (seen.has(source.href)) continue;

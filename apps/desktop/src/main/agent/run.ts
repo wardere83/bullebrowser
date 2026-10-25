@@ -1,4 +1,4 @@
-import { browserSearch, connectorTools, webSearchTool } from '@bullebrowser/agent-core';
+import { browserSearch, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError } from '@bullebrowser/agent-core';
 import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
 // (skill-aware), wires the ToolContext to the active tab, runs the loop,
@@ -175,10 +175,17 @@ export async function startAgentRun(
     .join('\n\n');
 
   const startTabId = activeTabId;
+  const isContinuation = (text: string) => /^(?:please\s+)?(?:continue|retry|try again|resume)[.!?\s]*$/i.test(text);
+  const priorRequest = [...history].reverse().find((turn) => turn.role === 'user' && !isContinuation(turn.content))?.content ?? '';
+  const discoveryRequest = isContinuation(req.userMessage) ? priorRequest : req.userMessage;
+  const fundingOnly = ['find_grants', 'research_funder', 'compare_grants'].includes(req.browserTask ?? '') || isFundingDiscoveryRequest(discoveryRequest);
   const ctx: ToolContext = {
-    beforeBrowserAction: (name, args) => runtime.presentAction(
-      typeof args.tabId === 'string' ? args.tabId : ctx.activeTabId, name, controller.signal,
-    ),
+    beforeBrowserAction: (name, args) => {
+      if (fundingOnly && ['navigate', 'new_tab'].includes(name) && typeof args.url === 'string' && isGrantSearchService(args.url)) {
+        throw new ToolError('BLOCKED_BY_POLICY', 'Grant-search services are excluded from funding discovery. Find the funder’s own program page or official government listing instead.');
+      }
+      return runtime.presentAction(typeof args.tabId === 'string' ? args.tabId : ctx.activeTabId, name, controller.signal);
+    },
     // A live getter, not a snapshot. new_tab and switch_tab change which tab is
     // really active, so a value captured at run start goes stale the moment the
     // agent opens a tab: it would go on reading the new tab (those tools take an
@@ -210,8 +217,8 @@ export async function startAgentRun(
         userRequest: req.userMessage,
         // Sealed by the loop as reference material; never part of the instructions.
         ...(grounding.referenceContext.length > 0 ? { referenceContext: grounding.referenceContext } : {}),
-        extraTools: [webSearchTool({ apiKey: getApiKey('brave') ?? undefined, signal: controller.signal,
-          browserSearch: browserSearch({ runtime, activeTabId: () => ctx.activeTabId, signal: controller.signal,
+        extraTools: [webSearchTool({ apiKey: getApiKey('brave') ?? undefined, signal: controller.signal, fundingOnly,
+          browserSearch: browserSearch({ runtime, activeTabId: () => ctx.activeTabId, signal: controller.signal, fundingOnly,
             presentAction: (tabId, action, signal) => runtime.presentAction(tabId, action, signal),
           }),
         }), ...grounding.tools, ...connectorTools({

@@ -1,5 +1,6 @@
 import type { ToolRuntime } from './types.js';
 import { assertAllowedDestination, isBlockedDestination } from './destinations.js';
+import { fundingSearchQuery, isFundingDiscoveryRequest, isGrantSearchService } from './funding-sources.js';
 
 const isBing = (url: URL) => /(^|\.)bing\.com$/.test(url.hostname);
 
@@ -15,14 +16,15 @@ function sourceUrl(href: string, base: string): URL {
 }
 
 /** No hidden HTTP scraping: search is performed in the user's visible tab. */
-export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () => string; signal: AbortSignal; presentAction?: (tabId: string, action: string, signal: AbortSignal) => Promise<void> }) {
+export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () => string; signal: AbortSignal; fundingOnly?: boolean; presentAction?: (tabId: string, action: string, signal: AbortSignal) => Promise<void> }) {
   return async (query: string, count: number) => {
     const check = () => { if (options.signal.aborted) throw new Error('cancelled'); };
     check();
     const tabId = options.activeTabId();
     if (!tabId) throw new Error('Open a browser tab to search.');
     const url = new URL('https://www.bing.com/search');
-    url.searchParams.set('q', query);
+    const fundingOnly = options.fundingOnly || isFundingDiscoveryRequest(query);
+    url.searchParams.set('q', fundingSearchQuery(query, fundingOnly));
     assertAllowedDestination(url);
     await options.presentAction?.(tabId, 'navigate', options.signal);
     check();
@@ -59,6 +61,7 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
     for (const link of links) {
       try {
         const source = sourceUrl(link.href, page.url);
+        if (fundingOnly && isGrantSearchService(source)) continue;
         if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password || isBlockedDestination(source) || /(^|\.)(google\.[a-z.]+|bing\.com)$/.test(source.hostname)) continue;
         source.hash = '';
         if (seen.has(source.href) || !link.text?.trim()) continue;
@@ -67,7 +70,9 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
         if (results.length >= count) break;
       } catch { /* Discard malformed or prohibited links. */ }
     }
-    if (!results.length) throw new Error('The search page returned no usable source links. It may require consent or a verification challenge; review the visible page. No sources were verified.');
+    if (!results.length) throw new Error(fundingOnly && links.length
+      ? 'No usable direct funding sources were found. Grant-search services are excluded. Refine the query toward the funder or official program; no grants were verified.'
+      : 'The search page returned no usable source links. It may require consent or a verification challenge; review the visible page. No sources were verified.');
     return { query, results, mode: 'browser', evidence: 'Search links are discovery only. Read source pages before citing claims.' };
   };
 }
