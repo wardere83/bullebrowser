@@ -46,7 +46,7 @@ it('reports challenge/empty results rather than inventing sources', async () => 
   const f = fixture();
   f.listLinks.mockResolvedValue([]);
   await expect(f.search('grants', 3)).rejects.toThrow('verification challenge');
-  expect(f.waitFor).toHaveBeenCalledWith('tab', { selector: '#b_results .b_algo h2 a', timeoutMs: 4000 });
+  expect(f.waitFor).toHaveBeenCalledWith('tab', { selector: '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)', timeoutMs: 4000 });
 });
 
 it('waits once for delayed results and reads the updated page', async () => {
@@ -112,4 +112,21 @@ it('keeps ordinary software research available', async () => {
   const f = fixture();
   f.listLinks.mockResolvedValue([{ text: 'Instrumentl', href: tracked('https://instrumentl.com/') }]);
   expect((await f.search('Compare grant search software', 3)).results[0]?.url).toBe('https://instrumentl.com/');
+});
+
+it('retries when a heading exists but its link is not usable yet', async () => {
+  const f = fixture();
+  f.listLinks.mockResolvedValueOnce([]).mockResolvedValueOnce([{ text: '', href: tracked('https://agency.gov/program') }]);
+  f.waitFor.mockResolvedValue({ matched: true });
+  expect((await f.search('grants', 2)).results[0]?.url).toBe('https://agency.gov/program');
+  expect(f.listLinks).toHaveBeenCalledTimes(3);
+});
+
+it('cancels promptly during a delayed-link retry', async () => {
+  const f = fixture();
+  f.listLinks.mockResolvedValue([]);
+  const pending = f.search('grants', 2);
+  setTimeout(() => f.controller.abort(), 25);
+  await expect(pending).rejects.toThrow('cancelled');
+  expect(f.readPage).toHaveBeenCalledTimes(2);
 });

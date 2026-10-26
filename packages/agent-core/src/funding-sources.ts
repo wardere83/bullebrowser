@@ -20,5 +20,8 @@ export function isFundingDiscoveryRequest(request: string): boolean {
 
 /** Guidance is advisory; source URLs are still filtered after search returns. */
 export function fundingSearchQuery(query: string, fundingOnly: boolean): string {
-  return fundingOnly ? `${query} official grant program eligibility -site:instrumentl.com -site:grantable.co -site:grantwatch.com -site:grantstation.com -site:grantforward.com -site:fundsforngos.org` : query;
+  // Search engines need topic words, not the assistant's command prefix.
+  // Keep ordinary product/title searches untouched (for example Find My).
+  const topic = fundingOnly ? query.trim().replace(/^(?:(?:please|can you|could you)\s+)*(?:find|search(?: the web)?(?: for)?|look for)\s+/i, '') : query;
+  return fundingOnly ? `${topic} official grant program eligibility -site:instrumentl.com -site:grantable.co -site:grantwatch.com -site:grantstation.com -site:grantforward.com -site:fundsforngos.org` : query;
 }

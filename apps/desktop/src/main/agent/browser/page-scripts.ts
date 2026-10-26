@@ -63,15 +63,24 @@ export const LIST_LINKS = `
     // Limit search-page discovery to result headings, including tracked links
     // whose actual destination is decoded by browserSearch.
     const bingSearch = /(^|\\.)bing\\.com$/.test(location.hostname) && location.pathname === '/search';
-    const selector = bingSearch ? '#b_results .b_algo h2 a[href]' : 'a[href]';
+    const selector = bingSearch
+      ? '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)'
+      : 'a[href]';
     for (const a of Array.from(document.querySelectorAll(selector))) {
       // Skip links the user cannot see and non-navigational hrefs, so the
       // model isn't handed a mega-menu it can't act on.
       const href = a.href;
       if (!href || !/^https?:/i.test(href)) continue;
       if (seen.has(href)) continue;
-      const rect = a.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) continue;
+      if (bingSearch && a.closest('.b_ad, .b_adTop, .b_adBottom, .b_ans, [aria-hidden="true"], [inert]')) continue;
+      const style = getComputedStyle(a);
+      if (style.visibility === 'hidden' || style.display === 'none') continue;
+      // Inline/display:contents links can have no box even though their text
+      // is painted. Check the text range before rejecting a visible result.
+      const range = document.createRange();
+      range.selectNodeContents(a);
+      const rects = [...a.getClientRects(), ...range.getClientRects()];
+      if (!rects.some((rect) => rect.width > 0 && rect.height > 0)) continue;
       seen.add(href);
       out.push({ text: (a.innerText || a.textContent || '').trim().slice(0, 120), href });
       if (out.length >= 200) break;

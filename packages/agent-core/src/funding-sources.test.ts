@@ -23,3 +23,9 @@ it('scopes source exclusions to funding, not ordinary software comparisons', () 
   expect(fundingSearchQuery('California youth', true)).toContain('-site:grantable.co');
   expect(fundingSearchQuery('Compare software', false)).toBe('Compare software');
 });
+
+it('turns a funding instruction into a topic query without changing ordinary titles', () => {
+  expect(fundingSearchQuery('Find open grants funding Seattle', true)).toMatch(/^open grants funding Seattle /);
+  expect(fundingSearchQuery('Please search the web for Seattle grants', true)).toMatch(/^Seattle grants /);
+  expect(fundingSearchQuery('Find My iPhone', false)).toBe('Find My iPhone');
+});

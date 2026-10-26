@@ -42,18 +42,41 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
     if (!options.runtime.listLinks) throw new Error('This browser cannot retrieve search result links.');
     let links = await options.runtime.listLinks(tabId);
     check();
-    // Results can arrive after the initial page load. Wait once, bounded, and
-    // revalidate the destination before reading. Never bypass consent/CAPTCHA.
-    if (!links.some((link) => {
-      try { const source = sourceUrl(link.href, page.url); return !isBing(source) && !isBlockedDestination(source); }
-      catch { return false; }
-    })) {
-      await options.runtime.waitFor(tabId, { selector: '#b_results .b_algo h2 a', timeoutMs: 4000 });
+    // A result heading can exist before its link is usable. Check the same
+    // acceptance criteria as extraction, then retry the rendered page boundedly.
+    const hasSource = () => links.some((link) => {
+      try {
+        const source = sourceUrl(link.href, page.url);
+        return Boolean(link.text?.trim()) && ['https:', 'http:'].includes(source.protocol)
+          && !source.username && !source.password && !isBlockedDestination(source)
+          && !/(^|\.)(google\.[a-z.]+|bing\.com)$/.test(source.hostname)
+          && !(fundingOnly && isGrantSearchService(source));
+      } catch { return false; }
+    });
+    for (let attempt = 0; !hasSource() && attempt < 3; attempt++) {
+      if (attempt === 0) {
+        await options.runtime.waitFor(tabId, { selector: '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)', timeoutMs: 4000 });
+      } else {
+        await new Promise<void>((resolve, reject) => {
+          const abort = () => {
+            clearTimeout(timer);
+            options.signal.removeEventListener('abort', abort);
+            reject(new Error('cancelled'));
+          };
+          const timer = setTimeout(() => {
+            options.signal.removeEventListener('abort', abort);
+            resolve();
+          }, attempt * 500);
+          options.signal.addEventListener('abort', abort, { once: true });
+          if (options.signal.aborted) abort();
+        });
+      }
       check();
       page = await options.runtime.readPage(tabId);
       check();
       validatePage();
       links = await options.runtime.listLinks(tabId);
+      check();
     }
     check();
     const results: Array<{ title: string; url: string; snippet: string }> = [];

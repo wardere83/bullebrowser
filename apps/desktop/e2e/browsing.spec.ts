@@ -408,29 +408,32 @@ test('follow-up retries remember the task without asking the user to repeat it',
   } finally { await close(); await site.close(); }
 });
 
-test('no search key uses visible browser search and filters DuckDuckGo results', async () => {
-  const source = await fixture();
-  const { app, win, close } = await launch();
-  try {
-    await app.evaluate(({ session }, base) => {
-      process.env.BRAVE_SEARCH_API_KEY = '';
-      const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
-      session.defaultSession.protocol.handle('https', () => new Response(`<html><head><title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_algo"><h2><a href="${tracked('https://duckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol></body></html>`, { headers: { 'Content-Type': 'text/html' } }));
-    }, source.url);
-    await win.locator('aside textarea').fill('Find grants for California schools');
-    await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
-    await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
-    await expect(win.getByRole('button', { name: 'Configure web search', exact: true })).toHaveCount(0);
-    await expect(win.getByRole('region', { name: 'Task activity' })).not.toContainText('untrusted_page_data');
-    const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
-    expect(tabs.some((tab) => /duckduckgo|duck\.com|ddg\.gg/.test(tab.url))).toBe(false);
-    // Search exclusions contain vendor names in Bing's query string; only
-    // a tab's destination hostname indicates the agent visited that vendor.
-    expect(tabs.some((tab) => /(^|\.)(instrumentl\.com|grantable\.co)$/.test(new URL(tab.url).hostname))).toBe(false);
-    expect(tabs.some((tab) => tab.url.startsWith('https://www.bing.com/search'))).toBe(true);
-  } finally { await close(); await source.close(); }
-});
+for (const layout of ['classic', 'semantic', 'contents']) {
+  test(`no search key uses visible browser search and filters DuckDuckGo results (${layout})`, async () => {
+    const source = await fixture();
+    const { app, win, close } = await launch();
+    try {
+      await app.evaluate(({ session }, { base, layout }) => {
+        process.env.BRAVE_SEARCH_API_KEY = '';
+        const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
+        session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://duckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol></body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
+      }, { base: source.url, layout });
+      await win.locator('aside textarea').fill('Find grants for California schools');
+      await win.getByRole('button', { name: 'Send', exact: true }).click();
+      await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+      await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
+      await expect(win.getByRole('button', { name: 'Configure web search', exact: true })).toHaveCount(0);
+      await expect(win.getByRole('region', { name: 'Task activity' })).not.toContainText('untrusted_page_data');
+      const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+      expect(tabs.some((tab) => /duckduckgo|duck\.com|ddg\.gg/.test(tab.url))).toBe(false);
+      // Search exclusions contain vendor names in Bing's query string; only
+      // a tab's destination hostname indicates the agent visited that vendor.
+      expect(tabs.some((tab) => /(^|\.)(instrumentl\.com|grantable\.co)$/.test(new URL(tab.url).hostname))).toBe(false);
+      expect(tabs.some((tab) => tab.url.startsWith('https://www.bing.com/search'))).toBe(true);
+    } finally { await close(); await source.close(); }
+  });
+
+}
 
 test('search-key settings are visible, masked and separate from model keys', async () => {
   const { win, close } = await launch();
@@ -722,3 +725,21 @@ for (const option of [
     }
   });
 }
+
+// Opt-in provider smoke test; deterministic layout coverage above runs in CI.
+test('live Bing search discovers and reads Seattle funding sources', async () => {
+  test.skip(process.env.BULLEBROWSER_LIVE_SEARCH !== '1', 'Requires a live search provider');
+  test.setTimeout(120_000);
+  const { app, win, close } = await launch();
+  try {
+    await app.evaluate(() => { process.env.BRAVE_SEARCH_API_KEY = ''; });
+    await win.locator('aside textarea').fill('Find open grants funding Seattle');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+    await expect(win.locator('.md-prose')).toContainText('source pages', { timeout: 90_000 });
+    await expect(win.locator('.md-prose')).not.toContainText('could not finish');
+    const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+    console.log('Live search report:', await win.locator('.md-prose').innerText(), tabs.map((tab) => ({ url: tab.url, title: tab.title })));
+    expect(tabs.some((tab) => /(^|\.)(seattle\.gov|seattlefoundation\.org|kingcounty\.gov)$/.test(new URL(tab.url).hostname))).toBe(true);
+  } finally { await close(); }
+});
