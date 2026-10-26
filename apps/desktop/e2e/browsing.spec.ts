@@ -408,7 +408,7 @@ test('follow-up retries remember the task without asking the user to repeat it',
   } finally { await close(); await site.close(); }
 });
 
-for (const layout of ['classic', 'semantic', 'contents']) {
+for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
   test(`no search key uses visible browser search and filters DuckDuckGo results (${layout})`, async () => {
     const source = await fixture();
     const { app, win, close } = await launch();
@@ -416,7 +416,7 @@ for (const layout of ['classic', 'semantic', 'contents']) {
       await app.evaluate(({ session }, { base, layout }) => {
         process.env.BRAVE_SEARCH_API_KEY = '';
         const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
-        session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://duckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol></body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
+        session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://duckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
       }, { base: source.url, layout });
       await win.locator('aside textarea').fill('Find grants for California schools');
       await win.getByRole('button', { name: 'Send', exact: true }).click();

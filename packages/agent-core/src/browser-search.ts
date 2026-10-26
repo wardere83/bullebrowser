@@ -53,9 +53,14 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
           && !(fundingOnly && isGrantSearchService(source));
       } catch { return false; }
     });
-    for (let attempt = 0; !hasSource() && attempt < 3; attempt++) {
-      if (attempt === 0) {
-        await options.runtime.waitFor(tabId, { selector: '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)', timeoutMs: 4000 });
+    // Use elapsed time rather than a retry count: a placeholder heading can
+    // satisfy waitFor immediately while its result link renders seconds later.
+    const deadline = Date.now() + 4000;
+    let waitedForHeading = false;
+    while (!hasSource() && Date.now() < deadline) {
+      if (!waitedForHeading) {
+        waitedForHeading = true;
+        await options.runtime.waitFor(tabId, { selector: '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)', timeoutMs: Math.max(1, deadline - Date.now()) });
       } else {
         await new Promise<void>((resolve, reject) => {
           const abort = () => {
@@ -66,7 +71,7 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
           const timer = setTimeout(() => {
             options.signal.removeEventListener('abort', abort);
             resolve();
-          }, attempt * 500);
+          }, Math.min(250, Math.max(0, deadline - Date.now())));
           options.signal.addEventListener('abort', abort, { once: true });
           if (options.signal.aborted) abort();
         });
@@ -80,11 +85,15 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
     }
     check();
     const results: Array<{ title: string; url: string; snippet: string }> = [];
+    let excludedGrantService = false;
     const seen = new Set<string>();
     for (const link of links) {
       try {
         const source = sourceUrl(link.href, page.url);
-        if (fundingOnly && isGrantSearchService(source)) continue;
+        if (fundingOnly && isGrantSearchService(source)) {
+          excludedGrantService = true;
+          continue;
+        }
         if (!['https:', 'http:'].includes(source.protocol) || source.username || source.password || isBlockedDestination(source) || /(^|\.)(google\.[a-z.]+|bing\.com)$/.test(source.hostname)) continue;
         source.hash = '';
         if (seen.has(source.href) || !link.text?.trim()) continue;
@@ -93,7 +102,7 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
         if (results.length >= count) break;
       } catch { /* Discard malformed or prohibited links. */ }
     }
-    if (!results.length) throw new Error(fundingOnly && links.length
+    if (!results.length) throw new Error(excludedGrantService
       ? 'No usable direct funding sources were found. Grant-search services are excluded. Refine the query toward the funder or official program; no grants were verified.'
       : 'The search page returned no usable source links. It may require consent or a verification challenge; review the visible page. No sources were verified.');
     return { query, results, mode: 'browser', evidence: 'Search links are discovery only. Read source pages before citing claims.' };
