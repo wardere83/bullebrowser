@@ -9,7 +9,11 @@ interface Intent { tools: string[]; targets?: string[]; url?: string; text?: str
 const normalize = (value: unknown) => String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' ? value as Record<string, unknown> : {};
 function canonical(value: unknown): string | undefined {
-  try { const url = new URL(String(value)); url.hash = ''; return url.href; } catch { return undefined; }
+  try {
+    const raw = String(value);
+    const url = new URL(/^[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?$/i.test(raw) ? 'https://' + raw : raw);
+    url.hash = ''; return url.href;
+  } catch { return undefined; }
 }
 const clicks = ['click', 'clickElement'];
 const commands = 'open|navigate|go to|click|tap|type|enter|select|press|scroll|reload|close';
@@ -21,7 +25,8 @@ function intentsFor(request: string, initialTabId: string): Intent[] {
     const rest = match[2]!.replace(/[.!?]+$/, '').trim();
     const quoted = [...rest.matchAll(/["“']([^"”']+)["”']/g)].map((part) => part[1]!);
     const target = normalize(quoted[0] ?? rest.replace(/^(?:the|a|an)\s+/i, '').replace(/\s+(?:button|control|link)$/i, ''));
-    const url = rest.match(/https?:\/\/[^\s"'<>]+/i)?.[0] ?? (/^[\w-]+(?:\.[\w-]+)+(?:\/\S*)?$/.test(rest) ? 'https://' + rest : undefined);
+    const bareHost = rest.match(/^([a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s"'<>]*)?)/i)?.[1];
+    const url = rest.match(/https?:\/\/[^\s"'<>]+/i)?.[0] ?? (bareHost ? 'https://' + bareHost : undefined);
     if (verb === 'navigate' || verb === 'go to' || (verb === 'open' && (url || /\b(?:tab|page|site|website|source)\b/i.test(rest)))) intents.push({ tools: ['navigate', 'new_tab'], ...(url ? { url } : {}) });
     else if (verb === 'close' && /\btab\b/i.test(rest)) intents.push({ tools: ['close_tab'], ...(/\b(?:this|current|active)\b/i.test(rest) ? { tabId: initialTabId } : {}), ...(quoted[0] ? { targets: [normalize(quoted[0])] } : {}) });
     else if (verb === 'open' || verb === 'close') {
@@ -45,7 +50,7 @@ function matches(intent: Intent, record: ToolCallRecord): boolean {
   const output = object(record.output);
   if (intent.tabId && record.input.tabId !== intent.tabId) return false;
   if (intent.url) {
-    try { if (new URL(String(record.input.url)).href !== new URL(intent.url).href) return false; } catch { return false; }
+    if (canonical(record.input.url) !== canonical(intent.url)) return false;
   }
   if (intent.text !== undefined && String(record.input.text ?? record.input.option ?? '') !== intent.text) return false;
   if (intent.key) return record.name === 'press_key' && normalize(record.input.key) === normalize(intent.key);
