@@ -58,6 +58,7 @@ jobs:
       - name: Build static export
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_MANIFEST_STRICT: "1"
           NEXT_PUBLIC_IOS_APP_URL: ${{ vars.IOS_APP_URL }}
           NEXT_PUBLIC_ANDROID_APP_URL: ${{ vars.ANDROID_APP_URL }}
         run: pnpm --filter @bullebrowser/web build
