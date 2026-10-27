@@ -161,4 +161,21 @@ describe('task completion and presentation', () => {
     expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', verifiedSourceCount: 3 }));
   });
 
+  it('uses the inspected control label over a misleading requested selector', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'wrong', name: 'click', input: { target: 'Save' } }] })
+      .mockResolvedValue(text('Done.'));
+    const ctx = context(), outcome = vi.fn();
+    ctx.runtime.inspectTarget = vi.fn(async () => ({ label: 'Accept cookies', submitsForm: false }));
+    await runAgent(input({ userMessage: 'Click "Save"', context: ctx, onCompletion: outcome }));
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
+  });
+  it('does not let closing a different tab satisfy closing the current tab', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'close', name: 'close_tab', input: { tabId: 'other' } }] })
+      .mockResolvedValue(text('Done.'));
+    const ctx = context(), outcome = vi.fn();
+    ctx.runtime.closeTab = vi.fn(async () => ({ closed: true }));
+    await runAgent(input({ userMessage: 'Close this tab', context: ctx, onCompletion: outcome }));
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
+  });
+
 });

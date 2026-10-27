@@ -341,7 +341,12 @@ export async function executeToolCall(
   // Clicks and Enter are judged on the element they will really hit: a click
   // named by selector ("#btn-2") or an Enter in a sign-up form says nothing
   // risky in its input, yet submits the user's data all the same.
-  const facts = inspectedFacts = await inspectForPolicy(name, input, context);
+  let facts = await inspectForPolicy(name, input, context);
+  if (name === 'close_tab') {
+    const tab = (await context.runtime.listTabs()).find((entry) => entry.id === input.tabId);
+    if (tab) facts = { label: tab.title, submitsForm: false };
+  }
+  inspectedFacts = facts;
   const step: PlanStep = {
     id: callId,
     toolName: name,

@@ -5,12 +5,12 @@ import { ResearchProgress, isResearchRequest, researchSourceMinimum } from './re
 import { isFundingDiscoveryRequest } from './funding-sources.js';
 
 export interface TaskOutcome { status: 'completed' | 'incomplete'; reason?: string; verifiedSourceCount: number }
-interface Intent { tools: string[]; targets?: string[]; url?: string; text?: string; key?: string }
+interface Intent { tools: string[]; targets?: string[]; url?: string; text?: string; key?: string; tabId?: string }
 const normalize = (value: unknown) => String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' ? value as Record<string, unknown> : {};
 const clicks = ['click', 'clickElement'];
 const commands = 'open|navigate|go to|click|tap|type|enter|select|press|scroll|reload|close';
-function intentsFor(request: string): Intent[] {
+function intentsFor(request: string, initialTabId: string): Intent[] {
   const pattern = new RegExp('(?:^|[;\\n]|\\b(?:and then|then|and)\\s+)(?:(?:can|could|would) you\\s+)?(?:please\\s+)?(' + commands + ')\\s+(.+?)(?=\\s+(?:and then|then|and)\\s+(?:' + commands + ')\\b|[;\\n]|$)', 'gi');
   const intents: Intent[] = [];
   for (const match of request.matchAll(pattern)) {
@@ -20,7 +20,7 @@ function intentsFor(request: string): Intent[] {
     const target = normalize(quoted[0] ?? rest.replace(/^(?:the|a|an)\s+/i, '').replace(/\s+(?:button|control|link)$/i, ''));
     const url = rest.match(/https?:\/\/[^\s"'<>]+/i)?.[0] ?? (/^[\w-]+(?:\.[\w-]+)+(?:\/\S*)?$/.test(rest) ? 'https://' + rest : undefined);
     if (verb === 'navigate' || verb === 'go to' || (verb === 'open' && (url || /\b(?:tab|page|site|website|source)\b/i.test(rest)))) intents.push({ tools: ['navigate', 'new_tab'], ...(url ? { url } : {}) });
-    else if (verb === 'close' && /\btab\b/i.test(rest)) intents.push({ tools: ['close_tab'] });
+    else if (verb === 'close' && /\btab\b/i.test(rest)) intents.push({ tools: ['close_tab'], ...(/\b(?:this|current|active)\b/i.test(rest) ? { tabId: initialTabId } : {}), ...(quoted[0] ? { targets: [normalize(quoted[0])] } : {}) });
     else if (verb === 'open' || verb === 'close') {
       const generic = !quoted.length && /^(?:the\s+)?(?:menu|navigation|dialog|modal|panel|dropdown)$/i.test(rest);
       intents.push({ tools: clicks, targets: generic ? verb === 'close' ? ['close', 'dismiss', 'cancel'] : ['menu', 'navigation', 'toggle'] : [target] });
@@ -40,13 +40,14 @@ function intentsFor(request: string): Intent[] {
 function matches(intent: Intent, record: ToolCallRecord): boolean {
   if (!intent.tools.includes(record.name)) return false;
   const output = object(record.output);
+  if (intent.tabId && record.input.tabId !== intent.tabId) return false;
   if (intent.url) {
     try { if (new URL(String(record.input.url)).href !== new URL(intent.url).href) return false; } catch { return false; }
   }
   if (intent.text !== undefined && String(record.input.text ?? record.input.option ?? '') !== intent.text) return false;
   if (intent.key) return record.name === 'press_key' && normalize(record.input.key) === normalize(intent.key);
   if (intent.targets?.length) {
-    const labels = [record.input.target, record.targetFacts?.label, output.matched, output.title].map(normalize);
+    const labels = (record.targetFacts?.label ? [record.targetFacts.label] : [output.matched, record.input.target, output.title]).map(normalize);
     if (!intent.targets.some((target) => target && labels.some((label) => (' ' + label + ' ').includes(' ' + target + ' ')))) return false;
   }
   return true;
@@ -68,7 +69,7 @@ export class TaskOutcomeTracker {
     const request = input.userRequest ?? input.userMessage;
     const funding = ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(request);
     this.research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(request))), !input.browserTask, funding, researchSourceMinimum(input.browserTask, request));
-    this.intents = intentsFor(request);
+    this.intents = intentsFor(request, input.context.activeTabId);
   }
   observe(step: AgentStep): void {
     this.research.observe(step);
