@@ -26,3 +26,7 @@ export * from './search.js';
 export * from './browser-search.js';
 export * from './destinations.js';
 export * from './funding-sources.js';
+
+export * from './presentation.js';
+
+export * from './task-outcome.js';

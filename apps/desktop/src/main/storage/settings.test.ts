@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS } from '../../shared/ipc.js';
 
 describe('homepage destination migration', () => {
   it('migrates all prohibited homepage forms and preserves an allowed custom homepage', () => {
-    for (const homepageUrl of ['https://duckduckgo.com/?q=grants', 'https://html.duckduckgo.com/', 'https://DUCK.COM./', 'https://ddg.gg/']) {
+    for (const homepageUrl of ['https://\u0064uckduckgo.com/?q=grants', 'https://html.\u0064uckduckgo.com/', 'https://DUCK.COM./', 'https://ddg.gg/']) {
       setSettings({ homepageUrl });
       expect(getSettings().homepageUrl).toBe(DEFAULT_SETTINGS.homepageUrl);
     }

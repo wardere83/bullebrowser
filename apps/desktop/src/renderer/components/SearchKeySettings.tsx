@@ -26,7 +26,7 @@ export function SearchKeySettings() {
   };
   return <section aria-label="Web search" className="space-y-2">
     <h3 className="text-sm font-semibold">Web search</h3>
-    <p className="text-xs text-ink-secondary">Search works in your visible browser without a key. Optionally connect Brave Search for API-based discovery. DuckDuckGo is blocked in either mode. Saved keys are encrypted on this device; the operating system may request permission. New tasks use saved changes immediately.</p>
+    <p className="text-xs text-ink-secondary">Search works in your visible browser without a key. Optionally connect Brave Search for API-based discovery. restricted search provider is blocked in either mode. Saved keys are encrypted on this device; the operating system may request permission. New tasks use saved changes immediately.</p>
     {configured && <p role="status" className="text-xs">Search key configured</p>}
     <div className="flex gap-2">
       <input type="password" aria-label="Brave Search API key" autoComplete="off" spellCheck={false}

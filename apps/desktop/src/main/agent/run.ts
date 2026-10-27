@@ -231,6 +231,9 @@ export async function startAgentRun(
         // Choosing a browser task and submitting its answer explicitly starts browsing.
         requestBrowseAccess: req.browserTask ? undefined : () => ask(req.userMessage, 'browse_access'),
         budget: req.budget ?? getSettings().stepBudget,
+        onCompletion: (outcome) => {
+          if (outcome.status === 'incomplete') { status = 'failed'; error = outcome.reason; }
+        },
         onStep: (step) => {
           // Keep the model's own prose as it streams. If the run later dies
           // (context limit, network drop), the finally block can still persist

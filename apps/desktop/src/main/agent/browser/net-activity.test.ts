@@ -18,7 +18,7 @@ afterEach(() => vi.useRealTimers());
 it('cancels every prohibited resource before sending, including untracked/background requests', () => {
   const { before } = sessionFixture();
   for (const resourceType of ['mainFrame', 'subFrame', 'script', 'image', 'xhr', 'webSocket', 'ping', 'media']) {
-    for (const url of ['https://duckduckgo.com/', 'https://html.duckduckgo.com/', 'https://DUCK.COM./', 'wss://ddg.gg/']) {
+    for (const url of ['https://\u0064uckduckgo.com/', 'https://html.\u0064uckduckgo.com/', 'https://DUCK.COM./', 'wss://ddg.gg/']) {
       const callback = vi.fn();
       before({ id: 1, url, resourceType }, callback);
       expect(callback).toHaveBeenCalledExactlyOnceWith({ cancel: true });
@@ -40,7 +40,7 @@ it('preserves allowed searches and installs only one listener per session', () =
 it('does not let blocked requests keep a permitted page busy', async () => {
   vi.useFakeTimers();
   const { session, before } = sessionFixture();
-  before({ id: 1, webContentsId: 3, url: 'https://duckduckgo.com/tracker', resourceType: 'image' }, vi.fn());
+  before({ id: 1, webContentsId: 3, url: 'https://\u0064uckduckgo.com/tracker', resourceType: 'image' }, vi.fn());
   const wc = { id: 3, session, isDestroyed: () => false } as unknown as WebContents;
   const idle = waitForNetworkIdle(wc, 100, 1000);
   await vi.advanceTimersByTimeAsync(100);

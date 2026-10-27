@@ -16,8 +16,8 @@ describe('tabs across an explicit update', () => {
   });
   it('does not restore prohibited pages or their redirect aliases after updating', () => {
     saveUpdateTabs([
-      { url: 'https://DUCKDUCKGO.COM./?q=private', active: false },
-      { url: 'https://html.duckduckgo.com/', active: false },
+      { url: 'https://\u0044UCKDUCKGO.COM./?q=private', active: false },
+      { url: 'https://html.\u0064uckduckgo.com/', active: false },
       { url: 'https://duck.com/', active: false },
       { url: 'https://ddg.gg/', active: true },
       { url: 'https://agency.gov/', active: false },

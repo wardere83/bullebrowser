@@ -37,6 +37,8 @@ jobs:
             echo 'Use a probe step + outputs/env values instead of secrets in if conditions.'
             exit 1
           fi
+      - name: Guard product language in tracked source
+        run: node scripts/check-product-language.mjs
       - run: pnpm -r typecheck
       - run: pnpm -r lint
       - name: Tests with coverage gate
@@ -55,6 +57,8 @@ jobs:
         run: pnpm --filter @bullebrowser/web test
       - name: Desktop build smoke
         run: pnpm --filter @bullebrowser/desktop build
+      - name: Guard product language in shipped desktop bundles
+        run: node scripts/check-product-language.mjs apps/desktop/out
 
   native-voice:
     name: Native speech (${{ matrix.os }})

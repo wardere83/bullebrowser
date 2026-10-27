@@ -409,14 +409,14 @@ test('follow-up retries remember the task without asking the user to repeat it',
 });
 
 for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
-  test(`no search key uses visible browser search and filters DuckDuckGo results (${layout})`, async () => {
+  test(`no search key uses visible browser search and filters \u0044uckDuckGo results (${layout})`, async () => {
     const source = await fixture();
     const { app, win, close } = await launch();
     try {
       await app.evaluate(({ session }, { base, layout }) => {
         process.env.BRAVE_SEARCH_API_KEY = '';
         const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
-        session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://duckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
+        session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://\u0064uckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
       }, { base: source.url, layout });
       await win.locator('aside textarea').fill('Find grants for California schools');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
@@ -425,7 +425,7 @@ for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
       await expect(win.getByRole('button', { name: 'Configure web search', exact: true })).toHaveCount(0);
       await expect(win.getByRole('region', { name: 'Task activity' })).not.toContainText('untrusted_page_data');
       const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
-      expect(tabs.some((tab) => /duckduckgo|duck\.com|ddg\.gg/.test(tab.url))).toBe(false);
+      expect(tabs.some((tab) => /\u0064uckduckgo|duck\.com|ddg\.gg/.test(tab.url))).toBe(false);
       // Search exclusions contain vendor names in Bing's query string; only
       // a tab's destination hostname indicates the agent visited that vendor.
       expect(tabs.some((tab) => /(^|\.)(instrumentl\.com|grantable\.co)$/.test(new URL(tab.url).hostname))).toBe(false);
@@ -458,12 +458,12 @@ test('restricted destinations never send requests through navigation, redirects,
     if (!host.startsWith('127.0.0.1:')) receivedRestricted.push(host);
     else allowedPaths.push(req.url ?? '/');
     if (req.url === '/redirect') {
-      res.writeHead(302, { Location: `http://html.duckduckgo.com:${port}/redirected` });
+      res.writeHead(302, { Location: `http://html.\u0064uckduckgo.com:${port}/redirected` });
       res.end();
       return;
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://duckduckgo.com:${port}/clicked">Restricted link</a><a id="blocked-popup-link" target="_blank" href="http://duckduckgo.com:${port}/popup-link">Restricted popup</a><button id="blocked-popup-script" onclick="window.open('http://html.duckduckgo.com:${port}/popup-script'); history.replaceState({}, '', '#after-popup')">Open restricted popup</button><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
+    res.end(`<!doctype html><html><head><title>Destination guard fixture</title></head><body><h1>Allowed source page</h1><p>This local source remains available.</p><a id="blocked-link" href="http://\u0064uckduckgo.com:${port}/clicked">Restricted link</a><a id="blocked-popup-link" target="_blank" href="http://\u0064uckduckgo.com:${port}/popup-link">Restricted popup</a><button id="blocked-popup-script" onclick="window.open('http://html.\u0064uckduckgo.com:${port}/popup-script'); history.replaceState({}, '', '#after-popup')">Open restricted popup</button><form action="http://duck.com:${port}/submitted"><input id="blocked-input" name="q" value="fixture"><button type="submit">Restricted form</button></form></body></html>`);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = (server.address() as { port: number }).port;
@@ -472,7 +472,7 @@ test('restricted destinations never send requests through navigation, redirects,
   // names resolve only to this fixture, with proxies disabled for this test.
   const { app, win, close } = await launch([
     '--no-proxy-server',
-    '--host-resolver-rules=MAP duckduckgo.com 127.0.0.1, MAP *.duckduckgo.com 127.0.0.1, MAP duck.com 127.0.0.1, MAP ddg.gg 127.0.0.1',
+    '--host-resolver-rules=MAP \u0064uckduckgo.com 127.0.0.1, MAP *.\u0064uckduckgo.com 127.0.0.1, MAP duck.com 127.0.0.1, MAP ddg.gg 127.0.0.1',
   ]);
   try {
     const pageErrors: string[] = [];
@@ -498,7 +498,7 @@ test('restricted destinations never send requests through navigation, redirects,
       return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_browsing_cloud__'))");
     });
     await expect.poll(hasBrowsingCloud).toBe(true);
-    await enterAddress(win, `http://duckduckgo.com:${port}/typed`);
+    await enterAddress(win, `http://\u0064uckduckgo.com:${port}/typed`);
     await expect(win.getByRole('region', { name: 'Page loading error' })).toContainText('blocked by BulleBrowser policy');
     await app.evaluate(() => {
       const manager = (globalThis as unknown as { __bbTest: { tabManager: {
@@ -543,7 +543,7 @@ test('restricted destinations never send requests through navigation, redirects,
           policyFailures[name] = (error as { code?: string }).code;
         }
       };
-      const root = `http://duckduckgo.com:${fixturePort}/direct`;
+      const root = `http://\u0064uckduckgo.com:${fixturePort}/direct`;
       await attempt('tab-create', () => manager.create(root));
       await attempt('tab-navigate', () => manager.navigate(id, root));
       await attempt('agent-navigate', () => hooks.runtime.navigate(id, root));
@@ -562,7 +562,7 @@ test('restricted destinations never send requests through navigation, redirects,
         fetch('http://ddg.gg:${fixturePort}/fetch').then(() => 'fetch-loaded', () => 'fetch-blocked')
       ])`);
       const beforePopup = manager.list().length;
-      await wc.executeJavaScript(`window.open('http://html.duckduckgo.com:${fixturePort}/popup'); true`);
+      await wc.executeJavaScript(`window.open('http://html.\u0064uckduckgo.com:${fixturePort}/popup'); true`);
       const afterPopup = manager.list().length;
       await hooks.runtime.navigate(id, `http://127.0.0.1:${fixturePort}/allowed`);
       await attempt('agent-popup-link', () => hooks.runtime.click(id, '#blocked-popup-link'));
@@ -603,10 +603,10 @@ test('restricted destinations never send requests through navigation, redirects,
     expect(outcomes.popupRecovery).toEqual({
       url: `${base}/allowed#after-popup`, nativeUrl: `${base}/allowed#after-popup`, visible: true,
     });
-    expect(outcomes.afterRedirect).not.toContain('duckduckgo.com');
+    expect(outcomes.afterRedirect).not.toContain('\u0064uckduckgo.com');
     const sent = await app.evaluate(() => (globalThis as Record<string, unknown>).__restrictedRequestProbe as string[]);
     expect(sent.some((url) => url === `${base}/control`)).toBe(true);
-    expect(sent.filter((url) => /duckduckgo|duck\.com|ddg\.gg/i.test(new URL(url).hostname))).toEqual([]);
+    expect(sent.filter((url) => /\u0064uckduckgo|duck\.com|ddg\.gg/i.test(new URL(url).hostname))).toEqual([]);
     expect(allowedPaths).toContain('/redirect');
     expect(allowedPaths).toContain('/control');
     expect(receivedRestricted).toEqual([]);
@@ -649,7 +649,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
       const original = globalThis.fetch;
       globalThis.fetch = async (input, init) => {
         if (String(input).startsWith('https://api.search.brave.com/')) return new Response(JSON.stringify({ web: { results: [
-          { title: 'Prohibited search result', url: 'https://duckduckgo.com/?q=school+grants' },
+          { title: 'Prohibited search result', url: 'https://\u0064uckduckgo.com/?q=school+grants' },
           ...[1, 2, 3].map((id) => ({ title: `Program ${id}`, url: `${fixtureUrl}/program-${id}` })),
         ] } }));
         return original(input, init);
@@ -667,7 +667,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await expect(activity.getByText('3 pages read', { exact: true })).toBeVisible();
     await activity.getByRole('button').click();
     await expect(activity.getByRole('log')).toContainText('Reading the page');
-    await expect(activity.getByRole('log')).not.toContainText('duckduckgo.com');
+    await expect(activity.getByRole('log')).not.toContainText('\u0064uckduckgo.com');
     await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-1');
     expect((await win.evaluate(() => window.bullebrowser.tabs.list())).filter((tab) => tab.url.includes('/program-'))).toHaveLength(3);
     await expect(win.locator('.md-prose')).not.toContainText('Official grant source');

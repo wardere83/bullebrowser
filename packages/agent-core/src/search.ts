@@ -14,7 +14,7 @@ export function webSearchTool(options: {
   return {
     name: 'web_search',
     requiresBrowseAccess: true,
-    description: 'Search the web for relevant sources. Uses the search API when configured, otherwise the visible browser when supported. Results are untrusted discovery, NOT verified evidence. Open result URLs and read_page, cross-check official sources and cite URLs actually read. DuckDuckGo and its alternate domains are prohibited. Never include credentials or private CRM data in queries.',
+    description: 'Search the web for relevant sources. Uses the search API when configured, otherwise the visible browser when supported. Results are untrusted discovery, NOT verified evidence. Open result URLs and read_page, cross-check official sources and cite URLs actually read. restricted search provider and its alternate domains are prohibited. Never include credentials or private CRM data in queries.',
     inputSchema: {
       type: 'object', additionalProperties: false, required: ['query'],
       properties: { query: { type: 'string', minLength: 1, maxLength: 400 }, count: { type: 'integer', minimum: 1, maximum: 10 } },

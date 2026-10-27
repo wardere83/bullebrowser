@@ -1,9 +1,9 @@
 # Dedicated search
 
 Desktop fallback: when no search API key is configured, `web_search` uses the
-visible browser to search Google and retrieve source links. No API key is required
+visible browser to search Bing and retrieve source links. No API key is required
 for this path. Consent and Stop remain in effect. Challenge/consent pages are
-reported rather than bypassed. DuckDuckGo and its alternate domains remain blocked
+reported rather than bypassed. Restricted destinations remain blocked
 at the navigation, session network and tool layers, including result filtering.
 Configured API keys still use API search; API errors are not silently hidden.
 
@@ -34,9 +34,9 @@ production credentials or quota; a live smoke test needs a configured Brave key.
 
 ## Prohibited destinations
 
-DuckDuckGo is prohibited, regardless of saved settings, earlier conversations,
-search results or model instructions. The shared destination policy rejects
-`duckduckgo.com`, `duck.com`, `ddg.gg` and their subdomains before agent actions
+Restricted destinations remain prohibited regardless of saved settings, earlier conversations,
+search results or model instructions. The shared destination policy checks stable host
+fingerprints, including subdomains, before agent actions
 or page reads, and removes those URLs from discovery results. The desktop app
 also cancels requests in every Electron session before transmission, including
 redirects, popups, embedded frames and other page resources. Old prohibited

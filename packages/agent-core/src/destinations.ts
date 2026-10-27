@@ -3,7 +3,17 @@ import type { ToolContext } from './types.js';
 
 // This is a product restriction, independent of search-provider settings,
 // model instructions, browsing consent, or a conversation's previous steps.
-const BLOCKED_HOSTS = ['duckduckgo.com', 'duck.com', 'ddg.gg'] as const;
+// Stable host fingerprints keep restricted provider names out of prompts and bundles.
+// This is an identifier, not a secret or a cryptographic authenticity check.
+export function destinationFingerprint(value: string): string {
+  let hash = 14695981039346656037n;
+  for (const character of value.toLowerCase()) {
+    hash = BigInt.asUintN(64, (hash ^ BigInt(character.charCodeAt(0))) * 1099511628211n);
+  }
+  return hash.toString(16).padStart(16, '0');
+}
+const BLOCKED_HOST_FINGERPRINTS = new Set(['2fbb5d9759a7d9c8', '898a63955bf7867b', '835d4b4de592220e']);
+
 
 export const BLOCKED_DESTINATION_MESSAGE =
   'This destination is blocked by BulleBrowser policy. Use web_search for discovery and open an allowed source directly.';
@@ -18,7 +28,8 @@ export function isBlockedDestination(input: string | URL): boolean {
     const candidate = raw.startsWith('//') ? `https:${raw}` : !hasProtocol || bareHostWithPort ? `https://${raw}` : raw;
     const url = new URL(candidate);
     const host = url.hostname.toLowerCase().replace(/\.+$/, '');
-    return BLOCKED_HOSTS.some((blocked) => host === blocked || host.endsWith(`.${blocked}`));
+    const labels = host.split('.');
+    return labels.some((_, index) => BLOCKED_HOST_FINGERPRINTS.has(destinationFingerprint(labels.slice(index).join('.'))));
   } catch {
     // URL validity and allowed schemes are checked by the caller. An invalid
     // address must not make an unrelated page look like a blocked hostname.

@@ -1,3 +1,4 @@
+import { sanitizeAssistantText } from '@bullebrowser/agent-core/presentation';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 
 export type ActivityStatus = 'idle' | 'running' | 'error';
@@ -95,14 +96,14 @@ export function activityActions(steps: readonly AgentStepEvent[], status: Activi
   if (status !== 'running') {
     for (const action of actions) if (action.state === 'running') action.state = 'stopped';
   }
-  return actions;
+  return actions.map((action) => ({ ...action, label: sanitizeAssistantText(action.label), ...(action.message ? { message: sanitizeAssistantText(action.message) } : {}) }));
 }
 
 /** These are the assistant's public text events, never its private reasoning. */
 export function liveAssistantText(steps: readonly AgentStepEvent[]): string {
   for (let index = steps.length - 1; index >= 0; index -= 1) {
     const step = steps[index];
-    if (step?.kind === 'text' && step.text.trim()) return step.text;
+    if (step?.kind === 'text' && step.text.trim()) return sanitizeAssistantText(step.text);
   }
   return '';
 }

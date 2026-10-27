@@ -1,3 +1,5 @@
+import { TaskOutcomeTracker } from './task-outcome.js';
+import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
 import { browserTask } from './browser-tasks.js';
 import { ResearchProgress, isResearchRequest } from './research.js';
 import { runLocalAgent } from './local-agent.js';
@@ -43,6 +45,7 @@ import {
 import {
   providerFor,
   type AgentInput,
+  type AgentStep,
   type AgentStepHandler,
   type ApiTool,
   type ModelId,
@@ -519,6 +522,27 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 }
 
 export async function runAgent(input: AgentInput): Promise<string> {
+  const progress = new TaskOutcomeTracker(input);
+  const answer = await runAgentTask({
+    ...input,
+    history: input.history.map((message) => message.role === 'assistant'
+      ? { ...message, content: sanitizeAssistantText(message.content) } : message),
+    onStep: (step) => {
+      progress.observe(step);
+      if (step.type !== 'done') input.onStep(sanitizeAssistantValue(step) as AgentStep);
+    },
+  }, progress);
+  const outcome = progress.finish(answer);
+  input.onCompletion?.(outcome);
+  const result = sanitizeAssistantText(progress.present(answer));
+  if (outcome.status === 'incomplete') {
+    input.onStep({ type: 'error', detail: outcome.reason, data: { code: 'TASK_INCOMPLETE' } });
+  }
+  input.onStep({ type: 'done' });
+  return result;
+}
+
+async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Promise<string> {
   const context = input.context;
   const research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage))), !input.browserTask,
     ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(input.userRequest ?? input.userMessage));
@@ -558,6 +582,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   // consent gate covers the agent going *off* and driving the browser itself.
   onStep({ type: 'thinking', detail: 'Reading the current page…' });
   const perceived = await retrieveContext(context, memory);
+  progress.observeContext(perceived.url, perceived.textSnippet);
 
   // The page in front of the user, so "summarize this" or "what does this say
   // about X" can be answered straight away instead of spending a read_page
@@ -598,7 +623,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
 
   const system =
     `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${browserTask(input.browserTask)?.instruction ?? ''}\n${input.browserTask ? 'The user has already answered the short clarifying question. Begin real browsing now. Use visible tabs as the work surface; leave viable options open and the strongest match selected. Limit the final chat response to a short outcome and essential caveats, without pasted page text.' : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
-    'DuckDuckGo and its alternate domains are prohibited destinations. Never open, read, click through, ' +
+    'restricted search provider and its alternate domains are prohibited destinations. Never open, read, click through, ' +
     'or use them as a fallback, even if earlier conversation history did so. Use web_search for discovery. ' +
     'If search is unavailable, explain the failure or inspect an allowed source supplied by the user.\n\n' +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
@@ -619,7 +644,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   ];
 
   if (provider === 'openai') {
-    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research });
+    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress });
   }
 
   const client = new Anthropic({ apiKey: input.apiKey, ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
@@ -640,6 +665,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   ];
 
   let finalText = '';
+  let terminalAnswer = false;
 
   // Each iteration is one model turn. The loop bound is a hard safety backstop;
   // the real limit is the step budget, charged per tool call below.
@@ -700,7 +726,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
     }
 
     if (response.stop_reason !== 'tool_use') {
-      const followUp = research.followUp(turnText, budget);
+      const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: response.content });
         messages.push({ role: 'user', content: followUp });
@@ -708,7 +734,8 @@ export async function runAgent(input: AgentInput): Promise<string> {
         continue;
       }
       // Terminal turn (end_turn / stop_sequence): this is the final answer.
-      finalText = research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText);
+      terminalAnswer = true;
+      finalText = progress.present(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
       if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
@@ -753,6 +780,10 @@ export async function runAgent(input: AgentInput): Promise<string> {
     messages.push({ role: 'user', content: toolResults });
   }
 
+  if (!terminalAnswer) {
+    onStep({ type: 'budget', data: { exhausted: true }, detail: NO_ANSWER });
+    finalText = finalText ? `${finalText}\n\n${NO_ANSWER}` : NO_ANSWER;
+  }
   onStep({ type: 'done' });
   // Once more over the whole answer: a reply continued after the length limit
   // can split a phrase between two turns.
@@ -846,8 +877,9 @@ async function runOpenAiTurns(args: {
   budget: StepBudget;
   userTurnText: string;
   research: ResearchProgress;
+  progress: TaskOutcomeTracker;
 }): Promise<string> {
-  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research } = args;
+  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress } = args;
   const { context, onStep } = input;
 
   const tools = toOpenAiTools(
@@ -865,6 +897,7 @@ async function runOpenAiTurns(args: {
   ];
 
   let finalText = '';
+  let terminalAnswer = false;
 
   for (let turn = 0; turn < budget.total * 2 + 5; turn++) {
     if (context.signal.aborted) throw new Error('cancelled');
@@ -888,16 +921,24 @@ async function runOpenAiTurns(args: {
       onStep({ type: 'done' });
       return replacement;
     }
+    if (choice.finish_reason === 'length') {
+      if (turnText) onStep({ type: 'text', detail: turnText });
+      finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
+      messages.push({ role: 'assistant', content: turnText });
+      messages.push({ role: 'user', content: 'Your reply was cut off. Continue from where it stopped without repeating text. Finish the requested work before reporting completion.' });
+      continue;
+    }
     const calls = choice.message.tool_calls ?? [];
     if (calls.length === 0) {
-      const followUp = research.followUp(turnText, budget);
+      const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: turnText });
         messages.push({ role: 'user', content: followUp });
         onStep({ type: 'thinking', detail: 'Continuing source research…' });
         continue;
       }
-      finalText = research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText);
+      terminalAnswer = true;
+      finalText = progress.present(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
       if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
@@ -954,6 +995,10 @@ async function runOpenAiTurns(args: {
     }
   }
 
+  if (!terminalAnswer) {
+    onStep({ type: 'budget', data: { exhausted: true }, detail: NO_ANSWER });
+    finalText = finalText ? `${finalText}\n\n${NO_ANSWER}` : NO_ANSWER;
+  }
   onStep({ type: 'done' });
   return applyTerminology(finalText) || NO_ANSWER;
 }

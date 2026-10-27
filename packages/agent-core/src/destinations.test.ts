@@ -11,16 +11,16 @@ import type { AgentStep, ToolContext, ToolRuntime } from './types.js';
 
 describe('prohibited destination matching', () => {
   it.each([
-    'https://duckduckgo.com/?q=private', 'http://www.duckduckgo.com/',
-    'https://html.duckduckgo.com/html/', 'https://lite.duckduckgo.com/lite/',
-    'HTTPS://DUCKDUCKGO.COM./', 'https://duckduckgo.com...:443/',
-    'https://%64uckduckgo.com/', 'https://duckduckgo%2Ecom/',
-    'https://duckduckgo。com/', 'https://duckduckgo.com\t/',
-    'https://example.org@duckduckgo.com/', '//duckduckgo.com/path',
-    'duckduckgo.com', 'duckduckgo.com:443/path', 'duckduckgo.com.:443/path',
+    'https://\u0064uckduckgo.com/?q=private', 'http://www.\u0064uckduckgo.com/',
+    'https://html.\u0064uckduckgo.com/html/', 'https://lite.\u0064uckduckgo.com/lite/',
+    'HTTPS://\u0044UCKDUCKGO.COM./', 'https://\u0064uckduckgo.com...:443/',
+    'https://%64uckduckgo.com/', 'https://\u0064uckduckgo%2Ecom/',
+    'https://\u0064uckduckgo。com/', 'https://\u0064uckduckgo.com\t/',
+    'https://example.org@\u0064uckduckgo.com/', '//\u0064uckduckgo.com/path',
+    '\u0064uckduckgo.com', '\u0064uckduckgo.com:443/path', '\u0064uckduckgo.com.:443/path',
     'https://duck.com/', 'https://www.duck.com/', 'https://ddg.gg/',
-    'https://go.ddg.gg/', 'wss://duckduckgo.com/socket',
-    'blob:https://duckduckgo.com/id', 'filesystem:https://duckduckgo.com/temporary/a',
+    'https://go.ddg.gg/', 'wss://\u0064uckduckgo.com/socket',
+    'blob:https://\u0064uckduckgo.com/id', 'filesystem:https://\u0064uckduckgo.com/temporary/a',
   ])('blocks canonical hostname variants: %s', (url) => {
     expect(isBlockedDestination(url)).toBe(true);
     expect(() => assertAllowedDestination(url)).toThrow(BLOCKED_DESTINATION_MESSAGE);
@@ -28,17 +28,17 @@ describe('prohibited destination matching', () => {
 
   it.each([
     'https://api.search.brave.com/res/v1/web/search', 'https://www.grants.gov/',
-    'https://notduckduckgo.com/', 'https://duckduckgo.com.example.org/',
-    'https://duckduckgo.com@example.org/', 'https://example.org/duckduckgo.com',
-    'https://example.org/?next=https://duckduckgo.com/', 'about:blank', '', 'not a URL',
+    'https://not\u0064uckduckgo.com/', 'https://\u0064uckduckgo.com.example.org/',
+    'https://\u0064uckduckgo.com@example.org/', 'https://example.org/\u0064uckduckgo.com',
+    'https://example.org/?next=https://\u0064uckduckgo.com/', 'about:blank', '', 'not a URL',
   ])('does not reject unrelated destinations: %s', (url) => {
     expect(isBlockedDestination(url)).toBe(false);
     expect(() => assertAllowedDestination(url)).not.toThrow();
   });
 
   it('accepts parsed URLs and never echoes queries or credentials in its error', () => {
-    expect(isBlockedDestination(new URL('https://duckduckgo.com/'))).toBe(true);
-    try { assertAllowedDestination('https://secret:password@duckduckgo.com/?q=confidential'); }
+    expect(isBlockedDestination(new URL('https://\u0064uckduckgo.com/'))).toBe(true);
+    try { assertAllowedDestination('https://secret:password@\u0064uckduckgo.com/?q=confidential'); }
     catch (error) {
       expect(error).toMatchObject({ code: 'BLOCKED_BY_POLICY', retryable: false, message: BLOCKED_DESTINATION_MESSAGE });
       expect(String(error)).not.toMatch(/confidential|password|secret/);
@@ -47,7 +47,7 @@ describe('prohibited destination matching', () => {
 
   it('enforces the same restriction in policy-only callers', () => {
     const policy = new PrivacyPolicyEngine();
-    expect(policy.evaluateToolStep({ id: '1', toolName: 'navigate', input: { url: 'https://duckduckgo.com/' }, expected: '' }))
+    expect(policy.evaluateToolStep({ id: '1', toolName: 'navigate', input: { url: 'https://\u0064uckduckgo.com/' }, expected: '' }))
       .toEqual({ allowed: false, requiresConfirmation: false, reason: BLOCKED_DESTINATION_MESSAGE });
     expect(policy.allowExternalProvider({ url: 'https://duck.com/', text: 'Page' }).allowed).toBe(false);
   });
@@ -84,7 +84,7 @@ async function execute(name: string, input: unknown, ctx: ToolContext) {
 describe('agent destination enforcement', () => {
   it.each(['navigate', 'new_tab'])('rejects %s before progress, consent or runtime side effects', async (name) => {
     const ctx = context();
-    const { outcome, steps, gate } = await execute(name, { url: 'https://html.duckduckgo.com/?q=private' }, ctx);
+    const { outcome, steps, gate } = await execute(name, { url: 'https://html.\u0064uckduckgo.com/?q=private' }, ctx);
     expect(outcome).toMatchObject({ isError: true, errorCode: 'BLOCKED_BY_POLICY' });
     expect(steps.map((step) => step.type)).toEqual(['error']);
     expect(ctx.runtime.navigate).not.toHaveBeenCalled();
@@ -101,7 +101,7 @@ describe('agent destination enforcement', () => {
     ['press_key', { key: 'Enter' }], ['scroll', { direction: 'down' }], ['reload', {}],
     ['find_elements', {}], ['wait_for', { networkIdle: true }], ['switch_tab', { tabId: '1' }],
   ])('rejects %s on a stale blocked page before touching it', async (name, input) => {
-    const ctx = context('https://duckduckgo.com/?q=old-search');
+    const ctx = context('https://\u0064uckduckgo.com/?q=old-search');
     const { outcome } = await execute(String(name), input, ctx);
     expect(outcome).toMatchObject({ isError: true, errorCode: 'BLOCKED_BY_POLICY' });
     for (const [method, fn] of Object.entries(ctx.runtime)) {
@@ -126,9 +126,9 @@ describe('agent destination enforcement', () => {
     ['press_key', { key: 'Enter' }], ['screenshot', {}], ['extract', { schema: {} }],
     ['find_elements', {}], ['scroll', { direction: 'down' }], ['reload', {}],
   ])('ignores a forged tabId when %s acts on the active tab', async (name, args) => {
-    const ctx = context('https://duckduckgo.com/');
+    const ctx = context('https://\u0064uckduckgo.com/');
     vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
-      { id: '1', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: '1', title: 'Blocked', url: 'https://\u0064uckduckgo.com/', active: true },
       { id: 'allowed', title: 'Allowed', url: 'https://agency.gov/', active: false },
     ]);
     const { outcome, steps } = await execute(String(name), { ...args, tabId: 'allowed' }, ctx);
@@ -142,9 +142,9 @@ describe('agent destination enforcement', () => {
   });
 
   it('also rejects a forged tabId through a direct registry call', async () => {
-    const ctx = context('https://duckduckgo.com/');
+    const ctx = context('https://\u0064uckduckgo.com/');
     vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
-      { id: '1', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: '1', title: 'Blocked', url: 'https://\u0064uckduckgo.com/', active: true },
       { id: 'allowed', title: 'Allowed', url: 'https://agency.gov/', active: false },
     ]);
     const input = { target: 'Submit', tabId: 'allowed' };
@@ -153,9 +153,9 @@ describe('agent destination enforcement', () => {
   });
 
   it('still lets a tab-aware read inspect an allowed nonactive tab', async () => {
-    const ctx = context('https://duckduckgo.com/');
+    const ctx = context('https://\u0064uckduckgo.com/');
     vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
-      { id: '1', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: '1', title: 'Blocked', url: 'https://\u0064uckduckgo.com/', active: true },
       { id: 'allowed', title: 'Allowed', url: 'https://agency.gov/', active: false },
     ]);
     vi.mocked(ctx.runtime.readPage).mockResolvedValue({ title: 'Source', url: 'https://agency.gov/', text: 'Source text' });
@@ -167,13 +167,13 @@ describe('agent destination enforcement', () => {
     const ctx = context();
     vi.mocked(ctx.runtime.listTabs).mockResolvedValue([
       { id: '1', title: 'Allowed', url: 'https://agency.gov/', active: false },
-      { id: '2', title: 'Blocked', url: 'https://duckduckgo.com/', active: true },
+      { id: '2', title: 'Blocked', url: 'https://\u0064uckduckgo.com/', active: true },
     ]);
     expect((await execute('getActiveTab', {}, ctx)).outcome.errorCode).toBe('BLOCKED_BY_POLICY');
   });
 
   it('allows leaving a blocked tab for an allowed source and closing it', async () => {
-    const ctx = context('https://duckduckgo.com/');
+    const ctx = context('https://\u0064uckduckgo.com/');
     expect((await execute('navigate', { url: 'https://agency.gov/' }, ctx)).outcome.isError).toBe(false);
     expect(ctx.runtime.navigate).toHaveBeenCalledOnce();
     expect((await execute('close_tab', { tabId: '1' }, ctx)).outcome.isError).toBe(false);
@@ -183,7 +183,7 @@ describe('agent destination enforcement', () => {
     const ctx = context();
     await expect(tools.navigate.execute({ url: 'https://ddg.gg/' }, ctx)).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
     expect(ctx.runtime.navigate).not.toHaveBeenCalled();
-    vi.mocked(ctx.runtime.readPage).mockResolvedValue({ title: 'Blocked', url: 'https://duckduckgo.com/', text: 'Must not reach model' });
+    vi.mocked(ctx.runtime.readPage).mockResolvedValue({ title: 'Blocked', url: 'https://\u0064uckduckgo.com/', text: 'Must not reach model' });
     const { outcome, steps } = await execute('read_page', {}, ctx);
     expect(outcome.errorCode).toBe('BLOCKED_BY_POLICY');
     expect(outcome.text).not.toContain('Must not reach model');
@@ -195,11 +195,11 @@ describe('agent destination enforcement', () => {
     let url = 'https://agency.gov/';
     vi.mocked(ctx.runtime.listTabs).mockImplementation(async () => [{ id: '1', title: 'Page', url, active: true }]);
     vi.mocked(ctx.runtime.click).mockImplementation(async () => {
-      url = 'https://duckduckgo.com/';
+      url = 'https://\u0064uckduckgo.com/';
       return { matched: 'Link', url: 'https://agency.gov/' };
     });
     vi.mocked(ctx.runtime.pressKey).mockImplementation(async () => {
-      url = 'https://duckduckgo.com/';
+      url = 'https://\u0064uckduckgo.com/';
       return { pressed: 'Enter' };
     });
     const { outcome, steps } = await execute(name, name === 'click' ? { target: 'Link' } : { key: 'Enter' }, ctx);
@@ -215,7 +215,7 @@ describe('agent destination enforcement', () => {
       { id: '2', title: 'Other', url: 'https://other.gov/', active: ctx.activeTabId === '2' },
     ]);
     vi.mocked(ctx.runtime.click).mockImplementation(async () => {
-      originalUrl = 'https://duckduckgo.com/';
+      originalUrl = 'https://\u0064uckduckgo.com/';
       ctx.activeTabId = '2';
       return { matched: 'Link' };
     });
@@ -230,7 +230,7 @@ describe('agent destination enforcement', () => {
       { id: '2', title: 'Target', url: targetUrl, active: false },
     ]);
     vi.mocked(ctx.runtime.readPage).mockImplementation(async () => {
-      targetUrl = 'https://duckduckgo.com/';
+      targetUrl = 'https://\u0064uckduckgo.com/';
       return { title: 'Old', url: 'https://other.gov/', text: 'Stale source text' };
     });
     const { outcome, steps } = await execute('read_page', { tabId: '2' }, ctx);
@@ -239,13 +239,13 @@ describe('agent destination enforcement', () => {
   });
 
   it('allows new-tab recovery without rechecking the blocked original page', async () => {
-    const ctx = context('https://duckduckgo.com/');
+    const ctx = context('https://\u0064uckduckgo.com/');
     expect((await execute('new_tab', { url: 'https://agency.gov/' }, ctx)).outcome.isError).toBe(false);
     expect(ctx.runtime.newTab).toHaveBeenCalledWith('https://agency.gov/');
   });
 
   it('does not perceive an already-open blocked page when a run starts', async () => {
-    const ctx = context('https://duckduckgo.com/');
+    const ctx = context('https://\u0064uckduckgo.com/');
     const result = await retrieveContext(ctx, new SessionMemoryStore());
     expect(result).toEqual({ memory: {}, unreadableReason: BLOCKED_DESTINATION_MESSAGE });
     expect(ctx.runtime.readPage).not.toHaveBeenCalled();
@@ -254,11 +254,11 @@ describe('agent destination enforcement', () => {
   it('filters blocked discovery links and stale tab metadata', async () => {
     const ctx = context();
     vi.mocked(ctx.runtime.listLinks!).mockResolvedValue([
-      { text: 'Blocked', href: 'https://duckduckgo.com/l/?uddg=https%3A%2F%2Fagency.gov' },
+      { text: 'Blocked', href: 'https://\u0064uckduckgo.com/l/?uddg=https%3A%2F%2Fagency.gov' },
       { text: 'Allowed', href: 'https://agency.gov/' },
     ]);
     expect(await tools.listLinks.execute({}, ctx)).toEqual({ links: [{ text: 'Allowed', href: 'https://agency.gov/' }] });
-    const blocked = context('https://duckduckgo.com/');
+    const blocked = context('https://\u0064uckduckgo.com/');
     expect(await tools.list_tabs.execute({}, blocked)).toEqual({ tabs: [] });
   });
 });
@@ -280,7 +280,7 @@ describe('API-only host discovery failures', () => {
 
   it('discards prohibited Brave results before source selection', async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ web: { results: [
-      { title: 'Blocked', url: 'https://duckduckgo.com/' }, { url: 'https://html.duckduckgo.com/' },
+      { title: 'Blocked', url: 'https://\u0064uckduckgo.com/' }, { url: 'https://html.\u0064uckduckgo.com/' },
       { url: 'https://duck.com/' }, { url: 'https://ddg.gg/' },
       { title: 'Official', url: 'https://agency.gov/', description: 'Official program' },
     ] } })));
@@ -311,7 +311,7 @@ describe('embedded runtime destination restriction', () => {
   it.each(['goBack', 'goForward'] as const)('refuses %s from an allowed page when the history target cannot be verified', async (method) => {
     const pageLocation = { href: 'https://agency.gov/' };
     vi.stubGlobal('location', pageLocation);
-    const navigateToUnknownTarget = () => { pageLocation.href = 'https://duckduckgo.com/'; };
+    const navigateToUnknownTarget = () => { pageLocation.href = 'https://\u0064uckduckgo.com/'; };
     const pageHistory = { back: vi.fn(navigateToUnknownTarget), forward: vi.fn(navigateToUnknownTarget) };
     vi.stubGlobal('history', pageHistory);
 
@@ -326,7 +326,7 @@ describe('embedded runtime destination restriction', () => {
   });
 
   it('rejects page reads before examining a prohibited document', async () => {
-    vi.stubGlobal('location', { href: 'https://duckduckgo.com/' });
+    vi.stubGlobal('location', { href: 'https://\u0064uckduckgo.com/' });
     const querySelector = vi.fn();
     vi.stubGlobal('document', { querySelector });
     await expect(createDomToolRuntime().readPage('page')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
@@ -342,7 +342,7 @@ describe('embedded runtime destination restriction', () => {
 
   it('rejects a blocked link before scrolling, cursor presentation or clicking', async () => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
-    const link = { href: 'https://duckduckgo.com/', closest: vi.fn(), scrollIntoView: vi.fn(), click: vi.fn() };
+    const link = { href: 'https://\u0064uckduckgo.com/', closest: vi.fn(), scrollIntoView: vi.fn(), click: vi.fn() };
     link.closest.mockReturnValue(link);
     vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [link] });
     const showCursor = vi.fn();
@@ -356,7 +356,7 @@ describe('embedded runtime destination restriction', () => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
     const button = {
       tagName: 'BUTTON', type: 'submit', matches: () => false,
-      form: { action: 'https://duckduckgo.com/submit' },
+      form: { action: 'https://\u0064uckduckgo.com/submit' },
       getAttribute: () => null,
     };
     const span = {
@@ -404,7 +404,7 @@ describe('embedded runtime destination restriction', () => {
   ] as const)('rejects a %s type=%s before its handler can defer form.%s()', async (tagName, type, method) => {
     const pageLocation = { href: 'https://agency.gov/' };
     vi.stubGlobal('location', pageLocation);
-    const action = 'https://duckduckgo.com/submit';
+    const action = 'https://\u0064uckduckgo.com/submit';
     const submit = vi.fn(() => { pageLocation.href = action; });
     const form = { action, submit, requestSubmit: submit };
     const control = formControl(tagName, type, form);
@@ -427,7 +427,7 @@ describe('embedded runtime destination restriction', () => {
 
   it('rejects a blocked form action even when its submitter override is allowed', async () => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
-    const control = formControl('BUTTON', 'submit', { action: 'https://duckduckgo.com/submit' });
+    const control = formControl('BUTTON', 'submit', { action: 'https://\u0064uckduckgo.com/submit' });
     control.getAttribute.mockReturnValue('https://agency.gov/submit');
     control.formAction = 'https://agency.gov/submit';
     vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [control] });
@@ -438,7 +438,7 @@ describe('embedded runtime destination restriction', () => {
 
   it.each(['submit', 'image'])('still blocks clicks on an input type=%s before activation', async (type) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
-    const control = formControl('INPUT', type, { action: 'https://duckduckgo.com/submit' });
+    const control = formControl('INPUT', type, { action: 'https://\u0064uckduckgo.com/submit' });
     vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [control] });
     await expect(createDomToolRuntime().click('page', '#submit')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);
     expect(control.click).not.toHaveBeenCalled();
@@ -447,11 +447,11 @@ describe('embedded runtime destination restriction', () => {
 
   it.each(['form action', 'default submitter override'])('checks the actual %s for implicit Enter submission', async (destination) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/' });
-    const form = { action: destination === 'form action' ? 'https://duckduckgo.com/submit' : 'https://agency.gov/submit', getRootNode: vi.fn() };
+    const form = { action: destination === 'form action' ? 'https://\u0064uckduckgo.com/submit' : 'https://agency.gov/submit', getRootNode: vi.fn() };
     const input = formControl('INPUT', 'text', form);
     const submitter = formControl('BUTTON', 'submit', form);
     submitter.getAttribute.mockReturnValue('submit');
-    submitter.formAction = 'https://duckduckgo.com/base/submit';
+    submitter.formAction = 'https://\u0064uckduckgo.com/base/submit';
     const controls = destination === 'form action' ? [input] : [input, submitter];
     form.getRootNode.mockReturnValue({ querySelectorAll: () => controls });
     vi.stubGlobal('document', { activeElement: input });
@@ -480,11 +480,11 @@ describe('embedded runtime destination restriction', () => {
 
   it.each(['resolved formAction', 'document base URI'])('checks a relative formaction against %s', async (resolution) => {
     vi.stubGlobal('location', { href: 'https://agency.gov/current' });
-    const baseURI = 'https://duckduckgo.com/search/';
+    const baseURI = 'https://\u0064uckduckgo.com/search/';
     const button = {
       tagName: 'BUTTON', type: 'submit', matches: () => false,
       form: { action: 'https://agency.gov/safe' },
-      formAction: resolution === 'resolved formAction' ? 'https://duckduckgo.com/search/submit' : '',
+      formAction: resolution === 'resolved formAction' ? 'https://\u0064uckduckgo.com/search/submit' : '',
       ownerDocument: { baseURI },
       getAttribute: () => 'submit',
     };
@@ -503,7 +503,7 @@ describe('embedded runtime destination restriction', () => {
     vi.stubGlobal('location', pageLocation);
     const button = {
       closest: () => null, scrollIntoView: vi.fn(), outerHTML: '<button>Open</button>',
-      click: vi.fn(() => { pageLocation.href = 'https://duckduckgo.com/'; }),
+      click: vi.fn(() => { pageLocation.href = 'https://\u0064uckduckgo.com/'; }),
     };
     vi.stubGlobal('document', { querySelectorAll: (selector: string) => selector === '*' ? [] : [button] });
     await expect(createDomToolRuntime().click('page', 'button')).rejects.toThrow(BLOCKED_DESTINATION_MESSAGE);

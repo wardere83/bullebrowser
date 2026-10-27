@@ -4,7 +4,7 @@ import type {
   ConversationSummary,
 } from '../../shared/ipc.js';
 import { createStore } from './store.js';
-import { protectConversationIdentity } from '@bullebrowser/agent-core';
+import { protectConversationIdentity, sanitizeAssistantText } from '@bullebrowser/agent-core';
 
 interface ConversationSchema extends Record<string, unknown> {
   conversations: ConversationDetail[];
@@ -37,7 +37,7 @@ class ConversationStore {
       .filter((conversation) => this.visibleTo(conversation, organizationId))
       .map(({ id, title, createdAt, updatedAt, messages }) => ({
         id,
-        title,
+        title: sanitizeAssistantText(title),
         createdAt,
         updatedAt,
         messageCount: messages.length,
@@ -49,7 +49,7 @@ class ConversationStore {
   get(id: string, organizationId?: string | null): ConversationDetail | null {
     const conversation = this.store.get('conversations').find((c) => c.id === id);
     if (!conversation || !this.visibleTo(conversation, organizationId)) return null;
-    return { ...conversation, messages: protectConversationIdentity(conversation.messages) };
+    return { ...conversation, messages: protectConversationIdentity(conversation.messages).map((message) => message.role === 'assistant' ? { ...message, content: sanitizeAssistantText(message.content) } : message) };
   }
 
   create(organizationId?: string | null): ConversationDetail {
@@ -77,7 +77,7 @@ class ConversationStore {
     if (idx < 0) return null;
     const conv = all[idx];
     if (!conv) return null;
-    conv.messages.push(msg);
+    conv.messages.push(msg.role === 'assistant' ? { ...msg, content: sanitizeAssistantText(msg.content) } : msg);
     conv.messageCount = conv.messages.length;
     conv.updatedAt = msg.timestamp;
     if (conv.title === 'New conversation' && msg.role === 'user') {

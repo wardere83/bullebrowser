@@ -143,8 +143,21 @@ public class MobileAgentPlugin extends Plugin {
         if (connection != null) network.execute(connection::disconnect);
         handler.postDelayed(() -> cancelled.remove(id), 110000); call.resolve();
     }
+    private boolean restrictedHost(String input) {
+        if (input == null) return false;
+        String host = java.net.IDN.toASCII(input).toLowerCase(java.util.Locale.ROOT).replaceAll("\\.+$", "");
+        while (!host.isEmpty()) {
+            long hash = 0xcbf29ce484222325L;
+            for (byte value : host.getBytes(java.nio.charset.StandardCharsets.US_ASCII)) hash = (hash ^ (value & 0xff)) * 0x100000001b3L;
+            if (hash == 0x2fbb5d9759a7d9c8L || hash == 0x898a63955bf7867bL || hash == 0x835d4b4de592220eL) return true;
+            int dot = host.indexOf('.');
+            if (dot < 0) break;
+            host = host.substring(dot + 1);
+        }
+        return false;
+    }
     private boolean webUrl(String address) {
-        try { Uri uri = Uri.parse(address); return address.length() <= 8192 && "https".equals(uri.getScheme()) && uri.getHost() != null && uri.getUserInfo() == null; } catch (Exception error) { return false; }
+        try { Uri uri = Uri.parse(address); return address.length() <= 8192 && "https".equals(uri.getScheme()) && uri.getHost() != null && !restrictedHost(uri.getHost()) && uri.getUserInfo() == null; } catch (Exception error) { return false; }
     }
     private JSObject info(String id) {
         WebView view = tabs.get(id);
@@ -174,6 +187,12 @@ public class MobileAgentPlugin extends Plugin {
                 view.getSettings().setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
                 // No addJavascriptInterface and no Capacitor bridge on untrusted pages.
                 view.setWebViewClient(new WebViewClient() {
+                    @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView page, WebResourceRequest request) {
+                        try {
+                            if (restrictedHost(request.getUrl().getHost())) return new android.webkit.WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0]));
+                        } catch (Exception error) { return new android.webkit.WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0])); }
+                        return super.shouldInterceptRequest(page, request);
+                    }
                     @Override public boolean shouldOverrideUrlLoading(WebView page, WebResourceRequest request) { return !allowed("browsing") || !webUrl(request.getUrl().toString()); }
                     @Override public void onPageFinished(WebView page, String url) { PluginCall waiting = pending.remove(tabId); if (waiting != null) waiting.resolve(new JSObject().put("tab", info(tabId))); }
                     @Override public void onReceivedError(WebView page, WebResourceRequest request, WebResourceError error) { if (request.isForMainFrame()) { PluginCall waiting = pending.remove(tabId); if (waiting != null) waiting.reject("The website could not load. Inspect the source tab."); } }

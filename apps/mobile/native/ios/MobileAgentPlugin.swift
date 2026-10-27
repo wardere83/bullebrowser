@@ -89,8 +89,20 @@ public class MobileAgentPlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegat
     @objc func cancelModel(_ call: CAPPluginCall) {
         DispatchQueue.main.async { if let id = call.getString("requestId") { self.requests[id]?.cancel() }; call.resolve() }
     }
+    private func restrictedHost(_ input: String) -> Bool {
+        let normalized = input.folding(options: [.caseInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX")).replacingOccurrences(of: "\u{3002}", with: ".").replacingOccurrences(of: "\u{ff61}", with: ".")
+        let labels = normalized.trimmingCharacters(in: CharacterSet(charactersIn: ".")).split(separator: ".")
+        let blocked: Set<UInt64> = [0x2fbb5d9759a7d9c8, 0x898a63955bf7867b, 0x835d4b4de592220e]
+        for index in labels.indices {
+            let host = labels[index...].joined(separator: ".")
+            var hash: UInt64 = 14695981039346656037
+            for byte in host.utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
+            if blocked.contains(hash) { return true }
+        }
+        return false
+    }
     private func webURL(_ address: String) -> URL? {
-        guard address.count <= 8192, let components = URLComponents(string: address), components.scheme == "https", components.user == nil, components.password == nil, let host = components.host, !host.isEmpty else { return nil }
+        guard address.count <= 8192, let components = URLComponents(string: address), components.scheme == "https", components.user == nil, components.password == nil, let host = components.host, !host.isEmpty, !restrictedHost(host) else { return nil }
         return components.url
     }
     private func info(_ id: String) -> JSObject {
