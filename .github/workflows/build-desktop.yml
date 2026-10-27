@@ -113,6 +113,7 @@ jobs:
       # No release may bypass failed quality checks or renderer builds.
       - name: Type-check, lint, and test
         run: |
+          node scripts/check-product-language.mjs
           pnpm -r typecheck
           pnpm -r lint
           pnpm --filter @bullebrowser/agent-core test
@@ -120,7 +121,9 @@ jobs:
           node --test services/widget-backend/auth.test.mjs
 
       - name: Build desktop renderer + main
-        run: pnpm --filter @bullebrowser/desktop build
+        run: |
+          pnpm --filter @bullebrowser/desktop build
+          node scripts/check-product-language.mjs apps/desktop/out
 
       # GitHub Actions rejects `secrets.X` in step-level `if:` expressions
       # (the secrets context is only usable inside `${{ }}` env values).
