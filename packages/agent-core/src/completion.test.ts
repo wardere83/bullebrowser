@@ -178,4 +178,18 @@ describe('task completion and presentation', () => {
     expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
   });
 
+  it('requires both supplied comparison sources even when an unrelated initial page was read', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'one', name: 'read_page', input: {} }] })
+      .mockResolvedValueOnce(text('Comparison complete.'))
+      .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'two', name: 'read_page', input: {} }] })
+      .mockResolvedValueOnce(text('Both supplied sources were compared.'));
+    const ctx = context(), outcome = vi.fn();
+    let reads = 0;
+    const urls = ['https://agency.gov/unrelated', 'https://agency.gov/source-0', 'https://agency.gov/source-1'];
+    ctx.runtime.readPage = vi.fn(async () => ({ url: urls[reads++]!, title: 'Official source', text: 'Program evidence.' }));
+    await runAgent(input({ browserTask: 'compare_grants', userMessage: 'Compare https://agency.gov/source-0 and https://agency.gov/source-1', context: ctx, onCompletion: outcome }));
+    expect(response).toHaveBeenCalledTimes(4);
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', verifiedSourceCount: 3 }));
+  });
+
 });

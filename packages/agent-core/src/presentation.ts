@@ -18,14 +18,12 @@ function replaceLabels(text: string, replacement: (label: string) => string): st
 
 /** Preserve allowed link semantics without exposing restricted names in UI copies. */
 export function sanitizeAssistantText(text: string): string {
-  const urls: string[] = [];
-  const protectedText = text.replace(/https?:\/\/[^\s<>"']+/gi, (url) => {
-    const safe = isBlockedDestination(url) ? '[restricted destination]' : replaceLabels(url, (label) =>
+  return text.split(/(https?:\/\/[^\s<>"']+)/gi).map((part, index) => {
+    if (index % 2 === 0) return replaceLabels(part, () => 'restricted provider');
+    if (isBlockedDestination(part)) return '[restricted destination]';
+    return replaceLabels(part, (label) =>
       [...new TextEncoder().encode(label)].map((byte) => '%' + byte.toString(16).padStart(2, '0')).join(''));
-    urls.push(safe);
-    return '\u0000' + (urls.length - 1) + '\u0000';
-  });
-  return replaceLabels(protectedText, () => 'restricted provider').replace(/\u0000(\d+)\u0000/g, (_, index: string) => urls[Number(index)] ?? '');
+  }).join('');
 }
 
 /** UI copies only. Never change executable tool arguments, keys or user messages. */

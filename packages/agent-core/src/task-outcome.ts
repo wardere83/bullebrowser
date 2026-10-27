@@ -8,6 +8,9 @@ export interface TaskOutcome { status: 'completed' | 'incomplete'; reason?: stri
 interface Intent { tools: string[]; targets?: string[]; url?: string; text?: string; key?: string; tabId?: string }
 const normalize = (value: unknown) => String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' ? value as Record<string, unknown> : {};
+function canonical(value: unknown): string | undefined {
+  try { const url = new URL(String(value)); url.hash = ''; return url.href; } catch { return undefined; }
+}
 const clicks = ['click', 'clickElement'];
 const commands = 'open|navigate|go to|click|tap|type|enter|select|press|scroll|reload|close';
 function intentsFor(request: string, initialTabId: string): Intent[] {
@@ -61,6 +64,7 @@ export class TaskOutcomeTracker {
   readonly research: ResearchProgress;
   private records: ToolCallRecord[] = [];
   private intents: Intent[];
+  private requiredSources: string[] = [];
   private exhausted = false;
   private followUps = 0;
   private declined = false;
@@ -70,6 +74,10 @@ export class TaskOutcomeTracker {
     const funding = ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(request);
     this.research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(request))), !input.browserTask, funding, researchSourceMinimum(input.browserTask, request));
     this.intents = intentsFor(request, input.context.activeTabId);
+    if (input.browserTask === 'compare_grants' || input.browserTask === 'explore_page') {
+      this.requiredSources = [...new Set((request.match(/https?:\/\/[^\s<>"']+/g) ?? [])
+        .map((url) => canonical(url.replace(/[),.;!?]+$/, ''))).filter((url): url is string => Boolean(url)))];
+    }
   }
   observe(step: AgentStep): void {
     this.research.observe(step);
@@ -96,12 +104,19 @@ export class TaskOutcomeTracker {
     return 'Task incomplete. ' + result.reason;
   }
   get outcome(): TaskOutcome { return this.finalOutcome ?? this.finish(''); }
+  private sourceWasRead(required: string): boolean {
+    if (this.research.sources.has(required)) return true;
+    return this.records.some((record) => record.ok && ['navigate', 'new_tab'].includes(record.name)
+      && canonical(record.input.url) === required
+      && this.research.sources.has(canonical(object(record.output).url) ?? ''));
+  }
   finish(text: string): TaskOutcome {
     let reason: string | undefined;
     if (!text.trim()) reason = 'No final result was produced.';
     else if (this.exhausted) reason = 'The task reached its execution budget before all requested work was verified.';
     else if (this.research.enabled && this.research.sources.size < this.research.minimumSources) reason = 'Only ' + this.research.sources.size + ' source pages were verified; the required research remains incomplete.';
     else if (/needs a connected assistant|ran out of step budget|no readable page open|^task incomplete|^research is incomplete|(?:could not|cannot|unable to) complete/i.test(text)) reason = 'The requested work could not be completed with the available connection or page.';
+    if (!reason && this.requiredSources.some((url) => !this.sourceWasRead(url))) reason = 'A source explicitly requested for this task was not read.';
     if (!reason) for (const intent of this.intents) {
       const latest = [...this.records].reverse().find((record) => matches(intent, record));
       if (!latest || !succeeded(latest)) { reason = 'The requested browser action or target was not executed successfully.'; break; }
