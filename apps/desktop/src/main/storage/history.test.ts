@@ -102,7 +102,7 @@ describe('history storage failure recovery', () => {
 
   it('never writes blank, internal or restricted destinations', async () => {
     const { historyStore } = await import('./history.js');
-    for (const url of ['', 'about:blank', 'https://duckduckgo.com/']) {
+    for (const url of ['', 'about:blank', 'https://ddg.gg/']) {
       historyStore.record({ ...entry(1), url });
     }
     expect(disk.create).not.toHaveBeenCalled();
