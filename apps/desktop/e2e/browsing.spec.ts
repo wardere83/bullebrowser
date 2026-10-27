@@ -226,6 +226,52 @@ test('address navigation shows an interactive native page with working history a
   }
 });
 
+test('a full history disk preserves saved history and keeps native browsing interactive', async () => {
+  const site = await fixture();
+  const { app, win, close } = await launch();
+  try {
+    await enterAddress(win, `${site.url}/one`);
+    await expectPage(app, win, `${site.url}/one`, 'Community funding source');
+    await expect.poll(() => win.evaluate(() => window.bullebrowser.history.list())).toEqual(
+      expect.arrayContaining([expect.objectContaining({ url: `${site.url}/one` })]),
+    );
+    await app.evaluate(({ app }) => {
+      const { createRequire } = process.getBuiltinModule('node:module');
+      const { join } = process.getBuiltinModule('node:path');
+      const require = createRequire(join(app.getAppPath(), 'package.json'));
+      const { default: Store } = require('electron-store');
+      const original = Store.prototype._write;
+      const probe = { failures: 0, restore: () => { Store.prototype._write = original; } };
+      (globalThis as Record<string, unknown>).__historyDiskProbe = probe;
+      Store.prototype._write = function (data: unknown) {
+        if (this.path.endsWith('/history.json') || this.path.endsWith('\\history.json')) {
+          probe.failures++;
+          throw Object.assign(new Error('Simulated full history disk'), { code: 'ENOSPC' });
+        }
+        return original.call(this, data);
+      };
+    });
+    await enterAddress(win, `${site.url}/two`);
+    await expectPage(app, win, `${site.url}/two`, 'Application details');
+    await clickPage(app, '#page-action');
+    await expect.poll(async () => (await pageState(app)).document.output).toBe('Page button clicked');
+    await enterAddress(win, `${site.url}/one`);
+    await expectPage(app, win, `${site.url}/one`, 'Community funding source');
+    expect(await app.evaluate(() => (globalThis as unknown as {
+      __historyDiskProbe: { failures: number };
+    }).__historyDiskProbe.failures)).toBe(1);
+    const saved = await win.evaluate(() => window.bullebrowser.history.list());
+    expect(saved.some((entry) => entry.url === `${site.url}/one`)).toBe(true);
+    expect(saved.some((entry) => entry.url === `${site.url}/two`)).toBe(false);
+  } finally {
+    await app.evaluate(() => (globalThis as unknown as {
+      __historyDiskProbe?: { restore(): void };
+    }).__historyDiskProbe?.restore()).catch(() => {});
+    await close();
+    await site.close();
+  }
+});
+
 test('bare hostnames and search settings navigate real pages through the address bar', async () => {
   const site = await fixture();
   const { app, win, close } = await launch();
