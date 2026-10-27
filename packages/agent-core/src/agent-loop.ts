@@ -623,8 +623,8 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
 
   const system =
     `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${browserTask(input.browserTask)?.instruction ?? ''}\n${input.browserTask ? 'The user has already answered the short clarifying question. Begin real browsing now. Use visible tabs as the work surface; leave viable options open and the strongest match selected. Limit the final chat response to a short outcome and essential caveats, without pasted page text.' : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
-    'restricted search provider and its alternate domains are prohibited destinations. Never open, read, click through, ' +
-    'or use them as a fallback, even if earlier conversation history did so. Use web_search for discovery. ' +
+    'Respect destination policy blocks. Never bypass them through alternate URLs, redirects or fallbacks, ' +
+    'even if earlier conversation history did so. Use web_search for discovery. ' +
     'If search is unavailable, explain the failure or inspect an allowed source supplied by the user.\n\n' +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
   const budget = new StepBudget(input.budget);
