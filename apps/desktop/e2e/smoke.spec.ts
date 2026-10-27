@@ -574,3 +574,34 @@ for (const interaction of ['click', 'keyboard', 'middle', 'same-window fallback'
     }
   });
 }
+
+test('an unexecuted action is reported incomplete across chat and task result events', async () => {
+  const { app, win, userData } = await launch({ openAiOnly: true });
+  try {
+    await app.evaluate(() => {
+      const original = globalThis.fetch;
+      (globalThis as Record<string, unknown>).__taskRequestCount = 0;
+      globalThis.fetch = async (input, init) => {
+        if (String(input).startsWith('https://api.openai.com/v1/chat/completions')) {
+          (globalThis as Record<string, number>).__taskRequestCount += 1;
+          return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: 'Done. Everything completed successfully.' } }] }));
+        }
+        return original(input, init);
+      };
+    });
+    await win.evaluate(() => window.bullebrowser.settings.set({ defaultModel: 'gpt-4o' }));
+    await win.reload();
+    await expect(win.locator('aside textarea')).toBeEnabled();
+    await win.evaluate(() => {
+      const state = window as unknown as { __taskResults: Array<{ status: string; text: string }> };
+      state.__taskResults = [];
+      window.bullebrowser.agent.onResult((result) => state.__taskResults.push(result));
+    });
+    await win.locator('aside textarea').fill('Click "Save"');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect.poll(() => win.evaluate(() => (window as unknown as { __taskResults: Array<{ status: string }> }).__taskResults[0]?.status)).toBe('failed');
+    await expect(win.locator('.md-prose')).toContainText('Task incomplete');
+    await expect(win.locator('.md-prose')).not.toContainText('Everything completed successfully');
+    expect(await app.evaluate(() => (globalThis as Record<string, number>).__taskRequestCount)).toBe(3);
+  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
+});
