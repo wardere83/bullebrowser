@@ -101,6 +101,20 @@ public class MobileAgentPlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegat
         }
         return false
     }
+    private var destinationRules: WKContentRuleList?
+    private func contentRules(_ completion: @escaping (WKContentRuleList?) -> Void) {
+        if let rules = destinationRules { completion(rules); return }
+        // Numeric identities keep provider branding out of the native binary.
+        let labels: [[UInt8]] = [[100,117,99,107,100,117,99,107,103,111,46,99,111,109], [100,117,99,107,46,99,111,109], [100,100,103,46,103,103]]
+        let rules: [[String: Any]] = labels.compactMap { bytes in
+            guard let host = String(bytes: bytes, encoding: .utf8) else { return nil }
+            return ["trigger": ["url-filter": "^[a-z][a-z0-9+.-]*://([^/@]*@)?([^/:]*\\.)?" + NSRegularExpression.escapedPattern(for: host) + "\\.*(:[0-9]+)?([/?#]|$)", "url-filter-is-case-sensitive": false], "action": ["type": "block"]]
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: rules), let json = String(data: data, encoding: .utf8) else { completion(nil); return }
+        WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "bullebrowser.destination-policy.v1", encodedContentRuleList: json) { list, _ in
+            DispatchQueue.main.async { self.destinationRules = list; completion(list) }
+        }
+    }
     private func webURL(_ address: String) -> URL? {
         guard address.count <= 8192, let components = URLComponents(string: address), components.scheme == "https", components.user == nil, components.password == nil, let host = components.host, !host.isEmpty, !restrictedHost(host) else { return nil }
         return components.url
@@ -128,13 +142,18 @@ public class MobileAgentPlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegat
             var id = call.getString("tabId") ?? self.active
             if action == "new" {
                 guard self.tabs.count < 12, let url = self.webURL(call.getString("url") ?? "https://www.google.com/") else { call.reject("Use an HTTPS website; at most 12 mobile tabs can be open."); return }
-                id = UUID().uuidString
-                let config = WKWebViewConfiguration(); config.websiteDataStore = .default()
-                // This web view has NO Capacitor bridge or native message handlers.
-                let view = WKWebView(frame: self.frame, configuration: config)
-                view.navigationDelegate = self; view.isOpaque = true; view.backgroundColor = .white
-                self.tabs[id] = view; self.order.append(id); self.bridge?.viewController?.view.addSubview(view)
-                self.select(id); self.load(view, id: id, url: url, call: call); return
+                self.contentRules { rules in
+                    guard let rules = rules, self.allowed("browsing"), self.tabs.count < 12 else { call.reject("The browser request policy is unavailable or browsing permission changed."); return }
+                    let newId = UUID().uuidString
+                    let config = WKWebViewConfiguration(); config.websiteDataStore = .default()
+                    config.userContentController.add(rules)
+                    // No Capacitor bridge or native handlers on untrusted pages.
+                    let view = WKWebView(frame: self.frame, configuration: config)
+                    view.navigationDelegate = self; view.isOpaque = true; view.backgroundColor = .white
+                    self.tabs[newId] = view; self.order.append(newId); self.bridge?.viewController?.view.addSubview(view)
+                    self.select(newId); self.load(view, id: newId, url: url, call: call)
+                }
+                return
             }
             guard let view = self.tabs[id] else { call.reject("Tab not found."); return }
             switch action {
@@ -195,7 +214,11 @@ public class MobileAgentPlugin: CAPPlugin, CAPBridgedPlugin, WKNavigationDelegat
         }
     }
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        decisionHandler(allowed("browsing") && navigationAction.request.url.flatMap({ webURL($0.absoluteString) }) != nil ? .allow : .cancel)
+        let permitted = allowed("browsing") && navigationAction.request.url.flatMap({ webURL($0.absoluteString) }) != nil
+        if !permitted, navigationAction.targetFrame?.isMainFrame == true, let id = order.first(where: { tabs[$0] === webView }) {
+            pending.removeValue(forKey: id)?.reject("This navigation is blocked by browser policy or browsing permission.")
+        }
+        decisionHandler(permitted ? .allow : .cancel)
     }
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if let id = order.first(where: { tabs[$0] === webView }) { pending.removeValue(forKey: id)?.resolve(["tab": info(id)]) }

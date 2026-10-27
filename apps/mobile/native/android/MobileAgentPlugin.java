@@ -193,7 +193,14 @@ public class MobileAgentPlugin extends Plugin {
                         } catch (Exception error) { return new android.webkit.WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0])); }
                         return super.shouldInterceptRequest(page, request);
                     }
-                    @Override public boolean shouldOverrideUrlLoading(WebView page, WebResourceRequest request) { return !allowed("browsing") || !webUrl(request.getUrl().toString()); }
+                    @Override public boolean shouldOverrideUrlLoading(WebView page, WebResourceRequest request) {
+                        if (allowed("browsing") && webUrl(request.getUrl().toString())) return false;
+                        if (request.isForMainFrame()) {
+                            PluginCall waiting = pending.remove(tabId);
+                            if (waiting != null) waiting.reject("This navigation is blocked by browser policy or browsing permission.");
+                        }
+                        return true;
+                    }
                     @Override public void onPageFinished(WebView page, String url) { PluginCall waiting = pending.remove(tabId); if (waiting != null) waiting.resolve(new JSObject().put("tab", info(tabId))); }
                     @Override public void onReceivedError(WebView page, WebResourceRequest request, WebResourceError error) { if (request.isForMainFrame()) { PluginCall waiting = pending.remove(tabId); if (waiting != null) waiting.reject("The website could not load. Inspect the source tab."); } }
                 });

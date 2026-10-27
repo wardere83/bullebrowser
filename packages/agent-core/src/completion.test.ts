@@ -10,7 +10,7 @@ function context() {
     runtime: {
       listTabs: vi.fn(async () => [{ id: 'tab', active: true, url: 'https://agency.gov/', title: 'Agency' }]),
       readPage: vi.fn(async () => ({ url: 'https://agency.gov/', title: 'Agency', text: 'Official program information.' })),
-      click: vi.fn(async () => ({ matched: 'Save' })),
+      click: vi.fn(async (_id: string, target: string) => ({ matched: target })),
       confirmDestructive: vi.fn(async () => true),
     },
   } as unknown as ToolContext;
@@ -86,4 +86,79 @@ describe('task completion and presentation', () => {
     expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
     expect(response).toHaveBeenCalledTimes(7);
   });
+  it('completes a single-page task from the real current-page read', async () => {
+    response.mockResolvedValue(text('The page describes the official program information.'));
+    const outcome = vi.fn();
+    await runAgent(input({ browserTask: 'explore_page', researchMode: true, userMessage: 'Find program information on this page', onCompletion: outcome }));
+    expect(response).toHaveBeenCalledTimes(1);
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', verifiedSourceCount: 1 }));
+  });
+  it('accepts a comparison of the two explicitly supplied sources', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'one', name: 'read_page', input: {} }] })
+      .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'two', name: 'read_page', input: {} }] })
+      .mockResolvedValueOnce(text('Both supplied program pages were checked.'));
+    const ctx = context();
+    let reads = 0;
+    ctx.runtime.readPage = vi.fn(async () => ({ url: 'https://agency.gov/source-' + Math.max(0, reads++ - 1), title: 'Official program', text: 'Eligibility and deadline.' }));
+    const outcome = vi.fn();
+    await runAgent(input({ browserTask: 'compare_grants', userMessage: 'Compare https://agency.gov/source-0 and https://agency.gov/source-1', context: ctx, onCompletion: outcome }));
+    expect(response).toHaveBeenCalledTimes(3);
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', verifiedSourceCount: 2 }));
+  });
+  it('does not let a cookie-banner click satisfy a requested Save click', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'cookie', name: 'click', input: { target: 'Accept cookies' } }] })
+      .mockResolvedValue(text('Done. Everything completed successfully.'));
+    const ctx = context(), outcome = vi.fn();
+    const result = await runAgent(input({ userMessage: 'Click "Save"', context: ctx, onCompletion: outcome }));
+    expect(ctx.runtime.click).toHaveBeenCalledTimes(1);
+    expect(result).toContain('Task incomplete');
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
+  });
+  it('does not let an unrelated page read recover a failed Save action', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'edit', name: 'click', input: { target: 'Edit' } }] })
+      .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'save', name: 'click', input: { target: 'Save' } }] })
+      .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'read', name: 'read_page', input: {} }] })
+      .mockResolvedValue(text('Done.'));
+    const ctx = context(), outcome = vi.fn();
+    ctx.runtime.click = vi.fn().mockResolvedValueOnce({ matched: 'Edit' }).mockRejectedValue(new Error('No element matched Save'));
+    await runAgent(input({ userMessage: 'Click "Save"', context: ctx, onCompletion: outcome }));
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
+  });
+  it('keeps an empty final answer incomplete after formatting', async () => {
+    response.mockResolvedValue(text(''));
+    const outcome = vi.fn();
+    const result = await runAgent(input({ onCompletion: outcome }));
+    expect(result).toContain('No final result');
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
+  });
+  it('does not report a no-op close as completed', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'close', name: 'close_tab', input: { tabId: 'tab' } }] })
+      .mockResolvedValue(text('Done.'));
+    const ctx = context(), outcome = vi.fn();
+    ctx.runtime.closeTab = vi.fn(async () => ({ closed: false }));
+    await runAgent(input({ userMessage: 'Close this tab', context: ctx, onCompletion: outcome }));
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'incomplete' }));
+  });
+  it.each([['Press Save', 'Save'], ['Open the menu', 'Menu'], ['Close the dialog', 'Close']])('accepts the correct page control action for %s', async (request, target) => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'action', name: 'clickElement', input: { target } }] })
+      .mockResolvedValueOnce(text('The requested control was activated.'));
+    const outcome = vi.fn();
+    await runAgent(input({ userMessage: request!, onCompletion: outcome }));
+    expect(response).toHaveBeenCalledTimes(2);
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
+  });
+  it('uses the same initial evidence for continuation, answer text and completion', async () => {
+    response.mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'one', name: 'read_page', input: {} }] })
+      .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'two', name: 'read_page', input: {} }] })
+      .mockResolvedValueOnce(text('Three official source pages were verified.'));
+    const ctx = context();
+    let reads = 0;
+    ctx.runtime.readPage = vi.fn(async () => ({ url: 'https://agency.gov/program-' + reads++, title: 'Official source', text: 'Program evidence.' }));
+    const outcome = vi.fn();
+    const result = await runAgent(input({ userMessage: 'Find grants for Seattle schools', researchMode: true, context: ctx, onCompletion: outcome }));
+    expect(result).not.toContain('incomplete');
+    expect(response).toHaveBeenCalledTimes(3);
+    expect(outcome).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed', verifiedSourceCount: 3 }));
+  });
+
 });

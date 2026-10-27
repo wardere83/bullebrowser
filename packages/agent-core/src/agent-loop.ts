@@ -1,10 +1,9 @@
 import { TaskOutcomeTracker } from './task-outcome.js';
 import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
 import { browserTask } from './browser-tasks.js';
-import { ResearchProgress, isResearchRequest } from './research.js';
+import type { ResearchProgress } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 import { assertAllowedToolDestination } from './destinations.js';
-import { isFundingDiscoveryRequest } from './funding-sources.js';
 // The BulleBrowser agent loop.
 //
 // This is a real Claude tool-use loop: the model is given the browser tool
@@ -194,6 +193,8 @@ export interface ToolCallRecord {
   attempts: number;
   startedAt: number;
   durationMs: number;
+  targetFacts?: TargetFacts;
+  output?: unknown;
 }
 
 export interface ToolCallHooks {
@@ -240,6 +241,8 @@ export async function executeToolCall(
   const input = (rawInput ?? {}) as Record<string, unknown>;
   const startedAt = Date.now();
   let attempts = 0;
+  let inspectedFacts: TargetFacts | null = null;
+  let verifiedOutput: unknown;
 
   const record = (outcome: ToolCallOutcome): ToolCallOutcome => {
     hooks.onRecord?.({
@@ -247,6 +250,8 @@ export async function executeToolCall(
       name,
       input: policy.redact(input) as Record<string, unknown>,
       ok: !outcome.isError,
+      ...(inspectedFacts ? { targetFacts: inspectedFacts } : {}),
+      ...(!outcome.isError && verifiedOutput !== undefined ? { output: policy.redact(previewOutput(verifiedOutput)) } : {}),
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
       result: truncate(outcome.imagePngBase64 ? '[screenshot]' : outcome.text, 4000),
       attempts,
@@ -300,6 +305,7 @@ export async function executeToolCall(
     try {
       if (context.signal.aborted) throw new Error('cancelled');
       const output = await apiTool.execute(input);
+      verifiedOutput = output;
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
       const text = typeof output === 'string' ? output : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), `api:${name}`), isError: false });
@@ -335,7 +341,7 @@ export async function executeToolCall(
   // Clicks and Enter are judged on the element they will really hit: a click
   // named by selector ("#btn-2") or an Enter in a sign-up form says nothing
   // risky in its input, yet submits the user's data all the same.
-  const facts = await inspectForPolicy(name, input, context);
+  const facts = inspectedFacts = await inspectForPolicy(name, input, context);
   const step: PlanStep = {
     id: callId,
     toolName: name,
@@ -382,6 +388,7 @@ export async function executeToolCall(
       }
       if (context.signal.aborted) throw new Error('cancelled');
       const output = await tool.execute(parsed, context);
+      verifiedOutput = output;
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
 
       // Hand a screenshot back as a real image so the model can see the page,
@@ -525,6 +532,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   const progress = new TaskOutcomeTracker(input);
   const answer = await runAgentTask({
     ...input,
+    onToolRecord: (record) => { progress.record(record); input.onToolRecord?.(record); },
     history: input.history.map((message) => message.role === 'assistant'
       ? { ...message, content: sanitizeAssistantText(message.content) } : message),
     onStep: (step) => {
@@ -532,9 +540,9 @@ export async function runAgent(input: AgentInput): Promise<string> {
       if (step.type !== 'done') input.onStep(sanitizeAssistantValue(step) as AgentStep);
     },
   }, progress);
-  const outcome = progress.finish(answer);
+  const result = sanitizeAssistantText(progress.finalize(answer));
+  const outcome = progress.outcome;
   input.onCompletion?.(outcome);
-  const result = sanitizeAssistantText(progress.present(answer));
   if (outcome.status === 'incomplete') {
     input.onStep({ type: 'error', detail: outcome.reason, data: { code: 'TASK_INCOMPLETE' } });
   }
@@ -544,11 +552,8 @@ export async function runAgent(input: AgentInput): Promise<string> {
 
 async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Promise<string> {
   const context = input.context;
-  const research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage))), !input.browserTask,
-    ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(input.userRequest ?? input.userMessage));
-  const originalOnStep = input.onStep;
-  const onStep: AgentStepHandler = (step) => { research.observe(step); originalOnStep(step); };
-  input = { ...input, onStep };
+  const research = progress.research;
+  const onStep = input.onStep;
 
   if (context.signal.aborted) {
     onStep({ type: 'error', detail: 'Cancelled by user.' });
@@ -735,7 +740,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       }
       // Terminal turn (end_turn / stop_sequence): this is the final answer.
       terminalAnswer = true;
-      finalText = progress.present(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
+      finalText = progress.finalize(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
       if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
@@ -938,7 +943,7 @@ async function runOpenAiTurns(args: {
         continue;
       }
       terminalAnswer = true;
-      finalText = progress.present(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
+      finalText = progress.finalize(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
       if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
