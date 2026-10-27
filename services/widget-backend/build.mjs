@@ -40,3 +40,6 @@ execFileSync(
 );
 
 console.log('built services/widget-backend/dist/server.mjs');
+
+// The embedded service must enforce the same product-language release gate.
+execFileSync(process.execPath, [path.join(repo, 'scripts/check-product-language.mjs'), path.join(dir, 'dist')], { stdio: 'inherit' });

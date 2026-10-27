@@ -1,8 +1,9 @@
+import { TaskOutcomeTracker } from './task-outcome.js';
+import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
 import { browserTask } from './browser-tasks.js';
-import { ResearchProgress, isResearchRequest } from './research.js';
+import type { ResearchProgress } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 import { assertAllowedToolDestination } from './destinations.js';
-import { isFundingDiscoveryRequest } from './funding-sources.js';
 // The BulleBrowser agent loop.
 //
 // This is a real Claude tool-use loop: the model is given the browser tool
@@ -43,6 +44,7 @@ import {
 import {
   providerFor,
   type AgentInput,
+  type AgentStep,
   type AgentStepHandler,
   type ApiTool,
   type ModelId,
@@ -191,6 +193,8 @@ export interface ToolCallRecord {
   attempts: number;
   startedAt: number;
   durationMs: number;
+  targetFacts?: TargetFacts;
+  output?: unknown;
 }
 
 export interface ToolCallHooks {
@@ -237,6 +241,8 @@ export async function executeToolCall(
   const input = (rawInput ?? {}) as Record<string, unknown>;
   const startedAt = Date.now();
   let attempts = 0;
+  let inspectedFacts: TargetFacts | null = null;
+  let verifiedOutput: unknown;
 
   const record = (outcome: ToolCallOutcome): ToolCallOutcome => {
     hooks.onRecord?.({
@@ -244,6 +250,8 @@ export async function executeToolCall(
       name,
       input: policy.redact(input) as Record<string, unknown>,
       ok: !outcome.isError,
+      ...(inspectedFacts ? { targetFacts: inspectedFacts } : {}),
+      ...(!outcome.isError && verifiedOutput !== undefined ? { output: policy.redact(previewOutput(verifiedOutput)) } : {}),
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
       result: truncate(outcome.imagePngBase64 ? '[screenshot]' : outcome.text, 4000),
       attempts,
@@ -297,6 +305,7 @@ export async function executeToolCall(
     try {
       if (context.signal.aborted) throw new Error('cancelled');
       const output = await apiTool.execute(input);
+      verifiedOutput = output;
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
       const text = typeof output === 'string' ? output : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), `api:${name}`), isError: false });
@@ -332,7 +341,12 @@ export async function executeToolCall(
   // Clicks and Enter are judged on the element they will really hit: a click
   // named by selector ("#btn-2") or an Enter in a sign-up form says nothing
   // risky in its input, yet submits the user's data all the same.
-  const facts = await inspectForPolicy(name, input, context);
+  let facts = await inspectForPolicy(name, input, context);
+  if (name === 'close_tab') {
+    const tab = (await context.runtime.listTabs()).find((entry) => entry.id === input.tabId);
+    if (tab) facts = { label: tab.title, submitsForm: false };
+  }
+  inspectedFacts = facts;
   const step: PlanStep = {
     id: callId,
     toolName: name,
@@ -379,6 +393,7 @@ export async function executeToolCall(
       }
       if (context.signal.aborted) throw new Error('cancelled');
       const output = await tool.execute(parsed, context);
+      verifiedOutput = output;
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
 
       // Hand a screenshot back as a real image so the model can see the page,
@@ -519,12 +534,31 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 }
 
 export async function runAgent(input: AgentInput): Promise<string> {
+  const progress = new TaskOutcomeTracker(input);
+  const answer = await runAgentTask({
+    ...input,
+    onToolRecord: (record) => { progress.record(record); input.onToolRecord?.(record); },
+    history: input.history.map((message) => message.role === 'assistant'
+      ? { ...message, content: sanitizeAssistantText(message.content) } : message),
+    onStep: (step) => {
+      progress.observe(step);
+      if (step.type !== 'done') input.onStep(sanitizeAssistantValue(step) as AgentStep);
+    },
+  }, progress);
+  const result = sanitizeAssistantText(progress.finalize(answer));
+  const outcome = progress.outcome;
+  input.onCompletion?.(outcome);
+  if (outcome.status === 'incomplete') {
+    input.onStep({ type: 'error', detail: outcome.reason, data: { code: 'TASK_INCOMPLETE' } });
+  }
+  input.onStep({ type: 'done' });
+  return result;
+}
+
+async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Promise<string> {
   const context = input.context;
-  const research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(input.userRequest ?? input.userMessage))), !input.browserTask,
-    ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(input.userRequest ?? input.userMessage));
-  const originalOnStep = input.onStep;
-  const onStep: AgentStepHandler = (step) => { research.observe(step); originalOnStep(step); };
-  input = { ...input, onStep };
+  const research = progress.research;
+  const onStep = input.onStep;
 
   if (context.signal.aborted) {
     onStep({ type: 'error', detail: 'Cancelled by user.' });
@@ -558,6 +592,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   // consent gate covers the agent going *off* and driving the browser itself.
   onStep({ type: 'thinking', detail: 'Reading the current page…' });
   const perceived = await retrieveContext(context, memory);
+  progress.observeContext(perceived.url, perceived.textSnippet);
 
   // The page in front of the user, so "summarize this" or "what does this say
   // about X" can be answered straight away instead of spending a read_page
@@ -598,8 +633,8 @@ export async function runAgent(input: AgentInput): Promise<string> {
 
   const system =
     `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${browserTask(input.browserTask)?.instruction ?? ''}\n${input.browserTask ? 'The user has already answered the short clarifying question. Begin real browsing now. Use visible tabs as the work surface; leave viable options open and the strongest match selected. Limit the final chat response to a short outcome and essential caveats, without pasted page text.' : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
-    'DuckDuckGo and its alternate domains are prohibited destinations. Never open, read, click through, ' +
-    'or use them as a fallback, even if earlier conversation history did so. Use web_search for discovery. ' +
+    'Respect destination policy blocks. Never bypass them through alternate URLs, redirects or fallbacks, ' +
+    'even if earlier conversation history did so. Use web_search for discovery. ' +
     'If search is unavailable, explain the failure or inspect an allowed source supplied by the user.\n\n' +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
   const budget = new StepBudget(input.budget);
@@ -619,7 +654,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   ];
 
   if (provider === 'openai') {
-    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research });
+    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress });
   }
 
   const client = new Anthropic({ apiKey: input.apiKey, ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
@@ -640,6 +675,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
   ];
 
   let finalText = '';
+  let terminalAnswer = false;
 
   // Each iteration is one model turn. The loop bound is a hard safety backstop;
   // the real limit is the step budget, charged per tool call below.
@@ -700,7 +736,7 @@ export async function runAgent(input: AgentInput): Promise<string> {
     }
 
     if (response.stop_reason !== 'tool_use') {
-      const followUp = research.followUp(turnText, budget);
+      const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: response.content });
         messages.push({ role: 'user', content: followUp });
@@ -708,7 +744,8 @@ export async function runAgent(input: AgentInput): Promise<string> {
         continue;
       }
       // Terminal turn (end_turn / stop_sequence): this is the final answer.
-      finalText = research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText);
+      terminalAnswer = true;
+      finalText = progress.finalize(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
       if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
@@ -753,6 +790,10 @@ export async function runAgent(input: AgentInput): Promise<string> {
     messages.push({ role: 'user', content: toolResults });
   }
 
+  if (!terminalAnswer) {
+    onStep({ type: 'budget', data: { exhausted: true }, detail: NO_ANSWER });
+    finalText = finalText ? `${finalText}\n\n${NO_ANSWER}` : NO_ANSWER;
+  }
   onStep({ type: 'done' });
   // Once more over the whole answer: a reply continued after the length limit
   // can split a phrase between two turns.
@@ -846,8 +887,9 @@ async function runOpenAiTurns(args: {
   budget: StepBudget;
   userTurnText: string;
   research: ResearchProgress;
+  progress: TaskOutcomeTracker;
 }): Promise<string> {
-  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research } = args;
+  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress } = args;
   const { context, onStep } = input;
 
   const tools = toOpenAiTools(
@@ -865,6 +907,7 @@ async function runOpenAiTurns(args: {
   ];
 
   let finalText = '';
+  let terminalAnswer = false;
 
   for (let turn = 0; turn < budget.total * 2 + 5; turn++) {
     if (context.signal.aborted) throw new Error('cancelled');
@@ -888,16 +931,24 @@ async function runOpenAiTurns(args: {
       onStep({ type: 'done' });
       return replacement;
     }
+    if (choice.finish_reason === 'length') {
+      if (turnText) onStep({ type: 'text', detail: turnText });
+      finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
+      messages.push({ role: 'assistant', content: turnText });
+      messages.push({ role: 'user', content: 'Your reply was cut off. Continue from where it stopped without repeating text. Finish the requested work before reporting completion.' });
+      continue;
+    }
     const calls = choice.message.tool_calls ?? [];
     if (calls.length === 0) {
-      const followUp = research.followUp(turnText, budget);
+      const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: turnText });
         messages.push({ role: 'user', content: followUp });
         onStep({ type: 'thinking', detail: 'Continuing source research…' });
         continue;
       }
-      finalText = research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText);
+      terminalAnswer = true;
+      finalText = progress.finalize(research.finish(finalText ? `${finalText} ${turnText}`.trim() : turnText));
       if (finalText) onStep({ type: 'text', detail: finalText });
       break;
     }
@@ -954,6 +1005,10 @@ async function runOpenAiTurns(args: {
     }
   }
 
+  if (!terminalAnswer) {
+    onStep({ type: 'budget', data: { exhausted: true }, detail: NO_ANSWER });
+    finalText = finalText ? `${finalText}\n\n${NO_ANSWER}` : NO_ANSWER;
+  }
   onStep({ type: 'done' });
   return applyTerminology(finalText) || NO_ANSWER;
 }

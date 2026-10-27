@@ -1,3 +1,4 @@
+import type { TaskOutcome } from './task-outcome.js';
 import type { BrowserTaskId } from './browser-tasks.js';
 import type { z } from 'zod';
 import type { ToolCallRecord } from './agent-loop.js';
@@ -255,6 +256,8 @@ export interface ReferenceContextItem {
 }
 
 export interface AgentInput {
+  /** Host must not mark incomplete or unverified execution as completed. */
+  onCompletion?: (outcome: TaskOutcome) => void;
   browserTask?: BrowserTaskId;
   /** Require live multi-source research for research prompts. */
   researchMode?: boolean;

@@ -122,6 +122,7 @@ async function start(session, prompt, url, title) {
   const controller = new AbortController();
   session.abort = () => controller.abort();
   try {
+    let completionIssue;
     const answer = await runAgent({
       apiKey: process.env.ANTHROPIC_API_KEY,
       model: MODEL,
@@ -130,6 +131,7 @@ async function start(session, prompt, url, title) {
       userMessage: prompt,
       extraTools: [webSearchTool({ apiKey: process.env.BRAVE_SEARCH_API_KEY, signal: controller.signal }), ...(canUseAccountApi(session.identity) ? API_TOOLS : [])],
       context: { activeTabId: 'page', signal: controller.signal, runtime: makeRuntime(session) },
+      onCompletion: (outcome) => { if (outcome.status === 'incomplete') completionIssue = outcome.reason; },
       onStep: (step) => {
         if (step.type === 'tool_call' && step.detail) send(session, { type: 'activity', text: step.detail });
         else if (step.type === 'thinking' && step.detail) send(session, { type: 'activity', text: step.detail });
@@ -137,7 +139,8 @@ async function start(session, prompt, url, title) {
       },
     });
     if (answer) send(session, { type: 'text', text: answer });
-    send(session, { type: 'done' });
+    if (completionIssue) send(session, { type: 'error', message: completionIssue });
+    else send(session, { type: 'done' });
   } catch (err) {
     send(session, { type: 'error', message: err?.message || 'The assistant hit an error.' });
   } finally {

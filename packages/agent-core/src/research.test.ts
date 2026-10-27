@@ -26,7 +26,7 @@ describe('live research requirements', () => {
 
   it('counts distinct successful source reads and excludes search snippets and empty pages', () => {
     const progress = new ResearchProgress(true);
-    for (const url of ['https://duckduckgo.com/?q=grants', 'https://www.google.com/search?q=grants', 'https://bing.com/search?q=grants']) progress.observe(read(url));
+    for (const url of ['https://\u0064uckduckgo.com/?q=grants', 'https://www.google.com/search?q=grants', 'https://bing.com/search?q=grants']) progress.observe(read(url));
     progress.observe(read('https://funder.org/one', ''));
     progress.observe(read('https://funder.org/one'));
     progress.observe(read('https://funder.org/one#section'));

@@ -196,7 +196,8 @@ describe('the keyless assistant', () => {
       // It did not read, browse or ask for access on the way to saying so.
       expect(context.runtime.readPage).not.toHaveBeenCalled();
       expect(requestBrowseAccess).not.toHaveBeenCalled();
-      expect(steps.map((step) => step.type)).toEqual(['thinking', 'text', 'done']);
+      expect(steps.map((step) => step.type)).toEqual(['thinking', 'text', 'error', 'done']);
+      expect(steps[2]?.data).toEqual({ code: 'TASK_INCOMPLETE' });
       expect(steps[1]).toEqual({ type: 'text', detail: reply });
       return reply;
     }

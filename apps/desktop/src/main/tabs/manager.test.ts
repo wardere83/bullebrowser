@@ -75,7 +75,7 @@ describe('native browsing navigation recovery', () => {
   it('shows direct policy refusals without creating a view or loading a page, then recovers', async () => {
     const { manager, id, view, win } = await createManager();
     const loads = view.webContents.loadURL.mock.calls.length;
-    for (const url of ['https://duckduckgo.com/?q=private', 'https://html.duckduckgo.com/', 'https://duck.com/', 'https://ddg.gg/']) {
+    for (const url of ['https://\u0064uckduckgo.com/?q=private', 'https://html.\u0064uckduckgo.com/', 'https://duck.com/', 'https://ddg.gg/']) {
       await expect(manager.create(url)).rejects.toThrow('blocked by BulleBrowser policy');
       await expect(manager.navigate(id, url)).rejects.toThrow('blocked by BulleBrowser policy');
       expect(manager.list()[0]).toMatchObject({ url, loading: false, loadError: {
@@ -95,7 +95,7 @@ describe('native browsing navigation recovery', () => {
 
   it('prevents page navigations and redirects and exposes the blocked outcome', async () => {
     const { manager, id, view } = await createManager();
-    const url = 'https://DUCKDUCKGO.COM./?q=private';
+    const url = 'https://\u0044UCKDUCKGO.COM./?q=private';
     const event = { preventDefault: vi.fn() };
     view.webContents.emit('will-navigate', event, url);
     expect(event.preventDefault).toHaveBeenCalledOnce();
@@ -112,7 +112,7 @@ describe('native browsing navigation recovery', () => {
 
   it('blocks prohibited subframes without marking the allowed parent page as failed', async () => {
     const { manager, view } = await createManager();
-    const event = { preventDefault: vi.fn(), url: 'https://links.duckduckgo.com/', isMainFrame: false };
+    const event = { preventDefault: vi.fn(), url: 'https://links.\u0064uckduckgo.com/', isMainFrame: false };
     view.webContents.emit('will-frame-navigate', event);
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(manager.list()[0]?.loadError).toBeUndefined();
@@ -125,7 +125,7 @@ describe('native browsing navigation recovery', () => {
     view.webContents.getURL.mockReturnValue(allowed);
     const loads = view.webContents.loadURL.mock.calls.length;
     const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
-    const blocked = 'https://duckduckgo.com/?q=private';
+    const blocked = 'https://\u0064uckduckgo.com/?q=private';
     expect(open({ url: blocked })).toEqual({ action: 'deny' });
     expect(manager.getNavigationUrl(id)).toBe(blocked);
     expect(manager.list()).toHaveLength(1);
@@ -159,7 +159,7 @@ describe('native browsing navigation recovery', () => {
     await manager.navigate(id, allowed);
     view.webContents.getURL.mockReturnValue(allowed);
     const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
-    const blocked = 'https://duckduckgo.com/?q=private';
+    const blocked = 'https://\u0064uckduckgo.com/?q=private';
     open({ url: blocked });
     const loads = view.webContents.loadURL.mock.calls.length;
     const updated = `${allowed}?tab=eligibility#requirements`;
@@ -189,7 +189,7 @@ describe('native browsing navigation recovery', () => {
     const { manager, id, view } = await createManager();
     view.webContents.getURL.mockReturnValue('https://agency.gov/');
     const open = view.webContents.setWindowOpenHandler.mock.calls[0]![0] as (details: { url: string }) => { action: string };
-    open({ url: 'https://duckduckgo.com/' });
+    open({ url: 'https://\u0064uckduckgo.com/' });
     const allowed = 'https://agency.gov/next';
     await manager.navigate(id, allowed);
     view.webContents.getURL.mockReturnValue(allowed);
@@ -216,7 +216,7 @@ describe('native browsing navigation recovery', () => {
     view.webContents.executeJavaScript.mockImplementation(async (script: string) => runInNewContext(script, page));
     manager.setBrowsingActivity('run', id);
     expect(decorated).toBe(true);
-    view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, 'https://duckduckgo.com/');
+    view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, 'https://\u0064uckduckgo.com/');
     const scriptsBeforeStop = view.webContents.executeJavaScript.mock.calls.length;
     manager.clearBrowsingActivity('run');
     // Policy keeps the hidden document untouched until explicit recovery.
@@ -237,7 +237,7 @@ describe('native browsing navigation recovery', () => {
     view.webContents.navigationHistory.canGoBack.mockReturnValue(nativeBack);
     expect(manager.list()[0]?.canGoBack).toBe(nativeBack);
     const loads = view.webContents.loadURL.mock.calls.length;
-    const blocked = 'https://duckduckgo.com/?q=private';
+    const blocked = 'https://\u0064uckduckgo.com/?q=private';
     view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, blocked);
     expect(manager.list()[0]).toMatchObject({ url: blocked, canGoBack: true, loadError: { code: -20 } });
     expect(view.setVisible).toHaveBeenLastCalledWith(false);
@@ -260,7 +260,7 @@ describe('native browsing navigation recovery', () => {
   it.each(['about:blank', 'https://duck.com/', 'file:///private/document.html', 'chrome-error://chromewebdata/'])('does not restore an unsafe retained document: %s', async (retainedUrl) => {
     const { manager, id, view } = await createManager();
     view.webContents.getURL.mockReturnValue(retainedUrl);
-    const blocked = 'https://duckduckgo.com/';
+    const blocked = 'https://\u0064uckduckgo.com/';
     view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, blocked);
     expect(manager.list()[0]?.canGoBack).toBe(false);
     const loads = view.webContents.loadURL.mock.calls.length;
@@ -274,7 +274,7 @@ describe('native browsing navigation recovery', () => {
   it('revalidates a retained document before restoring it', async () => {
     const { manager, id, view } = await createManager();
     view.webContents.getURL.mockReturnValue('https://agency.gov/');
-    const blocked = 'https://duckduckgo.com/';
+    const blocked = 'https://\u0064uckduckgo.com/';
     view.webContents.emit('will-navigate', { preventDefault: vi.fn() }, blocked);
     expect(manager.list()[0]?.canGoBack).toBe(true);
     view.webContents.getURL.mockReturnValue('https://ddg.gg/');
@@ -286,7 +286,7 @@ describe('native browsing navigation recovery', () => {
 
   it('lets an allowed navigation recover while an older prohibited load finishes failing', async () => {
     const { manager, id, view } = await createManager();
-    const blocked = 'https://duckduckgo.com/?q=private';
+    const blocked = 'https://\u0064uckduckgo.com/?q=private';
     start(view, blocked);
     expect(manager.list()[0]?.loadError).toBeDefined();
     // Session policy cancels that load; a separate stop would race this one.

@@ -9,6 +9,7 @@ import {
   connectorTools,
   CONNECTORS,
   runAgent,
+  sanitizeAssistantText,
   providerFor,
   type ActionPreview,
   type AgentStep,
@@ -184,6 +185,7 @@ export function App() {
     try {
       runtime.activeTabId =
         (await runtime.listTabs()).find((entry) => entry.active)?.id ?? (await runtime.newTab()).id;
+      let completionIssue = '';
       const result = await runAgent({
         model,
         apiKey: hasKey ? 'native-vault-managed' : undefined,
@@ -221,6 +223,7 @@ export function App() {
           authorize: () => ask('Allow this task to open an enabled connector?'),
           open: async (_id, url) => runtime.newTab(url),
         }),
+        onCompletion: (outcome) => { if (outcome.status === 'incomplete') completionIssue = outcome.reason ?? 'Task incomplete.'; },
         onStep: (step: AgentStep) => {
           // Never mirror raw tool arguments/results (which may contain form values).
           setStatus(
@@ -237,7 +240,7 @@ export function App() {
         },
       });
       setMessages((previous) => [...previous, { role: 'assistant', content: result }]);
-      setStatus('Ready for your review.');
+      setStatus(completionIssue || 'Ready for your review.');
     } catch (err) {
       if (lastText)
         setMessages((previous) => [...previous, { role: 'assistant', content: lastText }]);
@@ -469,7 +472,7 @@ export function App() {
               {messages.map((message, index) => (
                 <article key={index} className={message.role}>
                   <small>{message.role === 'user' ? 'You' : 'BulleBrowser'}</small>
-                  <p>{message.content}</p>
+                  <p>{message.role === 'assistant' ? sanitizeAssistantText(message.content) : message.content}</p>
                 </article>
               ))}
             </div>

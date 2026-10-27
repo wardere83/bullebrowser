@@ -1,3 +1,4 @@
+import { sanitizeAssistantText } from '@bullebrowser/agent-core/presentation';
 import { clearUpdateChat, SAVE_UPDATE_CHAT_EVENT, takeUpdateChat, type UpdateChatSnapshot } from '../lib/update-session.js';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -1009,7 +1010,7 @@ function Bubble({ role, content, live = false }: { role: 'user' | 'assistant'; c
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={CHAT_MARKDOWN_COMPONENTS}
-        >{content}</ReactMarkdown>
+        >{sanitizeAssistantText(content)}</ReactMarkdown>
       </div>
       {!live && <CopyButton source={prose} />}
     </div>

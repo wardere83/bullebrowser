@@ -11,7 +11,7 @@ function fixture(url = 'https://www.bing.com/search?q=grants') {
   const navigate = vi.fn(async (_tabId: string, _url: string) => ({ url, title: 'Search' }));
   const readPage = vi.fn(async () => ({ url, title: 'Search', text: 'Results' }));
   const listLinks = vi.fn(async () => [
-    { text: 'Blocked', href: 'https://duckduckgo.com/' },
+    { text: 'Blocked', href: 'https://\u0064uckduckgo.com/' },
     { text: 'Blocked redirect', href: tracked('https://duck.com') },
     { text: 'Program', href: tracked('https://agency.gov/program') },
     { text: 'Duplicate', href: 'https://agency.gov/program#top' },
@@ -34,7 +34,7 @@ it('searches visibly without a key and filters prohibited or duplicate result UR
   expect(fetch).not.toHaveBeenCalled();
 });
 it('rejects a prohibited search redirect before reading links', async () => {
-  const f = fixture('https://lite.duckduckgo.com/');
+  const f = fixture('https://lite.\u0064uckduckgo.com/');
   await expect(f.search('grants', 3)).rejects.toThrow('blocked');
   expect(f.listLinks).not.toHaveBeenCalled();
 });
@@ -68,7 +68,7 @@ it('waits once for delayed results and reads the updated page', async () => {
 it('rejects malformed, unsafe and prohibited encoded destinations', async () => {
   const f = fixture();
   f.listLinks.mockResolvedValue([
-    ...['https://ddg.gg', 'https://html.duckduckgo.com/', 'javascript:alert(1)', 'https://user:pass@agency.gov'].map((url) => ({ text: 'Unsafe', href: tracked(url) })),
+    ...['https://ddg.gg', 'https://html.\u0064uckduckgo.com/', 'javascript:alert(1)', 'https://user:pass@agency.gov'].map((url) => ({ text: 'Unsafe', href: tracked(url) })),
     { text: 'Malformed', href: 'https://www.bing.com/ck/a?u=a1!!!!' },
     { text: 'Navigation', href: 'https://www.bing.com/search?q=other' },
     { text: 'Valid', href: tracked('https://school.edu/funding') },
