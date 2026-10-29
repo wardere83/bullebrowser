@@ -5,13 +5,13 @@ const os = require('node:os');
 const path = require('node:path');
 const { validateNativeVoice, validateSpeechModels } = require('./validate-native-voice.cjs');
 
-function fixture(platform, arch) {
+function fixture(platform, arch, sharpBinary = `sharp-${platform}-${arch}-0.35.5.node`) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'voice-native-test-'));
   const suffix = `${platform}-${arch}`;
   const paths = [
     '@huggingface/transformers/package.json',
     `onnxruntime-node/bin/napi-v3/${platform}/${arch}/onnxruntime_binding.node`,
-    `@img/sharp-${suffix}/lib/sharp-${suffix}.node`,
+    `@img/sharp-${suffix}/lib/${sharpBinary}`,
     ...(platform === 'win32' ? [] : [`@img/sharp-libvips-${suffix}/package.json`]),
   ];
   for (const file of paths) {
@@ -31,6 +31,20 @@ for (const platform of ['darwin', 'win32', 'linux']) {
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
 }
+
+test('accepts the unversioned sharp binary name used before sharp 0.35', () => {
+  const root = fixture('linux', 'x64', 'sharp-linux-x64.node');
+  try {
+    assert.doesNotThrow(() => validateNativeVoice(root, 'linux', 'x64'));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('rejects a sharp package whose native binary is missing', () => {
+  const root = fixture('linux', 'x64', 'README.md');
+  try {
+    assert.throws(() => validateNativeVoice(root, 'linux', 'x64'), /incomplete.*sharp-linux-x64\*\.node/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('accepts a complete bundled voice and rejects a missing, truncated or unlisted one', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'voice-bundle-test-'));
