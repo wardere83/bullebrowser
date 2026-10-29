@@ -3,17 +3,28 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+// sharp 0.35 names its binary sharp-<platform>-<version>.node; older releases
+// used sharp-<platform>.node. Accept either so a patch bump never breaks packaging.
+function hasSharpBinary(libDir, suffix) {
+  try {
+    return fs.readdirSync(libDir).some((name) => name.startsWith(`sharp-${suffix}`) && name.endsWith('.node'));
+  } catch {
+    return false;
+  }
+}
+
 function validateNativeVoice(moduleRoot, platform, arch) {
   const suffix = `${platform === 'linux' ? 'linux' : platform}-${arch}`;
   const required = [
     path.join(moduleRoot, '@huggingface/transformers/package.json'),
     path.join(moduleRoot, 'onnxruntime-node/bin/napi-v3', platform, arch, 'onnxruntime_binding.node'),
-    path.join(moduleRoot, `@img/sharp-${suffix}/lib/sharp-${suffix}.node`),
   ];
   if (platform !== 'win32') {
     required.push(path.join(moduleRoot, `@img/sharp-libvips-${suffix}/package.json`));
   }
   const missing = required.filter((file) => !fs.existsSync(file));
+  const sharpLib = path.join(moduleRoot, `@img/sharp-${suffix}/lib`);
+  if (!hasSharpBinary(sharpLib, suffix)) missing.push(path.join(sharpLib, `sharp-${suffix}*.node`));
   if (missing.length) {
     throw new Error(`Voice runtime is incomplete for ${platform}/${arch}. Install dependencies with pnpm supportedArchitectures before packaging. Missing: ${missing.join(', ')}`);
   }
