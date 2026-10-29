@@ -174,7 +174,7 @@ export interface StructuredSchema<T> {
    */
   json: Record<string, unknown>;
   /** The full rules, including what the wire schema cannot express. */
-  zod: z.ZodType<T, z.ZodTypeDef, unknown>;
+  zod: z.ZodType<T, unknown>;
   /**
    * Rules across fields that only the caller can judge: ids that must exist,
    * quotes that must verify. Returns one line per problem, path first.

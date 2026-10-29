@@ -82,7 +82,7 @@ const FindElementsInput = z.object({
     .optional()
     .describe('Optional words to filter by (matched against label, role and field type).'),
 });
-const ExtractInput = z.object({ schema: z.record(z.unknown()) });
+const ExtractInput = z.object({ schema: z.record(z.string(), z.unknown()) });
 const LinkShape = z.object({ text: z.string(), href: z.string() });
 const TabShape = z.object({
   id: z.string(),
@@ -226,7 +226,7 @@ const toolDefinitions = {
   extractStructuredData: {
     name: 'extractStructuredData',
     description: 'Extract structured data from the page based on a schema.',
-    inputSchema: z.object({ schema: z.record(z.unknown()), tabId: z.string().optional() }),
+    inputSchema: z.object({ schema: z.record(z.string(), z.unknown()), tabId: z.string().optional() }),
     outputSchema: ExtractOut,
     execute: async (input, ctx) => {
       const tabId = input.tabId ?? ctx.activeTabId;
@@ -501,10 +501,10 @@ function zodFieldToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
   const wrap = (obj: Record<string, unknown>) =>
     description ? { ...obj, description } : obj;
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
-    return zodFieldToJsonSchema(schema.unwrap());
+    return zodFieldToJsonSchema(schema.unwrap() as z.ZodTypeAny);
   }
-  if (schema instanceof z.ZodEffects) {
-    return zodFieldToJsonSchema(schema.innerType());
+  if (schema instanceof z.ZodPipe) {
+    return zodFieldToJsonSchema(schema.in as z.ZodTypeAny);
   }
   if (schema instanceof z.ZodString) return wrap({ type: 'string' });
   if (schema instanceof z.ZodNumber) return wrap({ type: 'number' });
@@ -513,7 +513,7 @@ function zodFieldToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
     return wrap({ type: 'string', enum: schema.options as string[] });
   }
   if (schema instanceof z.ZodArray) {
-    return wrap({ type: 'array', items: zodFieldToJsonSchema(schema.element) });
+    return wrap({ type: 'array', items: zodFieldToJsonSchema(schema.element as z.ZodTypeAny) });
   }
   if (schema instanceof z.ZodRecord) {
     return wrap({ type: 'object', additionalProperties: true });

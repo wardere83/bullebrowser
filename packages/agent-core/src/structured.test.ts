@@ -500,13 +500,13 @@ describe('validation and the one correction', () => {
     expect(error.issues).toEqual(['status: "found" needs at least one claim']);
     // One correction only: the third scripted reply is never asked for.
     expect(sdk.stream).toHaveBeenCalledTimes(2);
-    expect(repairText(1)).toMatch(/- status: Invalid enum value/);
+    expect(repairText(1)).toMatch(/- status: Invalid option: expected one of "found"\|"missing"/);
   });
 
   it('names the root when the whole reply has the wrong shape', async () => {
     claudeAnswers(message('[]'), message(''));
     const error = await failure(structuredCompletion(request()));
-    expect(repairText(1)).toContain('- (root): Expected object, received array');
+    expect(repairText(1)).toContain('- (root): Invalid input: expected object, received array');
     // A reply with no text at all is not JSON either.
     expect(error.issues).toEqual(['(root): the reply was not valid JSON.']);
   });
