@@ -4,6 +4,8 @@ import type { AgentStepEvent } from '../../shared/agent-events.js';
 export type ActivityStatus = 'idle' | 'running' | 'error';
 export interface ActivityAction {
   id: number;
+  callId?: string;
+  durationMs?: number;
   toolName: string;
   label: string;
   state: 'running' | 'completed' | 'error' | 'stopped';
@@ -76,12 +78,13 @@ export function activityActions(steps: readonly AgentStepEvent[], status: Activi
   const actions: ActivityAction[] = [];
   for (const [index, step] of steps.entries()) {
     if (step.kind === 'tool_call') {
-      actions.push({ id: index, toolName: step.toolName, label: actionLabel(step), state: 'running' });
+      actions.push({ id: index, callId: step.callId, toolName: step.toolName, label: actionLabel(step), state: 'running' });
     } else if (step.kind === 'tool_result' || (step.kind === 'error' && step.toolName)) {
       const toolName = step.toolName;
-      const action = [...actions].reverse().find((entry) => entry.toolName === toolName && entry.state === 'running');
+      const action = [...actions].reverse().find((entry) => (step.callId ? entry.callId === step.callId : entry.toolName === toolName) && entry.state === 'running');
       if (action) {
         action.state = step.kind === 'error' ? 'error' : 'completed';
+        action.durationMs = step.durationMs;
         if (step.kind === 'error') action.message = step.message;
         else {
           const host = sourceHost(record(step.output)?.url);

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type {
   ConversationDetail,
+  TaskRunLog,
   ConversationSummary,
 } from '../../shared/ipc.js';
 import { createStore } from './store.js';
@@ -32,6 +33,7 @@ class ConversationStore {
    * (no organization is active), unbound chats only.
    */
   list(organizationId?: string | null): ConversationSummary[] {
+    this.pruneTaskRuns();
     return this.store
       .get('conversations')
       .filter((conversation) => this.visibleTo(conversation, organizationId))
@@ -47,6 +49,7 @@ class ConversationStore {
 
   /** A chat by id. With an organization argument, null unless it is visible to it. */
   get(id: string, organizationId?: string | null): ConversationDetail | null {
+    this.pruneTaskRuns();
     const conversation = this.store.get('conversations').find((c) => c.id === id);
     if (!conversation || !this.visibleTo(conversation, organizationId)) return null;
     return { ...conversation, messages: protectConversationIdentity(conversation.messages).map((message) => message.role === 'assistant' ? { ...message, content: sanitizeAssistantText(message.content) } : message) };
@@ -86,6 +89,28 @@ class ConversationStore {
     all[idx] = conv;
     this.store.set('conversations', all);
     return conv;
+  }
+
+  /** Task activity is local, organization scoped, and expires after 30 days. */
+  appendTaskRun(id: string, run: TaskRunLog): void {
+    this.pruneTaskRuns();
+    const all = this.store.get('conversations');
+    const conversation = all.find((entry) => entry.id === id);
+    if (!conversation) return;
+    conversation.taskRuns = [...(conversation.taskRuns ?? []).filter((entry) => entry.id !== run.id), structuredClone(run)];
+    this.store.set('conversations', all);
+  }
+
+  private pruneTaskRuns(): void {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const all = this.store.get('conversations');
+    let changed = false;
+    for (const conversation of all) {
+      if (!conversation.taskRuns) continue;
+      const kept = conversation.taskRuns.filter((run) => run.finishedAt >= cutoff);
+      if (kept.length !== conversation.taskRuns.length) { conversation.taskRuns = kept; changed = true; }
+    }
+    if (changed) this.store.set('conversations', all);
   }
 
   /**

@@ -1,3 +1,5 @@
+import type { TaskRunLog } from '../../shared/ipc.js';
+import { taskSources, taskReport } from '../../shared/task-report.js';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
@@ -8,15 +10,19 @@ export function TaskActivity({
   steps,
   status,
   currentStep,
+  audit,
 }: {
   steps: readonly AgentStepEvent[];
   status: ActivityStatus;
   currentStep: string;
+  audit?: Pick<TaskRunLog, 'calls' | 'consents'>;
 }) {
   const [chosenOpen, setChosenOpen] = useState<boolean | null>(null);
   const listId = useId();
   const actions = activityActions(steps, status);
   const readCount = pagesRead(steps);
+  const sources = taskSources(steps);
+  const [showTiming, setShowTiming] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const followLog = useRef(true);
   useEffect(() => {
@@ -60,6 +66,23 @@ export function TaskActivity({
           followLog.current = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
         }} className="max-h-64 overflow-y-auto border-t border-line/40 px-3 py-3">
           {actions.length === 0 && !failed && <p className="text-ink-secondary">Preparing the task. Browser actions will appear here as they happen.</p>}
+          <div className="mb-3 flex gap-3">
+            <button type="button" className="text-primary" onClick={() => {
+              const url = URL.createObjectURL(new Blob([taskReport(steps, audit)], { type: 'text/markdown' }));
+              const link = document.createElement('a');
+              link.href = url; link.download = 'bullebrowser-task.md'; link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}>Export task report</button>
+            <label className="text-ink-secondary"><input type="checkbox" checked={showTiming} onChange={(e) => setShowTiming(e.target.checked)} /> Show timing</label>
+          </div>
+          {sources.length > 0 && <details className="mb-3">
+            <summary className="cursor-pointer text-ink-primary">Sources ({sources.length})</summary>
+            <ul className="mt-2 space-y-2">{sources.map((source) => <li key={source.url}>
+              <p className="text-[11px] text-ink-secondary">{source.read ? 'Read' : 'Opened · unverified'} · source authority not assessed</p>
+              <button type="button" disabled={/redacted/i.test(source.url)} className="break-all text-left text-primary disabled:opacity-60" title={source.excerpt || 'This page was opened but not read.'}
+                onClick={() => { void window.bullebrowser.tabs.create(source.url).catch(() => {}); }}>{source.title || new URL(source.url).hostname}</button>
+            </li>)}</ul>
+          </details>}
           <ol role="log" aria-label="Browser task steps" aria-live="polite" aria-relevant="additions text" className="space-y-3">
             {actions.map((action) => (
               <li key={action.id} className="flex items-start gap-2">
@@ -73,6 +96,7 @@ export function TaskActivity({
                   <p className="mt-0.5 text-[11px] text-ink-secondary">
                     {action.state === 'running' ? 'In progress' : action.state === 'completed' ? 'Done' : action.state === 'error' ? 'Could not complete' : 'Stopped'}
                   </p>
+                  {showTiming && action.durationMs !== undefined && <p className="text-[11px] text-ink-secondary">{Math.round(action.durationMs)} ms</p>}
                   {action.message && <p role={action.state === 'error' ? 'alert' : undefined} className="mt-1 break-words text-danger">{action.message}</p>}
                 </div>
               </li>

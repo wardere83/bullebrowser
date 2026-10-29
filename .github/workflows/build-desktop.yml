@@ -24,7 +24,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  agent-benchmark:
+    uses: ./.github/workflows/agent-benchmark.yml
   build:
+    needs: agent-benchmark
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     # The mac job notarizes twice (arm64 + x64) and each submission now waits at

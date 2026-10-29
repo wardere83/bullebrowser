@@ -470,7 +470,7 @@ describe('the keyless assistant', () => {
         const plain = await ask(request);
         const withReference = await ask(request, { referenceContext });
         expect(withReference.reply).toBe(plain.reply);
-        expect(withReference.steps).toEqual(plain.steps);
+        expect(withReference.steps.map((step) => ({ ...step, durationMs: undefined }))).toEqual(plain.steps.map((step) => ({ ...step, durationMs: undefined })));
         expect(withReference.reply).not.toContain('Mission');
       }
     });

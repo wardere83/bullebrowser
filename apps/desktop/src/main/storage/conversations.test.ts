@@ -89,3 +89,16 @@ describe('chats and organizations', () => {
     expect(conversationStore.list().map((c) => c.id)).toEqual([two.id]);
   });
 });
+
+it('retains task activity for 30 days, scopes it to the chat, and deletes it with the chat', () => {
+  const chat = conversationStore.create(ORG_A);
+  const now = Date.now();
+  const run = { id: 'recent', startedAt: now - 1000, finishedAt: now, status: 'completed' as const,
+    steps: [{ kind: 'tool_result' as const, toolName: 'read_page', output: { url: 'https://agency.gov', text: 'Eligibility' }, ts: now }], consents: [] };
+  conversationStore.appendTaskRun(chat.id, { ...run, id: 'expired', finishedAt: now - 31 * 86400000 });
+  conversationStore.appendTaskRun(chat.id, run);
+  expect(conversationStore.get(chat.id, ORG_A)?.taskRuns).toHaveLength(1);
+  expect(conversationStore.get(chat.id, ORG_B)).toBeNull();
+  conversationStore.delete(chat.id, ORG_A);
+  expect(conversationStore.get(chat.id, ORG_A)).toBeNull();
+});

@@ -139,6 +139,9 @@ export interface ToolRuntime {
   /** Describe what a consequential action would send (dry run / preview). */
   previewAction?(tabId: string, target: string | null): Promise<ActionPreview>;
 
+  /** Metadata without extracting the page body; hosts without it use the legacy read fallback. */
+  getPageMetadata?(tabId: string): Promise<{ title: string; url: string }>;
+
   // Optional richer browser adapters for future native wiring.
   getSelection?(tabId: string): Promise<{ text: string }>;
   listLinks?(tabId: string): Promise<{ text: string; href: string }[]>;
@@ -219,6 +222,8 @@ export interface AgentMessage {
 }
 
 export interface AgentStep {
+  callId?: string;
+  durationMs?: number;
   type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget';
   toolName?: ToolName;
   detail?: string;

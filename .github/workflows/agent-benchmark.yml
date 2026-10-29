@@ -1,0 +1,38 @@
+name: Agent browser benchmarks
+on:
+  schedule:
+    - cron: '23 10 * * *'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Require provisioned evaluation infrastructure
+        env:
+          READY: ${{ vars.AGENT_EVAL_READY }}
+        run: |
+          if [ "$READY" != true ]; then
+            echo 'Agent evaluation is not configured. Provision the bullebrowser-evals runner and real benchmark baseline before enabling releases.'
+            exit 1
+          fi
+  evaluate:
+    needs: readiness
+    runs-on: [self-hosted, bullebrowser-evals]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run pinned public suites and private funding tasks
+        run: |
+          node /opt/bullebrowser-evals/run.mjs --repository "$GITHUB_WORKSPACE" --revision "$GITHUB_SHA" --output "$RUNNER_TEMP/candidate.json"
+      - name: Enforce regression, latency, grounding and recovery gates
+        run: node scripts/agent-benchmark-gate.mjs "$RUNNER_TEMP/candidate.json" /opt/bullebrowser-evals/baseline.json "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-benchmark-evidence
+          path: ${{ runner.temp }}/candidate.json
+          retention-days: 30
+          if-no-files-found: error

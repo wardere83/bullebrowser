@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   url: 'https://agency.gov/', navigationUrl: 'https://agency.gov/',
   execute: vi.fn(), capture: vi.fn(), load: vi.fn(), activate: vi.fn(),
-  getView: vi.fn(), send: vi.fn(),
+  getView: vi.fn(), send: vi.fn(), preconnect: vi.fn(),
 }));
 vi.mock('../tabs/manager.js', () => ({ tabManager: {
   getView: mocks.getView,
@@ -25,7 +25,7 @@ beforeEach(() => {
     isDestroyed: () => false, getURL: () => mocks.url,
     getTitle: () => 'Source', on: vi.fn(), off: vi.fn(), once: vi.fn(), focus: vi.fn(),
     mainFrame,
-    session: { webRequest: { onBeforeRequest: vi.fn(), onCompleted: vi.fn(), onErrorOccurred: vi.fn() } },
+    session: { preconnect: mocks.preconnect, webRequest: { onBeforeRequest: vi.fn(), onCompleted: vi.fn(), onErrorOccurred: vi.fn() } },
     debugger: { isAttached: () => true, sendCommand: mocks.send },
     executeJavaScript: mocks.execute, capturePage: mocks.capture, loadURL: mocks.load,
   } });
@@ -46,6 +46,7 @@ it('recovers from a blocked attempted destination without reading or presenting 
   mocks.execute.mockResolvedValue(undefined);
   await expect(runtime.navigate('tab', 'https://agency.gov/grants', { wait: 'none' })).resolves.toMatchObject({ url: 'https://agency.gov/grants' });
   expect(mocks.load).toHaveBeenCalledExactlyOnceWith('https://agency.gov/grants');
+  expect(mocks.preconnect).toHaveBeenCalledExactlyOnceWith({ url: 'https://agency.gov', numSockets: 1 });
   expect(onActivity).toHaveBeenCalledExactlyOnceWith('tab');
 });
 
@@ -54,6 +55,7 @@ it('rejects blocked navigation before touching the current page or presenting ac
   const runtime = new DesktopToolRuntime({ request: vi.fn() }, onActivity);
   await expect(runtime.navigate('tab', 'https://\u0064uckduckgo.com/?q=private')).rejects.toThrow('blocked by BulleBrowser policy');
   expect(mocks.getView).not.toHaveBeenCalled();
+  expect(mocks.preconnect).not.toHaveBeenCalled();
   expect(mocks.load).not.toHaveBeenCalled();
   expect(onActivity).not.toHaveBeenCalled();
 });

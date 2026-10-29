@@ -40,7 +40,7 @@ it('cancels the pending click before the dwell ends', async () => {
 it('stops typing without writing remaining characters', async () => {
   const result = TYPE_FN('#input', 'abcdef', 'run-1');
   const rejection = expect(result).rejects.toThrow('cancelled');
-  await vi.advanceTimersByTimeAsync(30);
+  await vi.advanceTimersByTimeAsync(180);
   expect(field.value).toBe('a');
   page.__bbCancelledRun = 'run-1';
   await vi.advanceTimersByTimeAsync(1000);
@@ -53,4 +53,16 @@ it('does not cancel a later run using the same document', async () => {
   await vi.advanceTimersByTimeAsync(500);
   await result;
   expect(field.click).toHaveBeenCalledOnce();
+});
+it('shows the real target before typing and leaves the field unchanged during the cursor animation', async () => {
+  const result = TYPE_FN('@12', 'abc', 'run-1');
+  expect(page.__bbCursor).toHaveBeenCalledWith(field, expect.objectContaining({ label: '@12' }));
+  expect(field.value).toBe('');
+  await vi.advanceTimersByTimeAsync(149);
+  expect(field.value).toBe('');
+  await vi.advanceTimersByTimeAsync(1);
+  expect(field.value).toBe('');
+  await vi.advanceTimersByTimeAsync(100);
+  await result;
+  expect(field.value).toBe('abc');
 });

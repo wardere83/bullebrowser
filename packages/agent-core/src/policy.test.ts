@@ -72,7 +72,7 @@ describe('policy decisions and redaction', () => {
       safe: 'ok',
     }) as Record<string, unknown>;
 
-    expect(redacted.apiKey).toBe('[REDACTED_API_KEY]');
+    expect(redacted.apiKey).toBe('[REDACTED]');
     expect(redacted.token).toBe('[REDACTED]');
     expect(redacted.safe).toBe('ok');
   });
@@ -87,4 +87,13 @@ describe('policy decisions and redaction', () => {
     expect(policy.evaluateToolStep({ id: 'x', toolName: 'press_key', input: { key: 'Tab' }, expected: '' })
       .requiresConfirmation).toBe(false);
   });
+});
+
+it('redacts credential-bearing URLs and auth fields in audit copies without changing executable inputs', () => {
+  const policy = new PrivacyPolicyEngine();
+  const input = { url: 'https://user:password@agency.gov/grants?token=private&program=college', apiKey: 'private-key', authorization: 'private-header' };
+  const copy = policy.redact(input);
+  expect(JSON.stringify(copy)).not.toMatch(/password|private|user:/);
+  expect(JSON.stringify(copy)).toContain('program=college');
+  expect(input.url).toContain('token=private');
 });

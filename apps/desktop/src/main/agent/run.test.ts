@@ -7,6 +7,7 @@ import { IPC, type AgentResultEvent, type AgentRunRequest } from '../../shared/i
 const mocks = vi.hoisted(() => ({
   runAgent: vi.fn<(input: AgentInput) => Promise<string>>(),
   appendMessage: vi.fn(),
+  appendTaskRun: vi.fn(),
   conversation: { id: 'conversation-1', messages: [] as Array<{ role: 'user' | 'assistant'; content: string }> },
   setBrowsingActivity: vi.fn(),
   activate: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock('@bullebrowser/agent-core', async (importOriginal) => ({
 }));
 vi.mock('../connectors/service.js', () => ({ enabledConnectors: () => [], connectorCatalog: () => [] }));
 vi.mock('../storage/conversations.js', () => ({
-  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage, bind: () => true },
+  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage, appendTaskRun: mocks.appendTaskRun, bind: () => true },
 }));
 vi.mock('../funding/platform.js', () => ({ fundingPlatform: () => null }));
 vi.mock('../identity/service.js', () => ({ identityService: {} }));
@@ -48,6 +49,7 @@ vi.mock('../tabs/manager.js', () => ({ tabManager: {
   clearBrowsingActivity: mocks.clearBrowsingActivity,
 } }));
 vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {
+  dispose() {}
   constructor(_confirm: unknown, activity: (tabId: string) => void) {
     mocks.pageActivity.mockImplementation(activity);
   }

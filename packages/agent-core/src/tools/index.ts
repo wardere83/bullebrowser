@@ -157,7 +157,7 @@ const toolDefinitions = {
     outputSchema: MetaOut,
     execute: async (input, ctx) => {
       const tabId = input.tabId ?? ctx.activeTabId;
-      const page = await ctx.runtime.readPage(tabId);
+      const page = ctx.runtime.getPageMetadata ? await ctx.runtime.getPageMetadata(tabId) : await ctx.runtime.readPage(tabId);
       return { tabId, title: page.title, url: page.url };
     },
   } satisfies ToolImpl<z.infer<typeof TabIdInput>, z.infer<typeof MetaOut>>,

@@ -1,4 +1,4 @@
-import type { ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
+import type { ToolCallRecord, ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
 import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessibility.js';
 // Single source of truth for IPC channel names and the typed bridge
 // surface. Both the preload script and the renderer consume this so we
@@ -181,7 +181,18 @@ export interface ConversationSummary {
   messageCount: number;
 }
 
+export interface TaskRunLog {
+  id: string;
+  startedAt: number;
+  finishedAt: number;
+  status: 'completed' | 'failed' | 'cancelled';
+  steps: AgentStepEvent[];
+  calls?: ToolCallRecord[];
+  consents: { kind: 'browse_access' | 'destructive'; approved: boolean; at: number }[];
+}
+
 export interface ConversationDetail extends ConversationSummary {
+  taskRuns?: TaskRunLog[];
   messages: { role: 'user' | 'assistant'; content: string; timestamp: number }[];
   /**
    * The organization this chat belongs to. A chat is bound to the organization
