@@ -608,7 +608,7 @@ export function AiPanel() {
         {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call')) && (
           <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
         )}
-        {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity key={run.id} steps={run.steps}
+        {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity archived key={run.id} steps={run.steps}
           status={run.status === 'failed' ? 'error' : 'idle'} currentStep="" audit={run} />)}
         {liveReply && <Bubble role="assistant" content={liveReply} live />}
         {status !== 'running' && <BudgetSpent steps={steps} onContinue={(b) => void sendMessage('Continue the task from where you stopped.', [], b)} />}

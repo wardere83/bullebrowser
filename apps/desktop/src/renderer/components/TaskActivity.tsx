@@ -11,10 +11,12 @@ export function TaskActivity({
   status,
   currentStep,
   audit,
+  archived = false,
 }: {
   steps: readonly AgentStepEvent[];
   status: ActivityStatus;
   currentStep: string;
+  archived?: boolean;
   audit?: Pick<TaskRunLog, 'calls' | 'consents'>;
 }) {
   const [chosenOpen, setChosenOpen] = useState<boolean | null>(null);
@@ -36,7 +38,7 @@ export function TaskActivity({
   const summary = failed ? 'Task stopped' : running ? active?.label ?? (readCount ? 'Reviewing sources…' : actions.length ? 'Working…' : 'Preparing your task…') : 'Task activity';
   return (
     <section
-      aria-label="Task activity"
+      aria-label={archived ? 'Archived task activity' : 'Task activity'}
       className={`mb-5 overflow-hidden rounded-lg border text-[12px] ${
         failed ? 'border-danger/30 bg-danger/5' : 'border-line/50 bg-surface-muted/30'
       }`}
@@ -45,6 +47,7 @@ export function TaskActivity({
         type="button"
         onClick={() => setChosenOpen(!open)}
         className="flex w-full items-center gap-2 px-3 py-2 text-left"
+        aria-label="Toggle task activity"
         aria-expanded={open}
         aria-controls={listId}
       >
