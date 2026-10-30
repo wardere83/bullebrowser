@@ -29,3 +29,16 @@ test('fails closed on absent, stale, mismatched or incomplete evidence', () => {
     (e) => { e.recovery.withRemediation = 0; },
   ]) { const candidate = evidence(); mutate(candidate); assert.ok(benchmarkGate(candidate, evidence(), options).length); }
 });
+
+
+test('uses the approved task set without inventing a 100-task or human-only requirement', () => {
+  const baseline = evidence(); const candidate = evidence();
+  for (const suite of SUITES) { baseline.suites[suite].tasks = 20; candidate.suites[suite].tasks = 20; }
+  candidate.suites['bulle-funding'].auditedCitations = 20;
+  candidate.suites['bulle-funding'].auditMethod = 'random-independent-review';
+  candidate.actions = { total: 20, visibleBeforeMutation: 20 };
+  expectNoFailures(candidate, baseline);
+  candidate.suites['bulle-funding'].auditedCitations = 0;
+  assert.ok(benchmarkGate(candidate, baseline, options).length);
+});
+function expectNoFailures(candidate, baseline) { assert.deepEqual(benchmarkGate(candidate, baseline, options), []); }

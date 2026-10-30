@@ -16,7 +16,7 @@ Commands are run without a shell. They must be installed on the evaluation runne
 
 Every command receives `--repository PATH --revision SHA --output FILE`. It must exit nonzero on failure and write fresh JSON to FILE on success. Missing output, wrong commit, invalid/future/stale timestamps, and failing thresholds stop publication. Previous adapter files are deleted before execution. Adapter stdout/stderr is not copied to Actions logs, to avoid leaking credentials or raw private task content.
 
-All responses need `revision` and `completedAt` (ISO timestamp). Suite responses need `suite`, containing the fields described in `docs/agentic-browser-upgrade.md`. The telemetry response needs `latency`, `actions`, and `recovery` in the release gate's schema. Funding evidence must incorporate the actual random human citation audit. The aggregator preserves the oldest measurement time, validates matching task sets against the baseline, writes the measured candidate and validation failures, and exits nonzero on failure.
+All responses need `revision` and `completedAt` (ISO timestamp). Suite responses need `suite`, containing the fields described in `docs/agentic-browser-upgrade.md`. The telemetry response needs `latency`, `actions`, and `recovery` in the release gate's schema. Funding evidence must incorporate the actual random citation audit. The aggregator preserves the oldest measurement time, validates matching task sets against the baseline, writes the measured candidate and validation failures, and exits nonzero on failure.
 
 Run locally on the configured evaluator:
 
