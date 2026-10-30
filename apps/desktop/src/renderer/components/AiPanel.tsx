@@ -609,7 +609,7 @@ export function AiPanel() {
         {current?.messages.map((m, i) => (
           <Bubble key={i} role={m.role} content={m.content} />
         ))}
-        {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call')) && (
+        {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call' || step.kind === 'page_instructions')) && (
           <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
         )}
         {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity archived key={run.id} steps={run.steps}

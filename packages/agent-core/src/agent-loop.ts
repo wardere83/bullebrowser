@@ -31,7 +31,7 @@ import {
   toToolError,
   type ToolErrorCode,
 } from './errors.js';
-import { neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
+import { detectPageInstructions, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
 import { requiredLevel } from './permissions.js';
 import { StepBudget } from './budget.js';
 import { PRODUCT_IDENTITY_INSTRUCTIONS, productQuestionReply, protectAssistantIdentity, protectConversationIdentity } from './product-identity.js';
@@ -211,6 +211,41 @@ function sealed(text: string, source: string): string {
   return wrapUntrusted(text, source);
 }
 
+// Every string a tool returned, joined, so instruction-like text is found in
+// a page body, a title or a search snippet alike. Capped like the result.
+function pageStrings(value: unknown, out: string[] = []): string[] {
+  if (typeof value === 'string') out.push(value);
+  else if (Array.isArray(value)) for (const item of value) pageStrings(item, out);
+  else if (value && typeof value === 'object') for (const item of Object.values(value)) pageStrings(item, out);
+  return out;
+}
+
+// Tell the user when page-derived text tried to steer the agent. The model
+// already gets the text sealed as data; this makes the attempt visible.
+async function warnOnPageInstructions(
+  output: unknown,
+  label: string | (() => Promise<string>),
+  policy: PrivacyPolicyEngine,
+  onStep: AgentStepHandler,
+): Promise<void> {
+  const finding = detectPageInstructions(truncate(pageStrings(output).join('\n'), 100_000));
+  if (!finding) return;
+  const source = typeof label === 'string' ? label : await label().catch(() => 'the current page');
+  onStep({
+    type: 'page_instructions',
+    detail: source,
+    data: policy.redact({ source, excerpt: finding.excerpt, signals: finding.signals }),
+  });
+}
+
+// The page a browser tool read from: its own URL when it reports one,
+// otherwise the active tab's.
+function browserSource(output: unknown, context: ToolContext): string | (() => Promise<string>) {
+  const url = output && typeof output === 'object' ? (output as { url?: unknown }).url : undefined;
+  if (typeof url === 'string' && url) return url;
+  return async () => (await context.runtime.listTabs()).find((tab) => tab.id === context.activeTabId)?.url || 'the current page';
+}
+
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new Error('cancelled'));
@@ -310,6 +345,7 @@ export async function executeToolCall(
       const output = await apiTool.execute(input);
       verifiedOutput = output;
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
+      await warnOnPageInstructions(output, `${name.replace(/_/g, ' ')} results`, policy, onStep);
       const text = typeof output === 'string' ? output : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), `api:${name}`), isError: false });
     } catch (error) {
@@ -407,6 +443,7 @@ export async function executeToolCall(
         return fail(new ToolError('UNKNOWN', 'The screenshot came back empty.'));
       }
 
+      await warnOnPageInstructions(output, browserSource(output, context), policy, onStep);
       const text = typeof output === 'string' ? neutralize(output) : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), name), isError: false });
     } catch (error) {
@@ -538,12 +575,19 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 
 export async function runAgent(input: AgentInput): Promise<string> {
   const progress = new TaskOutcomeTracker(input);
+  // One instruction warning per source per run: a page read three times is
+  // one page that tried, not three.
+  const warnedSources = new Set<string>();
   const answer = await runAgentTask({
     ...input,
     onToolRecord: (record) => { progress.record(record); input.onToolRecord?.(record); },
     history: input.history.map((message) => message.role === 'assistant'
       ? { ...message, content: sanitizeAssistantText(message.content) } : message),
     onStep: (step) => {
+      if (step.type === 'page_instructions') {
+        if (warnedSources.has(step.detail ?? '')) return;
+        warnedSources.add(step.detail ?? '');
+      }
       progress.observe(step);
       if (step.type !== 'done') input.onStep(sanitizeAssistantValue(step) as AgentStep);
     },
@@ -596,6 +640,10 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   onStep({ type: 'thinking', detail: 'Reading the current page…' });
   const perceived = await retrieveContext(context, memory);
   progress.observeContext(perceived.url, perceived.textSnippet);
+  if (perceived.url) {
+    await warnOnPageInstructions([perceived.title ?? '', perceived.textSnippet?.slice(0, PAGE_SNIPPET_CHARS) ?? ''],
+      perceived.url, policy, onStep);
+  }
 
   // The page in front of the user, so "summarize this" or "what does this say
   // about X" can be answered straight away instead of spending a read_page
