@@ -14,7 +14,7 @@ export function SessionScratchpad({ conversation }: { conversation: Conversation
       const store = useAgentStore.getState();
       if (store.current?.id === conversation.id) store.setCurrent({ ...store.current, scratchpad: value });
       setText(value);
-      setMessage(value ? 'Saved for the next task.' : 'Session notes forgotten.');
+      setMessage(value ? 'Saved for later tasks in this conversation.' : 'Session notes forgotten.');
     } catch {
       setMessage('Could not save session notes. Try again.');
     } finally {
@@ -23,7 +23,7 @@ export function SessionScratchpad({ conversation }: { conversation: Conversation
   }
   return <details className="shrink-0 border-b border-line px-5 py-2 text-xs">
     <summary className="cursor-pointer text-ink-secondary">Session scratchpad</summary>
-    <p className="my-2 text-ink-secondary">Notes apply to your next task in this conversation. They are not verified sources.</p>
+    <p className="my-2 text-ink-secondary">Notes apply to every task in this conversation until you forget them. They are not verified sources.</p>
     <textarea aria-label="Session notes" value={text} maxLength={12000} disabled={saving}
       onChange={(event) => { setText(event.target.value); setMessage('Unsaved changes'); }}
       className="w-full rounded border border-line bg-white p-2 text-ink-primary" rows={3} />

@@ -58,6 +58,8 @@ function browserBridge(): BrowserBridge {
   return window.bullebrowser;
 }
 
+const IS_MAC = navigator.userAgent.includes('Macintosh');
+
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
   const awaitingBrowseAccess = useAgentStore((s) => s.pendingConfirm?.kind === 'browse_access');
@@ -76,16 +78,6 @@ export function AiPanel() {
   const currentStep = activity?.currentStep ?? '';
   const liveReply = activityStatus === 'running' ? liveAssistantText(steps) : '';
   const runId = useAgentStore((s) => s.runId);
-  useEffect(() => {
-    const interrupt = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'Escape' && runId && status === 'running') {
-        event.preventDefault();
-        void window.bullebrowser.agent.cancel(runId);
-      }
-    };
-    window.addEventListener('keydown', interrupt);
-    return () => window.removeEventListener('keydown', interrupt);
-  }, [runId, status]);
   const [resumeChat] = useState(takeUpdateChat);
   const [draft, setDraft] = useState(resumeChat?.draft ?? '');
   const [selectedTask, setSelectedTask] = useState<BrowserTaskId | null>(null);
@@ -776,8 +768,9 @@ export function AiPanel() {
                   if (runId) void window.bullebrowser.agent.cancel(runId);
                 }}
                 className="h-9 rounded border border-danger bg-white px-3 text-sm font-medium text-danger hover:bg-danger/10"
-                title="Stop the running task (Ctrl/Command + Shift + Escape)"
-                aria-keyshortcuts="Control+Shift+Escape Meta+Shift+Escape"
+                // The shortcut is the View > Stop Task menu accelerator (main/menu.ts).
+                title={`Stop the running task (${IS_MAC ? 'Command + Shift + Escape' : 'Shift + Escape'})`}
+                aria-keyshortcuts={IS_MAC ? 'Meta+Shift+Escape' : 'Shift+Escape'}
               >
                 Stop
               </button>

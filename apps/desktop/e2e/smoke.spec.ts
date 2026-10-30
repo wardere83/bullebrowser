@@ -613,7 +613,7 @@ test('session scratchpad saves, reloads, and forgets notes without a model call'
     await win.getByText('Session scratchpad', { exact: true }).click();
     await win.getByRole('textbox', { name: 'Session notes', exact: true }).fill('Focus on workforce grants.');
     await win.getByRole('button', { name: 'Save notes', exact: true }).click();
-    await expect(win.getByText('Saved for the next task.', { exact: true })).toBeVisible();
+    await expect(win.getByText('Saved for later tasks in this conversation.', { exact: true })).toBeVisible();
     await win.reload();
     await win.getByText('Session scratchpad', { exact: true }).click();
     await expect(win.getByRole('textbox', { name: 'Session notes', exact: true })).toHaveValue('Focus on workforce grants.');

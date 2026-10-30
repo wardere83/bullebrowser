@@ -403,3 +403,8 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
 }
 
 export function hasActiveAgentRuns(): boolean { return runs.size > 0; }
+
+/** The Stop Task shortcut: halts whatever is running, from wherever focus is. */
+export function cancelAllAgentRuns(): void {
+  for (const runId of [...runs.keys()]) cancelAgentRun(runId);
+}
