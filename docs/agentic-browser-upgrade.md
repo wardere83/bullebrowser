@@ -1,6 +1,6 @@
 # Agentic browser upgrade: implementation and release readiness
 
-This branch is a tested foundation for the requested upgrade. It is not evidence that the full top-tier acceptance criteria have been achieved. Do not publish it as an acceptance-complete release.
+This upgrade is a tested foundation for the requested work. It is not evidence that the full top-tier acceptance criteria have been achieved, and release notes must not describe it as acceptance-complete or cite benchmark scores.
 
 ## Implemented
 
@@ -15,8 +15,8 @@ This branch is a tested foundation for the requested upgrade. It is not evidence
 - Task activity and consent events are persisted with the conversation, inherit its organization visibility and deletion, and expire after 30 days. Expiry is swept when history is read or updated. This is an activity history, not a visual page-state replay. Outputs remain bounded (UI excerpts 400 characters, tool-record results 4,000 characters); screenshots and full raw pages are not archived.
 - Audit copies redact credential fields and credential-bearing URLs without changing execution arguments.
 
-- User-authored session scratchpad persists with the organization-scoped conversation, is editable, and has an explicit Forget control. Saved notes apply to the next task as user context, never as verified page evidence.
-- Ctrl/Command + Shift + Escape interrupts the active task through the existing cancellation endpoint. Pause/step/resume/replan are still outstanding.
+- User-authored session scratchpad persists with the organization-scoped conversation, is editable, and has an explicit Forget control. Saved notes apply to every later task in that conversation, until forgotten, as user context, never as verified page evidence.
+- View > Stop Task (Command + Shift + Escape on macOS, Shift + Escape on Windows and Linux) cancels running tasks through the existing cancellation path. It is a menu accelerator, so it works while a web page has focus; Windows reserves Ctrl + Shift + Escape for Task Manager. Pause/step/resume/replan are still outstanding.
 - JSON audit export includes bounded/redacted tool records, consent decisions, sources and call-linked timing. It excludes raw step outputs and private reasoning.
 
 ## Release gate and evaluation infrastructure
@@ -25,7 +25,7 @@ This branch is a tested foundation for the requested upgrade. It is not evidence
 
 The nightly/reusable `agent-benchmark.yml` workflow invokes the repository-owned `scripts/run-agent-benchmarks.mjs`. It checks administrator-owned adapter configuration, runs each configured evaluator without shell interpolation, rejects stale/wrong-revision/missing output, aggregates the four suite results and browser telemetry, and validates the approved baseline. See `benchmarks/README.md` for configuration and the adapter protocol. There is no hard-coded external run script or readiness toggle.
 
-Installer builds run concurrently with evaluation. Publication waits for both jobs to pass. **Real datasets, evaluation accounts, installed suite adapters, an approved baseline and the random citation audit still need to be supplied.** The runner and validator are available; passing real benchmark results have not been obtained. Contract tests are not product benchmarks.
+Installer builds run concurrently with evaluation. While the repository variable `AGENT_EVAL_CONFIG` is unset, no benchmark runs and publication is not gated on one; the workflow reports "No benchmark evidence" and records no score. Once it is set, publication waits for both jobs to pass. **Real datasets, evaluation accounts, installed suite adapters, an approved baseline and the random citation audit still need to be supplied.** The runner and validator are available; passing real benchmark results have not been obtained. Contract tests are not product benchmarks.
 
 Evidence JSON has top-level `revision`, `completedAt`, `suites`, `latency`, `actions`, and `recovery`. Each suite needs `datasetRevision`, `taskSetHash`, `tasks` (nonempty and identical to baseline), `successRate`, `hallucinationRate`, `citationAccuracy`, `unrecoverableFailureRate`, `stepsToSuccess`, and `costPerTask`. Funding also needs `auditedCitations` (positive sample count) and `auditMethod` of `random-human-review` or `random-independent-review`. Baseline task sets and dataset versions must match. See the gate for the latency/action/recovery field names and thresholds. Evidence age is capped at 36 hours. Human citation audits and trusted evaluator outputs are still necessary; schema validation alone cannot establish real-world accuracy.
 
