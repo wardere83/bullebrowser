@@ -224,7 +224,12 @@ export interface AgentMessage {
 export interface AgentStep {
   callId?: string;
   durationMs?: number;
-  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget';
+  /**
+   * `page_instructions`: page-derived text read like instructions to an AI.
+   * It was sealed as data and not followed; `detail` names where it came from
+   * and `data` is `{ source, excerpt, signals }`. Sent once per source a run.
+   */
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget' | 'page_instructions';
   toolName?: ToolName;
   detail?: string;
   data?: unknown;

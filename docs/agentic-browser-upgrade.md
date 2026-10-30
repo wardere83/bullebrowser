@@ -18,6 +18,7 @@ This upgrade is a tested foundation for the requested work. It is not evidence t
 - User-authored session scratchpad persists with the organization-scoped conversation, is editable, and has an explicit Forget control. Saved notes apply to every later task in that conversation, until forgotten, as user context, never as verified page evidence.
 - View > Stop Task (Command + Shift + Escape on macOS, Shift + Escape on Windows and Linux) cancels running tasks through the existing cancellation path. It is a menu accelerator, so it works while a web page has focus; Windows reserves Ctrl + Shift + Escape for Task Manager. Pause/step/resume/replan are still outstanding.
 - JSON audit export includes bounded/redacted tool records, consent decisions, sources and call-linked timing. It excludes raw step outputs and private reasoning.
+- Page-instruction warning: page-derived text (tool results, search results and the open tab's opening text) is scanned before sealing for text that tries to override the assistant's instructions, addresses AI assistants directly, asks to hide something from the user, or imitates system/tool markup. A `page_instructions` step is emitted once per source per task, with the source and a bounded excerpt. Task activity shows an amber notice outside the collapsible log, and both exports list it. The patterns are deliberately narrow and are a notice, not the defense: every page is sealed as data whether or not anything matches. Uploaded documents and organization reference material are not scanned.
 
 ## Release gate and evaluation infrastructure
 
@@ -37,7 +38,7 @@ Evidence JSON has top-level `revision`, `completedAt`, `suites`, `latency`, `act
 - Claim-to-passage citations and authority review; existing citation requirements are unchanged.
 - Separate planner/executor orchestration, model routing and self-checks for all task types. Existing recovery and completion tracking remain active.
 - Additional organization memory controls. Existing organization knowledge storage remains unchanged.
-- Failure-remediation controls across all failure categories, a page-instruction warning banner, form before/after diffs, keyboard pause/step/resume/replan, tab orchestration rail, and full tokens/s telemetry.
+- Failure-remediation controls across all failure categories, form before/after diffs, keyboard pause/step/resume/replan, tab orchestration rail, and full tokens/s telemetry.
 - Provisioned public/private evaluation adapters, real benchmark runs, an approved baseline and random citation audit.
 
 ## Validation

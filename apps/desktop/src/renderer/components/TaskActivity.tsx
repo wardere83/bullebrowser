@@ -1,5 +1,5 @@
 import type { TaskRunLog } from '../../shared/ipc.js';
-import { taskSources, taskReport, taskAuditJson } from '../../shared/task-report.js';
+import { pageInstructionWarnings, taskSources, taskReport, taskAuditJson } from '../../shared/task-report.js';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
@@ -24,6 +24,7 @@ export function TaskActivity({
   const actions = activityActions(steps, status);
   const readCount = pagesRead(steps);
   const sources = taskSources(steps);
+  const warnings = pageInstructionWarnings(steps);
   const [showTiming, setShowTiming] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const followLog = useRef(true);
@@ -63,6 +64,26 @@ export function TaskActivity({
         {actions.length > 0 && <span className="shrink-0 text-[11px] text-ink-secondary">{actions.length} {actions.length === 1 ? 'step' : 'steps'}</span>}
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={13} className="text-ink-secondary" />
       </button>
+      {/* Outside the collapsible log: a page that tried to steer the agent is
+          something to see without opening anything. */}
+      {warnings.length > 0 && (
+        <div role="note" aria-label="Page instructions ignored" className="border-t border-amber-300/60 bg-amber-50 px-3 py-2 text-ink-primary">
+          <p className="flex items-start gap-2">
+            <Icon name="alert" size={14} className="mt-0.5 shrink-0 text-amber-600" />
+            <span>
+              {warnings.length === 1 ? 'Text from a page' : `Text from ${warnings.length} pages`} read like instructions to the AI.
+              It was treated as page data and not followed.
+            </span>
+          </p>
+          <ul className="mt-1.5 space-y-1 pl-[22px]">
+            {warnings.map((warning) => (
+              <li key={warning.source} className="break-words text-[11px] text-ink-secondary">
+                <span className="font-medium text-ink-primary">{warning.label}</span>: “{warning.excerpt}”
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {open && (
         <div id={listId} ref={logRef} onScroll={(event) => {
           const log = event.currentTarget;

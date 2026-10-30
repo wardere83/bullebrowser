@@ -9,4 +9,7 @@ export type AgentStepEvent = { callId?: string; durationMs?: number } & (
   | { kind: 'text'; text: string; ts: number }
   | { kind: 'error'; toolName?: string; message: string; code?: string; ts: number }
   | { kind: 'budget'; detail: string; used: number; total: number; exhausted: boolean; ts: number }
+  // Page text that read like instructions to the AI. It was treated as data
+  // and not followed; this records that it happened and where.
+  | { kind: 'page_instructions'; source: string; excerpt: string; signals: string[]; ts: number }
   | { kind: 'done'; ts: number });

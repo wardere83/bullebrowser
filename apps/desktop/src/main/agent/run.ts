@@ -397,6 +397,17 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
         ts,
       };
     }
+    case 'page_instructions': {
+      const d = (step.data ?? {}) as { excerpt?: unknown; signals?: unknown };
+      return {
+        kind: 'page_instructions',
+        callId: step.callId,
+        source: step.detail ?? '',
+        excerpt: typeof d.excerpt === 'string' ? d.excerpt : '',
+        signals: Array.isArray(d.signals) ? d.signals.filter((s): s is string => typeof s === 'string') : [],
+        ts,
+      };
+    }
     case 'done':
       return { kind: 'done', ts };
   }
