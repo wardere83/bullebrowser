@@ -143,6 +143,10 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     conversationStore.delete(id, await activeOrganizationId()),
   );
 
+  handle(IPC.CONVERSATION_SCRATCHPAD, async (_e, id: string, text: string) => {
+    conversationStore.setScratchpad(id, text, await activeOrganizationId());
+  });
+
   // agent
   handle(IPC.AGENT_RUN, (_e, req: AgentRunRequest) => startAgentRun(win, req));
   handle(IPC.AGENT_CANCEL, (_e, runId: string) => cancelAgentRun(runId));

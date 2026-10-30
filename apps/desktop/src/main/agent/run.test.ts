@@ -7,7 +7,8 @@ import { IPC, type AgentResultEvent, type AgentRunRequest } from '../../shared/i
 const mocks = vi.hoisted(() => ({
   runAgent: vi.fn<(input: AgentInput) => Promise<string>>(),
   appendMessage: vi.fn(),
-  conversation: { id: 'conversation-1', messages: [] as Array<{ role: 'user' | 'assistant'; content: string }> },
+  appendTaskRun: vi.fn(),
+  conversation: { scratchpad: '', id: 'conversation-1', messages: [] as Array<{ role: 'user' | 'assistant'; content: string }> },
   setBrowsingActivity: vi.fn(),
   activate: vi.fn(),
   clearBrowsingActivity: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock('@bullebrowser/agent-core', async (importOriginal) => ({
 }));
 vi.mock('../connectors/service.js', () => ({ enabledConnectors: () => [], connectorCatalog: () => [] }));
 vi.mock('../storage/conversations.js', () => ({
-  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage, bind: () => true },
+  conversationStore: { get: () => mocks.conversation, appendMessage: mocks.appendMessage, appendTaskRun: mocks.appendTaskRun, bind: () => true },
 }));
 vi.mock('../funding/platform.js', () => ({ fundingPlatform: () => null }));
 vi.mock('../identity/service.js', () => ({ identityService: {} }));
@@ -48,6 +49,7 @@ vi.mock('../tabs/manager.js', () => ({ tabManager: {
   clearBrowsingActivity: mocks.clearBrowsingActivity,
 } }));
 vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {
+  dispose() {}
   constructor(_confirm: unknown, activity: (tabId: string) => void) {
     mocks.pageActivity.mockImplementation(activity);
   }
@@ -65,6 +67,7 @@ const request: AgentRunRequest = {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.conversation.messages = [];
+  mocks.conversation.scratchpad = '';
 });
 
 async function runTask(overrides: Partial<AgentRunRequest> = {}) {
@@ -219,4 +222,15 @@ describe('agent task results for live voice', () => {
       log.mockRestore();
     }
   });
+});
+
+ it('adds saved session notes to model context without storing them as the user message', async () => {
+  mocks.conversation.scratchpad = 'Approved focus: workforce development';
+  mocks.runAgent.mockResolvedValue('Ready.');
+  await runTask();
+  const input = mocks.runAgent.mock.calls[0]![0];
+  expect(input.userMessage).toContain('Approved focus: workforce development');
+  expect(input.userMessage).toContain('not verified web evidence');
+  expect(input.userRequest).toBe(request.userMessage);
+  expect(mocks.appendMessage.mock.calls[0]![1].content).toBe(request.userMessage);
 });

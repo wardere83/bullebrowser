@@ -23,6 +23,7 @@ import {
   type AgentConfirmRequest,
   type AgentResultEvent,
   type AgentRunRequest,
+  type TaskRunLog,
 } from '../../shared/ipc.js';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { conversationStore } from '../storage/conversations.js';
@@ -115,6 +116,9 @@ export async function startAgentRun(
   // message would sit in the chat with nothing happening and no error. Degrade
   // to running the task without the attached context instead.
   let composedMessage = req.userMessage;
+  if (conversation.scratchpad?.trim()) {
+    composedMessage += '\n\nUser-authored session notes (context, not verified web evidence):\n' + conversation.scratchpad;
+  }
   try {
     composedMessage += buildAttachmentAppendix(req.attachments, attachmentSources);
   } catch (err) {
@@ -131,10 +135,14 @@ export async function startAgentRun(
     activeTabId = created.id;
   }
 
+  const taskLog: TaskRunLog = { id: runId, startedAt: Date.now(), finishedAt: 0, status: 'completed', steps: [], calls: [], consents: [] };
   const ask = (message: string, kind: AgentConfirmRequest['kind']) =>
     new Promise<boolean>((resolve) => {
       const id = randomUUID();
-      pendingConfirms.set(id, resolve);
+      pendingConfirms.set(id, (approved) => {
+        taskLog.consents.push({ kind, approved, at: Date.now() });
+        resolve(approved);
+      });
       win.webContents.send(IPC.AGENT_CONFIRM_REQUEST, {
         runId,
         id,
@@ -231,6 +239,7 @@ export async function startAgentRun(
         // Choosing a browser task and submitting its answer explicitly starts browsing.
         requestBrowseAccess: req.browserTask ? undefined : () => ask(req.userMessage, 'browse_access'),
         budget: req.budget ?? getSettings().stepBudget,
+        onToolRecord: (record) => { taskLog.calls!.push(record); },
         onCompletion: (outcome) => {
           if (outcome.status === 'incomplete') { status = 'failed'; error = outcome.reason; }
         },
@@ -243,10 +252,9 @@ export async function startAgentRun(
           // Publish completion after the final answer has been saved, so both
           // the chat refresh and a waiting voice tool receive the same result.
           if (step.type === 'done') return;
-          win.webContents.send(IPC.AGENT_STEP, {
-            runId,
-            step: stepToEvent(step),
-          });
+          const event = stepToEvent(step);
+          taskLog.steps.push(event);
+          win.webContents.send(IPC.AGENT_STEP, { runId, step: event });
         },
       });
     } catch (err) {
@@ -264,8 +272,16 @@ export async function startAgentRun(
         } else assistantText = `This task could not finish: ${error}\n\nYour request is saved in this conversation. You can ask me to try again without retyping it.`;
       }
     } finally {
+      runtime.dispose();
       tabManager.clearBrowsingActivity(runId);
       try {
+        taskLog.finishedAt = Date.now();
+        taskLog.status = status;
+        taskLog.steps.push({ kind: 'text', text: assistantText, ts: taskLog.finishedAt });
+        taskLog.steps.push(status === 'failed'
+          ? { kind: 'error', message: error ?? 'Task failed.', ts: taskLog.finishedAt }
+          : { kind: 'done', ts: taskLog.finishedAt });
+        conversationStore.appendTaskRun(req.conversationId, taskLog);
         if (assistantText) {
           conversationStore.appendMessage(req.conversationId, {
             role: 'assistant',
@@ -343,6 +359,7 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
     case 'tool_call':
       return {
         kind: 'tool_call',
+        callId: step.callId,
         toolName: step.toolName ?? 'unknown',
         detail: step.detail ?? '',
         input: step.data,
@@ -351,6 +368,8 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
     case 'tool_result':
       return {
         kind: 'tool_result',
+        callId: step.callId,
+        durationMs: step.durationMs,
         toolName: step.toolName ?? 'unknown',
         output: step.data,
         ts,
@@ -360,6 +379,8 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
     case 'error':
       return {
         kind: 'error',
+        callId: step.callId,
+        durationMs: step.durationMs,
         toolName: step.toolName,
         message: step.detail ?? '',
         ...((step.data as { code?: string } | undefined)?.code ? { code: (step.data as { code: string }).code } : {}),
@@ -382,3 +403,8 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
 }
 
 export function hasActiveAgentRuns(): boolean { return runs.size > 0; }
+
+/** The Stop Task shortcut: halts whatever is running, from wherever focus is. */
+export function cancelAllAgentRuns(): void {
+  for (const runId of [...runs.keys()]) cancelAgentRun(runId);
+}

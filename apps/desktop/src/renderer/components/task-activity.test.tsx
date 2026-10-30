@@ -117,3 +117,15 @@ describe('real browser task activity', () => {
     expect(html).not.toContain('>Done<');
   });
 });
+
+it('matches overlapping calls by id even when the same tool finishes out of order', () => {
+  const steps: AgentStepEvent[] = [
+    { ...call('getPageMetadata'), callId: 'first' },
+    { ...call('getPageMetadata'), callId: 'second' },
+    { ...result('getPageMetadata'), callId: 'first', durationMs: 12 },
+  ];
+  expect(activityActions(steps, 'running')).toMatchObject([
+    { callId: 'first', state: 'completed', durationMs: 12 },
+    { callId: 'second', state: 'running' },
+  ]);
+});

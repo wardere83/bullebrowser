@@ -43,6 +43,8 @@ jobs:
       - run: pnpm -r lint
       - name: Tests with coverage gate
         run: pnpm --filter @bullebrowser/agent-core test
+      - name: Agent benchmark gate contracts
+        run: node --test scripts/agent-benchmark-gate.test.mjs scripts/run-agent-benchmarks.test.mjs
       - name: Desktop unit tests
         run: pnpm --filter @bullebrowser/desktop test
       - name: Widget authorization tests
@@ -66,7 +68,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, macos-15-intel, windows-2022]
+        os: [ubuntu-22.04, macos-15, macos-15-intel, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

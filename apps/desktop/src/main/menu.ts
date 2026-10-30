@@ -11,6 +11,7 @@
 import { app, Menu, MenuItem, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { product } from '@bullebrowser/brand-tokens';
 import { tabManager } from './tabs/manager.js';
+import { cancelAllAgentRuns } from './agent/run.js';
 
 export function setupAppMenu(win: BrowserWindow) {
   const isMac = process.platform === 'darwin';
@@ -72,6 +73,14 @@ export function setupAppMenu(win: BrowserWindow) {
             const id = activeTab();
             if (id) void tabManager.reload(id);
           },
+        },
+        {
+          // Stopping a task matters most while the agent is driving a page —
+          // exactly when focus is inside that page, out of the renderer's reach.
+          // Not Ctrl+Shift+Escape off the Mac: Windows reserves it for Task Manager.
+          label: 'Stop Task',
+          accelerator: isMac ? 'Cmd+Shift+Escape' : 'Shift+Escape',
+          click: () => cancelAllAgentRuns(),
         },
         { type: 'separator' },
         { role: 'resetZoom' },

@@ -21,6 +21,7 @@ import { RealtimeVoice } from './RealtimeVoice.js';
 import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
 import { BrowserProgress, TaskActivity } from './TaskActivity.js';
+import { SessionScratchpad } from './SessionScratchpad.js';
 import { liveAssistantText } from './task-activity.js';
 import type {
   AppSettings,
@@ -56,6 +57,8 @@ const NO_STEPS: AgentStepEvent[] = [];
 function browserBridge(): BrowserBridge {
   return window.bullebrowser;
 }
+
+const IS_MAC = navigator.userAgent.includes('Macintosh');
 
 export function AiPanel() {
   const current = useAgentStore((s) => s.current);
@@ -586,6 +589,7 @@ export function AiPanel() {
         />
       )}
 
+      {current && <SessionScratchpad key={current.id} conversation={current} />}
       <div className="relative flex flex-1 flex-col overflow-hidden">
       <div
         ref={messagesRef}
@@ -606,8 +610,10 @@ export function AiPanel() {
           <Bubble key={i} role={m.role} content={m.content} />
         ))}
         {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call')) && (
-          <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} />
+          <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
         )}
+        {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity archived key={run.id} steps={run.steps}
+          status={run.status === 'failed' ? 'error' : 'idle'} currentStep="" audit={run} />)}
         {liveReply && <Bubble role="assistant" content={liveReply} live />}
         {status !== 'running' && <BudgetSpent steps={steps} onContinue={(b) => void sendMessage('Continue the task from where you stopped.', [], b)} />}
       </div>
@@ -762,7 +768,9 @@ export function AiPanel() {
                   if (runId) void window.bullebrowser.agent.cancel(runId);
                 }}
                 className="h-9 rounded border border-danger bg-white px-3 text-sm font-medium text-danger hover:bg-danger/10"
-                title="Stop the running task"
+                // The shortcut is the View > Stop Task menu accelerator (main/menu.ts).
+                title={`Stop the running task (${IS_MAC ? 'Command + Shift + Escape' : 'Shift + Escape'})`}
+                aria-keyshortcuts={IS_MAC ? 'Meta+Shift+Escape' : 'Shift+Escape'}
               >
                 Stop
               </button>

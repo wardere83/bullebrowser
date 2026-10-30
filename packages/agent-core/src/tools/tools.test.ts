@@ -208,3 +208,13 @@ describe('every tool delegates to the runtime', () => {
     expect(ctx.runtime.readPage).toHaveBeenCalledWith('t7');
   });
 });
+
+it('uses the metadata adapter without extracting the body, preserving the fallback for other hosts', async () => {
+  const ctx = makeCtx();
+  ctx.runtime.getPageMetadata = vi.fn(async () => ({ title: 'Metadata', url: 'https://agency.gov' }));
+  expect(await tools.getPageMetadata.execute({}, ctx)).toMatchObject({ title: 'Metadata', url: 'https://agency.gov' });
+  expect(ctx.runtime.readPage).not.toHaveBeenCalled();
+  delete ctx.runtime.getPageMetadata;
+  expect(await tools.getPageMetadata.execute({}, ctx)).toMatchObject({ title: 'T' });
+  expect(ctx.runtime.readPage).toHaveBeenCalledOnce();
+});

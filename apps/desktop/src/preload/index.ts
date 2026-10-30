@@ -81,6 +81,7 @@ const bridge: BrowserBridge = {
     list: () => ipcRenderer.invoke(IPC.CONVERSATION_LIST),
     get: (id) => ipcRenderer.invoke(IPC.CONVERSATION_GET, id),
     create: () => ipcRenderer.invoke(IPC.CONVERSATION_NEW),
+    setScratchpad: (id, text) => ipcRenderer.invoke(IPC.CONVERSATION_SCRATCHPAD, id, text),
     delete: (id) => ipcRenderer.invoke(IPC.CONVERSATION_DELETE, id),
   },
   agent: {

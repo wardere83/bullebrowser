@@ -24,6 +24,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  agent-benchmark:
+    uses: ./.github/workflows/agent-benchmark.yml
   build:
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -41,7 +43,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             target: mac
           - os: windows-2022
             target: win
@@ -376,7 +378,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, agent-benchmark]
     runs-on: ubuntu-22.04
     permissions:
       contents: write

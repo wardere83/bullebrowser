@@ -16,7 +16,7 @@ async function launch(provider: 'none' | 'anthropic' | 'openai' = 'none') {
     args: ['.', '--no-sandbox', `--user-data-dir=${mkdtempSync(join(tmpdir(), 'bullebrowser-identity-'))}`], env });
   const win = await app.firstWindow({ timeout: 20_000 });
   await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
-  await expect(win.locator('aside textarea')).toBeEnabled();
+  await expect(win.locator('aside textarea.prompt-input-field')).toBeEnabled();
   await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.conversations.list()).length)).toBeGreaterThan(0);
   await win.evaluate(() => {
     const events: string[] = [];
@@ -40,7 +40,7 @@ for (const provider of ['none', 'anthropic', 'openai'] as const) {
     try {
       const requests = [updateQuestion, 'How was BulleBrowser built?', 'What model are you?'];
       for (let index = 0; index < requests.length; index++) {
-        await win.locator('aside textarea').fill(requests[index]!);
+        await win.locator('aside textarea.prompt-input-field').fill(requests[index]!);
         await win.getByRole('button', { name: 'Send', exact: true }).click();
         await expect(win.locator('.md-prose')).toHaveCount(index + 1);
         const reply = win.locator('.md-prose').nth(index);
@@ -57,7 +57,7 @@ for (const provider of ['none', 'anthropic', 'openai'] as const) {
       await win.locator('.md-prose').last().getByRole('link', { name: 'support@bullebrowser.com', exact: true }).click();
       await expect.poll(() => app.evaluate(() => (globalThis as unknown as { __identityContacts: string[] }).__identityContacts)).toEqual(['mailto:support@bullebrowser.com']);
       expect(await win.evaluate(() => window.bullebrowser.tabs.list())).toEqual(tabsBefore);
-      await expect(win.locator('aside textarea')).toBeVisible();
+      await expect(win.locator('aside textarea.prompt-input-field')).toBeVisible();
     } finally { await app.close(); }
   });
 }
@@ -81,7 +81,7 @@ test('saved app questions and their follow-ups use the support answer without ch
     expect(await win.locator('.md-prose').innerText()).not.toMatch(/Claude|Anthropic/);
     const retained = JSON.parse(readFileSync(path, 'utf8')).conversations[0].messages[1].content.includes('Claude');
     expect(retained).toBe(true);
-    await win.locator('aside textarea').fill('Both');
+    await win.locator('aside textarea.prompt-input-field').fill('Both');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(win.locator('.md-prose')).toHaveCount(2);
     await expect(win.locator('.md-prose').last()).toContainText('support@bullebrowser.com');

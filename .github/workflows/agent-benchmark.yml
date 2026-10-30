@@ -1,0 +1,73 @@
+name: Agent browser benchmarks
+on:
+  schedule:
+    - cron: '23 10 * * *'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-22.04
+    outputs:
+      configured: ${{ steps.config.outputs.configured }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Unset configuration means evaluation has not been provisioned yet:
+      # releases publish, and the run says plainly that no benchmark ran. It
+      # never records a score or a pass. Once AGENT_EVAL_CONFIG is set, an
+      # incomplete configuration or a failing evaluation blocks publication.
+      - name: Validate evaluator configuration
+        id: config
+        env:
+          AGENT_EVAL_CONFIG: ${{ vars.AGENT_EVAL_CONFIG }}
+        run: |
+          if [ -z "$(printf '%s' "$AGENT_EVAL_CONFIG" | tr -d '[:space:]')" ]; then
+            echo '::warning title=No benchmark evidence::AGENT_EVAL_CONFIG is not set, so no agent benchmarks ran for this revision. Publication is not gated on benchmarks until it is configured. See benchmarks/README.md.'
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node --input-type=module <<'JS'
+          import { configurationErrors } from './scripts/run-agent-benchmarks.mjs';
+          let config;
+          try { config = JSON.parse(process.env.AGENT_EVAL_CONFIG); }
+          catch { console.error('AGENT_EVAL_CONFIG must be valid JSON. See benchmarks/README.md.'); process.exit(1); }
+          const errors = configurationErrors(config);
+          if (errors.length) {
+            console.error('Real benchmark configuration is incomplete. See benchmarks/README.md.');
+            for (const error of errors) console.error(error);
+            process.exit(1);
+          }
+          JS
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
+  evaluate:
+    needs: readiness
+    if: needs.readiness.outputs.configured == 'true'
+    # Defaults to hosted Linux. Private installed datasets may require an isolated runner.
+    runs-on: ${{ fromJSON(vars.AGENT_EVAL_RUNNER || '"ubuntu-22.04"') }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Materialize administrator-owned evaluator configuration
+        env:
+          AGENT_EVAL_CONFIG: ${{ vars.AGENT_EVAL_CONFIG }}
+        run: |
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs';
+          writeFileSync(process.env.RUNNER_TEMP + '/agent-eval-config.json', process.env.AGENT_EVAL_CONFIG, { mode: 0o600 });
+          JS
+      - name: Run real suites and enforce release thresholds
+        run: node scripts/run-agent-benchmarks.mjs --config "$RUNNER_TEMP/agent-eval-config.json" --repository "$GITHUB_WORKSPACE" --revision "$GITHUB_SHA" --output "$RUNNER_TEMP/candidate.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-benchmark-evidence
+          path: ${{ runner.temp }}/candidate.json
+          retention-days: 30
+          if-no-files-found: warn

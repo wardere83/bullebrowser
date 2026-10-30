@@ -1,4 +1,4 @@
-import type { ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
+import type { ToolCallRecord, ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
 import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessibility.js';
 // Single source of truth for IPC channel names and the typed bridge
 // surface. Both the preload script and the renderer consume this so we
@@ -68,6 +68,7 @@ export const IPC = {
   CONVERSATION_GET: 'conversation:get',
   CONVERSATION_NEW: 'conversation:new',
   CONVERSATION_DELETE: 'conversation:delete',
+  CONVERSATION_SCRATCHPAD: 'conversation:scratchpad',
   // App
   APP_GET_INFO: 'app:get-info',
   APP_QUIT: 'app:quit',
@@ -181,7 +182,20 @@ export interface ConversationSummary {
   messageCount: number;
 }
 
+export interface TaskRunLog {
+  id: string;
+  startedAt: number;
+  finishedAt: number;
+  status: 'completed' | 'failed' | 'cancelled';
+  steps: AgentStepEvent[];
+  calls?: ToolCallRecord[];
+  consents: { kind: 'browse_access' | 'destructive'; approved: boolean; at: number }[];
+}
+
 export interface ConversationDetail extends ConversationSummary {
+  /** User-authored notes for this conversation only. */
+  scratchpad?: string;
+  taskRuns?: TaskRunLog[];
   messages: { role: 'user' | 'assistant'; content: string; timestamp: number }[];
   /**
    * The organization this chat belongs to. A chat is bound to the organization
@@ -303,6 +317,7 @@ export interface BrowserBridge {
     list(): Promise<ConversationSummary[]>;
     get(id: string): Promise<ConversationDetail | null>;
     create(): Promise<ConversationDetail>;
+    setScratchpad(id: string, text: string): Promise<void>;
     delete(id: string): Promise<void>;
   };
   agent: {

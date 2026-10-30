@@ -13,7 +13,7 @@ const SENSITIVE_FIELD_RE =
 // over-redacting a log line costs nothing, under-redacting leaks. This is the
 // original blanket pattern, kept as-is deliberately — only the *blocking*
 // decision above needed to become precise.
-const REDACT_KEY_RE = /(password|passcode|token|secret|ssn|social|credit|card|cvv)/i;
+const REDACT_KEY_RE = /(password|passcode|token|secret|ssn|social|credit|card|cvv|api.?key|authorization|cookie)/i;
 
 export const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
 
@@ -109,7 +109,20 @@ export class PrivacyPolicyEngine implements PolicyEngine {
     if (typeof value === 'string') {
       return value
         .replace(/sk-[A-Za-z0-9_-]{16,}/g, '[REDACTED_API_KEY]')
-        .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [REDACTED_TOKEN]');
+        .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [REDACTED_TOKEN]')
+        .replace(/https?:\/\/[^\s<>"']+/gi, (raw) => {
+          try {
+            const url = new URL(raw);
+            let changed = false;
+            if (url.username || url.password) { url.username = ''; url.password = ''; changed = true; }
+            for (const key of [...url.searchParams.keys()]) {
+              if (/token|secret|api.?key|signature|credential|authorization|access.?key/i.test(key)) {
+                url.searchParams.set(key, '[REDACTED]'); changed = true;
+              }
+            }
+            return changed ? url.href : raw;
+          } catch { return raw; }
+        });
     }
     if (Array.isArray(value)) return value.map((v) => this.redact(v));
     if (!value || typeof value !== 'object') return value;

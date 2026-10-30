@@ -133,9 +133,9 @@ test('white chat keeps the composer, Markdown, history and attachment menu reada
     await win.getByRole('button', { name: 'History', exact: true }).click();
     await win.getByRole('button', { name: /Light appearance fixture/ }).click();
     await expect(win.getByRole('heading', { name: 'Research summary' })).toBeVisible();
-    await win.locator('aside textarea').fill('A readable draft');
+    await win.locator('aside textarea.prompt-input-field').fill('A readable draft');
     const styles = await win.evaluate(() => {
-      const selectors = ['aside', 'aside .prompt-input-shell', 'aside textarea', '.chat-user-message', '.md-prose', '.md-prose a', '.md-prose code', '.md-prose pre', '.md-prose th', '.md-prose blockquote'];
+      const selectors = ['aside', 'aside .prompt-input-shell', 'aside textarea.prompt-input-field', '.chat-user-message', '.md-prose', '.md-prose a', '.md-prose code', '.md-prose pre', '.md-prose th', '.md-prose blockquote'];
       const rgb = (value: string) => value.match(/[\d.]+/g)!.map(Number);
       const luminance = (value: number[]) => value.slice(0, 3).map((v) => v / 255).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
       return selectors.map((selector) => {
@@ -180,7 +180,7 @@ test('the browsing cloud follows real keyless consent, completion and Stop witho
     }, site.url);
     await holdReads(app);
     const begin = async () => {
-      await win.locator('aside textarea').fill('summarize this page');
+      await win.locator('aside textarea.prompt-input-field').fill('summarize this page');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
       expect(await readPage(app, tabId, cloudProbe)).toBeNull();
@@ -361,7 +361,7 @@ test('the prompt border travels only during interaction and the intro stays whit
   try {
     const intro = win.getByRole('region', { name: 'BulleBrowser funding introduction' });
     await expect(intro).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-    const input = win.locator('aside textarea');
+    const input = win.locator('aside textarea.prompt-input-field');
     const train = win.locator('aside .prompt-border-train');
     await win.mouse.move(0, 0);
     await expect(input).not.toBeFocused();

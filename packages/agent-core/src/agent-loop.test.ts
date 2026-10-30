@@ -925,3 +925,26 @@ describe('sealed reference context', () => {
     expect(turn).toContain('<untrusted_page_data source="knowledge:Annual_Report.pdf_p2">\nServes 400 families.\n</untrusted_page_data>');
   });
 });
+
+it('starts a streamed browser call before the model finishes its turn without running it twice', async () => {
+  let finish!: () => void;
+  const hold = new Promise<void>((resolve) => { finish = resolve; });
+  async function* stream() {
+    yield { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: 'early', name: 'navigate', input: {} } };
+    yield { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"url":"https://agency.gov"}' } };
+    yield { type: 'content_block_stop', index: 0 };
+    await hold;
+    yield { type: 'message_delta', delta: { stop_reason: 'tool_use', stop_sequence: null }, usage: { output_tokens: 20 } };
+  }
+  createMock.mockReset();
+  createMock.mockResolvedValueOnce(stream());
+  createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('The page is open.')] });
+  const context = makeContext();
+  const task = runAgent({ apiKey: 'test-key', model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'Open https://agency.gov', context, onStep: () => {} });
+  for (let i = 0; i < 100; i++) await Promise.resolve();
+  expect(context.runtime.navigate).toHaveBeenCalledOnce();
+  expect(createMock).toHaveBeenCalledOnce();
+  finish();
+  await task;
+  expect(context.runtime.navigate).toHaveBeenCalledOnce();
+});

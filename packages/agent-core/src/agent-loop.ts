@@ -1,3 +1,4 @@
+import { consumeTurn, ToolDispatchQueue } from './stream-turn.js';
 import { TaskOutcomeTracker } from './task-outcome.js';
 import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
 import { browserTask } from './browser-tasks.js';
@@ -240,6 +241,8 @@ export async function executeToolCall(
   const name = rawName as ToolName;
   const input = (rawInput ?? {}) as Record<string, unknown>;
   const startedAt = Date.now();
+  const publish = onStep;
+  onStep = (step) => publish({ ...step, callId, ...(['tool_result', 'error'].includes(step.type) ? { durationMs: Date.now() - startedAt } : {}) });
   let attempts = 0;
   let inspectedFacts: TargetFacts | null = null;
   let verifiedOutput: unknown;
@@ -253,7 +256,7 @@ export async function executeToolCall(
       ...(inspectedFacts ? { targetFacts: inspectedFacts } : {}),
       ...(!outcome.isError && verifiedOutput !== undefined ? { output: policy.redact(previewOutput(verifiedOutput)) } : {}),
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
-      result: truncate(outcome.imagePngBase64 ? '[screenshot]' : outcome.text, 4000),
+      result: policy.redact(truncate(outcome.imagePngBase64 ? '[screenshot]' : outcome.text, 4000)) as string,
       attempts,
       startedAt,
       durationMs: Date.now() - startedAt,
@@ -688,19 +691,35 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     // already in flight. Without it, cancelling was only checked between turns
     // — the user hit Stop and then waited out the whole current response.
     elideOldToolResults(messages);
-    const response = await withTurnSignal(context.signal, (signal) =>
-      client.messages.create(
-        {
-          model: input.model,
-          max_tokens: maxTokens,
-          ...(thinking ? { thinking } : {}),
-          system,
-          tools: toolDefs,
-          messages,
-        },
-        { signal },
-      ),
-    );
+    const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
+      if (context.signal.aborted) throw new Error('cancelled');
+      const charge = budget.charge(toolUse.name);
+      if (!charge.ok) return { text: budgetExhausted(budget, onStep), isError: true };
+      const outcome = await executeToolCall(toolUse.id, toolUse.name, toolUse.input,
+        context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
+      if (charge.warn) budgetWarning(budget, outcome, onStep);
+      return outcome;
+    }, new Set(extraTools.keys()));
+    const response = await withTurnSignal(context.signal, async (signal) => {
+      try {
+        const source = await client.messages.create(
+          {
+            model: input.model,
+            stream: true,
+            max_tokens: maxTokens,
+            ...(thinking ? { thinking } : {}),
+            system,
+            tools: toolDefs,
+            messages,
+          },
+          { signal },
+        );
+        return await consumeTurn(source, (tool) => { void dispatch.enqueue(tool); });
+      } finally {
+        // Never leave browser work detached if the model stream fails.
+        await dispatch.settled();
+      }
+    });
 
     // The product's wording is applied to the text itself, before the identity
     // check: that check ends the run whenever it changes anything, and a
@@ -722,7 +741,8 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     // The model hit the per-turn token cap mid-answer. Preserve what it wrote,
     // ask it to continue, and accumulate — otherwise the reply is silently
     // truncated. (Bounded by the outer turn limit.)
-    if (response.stop_reason === 'max_tokens') {
+    const hasTools = response.content.some((block) => block.type === 'tool_use');
+    if (response.stop_reason === 'max_tokens' && !hasTools) {
       if (turnText) onStep({ type: 'text', detail: turnText });
       finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
       messages.push({ role: 'assistant', content: response.content });
@@ -735,7 +755,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       continue;
     }
 
-    if (response.stop_reason !== 'tool_use') {
+    if (response.stop_reason !== 'tool_use' && !hasTools) {
       const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: response.content });
@@ -760,31 +780,10 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
     );
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const toolUse of toolUses) {
-      if (context.signal.aborted) throw new Error('cancelled');
-      const charge = budget.charge(toolUse.name);
-      if (!charge.ok) {
-        toolResults.push({
-          type: 'tool_result',
-          tool_use_id: toolUse.id,
-          content: budgetExhausted(budget, onStep),
-          is_error: true,
-        });
-        continue;
-      }
-      const outcome = await executeToolCall(
-        toolUse.id,
-        toolUse.name,
-        toolUse.input,
-        context,
-        policy,
-        onStep,
-        gate,
-        extraTools,
-        { onRecord: input.onToolRecord },
-      );
-      if (charge.warn) budgetWarning(budget, outcome, onStep);
-      toolResults.push(toAnthropicToolResult(toolUse.id, outcome));
+    // Streamed calls reuse their in-flight result. Non-streaming hosts enqueue here.
+    const outcomes = await Promise.all(toolUses.map((tool) => dispatch.enqueue(tool)));
+    for (const [index, toolUse] of toolUses.entries()) {
+      toolResults.push(toAnthropicToolResult(toolUse.id, outcomes[index]!));
     }
 
     messages.push({ role: 'user', content: toolResults });
@@ -961,36 +960,26 @@ async function runOpenAiTurns(args: {
     // Every tool_call must get a matching 'tool' message or the next request is
     // rejected — so this loop must not skip any call, even past the limit.
     const images: string[] = [];
-    for (const call of calls) {
+    const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
       if (context.signal.aborted) throw new Error('cancelled');
-      const charge = budget.charge(call.function?.name ?? '');
-      if (!charge.ok) {
-        messages.push({ role: 'tool', tool_call_id: call.id, content: budgetExhausted(budget, onStep) });
-        continue;
-      }
-
+      const charge = budget.charge(toolUse.name);
+      if (!charge.ok) return { text: budgetExhausted(budget, onStep), isError: true };
+      const outcome = await executeToolCall(toolUse.id, toolUse.name, toolUse.input,
+        context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
+      if (charge.warn) budgetWarning(budget, outcome, onStep);
+      return outcome;
+    }, new Set(extraTools.keys()));
+    const outcomes = await Promise.all(calls.map(async (call) => {
       const { name, input: parsedInput, error } = parseToolArguments(call);
       if (error) {
         onStep({ type: 'error', toolName: name, detail: error });
-        messages.push({ role: 'tool', tool_call_id: call.id, content: error });
-        continue;
+        return { text: error, isError: true } as ToolCallOutcome;
       }
-
-      const outcome = await executeToolCall(
-        call.id,
-        name,
-        parsedInput,
-        context,
-        policy,
-        onStep,
-        gate,
-        extraTools,
-        { onRecord: input.onToolRecord },
-      );
-      if (charge.warn) budgetWarning(budget, outcome, onStep);
+      return dispatch.enqueue({ type: 'tool_use', id: call.id, name, input: parsedInput });
+    }));
+    for (const [index, call] of calls.entries()) {
+      const outcome = outcomes[index]!;
       messages.push({ role: 'tool', tool_call_id: call.id, content: outcome.text });
-      // There is no image tool_result in this API, so a screenshot follows as a
-      // user message once all the tool replies are in.
       if (outcome.imagePngBase64) images.push(outcome.imagePngBase64);
     }
 

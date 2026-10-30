@@ -150,14 +150,15 @@ async function expectNativeBounds(app: ElectronApplication, win: Page) {
   }).toEqual({ x: 0, topDifference: 0, rightDifference: 0, bottomDifference: 0, widthDifference: 0, heightDifference: 0 });
 }
 
-async function holdActualPageRead(app: ElectronApplication) {
-  await app.evaluate(() => {
+async function holdActualPageRead(app: ElectronApplication, once = false) {
+  await app.evaluate((_electron, holdOnce) => {
     const runtime = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.runtime;
     const prototype = Object.getPrototypeOf(runtime);
     const original = prototype.readPage;
     const probe: ReadProbe = { entered: 0, release: null };
     (globalThis as Record<string, unknown>).__browsingRead = probe;
     prototype.readPage = async function (tabId: string) {
+      if (holdOnce) prototype.readPage = original;
       // Only pause after the real runtime has read the real native document.
       // The agent's consent, tool events, answer and storage run normally.
       const result = await original.call(this, tabId);
@@ -165,7 +166,7 @@ async function holdActualPageRead(app: ElectronApplication) {
       await new Promise<void>((resolve) => { probe.release = resolve; });
       return result;
     };
-  });
+  }, once);
 }
 
 async function releasePageRead(app: ElectronApplication) {
@@ -337,7 +338,7 @@ test('the keyless address-bar assistant browses only after approval and reads th
     await expect.poll(() => app.evaluate(() => (globalThis as unknown as { __browsingRead: ReadProbe }).__browsingRead.entered)).toBe(1);
     const activity = win.getByRole('region', { name: 'Task activity', exact: true });
     const steps = activity.getByRole('log', { name: 'Browser task steps', exact: true });
-    await expect(activity.getByRole('button')).toHaveAttribute('aria-expanded', 'true');
+    await expect(activity.getByRole('button', { name: 'Toggle task activity', exact: true })).toHaveAttribute('aria-expanded', 'true');
     await expect(steps).toBeVisible();
     await expect(steps).toContainText('Reading the page');
     await expect(steps).toContainText('In progress');
@@ -349,8 +350,8 @@ test('the keyless address-bar assistant browses only after approval and reads th
     await expect(win.locator('aside').getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
     // Completed steps stay associated with the completed answer. They can be
     // reviewed after the running view folds up, without starting another task.
-    await expect(activity.getByRole('button')).toHaveAttribute('aria-expanded', 'false');
-    await activity.getByRole('button').click();
+    await expect(activity.getByRole('button', { name: 'Toggle task activity', exact: true })).toHaveAttribute('aria-expanded', 'false');
+    await activity.getByRole('button', { name: 'Toggle task activity', exact: true }).click();
     await expect(steps).toContainText('Reading the page');
     await expect(steps).toContainText('Done');
     await expect(steps).not.toContainText('In progress');
@@ -421,7 +422,7 @@ test('each browser option asks a short app question instead of filling the compo
     for (const [label, question] of tasks) {
       await win.getByRole('button', { name: label, exact: true }).click();
       await expect(win.getByRole('status').filter({ hasText: question })).toBeVisible();
-      await expect(win.locator('aside textarea')).toHaveValue('');
+      await expect(win.locator('aside textarea.prompt-input-field')).toHaveValue('');
       await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
     }
     // Composer motion is verified in the appearance suite, independently of task selection.
@@ -435,7 +436,7 @@ test('follow-up retries remember the task without asking the user to repeat it',
     await enterAddress(win, `${site.url}/one`);
     await expectPage(app, win, `${site.url}/one`, 'Community funding source');
     for (const [index, prompt] of ['Summarize this page', 'Try again', 'Continue'].entries()) {
-      await win.locator('aside textarea').fill(prompt);
+      await win.locator('aside textarea.prompt-input-field').fill(prompt);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       const allow = win.getByRole('button', { name: 'Allow Access', exact: true });
       await expect(allow).toBeVisible();
@@ -464,7 +465,7 @@ for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
         const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
         session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://\u0064uckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
       }, { base: source.url, layout });
-      await win.locator('aside textarea').fill('Find grants for California schools');
+      await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
@@ -701,7 +702,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
         return original(input, init);
       };
     }, base);
-    await win.locator('aside textarea').fill('Find grants for California schools');
+    await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
     await expect(win.getByRole('status', { name: 'Browser progress' })).toContainText('Waiting for browsing access');
@@ -711,7 +712,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
     await expect(activity.getByText(/pages? read/)).toBeVisible();
     await expect(win.locator('.md-prose')).toContainText('3 source pages', { timeout: 30_000 });
     await expect(activity.getByText('3 pages read', { exact: true })).toBeVisible();
-    await activity.getByRole('button').click();
+    await activity.getByRole('button', { name: 'Toggle task activity', exact: true }).click();
     await expect(activity.getByRole('log')).toContainText('Reading the page');
     await expect(activity.getByRole('log')).not.toContainText('\u0064uckduckgo.com');
     await expect.poll(async () => (await pageState(app)).url).toBe(base + '/program-1');
@@ -730,7 +731,7 @@ for (const option of [
   { label: 'Compare grant opportunities', answer: 'Accessible classrooms in California schools' },
   { label: 'Explore this page', answer: 'Find the eligibility and application requirements' },
 ]) {
-  test(`${option.label} asks once then browses visible source tabs at a readable tempo`, async () => {
+  test(`${option.label} asks once then shows real progress and reads visible source tabs`, async () => {
     const server = createServer((req, res) => {
       res.setHeader('Content-Type', 'text/html');
       res.end(`<html><head><title>Education funding options</title></head><body><h1>School grant programs</h1><p style="margin-bottom:900px">${req.url}: grants support accessible classrooms.</p><h2>Eligibility and application requirements</h2><p>Schools can request funding. Check program criteria.</p><a href="/program-1">Education grant one</a><a href="/program-2">Education grant two</a><a href="/program-3">Education grant three</a></body></html>`);
@@ -749,18 +750,19 @@ for (const option of [
         };
       }, base);
       await win.getByRole('button', { name: option.label, exact: true }).click();
-      await expect(win.locator('aside textarea')).toHaveValue('');
-      await win.locator('aside textarea').fill(option.answer);
-      const started = Date.now();
+      await expect(win.locator('aside textarea.prompt-input-field')).toHaveValue('');
+      await win.locator('aside textarea.prompt-input-field').fill(option.answer);
+      await holdActualPageRead(app, true);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeHidden();
       await expect.poll(() => app.evaluate(async () => {
         const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
         return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_agent_cursor__')?.shadowRoot?.querySelector('.ptr'))");
       })).toBe(true);
+      await expect.poll(() => app.evaluate(() => (globalThis as unknown as { __browsingRead: ReadProbe }).__browsingRead.entered)).toBe(1);
       await expect(win.getByRole('status', { name: 'Browser progress' })).toBeVisible();
+      await releasePageRead(app);
       await expect(win.locator('.md-prose')).toContainText('3 source pages', { timeout: 30_000 });
-      expect(Date.now() - started).toBeGreaterThan(4_000);
       const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
       expect(tabs.filter((tab) => tab.url.includes('/program-'))).toHaveLength(3);
       expect(tabs.find((tab) => tab.active)?.url).toBe(base + '/program-1');
@@ -779,7 +781,7 @@ test('live Bing search discovers and reads Seattle funding sources', async () =>
   const { app, win, close } = await launch();
   try {
     await app.evaluate(() => { process.env.BRAVE_SEARCH_API_KEY = ''; });
-    await win.locator('aside textarea').fill('Find open grants funding Seattle');
+    await win.locator('aside textarea.prompt-input-field').fill('Find open grants funding Seattle');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(win.locator('.md-prose')).toContainText('source pages', { timeout: 90_000 });

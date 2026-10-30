@@ -1,4 +1,4 @@
-import { presentationPause } from './browser/presentation.js';
+import { ElementMapCache } from './browser/element-cache.js';
 // ToolRuntime implementation that drives the active WebContentsView. Page
 // actions run as scripts injected with executeJavaScript (see the in-page
 // helpers at the bottom); keys go through sendInputEvent, and navigation
@@ -60,10 +60,11 @@ export interface ConfirmDelegate {
 const SCREENSHOT_MAX_WIDTH = 1280;
 
 export class DesktopToolRuntime implements ToolRuntime {
+  private readonly elementMaps = new ElementMapCache<{ elements: string[] }>();
+  private readonly cacheWatchers = new Map<WebContents, () => void>();
   private readonly touched = new Set<WebContents>();
   private readonly actionId = `${Date.now()}-${Math.random()}`;
   // Levels the user allowed for this task only ("Allow once").
-  private readingPresentation: { tabId: string; signal: AbortSignal } | undefined;
   private readonly grantedForTask = new Map<string, PermissionLevel>();
 
   constructor(
@@ -85,6 +86,17 @@ export class DesktopToolRuntime implements ToolRuntime {
     }, { once: true });
   }
 
+  dispose(): void {
+    for (const [wc, invalidate] of this.cacheWatchers) {
+      if (wc.isDestroyed()) continue;
+      wc.off('did-start-navigation', invalidate);
+      wc.off('dom-ready', invalidate);
+      wc.off('destroyed', invalidate);
+    }
+    this.cacheWatchers.clear();
+    this.touched.clear();
+  }
+
   private wcFor(tabId: string, navigationOnly = false): WebContents {
     if (this.signal?.aborted) throw new Error('cancelled');
     const view = tabManager.getView(tabId);
@@ -94,29 +106,34 @@ export class DesktopToolRuntime implements ToolRuntime {
       assertAllowedDestination(view.webContents.getURL());
       this.onPageActivity?.(tabId);
     }
+    if (!this.cacheWatchers.has(view.webContents)) {
+      const invalidate = () => this.elementMaps.invalidate(tabId);
+      this.cacheWatchers.set(view.webContents, invalidate);
+      view.webContents.on('did-start-navigation', invalidate);
+      view.webContents.on('dom-ready', invalidate);
+      view.webContents.once('destroyed', invalidate);
+    }
     this.touched.add(view.webContents);
     return view.webContents;
   }
 
   async presentAction(tabId: string, name: string, signal: AbortSignal): Promise<void> {
     if (signal.aborted) throw new Error('cancelled');
+    if (!['read_page', 'find_elements', 'getPageMetadata', 'getSelection', 'listLinks', 'screenshot', 'list_tabs'].includes(name)) this.elementMaps.invalidate(tabId);
     const navigationOnly = name === 'navigate' || name === 'new_tab';
     const wc = this.wcFor(tabId, navigationOnly);
     if (navigationOnly) {
       // Recovery can navigate to an allowed source without reading or
       // decorating the blocked page it is leaving behind.
-      this.readingPresentation = undefined;
       if (isBlockedDestination(tabManager.getNavigationUrl(tabId) ?? '') || isBlockedDestination(wc.getURL())) return;
       this.onPageActivity?.(tabId);
     }
-    await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
+    await wc.executeJavaScript(`${AGENT_CURSOR}; window.__bbToolToast(${JSON.stringify(name.replace(/_/g, ' ') + '…')}); (() => {
       const element = document.querySelector('main h1, article h1, h1, main p, article p');
       const rect = element?.getBoundingClientRect();
       if (rect && rect.top >= 0 && rect.bottom < innerHeight) window.__bbCursor(element, { halo: true });
       else window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
     })()` ).catch(() => {});
-    await presentationPause(380, signal);
-    this.readingPresentation = name === 'read_page' ? { tabId, signal } : undefined;
   }
 
   // What every targeted page call starts with: the helpers, this frame's ref
@@ -139,6 +156,8 @@ export class DesktopToolRuntime implements ToolRuntime {
     assertWebUrl(url);
     const wc = this.wcFor(tabId, true);
     const mode = opts.wait ?? 'idle';
+    // Chromium warms only the already-approved destination; never prefetch page content.
+    try { wc.session.preconnect({ url: new URL(url).origin, numSockets: 1 }); } catch { /* A performance hint must never prevent navigation. */ }
     let status: number | undefined;
     const onNavigate = (_e: unknown, _url: string, code: number) => {
       status = code;
@@ -196,9 +215,12 @@ export class DesktopToolRuntime implements ToolRuntime {
     return { url: wc.getURL(), title: wc.getTitle(), ...(status ? { status } : {}), ...extra };
   }
 
+  async getPageMetadata(tabId: string) {
+    const wc = this.wcFor(tabId);
+    return { url: wc.getURL(), title: wc.getTitle() };
+  }
+
   async readPage(tabId: string) {
-    const presentation = this.readingPresentation?.tabId === tabId ? this.readingPresentation : undefined;
-    this.readingPresentation = undefined;
     const wc = this.wcFor(tabId);
     const result = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as
       | { text: string }
@@ -222,16 +244,6 @@ export class DesktopToolRuntime implements ToolRuntime {
       );
     }
     const text = (('text' in result ? result.text : '') + framed.join('')).slice(0, 40_000);
-    if (presentation && text.trim()) {
-      if (presentation.signal.aborted) throw new Error('cancelled');
-      // Scan actual source content at a visible tempo. Respect reduced motion.
-      await wc.executeJavaScript(`${AGENT_CURSOR}; (() => {
-        const page = document.scrollingElement || document.documentElement;
-        if (page.scrollHeight > innerHeight * 1.3) window.scrollBy({ top: Math.round(innerHeight * .6), behavior: (window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'instant' : 'smooth' });
-        window.__bbCursorTo(Math.round(innerWidth * .42), Math.round(innerHeight * .55));
-      })()`).catch(() => {});
-      await presentationPause(550, presentation.signal);
-    }
     assertAllowedDestination(wc.getURL());
     return { title: wc.getTitle(), url: wc.getURL(), text };
   }
@@ -331,7 +343,10 @@ export class DesktopToolRuntime implements ToolRuntime {
         var el = __bb.FindField(t);
         el.scrollIntoView({ block: 'center' });
         window.__bbCursor(el, { click: true });
-        return __bb.Select(el, o);
+        return new Promise(function (resolve, reject) { setTimeout(function () {
+          if (window.__bbCancelledRun === window.__bbRunId) return reject(new Error('cancelled'));
+          resolve(__bb.Select(__bb.FindField(t), o));
+        }, 150); });
       })(${JSON.stringify(t)}, ${JSON.stringify(option)})`,
     );
     return { matched: value };
@@ -339,6 +354,9 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async findElements(tabId: string, query?: string) {
     const wc = this.wcFor(tabId);
+    const url = wc.getURL();
+    const cached = this.elementMaps.get(tabId, url, query);
+    if (cached) return cached;
     const q = JSON.stringify(query ?? '');
     type Found = { lines: string[]; fps: Record<string, Record<string, unknown>>; seq: number };
     const list = async (frame: WebFrameMain): Promise<string[]> => {
@@ -361,7 +379,9 @@ export class DesktopToolRuntime implements ToolRuntime {
         /* unreadable frame — skip */
       }
     }
-    return { elements: elements.slice(0, 220) };
+    const result = { elements: elements.slice(0, 220) };
+    if (wc.getURL() === url) this.elementMaps.set(tabId, url, query ?? '', result);
+    return result;
   }
 
   async inspectTarget(

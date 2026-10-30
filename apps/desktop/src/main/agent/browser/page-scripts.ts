@@ -494,13 +494,13 @@ export const AGENT_CURSOR = `
         host = document.createElement('div');
         host.id = HOST_ID;
         host.setAttribute('aria-hidden', 'true');
-        host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
+        host.style.cssText = 'position:fixed!important;left:0!important;top:0!important;width:0!important;height:0!important;z-index:2147483647!important;pointer-events:none!important;display:block!important;visibility:visible!important;opacity:1!important;';
         (document.body || document.documentElement).appendChild(host);
         var root = host.attachShadow({ mode: 'open' });
         var cursorStyle =
           ':host{all:initial}' +
           '.ptr{position:fixed;width:22px;height:22px;margin:-2px 0 0 -2px;' +
-            'transition:transform .28s cubic-bezier(.22,1,.36,1);will-change:transform;' +
+            'transition:transform .15s cubic-bezier(.22,1,.36,1);will-change:transform;' +
             'filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}' +
           '.ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;' +
             'border:2px solid #20BAD1;opacity:0;pointer-events:none}' +
@@ -508,6 +508,9 @@ export const AGENT_CURSOR = `
           '.halo{position:fixed;border:2px solid rgba(32, 186, 209,.9);border-radius:4px;' +
             'box-shadow:0 0 0 3px rgba(32, 186, 209,.18);opacity:0;transition:opacity .2s}' +
           '.halo.go{opacity:1}' +
+          '.toast{position:fixed;bottom:18px;left:18px;padding:6px 10px;border-radius:6px;background:#10232b;color:white;font:12px system-ui;pointer-events:none}' +
+          '.scroll-glow{position:fixed;inset:0;box-shadow:inset 0 0 35px rgba(32,186,209,.25);pointer-events:none}' +
+          '.label{position:fixed;padding:3px 6px;border-radius:4px;background:#10232b;color:white;font:12px system-ui;pointer-events:none}' +
           '@keyframes bb-ring{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.2)}}' +
           '@media (prefers-reduced-motion:reduce){.ptr{transition:none}.ring.go{animation:none}}';
         var cursorSheet = new CSSStyleSheet();
@@ -517,7 +520,7 @@ export const AGENT_CURSOR = `
           '<svg class="ptr" viewBox="0 0 24 24" fill="none">' +
             '<path d="M5 3l14 8.5-6.2 1.4L9.8 19 5 3z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/>' +
           '</svg>' +
-          '<div class="ring"></div><div class="halo"></div>';
+          '<div class="ring"></div><div class="halo"></div><div class="label" hidden></div><div class="toast" hidden></div><div class="scroll-glow" hidden></div>';
       }
       var root2 = host.shadowRoot;
       var ptr = root2.querySelector('.ptr');
@@ -540,6 +543,14 @@ export const AGENT_CURSOR = `
       }
 
       ptr.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      var label = root2.querySelector('.label');
+      label.hidden = !opts.label;
+      label.textContent = opts.label || '';
+      label.style.left = (x + 16) + 'px';
+      label.style.top = (y + 16) + 'px';
+      var glow = root2.querySelector('.scroll-glow');
+      glow.hidden = !opts.scroll;
+      if (opts.scroll) setTimeout(function () { glow.hidden = true; }, 500);
 
       if (r && opts.halo !== false) {
         halo.style.left = r.left + 'px';
@@ -569,6 +580,17 @@ export const AGENT_CURSOR = `
     } catch (e) {
       /* never let the overlay break the action it is illustrating */
     }
+  };
+
+  window.__bbToolToast = function (text) {
+    window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
+    var host = document.getElementById('__bb_agent_cursor__');
+    var toast = host && host.shadowRoot && host.shadowRoot.querySelector('.toast');
+    if (!toast) return;
+    toast.textContent = text;
+    toast.hidden = false;
+    clearTimeout(window.__bbToastTimer);
+    window.__bbToastTimer = setTimeout(function () { toast.hidden = true; }, 1800);
   };
 
   // Move the pointer to a viewport point, no element involved.
@@ -607,7 +629,7 @@ export function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
   const w = window as unknown as PageWindow;
   const first = __bb.FindClickable(target);
   first.scrollIntoView({ block: 'center', inline: 'nearest' });
-  w.__bbCursor(first, { click: true });
+  w.__bbCursor(first, { click: true, label: /^@/.test(target) ? target : undefined });
   // Dwell so the user sees where it's going before the page changes.
   return new Promise<ClickSpot>((resolve, reject) => {
     setTimeout(() => {
@@ -638,7 +660,7 @@ export function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
       const host = top ? (top.getRootNode() as ShadowRoot).host : null;
       const onTop = !!top && (top === node || node.contains(top) || top.contains(node) || (!!host && node.contains(host)));
       resolve({ matched: label ? `${tag} "${label}"` : tag, x, y, onTop, ref: `[data-bb-click="${token}"]` });
-    }, 450);
+    }, 150);
   });
 }
 
@@ -651,7 +673,7 @@ export function CLICK_FN(target: string, actionId = (window as unknown as { __bb
   // Without the pause the click fires in the same frame the cursor appears, so
   // the page changes before the user's eye has anywhere to land — the whole
   // point is to show them where it went.
-  w.__bbCursor(node, { click: true });
+  w.__bbCursor(node, { click: true, label: /^@/.test(target) ? target : undefined });
   const label = __bb.Label(node).slice(0, 80);
   const tag = node.tagName.toLowerCase();
   return new Promise<string>((resolve, reject) => {
@@ -682,17 +704,22 @@ export function CLICK_FN(target: string, actionId = (window as unknown as { __bb
       }
       node.click();
       resolve(label ? `${tag} "${label}"` : tag);
-    }, 450);
+    }, 150);
   });
 }
 
-export function TYPE_FN(target: string, text: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<{ matched: string; native: boolean }> {
+export async function TYPE_FN(target: string, text: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<{ matched: string; native: boolean }> {
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   const w = window as unknown as PageWindow;
   const html = __bb.FindField(target);
   __bb.GuardField(html);
   const label = __bb.Label(html).slice(0, 80);
   const described = label ? `${html.tagName.toLowerCase()} "${label}"` : html.tagName.toLowerCase();
+
+  html.scrollIntoView({ block: 'center' });
+  w.__bbCursor(html, { click: true, hold: 4000, label: /^@/.test(target) ? target : undefined });
+  await new Promise<void>((resolve) => setTimeout(resolve, 150));
+  if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
 
   // A dropdown takes a choice, not keystrokes. Writing .value through the
   // input setter threw "Illegal invocation" on a <select>.
@@ -771,10 +798,10 @@ export function TYPE_FN(target: string, text: string, actionId = (window as unkn
   });
 }
 
-export function SCROLL_FN(
+export async function SCROLL_FN(
   direction: 'up' | 'down' | 'top' | 'bottom',
   amount: number,
-): number {
+): Promise<number> {
   const doc = document.scrollingElement || document.documentElement;
   // Park the pointer mid-viewport and let it drift the way the page is going,
   // so a scroll reads as the agent doing something rather than the page moving
@@ -784,9 +811,14 @@ export function SCROLL_FN(
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
     const drift = direction === 'up' || direction === 'top' ? -60 : 60;
-    to(cx, cy - drift);
+    const cursor = (window as unknown as PageWindow).__bbCursor;
+    if (cursor) cursor(null, { at: { x: cx, y: cy - drift }, scroll: true, label: drift < 0 ? '↑' : '↓', halo: false });
+    else to(cx, cy - drift);
     setTimeout(() => to(cx, cy + drift), 60);
   }
+  await new Promise<void>((resolve) => setTimeout(resolve, 150));
+  const run = window as unknown as { __bbRunId?: string; __bbCancelledRun?: string };
+  if (run.__bbRunId && run.__bbCancelledRun === run.__bbRunId) throw new Error('cancelled');
   switch (direction) {
     case 'down':
       window.scrollBy({ top: amount, behavior: 'smooth' });
