@@ -422,7 +422,7 @@ test('each browser option asks a short app question instead of filling the compo
     for (const [label, question] of tasks) {
       await win.getByRole('button', { name: label, exact: true }).click();
       await expect(win.getByRole('status').filter({ hasText: question })).toBeVisible();
-      await expect(win.locator('aside textarea')).toHaveValue('');
+      await expect(win.locator('aside textarea.prompt-input-field')).toHaveValue('');
       await expect(win.getByRole('region', { name: 'BulleBrowser funding introduction' })).toBeVisible();
     }
     // Composer motion is verified in the appearance suite, independently of task selection.
@@ -436,7 +436,7 @@ test('follow-up retries remember the task without asking the user to repeat it',
     await enterAddress(win, `${site.url}/one`);
     await expectPage(app, win, `${site.url}/one`, 'Community funding source');
     for (const [index, prompt] of ['Summarize this page', 'Try again', 'Continue'].entries()) {
-      await win.locator('aside textarea').fill(prompt);
+      await win.locator('aside textarea.prompt-input-field').fill(prompt);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       const allow = win.getByRole('button', { name: 'Allow Access', exact: true });
       await expect(allow).toBeVisible();
@@ -465,7 +465,7 @@ for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
         const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
         session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://\u0064uckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
       }, { base: source.url, layout });
-      await win.locator('aside textarea').fill('Find grants for California schools');
+      await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
@@ -702,7 +702,7 @@ test('a research prompt browses multiple real pages and shows live page counts',
         return original(input, init);
       };
     }, base);
-    await win.locator('aside textarea').fill('Find grants for California schools');
+    await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
     await expect(win.getByRole('status', { name: 'Browser progress' })).toContainText('Waiting for browsing access');
@@ -750,8 +750,8 @@ for (const option of [
         };
       }, base);
       await win.getByRole('button', { name: option.label, exact: true }).click();
-      await expect(win.locator('aside textarea')).toHaveValue('');
-      await win.locator('aside textarea').fill(option.answer);
+      await expect(win.locator('aside textarea.prompt-input-field')).toHaveValue('');
+      await win.locator('aside textarea.prompt-input-field').fill(option.answer);
       await holdActualPageRead(app, true);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeHidden();
@@ -781,7 +781,7 @@ test('live Bing search discovers and reads Seattle funding sources', async () =>
   const { app, win, close } = await launch();
   try {
     await app.evaluate(() => { process.env.BRAVE_SEARCH_API_KEY = ''; });
-    await win.locator('aside textarea').fill('Find open grants funding Seattle');
+    await win.locator('aside textarea.prompt-input-field').fill('Find open grants funding Seattle');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(win.locator('.md-prose')).toContainText('source pages', { timeout: 90_000 });

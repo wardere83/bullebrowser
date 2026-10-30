@@ -68,6 +68,7 @@ export const IPC = {
   CONVERSATION_GET: 'conversation:get',
   CONVERSATION_NEW: 'conversation:new',
   CONVERSATION_DELETE: 'conversation:delete',
+  CONVERSATION_SCRATCHPAD: 'conversation:scratchpad',
   // App
   APP_GET_INFO: 'app:get-info',
   APP_QUIT: 'app:quit',
@@ -192,6 +193,8 @@ export interface TaskRunLog {
 }
 
 export interface ConversationDetail extends ConversationSummary {
+  /** User-authored notes for this conversation only. */
+  scratchpad?: string;
   taskRuns?: TaskRunLog[];
   messages: { role: 'user' | 'assistant'; content: string; timestamp: number }[];
   /**
@@ -314,6 +317,7 @@ export interface BrowserBridge {
     list(): Promise<ConversationSummary[]>;
     get(id: string): Promise<ConversationDetail | null>;
     create(): Promise<ConversationDetail>;
+    setScratchpad(id: string, text: string): Promise<void>;
     delete(id: string): Promise<void>;
   };
   agent: {

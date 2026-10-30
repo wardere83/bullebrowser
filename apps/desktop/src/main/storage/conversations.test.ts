@@ -102,3 +102,15 @@ it('retains task activity for 30 days, scopes it to the chat, and deletes it wit
   conversationStore.delete(chat.id, ORG_A);
   expect(conversationStore.get(chat.id, ORG_A)).toBeNull();
 });
+
+it('isolates session notes, binds legacy notes, and forgets their stored value', () => {
+  const chat = conversationStore.create();
+  conversationStore.setScratchpad(chat.id, 'Approved target: workforce grants', ORG_A);
+  expect(conversationStore.get(chat.id, ORG_A)?.scratchpad).toContain('workforce');
+  expect(conversationStore.get(chat.id, ORG_B)).toBeNull();
+  expect(() => conversationStore.setScratchpad(chat.id, 'overwrite', ORG_B)).toThrow('Conversation not found');
+  expect(() => conversationStore.setScratchpad(chat.id, 'x'.repeat(12001), ORG_A)).toThrow();
+  expect(() => conversationStore.setScratchpad(chat.id, null as unknown as string, ORG_A)).toThrow();
+  conversationStore.setScratchpad(chat.id, '', ORG_A);
+  expect(conversationStore.get(chat.id, ORG_A)?.scratchpad).toBeUndefined();
+});

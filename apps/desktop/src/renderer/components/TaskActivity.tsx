@@ -1,5 +1,5 @@
 import type { TaskRunLog } from '../../shared/ipc.js';
-import { taskSources, taskReport } from '../../shared/task-report.js';
+import { taskSources, taskReport, taskAuditJson } from '../../shared/task-report.js';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
@@ -76,6 +76,12 @@ export function TaskActivity({
               link.href = url; link.download = 'bullebrowser-task.md'; link.click();
               setTimeout(() => URL.revokeObjectURL(url), 1000);
             }}>Export task report</button>
+            {audit && <button type="button" className="text-primary" onClick={() => {
+              const url = URL.createObjectURL(new Blob([taskAuditJson(steps, audit)], { type: 'application/json' }));
+              const link = document.createElement('a');
+              link.href = url; link.download = 'bullebrowser-audit.json'; link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}>Export audit JSON</button>}
             <label className="text-ink-secondary"><input type="checkbox" checked={showTiming} onChange={(e) => setShowTiming(e.target.checked)} /> Show timing</label>
           </div>
           {sources.length > 0 && <details className="mb-3">

@@ -24,3 +24,15 @@ it('exports consent decisions and tool audit JSON without letting page text term
   const json = report.split('```json\n')[1]!.split('\n```')[0]!;
   expect(JSON.parse(json)[0].result).toBe('```');
 });
+
+it('exports a machine-readable timeline without private reasoning or raw result bodies', async () => {
+  const { taskAuditJson } = await import('./task-report.js');
+  const json = taskAuditJson([
+    { kind: 'thinking', detail: 'private reasoning', ts: 1 },
+    { kind: 'tool_result', toolName: 'getPageMetadata', callId: 'c1', output: { hidden: 'raw body' }, durationMs: 5, ts: 2 },
+  ], { calls: [], consents: [{ kind: 'destructive', approved: false, at: 3 }] });
+  const audit = JSON.parse(json);
+  expect(audit.timeline).toEqual([{ at: 2, kind: 'tool_result', toolName: 'getPageMetadata', callId: 'c1', durationMs: 5 }]);
+  expect(audit.consents[0].approved).toBe(false);
+  expect(json).not.toMatch(/private reasoning|raw body/);
+});

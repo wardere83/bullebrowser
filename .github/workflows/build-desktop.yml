@@ -27,7 +27,6 @@ jobs:
   agent-benchmark:
     uses: ./.github/workflows/agent-benchmark.yml
   build:
-    needs: agent-benchmark
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     # The mac job notarizes twice (arm64 + x64) and each submission now waits at
@@ -379,7 +378,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, agent-benchmark]
     runs-on: ubuntu-22.04
     permissions:
       contents: write

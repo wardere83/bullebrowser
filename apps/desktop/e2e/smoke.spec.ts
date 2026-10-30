@@ -69,7 +69,7 @@ async function launch(
 test('the agent panel mounts with its composer', async () => {
   const { app, win } = await launch();
   await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
-  await expect(win.locator('aside textarea')).toBeEnabled();
+  await expect(win.locator('aside textarea.prompt-input-field')).toBeEnabled();
   await app.close();
 });
 
@@ -113,7 +113,7 @@ test('a saved OpenAI key enables the assistant and voice controls', async () => 
   });
   expect(savedModel).toBe('gpt-4o');
   await win.reload();
-  await expect(win.locator('aside textarea')).toBeEnabled();
+  await expect(win.locator('aside textarea.prompt-input-field')).toBeEnabled();
   await expect(win.locator('[aria-label="Voice input"]')).toBeVisible();
   await expect(win.locator('[aria-label="Voice Mode"]')).toBeVisible();
   await app.close();
@@ -155,7 +155,7 @@ test('voice input opens an overlay that can be dismissed', async () => {
   await expect(win.getByRole('button', { name: 'Cancel' })).toBeVisible({ timeout: 10_000 });
   await win.getByRole('button', { name: 'Cancel' }).click();
   await expect(win.getByRole('button', { name: 'Cancel' })).toBeHidden();
-  await expect(win.locator('aside textarea')).toBeEnabled();
+  await expect(win.locator('aside textarea.prompt-input-field')).toBeEnabled();
   await app.close();
 });
 
@@ -354,7 +354,7 @@ test('updates expose real progress and stage without closing tabs or interruptin
         BrowserWindow.getAllWindows()[0].webContents.send('update:status', state.__updateStatus);
       });
     });
-    const composer = win.locator('aside textarea');
+    const composer = win.locator('aside textarea.prompt-input-field');
     await expect(composer).toBeEnabled();
     await composer.fill('Keep my draft through this update.');
     const update = win.getByRole('button', { name: 'Update', exact: true });
@@ -415,7 +415,7 @@ test('updates expose real progress and stage without closing tabs or interruptin
     await expect(dialog).toContainText('Could not check for updates');
     await expect(dialog.getByRole('link', { name: 'Latest installer' })).toHaveAttribute('href', 'https://bullebrowser.com/download');
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
-    await expect(win.locator('aside textarea')).toBeEnabled();
+    await expect(win.locator('aside textarea.prompt-input-field')).toBeEnabled();
   } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
 });
 
@@ -456,7 +456,7 @@ test('chat and spoken browser tasks use the real local assistant without any key
       await window.bullebrowser.tabs.navigate(active.id, target);
     }, url);
     await expect(win.getByText('Add your key to start — it stays on this device.', { exact: true })).toBeHidden();
-    await win.locator('aside textarea').fill('summarize this page');
+    await win.locator('aside textarea.prompt-input-field').fill('summarize this page');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     const approval = win.getByRole('button', { name: 'Allow Access', exact: true });
     await expect(approval).toBeVisible();
@@ -521,7 +521,7 @@ for (const interaction of ['click', 'keyboard', 'middle', 'same-window fallback'
           return { runId: 'link-run' };
         });
       }, { conversation: seed, url });
-      await win.locator('aside textarea').fill('Find a source');
+      await win.locator('aside textarea.prompt-input-field').fill('Find a source');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
       const link = win.getByRole('link', { name: 'Open source', exact: true });
       await expect(link).toBeVisible();
@@ -545,7 +545,7 @@ for (const interaction of ['click', 'keyboard', 'middle', 'same-window fallback'
       const readChrome = () => app.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(`({
           hasSource: !!Array.from(document.querySelectorAll('aside a')).find(a => a.textContent === 'Open source'),
-          composerEnabled: !!document.querySelector('aside textarea') && !document.querySelector('aside textarea').disabled,
+          composerEnabled: !!document.querySelector('aside textarea.prompt-input-field') && !document.querySelector('aside textarea.prompt-input-field').disabled,
           chatX: document.querySelector('aside').getBoundingClientRect().x
         })`),
       );
@@ -565,8 +565,8 @@ for (const interaction of ['click', 'keyboard', 'middle', 'same-window fallback'
       expect(bounds!.width).toBeGreaterThan(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(chatX + 1);
       if (interaction !== 'same-window fallback') {
-        await win.locator('aside textarea').fill('Continue the same conversation');
-        await expect(win.locator('aside textarea')).toHaveValue('Continue the same conversation');
+        await win.locator('aside textarea.prompt-input-field').fill('Continue the same conversation');
+        await expect(win.locator('aside textarea.prompt-input-field')).toHaveValue('Continue the same conversation');
       }
     } finally {
       await app.close();
@@ -591,17 +591,39 @@ test('an unexecuted action is reported incomplete across chat and task result ev
     });
     await win.evaluate(() => window.bullebrowser.settings.set({ defaultModel: 'gpt-4o' }));
     await win.reload();
-    await expect(win.locator('aside textarea')).toBeEnabled();
+    await expect(win.locator('aside textarea.prompt-input-field')).toBeEnabled();
     await win.evaluate(() => {
       const state = window as unknown as { __taskResults: Array<{ status: string; text: string }> };
       state.__taskResults = [];
       window.bullebrowser.agent.onResult((result) => state.__taskResults.push(result));
     });
-    await win.locator('aside textarea').fill('Click "Save"');
+    await win.locator('aside textarea.prompt-input-field').fill('Click "Save"');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await expect.poll(() => win.evaluate(() => (window as unknown as { __taskResults: Array<{ status: string }> }).__taskResults[0]?.status)).toBe('failed');
     await expect(win.locator('.md-prose')).toContainText('Task incomplete');
     await expect(win.locator('.md-prose')).not.toContainText('Everything completed successfully');
     expect(await app.evaluate(() => (globalThis as Record<string, number>).__taskRequestCount)).toBe(3);
   } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
+});
+
+
+test('session scratchpad saves, reloads, and forgets notes without a model call', async () => {
+  const { app, win, userData } = await launch({ withoutKeys: true });
+  try {
+    await win.getByText('Session scratchpad', { exact: true }).click();
+    await win.getByRole('textbox', { name: 'Session notes', exact: true }).fill('Focus on workforce grants.');
+    await win.getByRole('button', { name: 'Save notes', exact: true }).click();
+    await expect(win.getByText('Saved for the next task.', { exact: true })).toBeVisible();
+    await win.reload();
+    await win.getByText('Session scratchpad', { exact: true }).click();
+    await expect(win.getByRole('textbox', { name: 'Session notes', exact: true })).toHaveValue('Focus on workforce grants.');
+    await win.getByRole('button', { name: 'Forget this', exact: true }).click();
+    await expect(win.getByText('Session notes forgotten.', { exact: true })).toBeVisible();
+    await win.reload();
+    await win.getByText('Session scratchpad', { exact: true }).click();
+    await expect(win.getByRole('textbox', { name: 'Session notes', exact: true })).toHaveValue('');
+  } finally {
+    await app.close();
+    rmSync(userData, { recursive: true, force: true });
+  }
 });

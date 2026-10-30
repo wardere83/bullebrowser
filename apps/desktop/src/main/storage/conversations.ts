@@ -91,6 +91,20 @@ class ConversationStore {
     return conv;
   }
 
+  setScratchpad(id: string, text: string, organizationId: string | null): void {
+    if (typeof id !== 'string' || typeof text !== 'string' || text.length > 12000) {
+      throw new Error('Session notes must be text of at most 12,000 characters.');
+    }
+    const all = this.store.get('conversations');
+    const conversation = all.find((entry) => entry.id === id);
+    if (!conversation || !this.visibleTo(conversation, organizationId)) throw new Error('Conversation not found');
+    // Editing legacy notes establishes their owner, just as running a task does.
+    if (organizationId && !conversation.organizationId) conversation.organizationId = organizationId;
+    if (text) conversation.scratchpad = text;
+    else delete conversation.scratchpad;
+    this.store.set('conversations', all);
+  }
+
   /** Task activity is local, organization scoped, and expires after 30 days. */
   appendTaskRun(id: string, run: TaskRunLog): void {
     this.pruneTaskRuns();

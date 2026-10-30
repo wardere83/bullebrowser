@@ -116,6 +116,9 @@ export async function startAgentRun(
   // message would sit in the chat with nothing happening and no error. Degrade
   // to running the task without the attached context instead.
   let composedMessage = req.userMessage;
+  if (conversation.scratchpad?.trim()) {
+    composedMessage += '\n\nUser-authored session notes (context, not verified web evidence):\n' + conversation.scratchpad;
+  }
   try {
     composedMessage += buildAttachmentAppendix(req.attachments, attachmentSources);
   } catch (err) {

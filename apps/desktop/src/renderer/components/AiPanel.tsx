@@ -21,6 +21,7 @@ import { RealtimeVoice } from './RealtimeVoice.js';
 import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
 import { BrowserProgress, TaskActivity } from './TaskActivity.js';
+import { SessionScratchpad } from './SessionScratchpad.js';
 import { liveAssistantText } from './task-activity.js';
 import type {
   AppSettings,
@@ -75,6 +76,16 @@ export function AiPanel() {
   const currentStep = activity?.currentStep ?? '';
   const liveReply = activityStatus === 'running' ? liveAssistantText(steps) : '';
   const runId = useAgentStore((s) => s.runId);
+  useEffect(() => {
+    const interrupt = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'Escape' && runId && status === 'running') {
+        event.preventDefault();
+        void window.bullebrowser.agent.cancel(runId);
+      }
+    };
+    window.addEventListener('keydown', interrupt);
+    return () => window.removeEventListener('keydown', interrupt);
+  }, [runId, status]);
   const [resumeChat] = useState(takeUpdateChat);
   const [draft, setDraft] = useState(resumeChat?.draft ?? '');
   const [selectedTask, setSelectedTask] = useState<BrowserTaskId | null>(null);
@@ -586,6 +597,7 @@ export function AiPanel() {
         />
       )}
 
+      {current && <SessionScratchpad key={current.id} conversation={current} />}
       <div className="relative flex flex-1 flex-col overflow-hidden">
       <div
         ref={messagesRef}
@@ -764,7 +776,8 @@ export function AiPanel() {
                   if (runId) void window.bullebrowser.agent.cancel(runId);
                 }}
                 className="h-9 rounded border border-danger bg-white px-3 text-sm font-medium text-danger hover:bg-danger/10"
-                title="Stop the running task"
+                title="Stop the running task (Ctrl/Command + Shift + Escape)"
+                aria-keyshortcuts="Control+Shift+Escape Meta+Shift+Escape"
               >
                 Stop
               </button>

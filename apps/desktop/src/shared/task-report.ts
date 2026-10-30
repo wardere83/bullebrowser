@@ -46,3 +46,19 @@ export function taskReport(steps: readonly AgentStepEvent[], audit?: Pick<TaskRu
   }
   return lines.join('\n') + '\n';
 }
+
+/** Export bounded audit records, never raw page bodies or private thinking. */
+export function taskAuditJson(steps: readonly AgentStepEvent[], audit: Pick<TaskRunLog, 'calls' | 'consents'>): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    scope: 'Redacted tool records with bounded results; not a full page recording',
+    sources: taskSources(steps),
+    calls: audit.calls ?? [],
+    consents: audit.consents,
+    timeline: steps.flatMap((step) => step.kind === 'tool_call' || step.kind === 'tool_result'
+      ? [{ at: step.ts, kind: step.kind, callId: step.callId, toolName: step.toolName,
+        ...(step.kind === 'tool_result' ? { durationMs: step.durationMs } : {}) }]
+      : []),
+  }, null, 2) + '\n';
+}
