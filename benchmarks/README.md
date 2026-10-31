@@ -25,4 +25,8 @@ node scripts/run-agent-benchmarks.mjs --config /path/to/config.json --repository
 node scripts/run-agent-benchmarks.mjs --config /path/to/config.json --repository . --revision EXACT_40_CHARACTER_COMMIT_SHA --output /tmp/candidate.json
 ```
 
-Preflight checks configuration and baseline presence only. It does not certify the adapters, authenticate accounts, or claim benchmarks passed. The workflow runs nightly, manually, and during release. Installer builds run concurrently. While `AGENT_EVAL_CONFIG` is unset, no benchmark runs: the workflow succeeds with a "No benchmark evidence" warning, publication proceeds, and nothing records a score or a pass. Once it is set, publication waits for both the installers and measured benchmark validation, and an incomplete configuration, a failing evaluator or a missing result blocks the release.
+Preflight checks configuration and baseline presence only. It does not certify the adapters, authenticate accounts, or claim benchmarks passed. The workflow runs nightly, manually, and during release. Installer builds run concurrently. Publication waits for both the installers and measured benchmark validation. Missing configuration, failing evaluation, or missing evidence blocks publication.
+
+## Publication requirement
+
+Missing, blank or malformed AGENT_EVAL_CONFIG is a failing readiness check. Evaluation cannot be skipped to publish a release. Both real benchmark validation and all installer jobs must succeed. The latest already-published installer is unaffected by this requirement.
