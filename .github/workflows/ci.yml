@@ -44,7 +44,7 @@ jobs:
       - name: Tests with coverage gate
         run: pnpm --filter @bullebrowser/agent-core test
       - name: Agent benchmark gate contracts
-        run: node --test scripts/agent-benchmark-gate.test.mjs scripts/run-agent-benchmarks.test.mjs
+        run: node --test scripts/agent-benchmark-gate.test.mjs scripts/run-agent-benchmarks.test.mjs scripts/benchmark-workflow.test.mjs
       - name: Desktop unit tests
         run: pnpm --filter @bullebrowser/desktop test
       - name: Widget authorization tests

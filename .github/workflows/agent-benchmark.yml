@@ -16,19 +16,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # Unset configuration means evaluation has not been provisioned yet:
-      # releases publish, and the run says plainly that no benchmark ran. It
-      # never records a score or a pass. Once AGENT_EVAL_CONFIG is set, an
-      # incomplete configuration or a failing evaluation blocks publication.
+      # Missing evaluation infrastructure is a release failure, never a skip.
       - name: Validate evaluator configuration
         id: config
         env:
           AGENT_EVAL_CONFIG: ${{ vars.AGENT_EVAL_CONFIG }}
         run: |
           if [ -z "$(printf '%s' "$AGENT_EVAL_CONFIG" | tr -d '[:space:]')" ]; then
-            echo '::warning title=No benchmark evidence::AGENT_EVAL_CONFIG is not set, so no agent benchmarks ran for this revision. Publication is not gated on benchmarks until it is configured. See benchmarks/README.md.'
-            echo 'configured=false' >> "$GITHUB_OUTPUT"
-            exit 0
+            echo '::error title=Benchmark configuration required::AGENT_EVAL_CONFIG is missing. Configure real evaluation before publication. See benchmarks/README.md.'
+            exit 1
           fi
           node --input-type=module <<'JS'
           import { configurationErrors } from './scripts/run-agent-benchmarks.mjs';
