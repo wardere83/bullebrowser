@@ -1,3 +1,4 @@
+import { TaskControl, type TaskCommand } from './task-control.js';
 import { browserSearch, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError } from '@bullebrowser/agent-core';
 import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
@@ -13,6 +14,7 @@ import {
   FUNDING_WORKFLOW_IDS,
   findSkill,
   providerFor,
+  productQuestionReply,
   runAgent,
   type AgentStep,
   type ActionPreview,
@@ -56,6 +58,8 @@ const attachmentSources: AttachmentSources = {
 interface ActiveRun {
   controller: AbortController;
   pendingConfirms: Map<string, (approved: boolean) => void>;
+  control: TaskControl;
+  notifyControl?: () => void;
 }
 
 const runs = new Map<string, ActiveRun>();
@@ -79,6 +83,33 @@ export async function startAgentRun(
   const apiKey = getApiKey(providerFor(model));
 
   const controller = new AbortController();
+  const runId = randomUUID();
+  const pendingConfirms = new Map<string, (approved: boolean) => void>();
+  const control = new TaskControl();
+  runs.set(runId, { controller, pendingConfirms, control });
+
+  const taskLog: TaskRunLog = { id: runId, startedAt: Date.now(), finishedAt: 0, status: 'completed', steps: [], calls: [], consents: [] };
+  const ask = (message: string, kind: AgentConfirmRequest['kind']) =>
+    new Promise<boolean>((resolve) => {
+      const id = randomUUID();
+      pendingConfirms.set(id, (approved) => {
+        taskLog.consents.push({ kind, approved, at: Date.now() });
+        resolve(approved);
+      });
+      win.webContents.send(IPC.AGENT_CONFIRM_REQUEST, {
+        runId,
+        id,
+        message,
+        kind,
+      } satisfies AgentConfirmRequest);
+    });
+
+  runs.get(runId)!.notifyControl = () => publishEvent({ kind: 'control', paused: control.paused, follow: control.follow, ts: Date.now() });
+  const publishEvent = (event: AgentStepEvent) => {
+    taskLog.steps.push(event);
+    win.webContents.send(IPC.AGENT_STEP, { runId, step: event });
+  };
+
   // What the run may know about the active organization. A failure here must
   // not stop the chat: the run then simply has no organization material.
   const grounding = await groundChat(fundingPlatform(), identityService, {
@@ -93,11 +124,13 @@ export async function startAgentRun(
   // A chat belongs to the organization it was first used under, and is not
   // continued under another one.
   const conversation = conversationStore.get(req.conversationId, grounding.organizationId);
-  if (!conversation) throw new Error('Conversation not found');
+  if (!conversation) { cancelAgentRun(runId); throw new Error('Conversation not found'); }
   if (grounding.organizationId) conversationStore.bind(req.conversationId, grounding.organizationId);
   // Snapshot before appending. Storage adapters may return shared objects;
   // history must contain prior turns exactly once, not the new message too.
   const history = conversation.messages.map((message) => ({ role: message.role, content: message.content }));
+  const productOnly = !!productQuestionReply(req.userMessage, history);
+  const sessionConsent = productOnly ? Promise.resolve(true) : ask(req.userMessage, 'browse_access');
 
   // Store the user's message CLEAN (what they typed), but hand the model an
   // enriched version that folds in any attached file/project/screenshot
@@ -125,37 +158,18 @@ export async function startAgentRun(
     console.error('[agent] could not resolve attachments; running without them', err);
   }
 
-  const runId = randomUUID();
-  const pendingConfirms = new Map<string, (approved: boolean) => void>();
-  runs.set(runId, { controller, pendingConfirms });
-
   let activeTabId = tabManager.getActiveId();
   if (!activeTabId) {
     const created = await tabManager.create();
     activeTabId = created.id;
   }
 
-  const taskLog: TaskRunLog = { id: runId, startedAt: Date.now(), finishedAt: 0, status: 'completed', steps: [], calls: [], consents: [] };
-  const ask = (message: string, kind: AgentConfirmRequest['kind']) =>
-    new Promise<boolean>((resolve) => {
-      const id = randomUUID();
-      pendingConfirms.set(id, (approved) => {
-        taskLog.consents.push({ kind, approved, at: Date.now() });
-        resolve(approved);
-      });
-      win.webContents.send(IPC.AGENT_CONFIRM_REQUEST, {
-        runId,
-        id,
-        message,
-        kind,
-      } satisfies AgentConfirmRequest);
-    });
-
   const runtime = new DesktopToolRuntime({
     request: (message: string, preview?: ActionPreview) => ask([
       message,
       preview?.summary,
       preview?.url ? `Destination: ${preview.url}` : undefined,
+      ...(preview?.changes ?? []).map((change) => `${change.label}: ${change.before || '(empty)'} → ${change.after || '(empty)'}`),
       ...(preview?.fields ?? []).map((field) => `${field.label}: ${field.value}`),
       ...(preview?.files ?? []).map((file) => `File: ${file.name}`),
       preview?.note,
@@ -165,10 +179,11 @@ export async function startAgentRun(
     // page. Late operations after Stop must not restore the browsing effect.
     if (!controller.signal.aborted) {
       // Each source being inspected is shown in the left browsing pane.
-      if (tabManager.getActiveId() !== tabId) tabManager.activate(tabId);
+      activeTabId = tabId;
+      if (control.follow && tabManager.getActiveId() !== tabId) tabManager.activate(tabId);
       tabManager.setBrowsingActivity(runId, tabId);
     }
-  }, 'default', controller.signal);
+  }, 'default', controller.signal, () => control.follow, (source) => publishEvent({ kind: 'source', ...source, ts: Date.now() }));
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
   const isFundingWorkflow = !!skill && (FUNDING_WORKFLOW_IDS as readonly string[]).includes(skill.id);
@@ -188,6 +203,17 @@ export async function startAgentRun(
   const discoveryRequest = isContinuation(req.userMessage) ? priorRequest : req.userMessage;
   const fundingOnly = ['find_grants', 'research_funder', 'compare_grants'].includes(req.browserTask ?? '') || isFundingDiscoveryRequest(discoveryRequest);
   const ctx: ToolContext = {
+    beforeTool: () => control.beforeTool(controller.signal),
+    afterBrowserAction: async (name, args, callId) => {
+      if (!['navigate', 'read_page', 'find_elements', 'click', 'type', 'select_option', 'scroll', 'press_key', 'new_tab', 'switch_tab'].includes(name)) return;
+      try {
+        const tabId = typeof args.tabId === 'string' ? args.tabId : ctx.activeTabId;
+        const frame = await runtime.captureReplay(tabId, name, callId);
+        publishEvent({ kind: 'replay', frame, ts: frame.at });
+      } catch {
+        publishEvent({ kind: 'warning', message: 'A page-state capture was unavailable for this step. Its tool audit is still recorded.', ts: Date.now() });
+      }
+    },
     beforeBrowserAction: (name, args) => {
       if (fundingOnly && ['navigate', 'new_tab'].includes(name) && typeof args.url === 'string' && isGrantSearchService(args.url)) {
         throw new ToolError('BLOCKED_BY_POLICY', 'Grant-search services are excluded from funding discovery. Find the funder’s own program page or official government listing instead.');
@@ -201,7 +227,7 @@ export async function startAgentRun(
     // original one — clicking a page the model isn't looking at, and
     // screenshotting a view that relayout() has since sized to 0x0.
     get activeTabId() {
-      return tabManager.getActiveId() ?? startTabId;
+      return activeTabId ?? startTabId;
     },
     signal: controller.signal,
     runtime,
@@ -214,7 +240,14 @@ export async function startAgentRun(
     let status: AgentResultEvent['status'] = 'completed';
     let error: string | undefined;
     try {
+      const approved = await sessionConsent;
+      if (!productOnly) publishEvent({ kind: 'scope', granted: approved, label: approved ? 'Session • Agent tabs' : 'Browser access denied', ts: Date.now() });
+      if (controller.signal.aborted) throw new Error('cancelled');
+      if (!approved) throw new ToolError('PERMISSION_DENIED', 'Browser access was declined. Use Retry to review session permissions.');
+      runtime.authorizeSession();
       assistantText = await runAgent({
+        planning: !!apiKey,
+        shouldReplan: () => control.takeReplan(),
         apiKey: apiKey ?? undefined,
         researchMode: true,
         browserTask: req.browserTask,
@@ -237,7 +270,7 @@ export async function startAgentRun(
         })],
         context: ctx,
         // Choosing a browser task and submitting its answer explicitly starts browsing.
-        requestBrowseAccess: req.browserTask ? undefined : () => ask(req.userMessage, 'browse_access'),
+        requestBrowseAccess: () => sessionConsent,
         budget: req.budget ?? getSettings().stepBudget,
         onToolRecord: (record) => { taskLog.calls!.push(record); },
         onCompletion: (outcome) => {
@@ -253,8 +286,7 @@ export async function startAgentRun(
           // the chat refresh and a waiting voice tool receive the same result.
           if (step.type === 'done') return;
           const event = stepToEvent(step);
-          taskLog.steps.push(event);
-          win.webContents.send(IPC.AGENT_STEP, { runId, step: event });
+          publishEvent(event);
         },
       });
     } catch (err) {
@@ -340,6 +372,17 @@ export function cancelAgentRun(runId: string) {
   runs.delete(runId);
 }
 
+export function controlAllAgentRuns(command: TaskCommand): void {
+  for (const id of runs.keys()) controlAgentRun(id, command);
+}
+
+export function controlAgentRun(runId: string, command: string): void {
+  if (!['pause', 'resume', 'step', 'replan', 'follow', 'unfollow'].includes(command)) throw new Error('Unknown task control');
+  const run = runs.get(runId);
+  run?.control.command(command as TaskCommand);
+  run?.notifyControl?.();
+}
+
 export function replyAgentConfirm(runId: string, id: string, approved: boolean) {
   const run = runs.get(runId);
   const resolver = run?.pendingConfirms.get(id);
@@ -354,6 +397,13 @@ export function replyAgentConfirm(runId: string, id: string, approved: boolean) 
 function stepToEvent(step: AgentStep): AgentStepEvent {
   const ts = Date.now();
   switch (step.type) {
+    case 'source': {
+      const source = step.data as { url: string; title?: string; text: string };
+      return { kind: 'source', url: source.url, title: source.title ?? '', text: source.text, ts };
+    }
+    case 'warning': return { kind: 'warning', message: step.detail ?? '', ts };
+    case 'plan':
+      return { kind: 'plan', detail: step.detail ?? '', goals: structuredClone((step.data as { goals?: { id: string; goal: string; status: string }[] })?.goals ?? []), ts };
     case 'thinking':
       return { kind: 'thinking', detail: step.detail, ts };
     case 'tool_call':
@@ -394,6 +444,17 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
         used: d.used ?? 0,
         total: d.total ?? 0,
         exhausted: !!d.exhausted,
+        ts,
+      };
+    }
+    case 'page_instructions': {
+      const d = (step.data ?? {}) as { excerpt?: unknown; signals?: unknown };
+      return {
+        kind: 'page_instructions',
+        callId: step.callId,
+        source: step.detail ?? '',
+        excerpt: typeof d.excerpt === 'string' ? d.excerpt : '',
+        signals: Array.isArray(d.signals) ? d.signals.filter((s): s is string => typeof s === 'string') : [],
         ts,
       };
     }

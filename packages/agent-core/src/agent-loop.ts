@@ -1,3 +1,4 @@
+import { GoalPlanner } from './planning.js';
 import { consumeTurn, ToolDispatchQueue } from './stream-turn.js';
 import { TaskOutcomeTracker } from './task-outcome.js';
 import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
@@ -31,7 +32,7 @@ import {
   toToolError,
   type ToolErrorCode,
 } from './errors.js';
-import { neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
+import { detectPageInstructions, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
 import { requiredLevel } from './permissions.js';
 import { StepBudget } from './budget.js';
 import { PRODUCT_IDENTITY_INSTRUCTIONS, productQuestionReply, protectAssistantIdentity, protectConversationIdentity } from './product-identity.js';
@@ -211,6 +212,41 @@ function sealed(text: string, source: string): string {
   return wrapUntrusted(text, source);
 }
 
+// Every string a tool returned, joined, so instruction-like text is found in
+// a page body, a title or a search snippet alike. Capped like the result.
+function pageStrings(value: unknown, out: string[] = []): string[] {
+  if (typeof value === 'string') out.push(value);
+  else if (Array.isArray(value)) for (const item of value) pageStrings(item, out);
+  else if (value && typeof value === 'object') for (const item of Object.values(value)) pageStrings(item, out);
+  return out;
+}
+
+// Tell the user when page-derived text tried to steer the agent. The model
+// already gets the text sealed as data; this makes the attempt visible.
+async function warnOnPageInstructions(
+  output: unknown,
+  label: string | (() => Promise<string>),
+  policy: PrivacyPolicyEngine,
+  onStep: AgentStepHandler,
+): Promise<void> {
+  const finding = detectPageInstructions(truncate(pageStrings(output).join('\n'), 100_000));
+  if (!finding) return;
+  const source = typeof label === 'string' ? label : await label().catch(() => 'the current page');
+  onStep({
+    type: 'page_instructions',
+    detail: policy.redact(source) as string,
+    data: policy.redact({ source, excerpt: finding.excerpt, signals: finding.signals }),
+  });
+}
+
+// The page a browser tool read from: its own URL when it reports one,
+// otherwise the active tab's.
+function browserSource(output: unknown, context: ToolContext): string | (() => Promise<string>) {
+  const url = output && typeof output === 'object' ? (output as { url?: unknown }).url : undefined;
+  if (typeof url === 'string' && url) return url;
+  return async () => (await context.runtime.listTabs()).find((tab) => tab.id === context.activeTabId)?.url || 'the current page';
+}
+
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) return reject(new Error('cancelled'));
@@ -238,6 +274,7 @@ export async function executeToolCall(
   hooks: ToolCallHooks = {},
 ): Promise<ToolCallOutcome> {
   if (context.signal.aborted) throw new Error('cancelled');
+  await context.beforeTool?.();
   const name = rawName as ToolName;
   const input = (rawInput ?? {}) as Record<string, unknown>;
   const startedAt = Date.now();
@@ -309,7 +346,9 @@ export async function executeToolCall(
       if (context.signal.aborted) throw new Error('cancelled');
       const output = await apiTool.execute(input);
       verifiedOutput = output;
+      await context.afterBrowserAction?.(name, input, callId);
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
+      await warnOnPageInstructions(output, `${name.replace(/_/g, ' ')} results`, policy, onStep);
       const text = typeof output === 'string' ? output : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), `api:${name}`), isError: false });
     } catch (error) {
@@ -397,6 +436,7 @@ export async function executeToolCall(
       if (context.signal.aborted) throw new Error('cancelled');
       const output = await tool.execute(parsed, context);
       verifiedOutput = output;
+      await context.afterBrowserAction?.(name, input, callId);
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
 
       // Hand a screenshot back as a real image so the model can see the page,
@@ -407,6 +447,7 @@ export async function executeToolCall(
         return fail(new ToolError('UNKNOWN', 'The screenshot came back empty.'));
       }
 
+      await warnOnPageInstructions(output, browserSource(output, context), policy, onStep);
       const text = typeof output === 'string' ? neutralize(output) : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), name), isError: false });
     } catch (error) {
@@ -538,18 +579,35 @@ function createBrowseGate(request?: () => Promise<boolean>): BrowseGate {
 
 export async function runAgent(input: AgentInput): Promise<string> {
   const progress = new TaskOutcomeTracker(input);
+  let sourceRead = false;
+  const isRecommendation = (text: string) => /^\s*(recommendation|suggestion):/i.test(text);
+  const identityRequest = !!productQuestionReply(input.userRequest ?? input.userMessage, input.history);
+  // One instruction warning per source per run: a page read three times is
+  // one page that tried, not three.
+  const warnedSources = new Set<string>();
   const answer = await runAgentTask({
     ...input,
-    onToolRecord: (record) => { progress.record(record); input.onToolRecord?.(record); },
+    onToolRecord: (record) => {
+      const page = record.output as { url?: string; text?: string } | undefined;
+      if (record.ok && record.name === 'read_page' && page?.url && page.text?.trim()) sourceRead = true;
+      progress.record(record); input.onToolRecord?.(record);
+    },
     history: input.history.map((message) => message.role === 'assistant'
       ? { ...message, content: sanitizeAssistantText(message.content) } : message),
     onStep: (step) => {
+      if (step.type === 'source') sourceRead = true;
+      if (input.planning && !identityRequest && step.type === 'text' && !sourceRead && !isRecommendation(step.detail ?? '')) return;
+      if (step.type === 'page_instructions') {
+        if (warnedSources.has(step.detail ?? '')) return;
+        warnedSources.add(step.detail ?? '');
+      }
       progress.observe(step);
       if (step.type !== 'done') input.onStep(sanitizeAssistantValue(step) as AgentStep);
     },
   }, progress);
-  const result = sanitizeAssistantText(progress.finalize(answer));
-  const outcome = progress.outcome;
+  const ungrounded = input.planning && !identityRequest && !sourceRead && !isRecommendation(answer);
+  const result = ungrounded ? 'I could not read a source to verify this result. Please provide an accessible source or retry.' : sanitizeAssistantText(progress.finalize(answer));
+  const outcome = ungrounded ? { ...progress.outcome, status: 'incomplete' as const, reason: result } : progress.outcome;
   input.onCompletion?.(outcome);
   if (outcome.status === 'incomplete') {
     input.onStep({ type: 'error', detail: outcome.reason, data: { code: 'TASK_INCOMPLETE' } });
@@ -596,6 +654,11 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   onStep({ type: 'thinking', detail: 'Reading the current page…' });
   const perceived = await retrieveContext(context, memory);
   progress.observeContext(perceived.url, perceived.textSnippet);
+  if (perceived.url && perceived.textSnippet?.trim()) onStep({ type: 'source', data: { url: perceived.url, title: perceived.title, text: perceived.textSnippet.slice(0, 400) } });
+  if (perceived.url) {
+    await warnOnPageInstructions([perceived.title ?? '', perceived.textSnippet?.slice(0, PAGE_SNIPPET_CHARS) ?? ''],
+      perceived.url, policy, onStep);
+  }
 
   // The page in front of the user, so "summarize this" or "what does this say
   // about X" can be answered straight away instead of spending a read_page
@@ -644,6 +707,13 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   const sealedContext = [pageContext, ...referenceBlocks].filter(Boolean).join('\n\n');
   const userTurnText = sealedContext ? `${sealedContext}\n\n${input.userMessage}` : input.userMessage;
 
+  const planner = input.planning ? new GoalPlanner(input) : undefined;
+  if (planner) {
+    await planner.ensure();
+    const previous = input.onToolRecord;
+    input = { ...input, extraTools: [...(input.extraTools ?? []), planner.tool], onToolRecord: (record) => { planner.observe(record); previous?.(record); } };
+  }
+
   // Merge host-supplied API tools in with the built-in browser tools so the
   // model can call either. The map routes execution; the defs advertise them.
   const extraTools = new Map((input.extraTools ?? []).map((t) => [t.name, t]));
@@ -657,7 +727,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   ];
 
   if (provider === 'openai') {
-    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress });
+    return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress, planner });
   }
 
   const client = new Anthropic({ apiKey: input.apiKey, ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
@@ -685,6 +755,8 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   for (let turn = 0; turn < budget.total * 2 + 5; turn++) {
     if (context.signal.aborted) throw new Error('cancelled');
 
+    if (input.shouldReplan?.()) planner?.requestReplan();
+    await planner?.ensure();
     onStep({ type: 'thinking', detail: 'Thinking…' });
 
     // Pass the abort signal to the SDK so Stop interrupts a model call that's
@@ -693,6 +765,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     elideOldToolResults(messages);
     const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
       if (context.signal.aborted) throw new Error('cancelled');
+      await planner?.ensure();
       const charge = budget.charge(toolUse.name);
       if (!charge.ok) return { text: budgetExhausted(budget, onStep), isError: true };
       const outcome = await executeToolCall(toolUse.id, toolUse.name, toolUse.input,
@@ -704,11 +777,11 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       try {
         const source = await client.messages.create(
           {
-            model: input.model,
+            model: planner?.model ?? input.model,
             stream: true,
             max_tokens: maxTokens,
-            ...(thinking ? { thinking } : {}),
-            system,
+            ...(!planner && thinking ? { thinking } : {}),
+            system: system + (planner?.instructions ?? ''),
             tools: toolDefs,
             messages,
           },
@@ -756,6 +829,14 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     }
 
     if (response.stop_reason !== 'tool_use' && !hasTools) {
+      if (planner && !planner.synthesis) {
+        const verified = await dispatch.enqueue({ type: 'tool_use', id: `verify-${turn}`, name: 'read_page', input: { tabId: context.activeTabId } });
+        if (verified.isError) throw new Error('Final page verification failed; the task cannot be reported as complete.');
+        planner.beginSynthesis();
+        messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\nNow synthesize the result with citations to pages read.` });
+        continue;
+      }
+
       const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: response.content });
@@ -887,8 +968,9 @@ async function runOpenAiTurns(args: {
   userTurnText: string;
   research: ResearchProgress;
   progress: TaskOutcomeTracker;
+  planner?: GoalPlanner;
 }): Promise<string> {
-  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress } = args;
+  const { input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress, planner } = args;
   const { context, onStep } = input;
 
   const tools = toOpenAiTools(
@@ -910,11 +992,13 @@ async function runOpenAiTurns(args: {
 
   for (let turn = 0; turn < budget.total * 2 + 5; turn++) {
     if (context.signal.aborted) throw new Error('cancelled');
+    if (input.shouldReplan?.()) planner?.requestReplan();
+    await planner?.ensure();
     onStep({ type: 'thinking', detail: 'Thinking…' });
 
     const response = await createOpenAiCompletion(
       input.apiKey as string,
-      { model: input.model, messages, tools, tool_choice: 'auto', max_tokens: MAX_TOKENS_PER_TURN },
+      { model: planner?.model ?? input.model, messages: [{ role: 'system', content: system + (planner?.instructions ?? '') }, ...messages.slice(1)], tools, tool_choice: 'auto', max_tokens: MAX_TOKENS_PER_TURN },
       context.signal,
       undefined,
       input.modelFetch,
@@ -939,6 +1023,16 @@ async function runOpenAiTurns(args: {
     }
     const calls = choice.message.tool_calls ?? [];
     if (calls.length === 0) {
+      if (planner && !planner.synthesis) {
+        const charge = budget.charge('read_page');
+        if (!charge.ok) throw new Error('No budget remains for final verification.');
+        const verified = await executeToolCall(`verify-${turn}`, 'read_page', { tabId: context.activeTabId }, context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
+        if (verified.isError) throw new Error('Final page verification failed; the task cannot be reported as complete.');
+        planner.beginSynthesis();
+        messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\nNow synthesize the result with citations to pages read.` });
+        continue;
+      }
+
       const followUp = research.followUp(turnText, budget) ?? progress.followUp(turnText, budget);
       if (followUp) {
         messages.push({ role: 'assistant', content: turnText });
@@ -962,6 +1056,7 @@ async function runOpenAiTurns(args: {
     const images: string[] = [];
     const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
       if (context.signal.aborted) throw new Error('cancelled');
+      await planner?.ensure();
       const charge = budget.charge(toolUse.name);
       if (!charge.ok) return { text: budgetExhausted(budget, onStep), isError: true };
       const outcome = await executeToolCall(toolUse.id, toolUse.name, toolUse.input,

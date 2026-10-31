@@ -1,3 +1,4 @@
+import type { ReplayFrame } from '../../shared/agent-events.js';
 import { ElementMapCache } from './browser/element-cache.js';
 // ToolRuntime implementation that drives the active WebContentsView. Page
 // actions run as scripts injected with executeJavaScript (see the in-page
@@ -65,6 +66,8 @@ export class DesktopToolRuntime implements ToolRuntime {
   private readonly touched = new Set<WebContents>();
   private readonly actionId = `${Date.now()}-${Math.random()}`;
   // Levels the user allowed for this task only ("Allow once").
+  private sessionAuthorized = false;
+  authorizeSession(): void { this.sessionAuthorized = true; }
   private readonly grantedForTask = new Map<string, PermissionLevel>();
 
   constructor(
@@ -72,6 +75,8 @@ export class DesktopToolRuntime implements ToolRuntime {
     private onPageActivity?: (tabId: string) => void,
     private readonly profile = 'default',
     private readonly signal?: AbortSignal,
+    private readonly followsAgent: () => boolean = () => true,
+    private readonly onViewport?: (source: { url: string; title: string; text: string }) => void,
   ) {
     signal?.addEventListener('abort', () => {
       for (const wc of this.touched) {
@@ -117,6 +122,20 @@ export class DesktopToolRuntime implements ToolRuntime {
     return view.webContents;
   }
 
+  async captureReplay(tabId: string, tool: string, callId: string): Promise<ReplayFrame> {
+    const wc = this.wcFor(tabId);
+    const geometry = await wc.executeJavaScript(`({ width: innerWidth, height: innerHeight, cursor: window.__bbLastCursor })`) as { width: number; height: number; cursor?: { x: number; y: number; at: number } };
+    let image = await wc.capturePage();
+    if (image.getSize().width > 640) image = image.resize({ width: 640 });
+    const size = image.getSize();
+    const url = new URL(wc.getURL());
+    url.username = ''; url.password = ''; url.search = ''; url.hash = '';
+    return { callId, tool, tabId, url: url.href, title: wc.getTitle(), at: Date.now(),
+      image: 'data:image/jpeg;base64,' + image.toJPEG(55).toString('base64'), width: size.width, height: size.height,
+      ...(geometry.cursor ? { cursor: { x: geometry.cursor.x / Math.max(1, geometry.width), y: geometry.cursor.y / Math.max(1, geometry.height), at: geometry.cursor.at } } : {}),
+    };
+  }
+
   async presentAction(tabId: string, name: string, signal: AbortSignal): Promise<void> {
     if (signal.aborted) throw new Error('cancelled');
     if (!['read_page', 'find_elements', 'getPageMetadata', 'getSelection', 'listLinks', 'screenshot', 'list_tabs'].includes(name)) this.elementMaps.invalidate(tabId);
@@ -128,19 +147,14 @@ export class DesktopToolRuntime implements ToolRuntime {
       if (isBlockedDestination(tabManager.getNavigationUrl(tabId) ?? '') || isBlockedDestination(wc.getURL())) return;
       this.onPageActivity?.(tabId);
     }
-    await wc.executeJavaScript(`${AGENT_CURSOR}; window.__bbToolToast(${JSON.stringify(name.replace(/_/g, ' ') + '…')}); (() => {
-      const element = document.querySelector('main h1, article h1, h1, main p, article p');
-      const rect = element?.getBoundingClientRect();
-      if (rect && rect.top >= 0 && rect.bottom < innerHeight) window.__bbCursor(element, { halo: true });
-      else window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
-    })()` ).catch(() => {});
+    await wc.executeJavaScript(`${AGENT_CURSOR}; window.__bbToolToast(${JSON.stringify(name.replace(/_/g, ' ') + '…')});`).catch(() => {});
   }
 
   // What every targeted page call starts with: the helpers, this frame's ref
   // state (numbering, and the fingerprint of a targeted ref) and the cursor.
   private prelude(wc: WebContents, withCursor = true) {
     return (frame: WebFrameMain, target: string) =>
-      `window.__bbRunId = ${JSON.stringify(this.actionId)}; ${PAGE_HELPERS}; ${refPrelude(wc, frame, target)}${withCursor ? `; ${AGENT_CURSOR}` : ''}`;
+      `if (window.__bbRunId !== ${JSON.stringify(this.actionId)}) window.__bbBeforeValues = new Map(); window.__bbRunId = ${JSON.stringify(this.actionId)}; ${PAGE_HELPERS}; ${refPrelude(wc, frame, target)}${withCursor ? `; ${AGENT_CURSOR}` : ''}`;
   }
 
   // After a page loads: clear any cookie banner, and say so.
@@ -222,6 +236,20 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async readPage(tabId: string) {
     const wc = this.wcFor(tabId);
+    if (this.onViewport) {
+      const first = await wc.executeJavaScript(`(() => {
+        const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
+        let node, count = 0, text = '';
+        while ((node = walker.nextNode()) && count++ < 2000 && text.length < 8000) {
+          const el = node.parentElement; if (!el || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)) continue;
+          const rect = el.getBoundingClientRect();
+          if (rect.width && rect.height && rect.bottom > 0 && rect.top < innerHeight) text += node.textContent.trim() + '\\n';
+        }
+        return { url: location.href, title: document.title, text: text.slice(0, 8000) };
+      })()`) as { url: string; title: string; text: string };
+      assertAllowedDestination(first.url);
+      if (first.text.trim()) this.onViewport(first);
+    }
     const result = (await wc.executeJavaScript(EXTRACT_READABLE_TEXT)) as
       | { text: string }
       | { error: string };
@@ -479,7 +507,8 @@ export class DesktopToolRuntime implements ToolRuntime {
   async newTab(url?: string): Promise<TabSummary> {
     if (url) assertWebUrl(url);
     // Opened from the tab the agent is on, so closing it returns the user there.
-    const tab = await tabManager.create(url, tabManager.getActiveId() ?? undefined);
+    const tab = await tabManager.create(url, tabManager.getActiveId() ?? undefined, !this.followsAgent());
+    this.onPageActivity?.(tab.id);
     // create() starts the load without waiting for it; the agent's next step
     // is almost always read_page, which then read a blank or half-built page.
     if (url) {
@@ -512,7 +541,7 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async switchTab(tabId: string): Promise<TabSummary> {
     this.wcFor(tabId);
-    tabManager.activate(tabId);
+    if (this.followsAgent()) tabManager.activate(tabId);
     const list = tabManager.list();
     const tab = list.find((t) => t.id === tabId);
     if (!tab) throw new Error(`Tab not found: ${tabId}`);
@@ -647,6 +676,7 @@ export class DesktopToolRuntime implements ToolRuntime {
   async checkPermission(tabId: string, level: PermissionLevel, ask: PermissionAsk): Promise<'granted' | 'confirmed' | 'denied'> {
     const origin = originOf(this.wcFor(tabId).getURL());
     if (!origin) return 'granted'; // start page, about:blank — nothing to protect
+    if (this.sessionAuthorized) return 'granted';
     const task = this.grantedForTask.get(origin);
     if (levelAllows(sitePermissions.level(this.profile, origin), level) || (task && levelAllows(task, level))) {
       return 'granted';

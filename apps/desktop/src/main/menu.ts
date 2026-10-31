@@ -11,7 +11,7 @@
 import { app, Menu, MenuItem, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
 import { product } from '@bullebrowser/brand-tokens';
 import { tabManager } from './tabs/manager.js';
-import { cancelAllAgentRuns } from './agent/run.js';
+import { cancelAllAgentRuns, controlAllAgentRuns } from './agent/run.js';
 
 export function setupAppMenu(win: BrowserWindow) {
   const isMac = process.platform === 'darwin';
@@ -82,6 +82,10 @@ export function setupAppMenu(win: BrowserWindow) {
           accelerator: isMac ? 'Cmd+Shift+Escape' : 'Shift+Escape',
           click: () => cancelAllAgentRuns(),
         },
+        { label: 'Pause Task', accelerator: 'CmdOrCtrl+Shift+P', click: () => controlAllAgentRuns('pause') },
+        { label: 'Resume Task', accelerator: 'CmdOrCtrl+Shift+O', click: () => controlAllAgentRuns('resume') },
+        { label: 'Step Task', accelerator: 'CmdOrCtrl+Shift+N', click: () => controlAllAgentRuns('step') },
+        { label: 'Re-plan Task', accelerator: 'CmdOrCtrl+Shift+R', click: () => controlAllAgentRuns('replan') },
         { type: 'separator' },
         { role: 'resetZoom' },
         { role: 'zoomIn' },

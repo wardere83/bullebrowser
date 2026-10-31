@@ -1,3 +1,4 @@
+import { taskSources } from '../../shared/task-report.js';
 import { sanitizeAssistantText } from '@bullebrowser/agent-core/presentation';
 import { clearUpdateChat, SAVE_UPDATE_CHAT_EVENT, takeUpdateChat, type UpdateChatSnapshot } from '../lib/update-session.js';
 import { useEffect, useRef, useState } from 'react';
@@ -21,6 +22,7 @@ import { RealtimeVoice } from './RealtimeVoice.js';
 import { refreshVoiceConversation, runVoiceBrowserTask, type VoiceBrowserTaskResult } from '../lib/voice-agent.js';
 import { AttachMenu, type UiAttachment } from './AttachMenu.js';
 import { BrowserProgress, TaskActivity } from './TaskActivity.js';
+import { AgentControls } from './AgentControls.js';
 import { SessionScratchpad } from './SessionScratchpad.js';
 import { liveAssistantText } from './task-activity.js';
 import type {
@@ -589,6 +591,7 @@ export function AiPanel() {
         />
       )}
 
+      {runId && <AgentControls runId={runId} steps={steps} />}
       {current && <SessionScratchpad key={current.id} conversation={current} />}
       <div className="relative flex flex-1 flex-col overflow-hidden">
       <div
@@ -609,8 +612,8 @@ export function AiPanel() {
         {current?.messages.map((m, i) => (
           <Bubble key={i} role={m.role} content={m.content} />
         ))}
-        {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call')) && (
-          <TaskActivity key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
+        {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call' || step.kind === 'page_instructions')) && (
+          <TaskActivity onRetry={() => void sendMessage(lastUserMessage, [])} key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
         )}
         {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity archived key={run.id} steps={run.steps}
           status={run.status === 'failed' ? 'error' : 'idle'} currentStep="" audit={run} />)}
@@ -933,12 +936,13 @@ function AllowAccess({ task }: { task: string }) {
   };
 
   return (
-    <div className="mx-3 mb-2 rounded-xl border border-primary/30 bg-primary/[0.04] p-4 shadow-sm">
+    <div role="dialog" aria-label="Session browser permissions" className="mx-3 mb-2 rounded-xl border border-primary/30 bg-primary/[0.04] p-4 shadow-sm">
       <div className="text-[13px] font-medium text-ink-primary">
         Allow Access
       </div>
       <p className="mt-1 text-xs leading-relaxed text-ink-secondary">
-        BulleBrowser wants to browse the web in your tabs to do this:
+        Allow this session to access agent tabs and page scripting, request downloads and notifications, and use clipboard access when requested. Purchases, submissions, sending, deleting, uploads and downloads still require individual approval. Page-state replay is saved locally with this conversation for 30 days.
+        Task:
         <span className="mt-1 block italic text-ink-primary">“{task}”</span>
       </p>
       <div className="mt-3 flex gap-2">
@@ -987,8 +991,13 @@ function EmptyState({ selectedTask, onBrowse }: { selectedTask: BrowserTaskId | 
 }
 
 function MarkdownLink({ href, title, children }: React.ComponentProps<'a'>) {
+  const steps = useAgentStore((state) => state.steps);
+  const current = useAgentStore((state) => state.current);
+  const sources = taskSources([...(current?.taskRuns?.flatMap((run) => run.steps) ?? []), ...steps]);
+  const source = sources.find((entry) => entry.url === href);
+  const preview = source?.read ? `Read excerpt: ${source.excerpt}` : title;
   return (
-    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+    <a href={href} title={preview} target="_blank" rel="noopener noreferrer">
       {children}
     </a>
   );
