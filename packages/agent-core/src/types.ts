@@ -91,6 +91,8 @@ export interface TabSummary {
 }
 
 export interface ToolContext {
+  beforeTool?: () => Promise<void>;
+  afterBrowserAction?: (name: string, input: Record<string, unknown>, callId: string) => Promise<void>;
   /** Host presentation after consent and policy checks, before a real browser action. */
   beforeBrowserAction?: (name: string, input: Record<string, unknown>) => Promise<void>;
   activeTabId: string;
@@ -182,6 +184,7 @@ export interface ActionPreview {
   url?: string;
   method?: string;
   fields?: { label: string; value: string }[];
+  changes?: { label: string; before: string; after: string }[];
   files?: { name: string; size?: number }[];
   note?: string;
 }
@@ -224,7 +227,7 @@ export interface AgentMessage {
 export interface AgentStep {
   callId?: string;
   durationMs?: number;
-  type: 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget';
+  type: 'source' | 'warning' | 'plan' | 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget' | 'page_instructions';
   toolName?: ToolName;
   detail?: string;
   data?: unknown;
@@ -261,6 +264,9 @@ export interface ReferenceContextItem {
 }
 
 export interface AgentInput {
+  /** Use a separate goal planner and fast executor, with verified synthesis. */
+  planning?: boolean;
+  shouldReplan?: () => boolean;
   /** Host must not mark incomplete or unverified execution as completed. */
   onCompletion?: (outcome: TaskOutcome) => void;
   browserTask?: BrowserTaskId;

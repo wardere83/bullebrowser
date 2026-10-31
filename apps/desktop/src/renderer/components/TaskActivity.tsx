@@ -1,5 +1,7 @@
+import { AgentTabs } from './AgentTabs.js';
+import { TaskReplay } from './TaskReplay.js';
 import type { TaskRunLog } from '../../shared/ipc.js';
-import { taskSources, taskReport, taskAuditJson } from '../../shared/task-report.js';
+import { pageInstructionWarnings, taskSources, taskReport, taskAuditJson } from '../../shared/task-report.js';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
@@ -12,11 +14,13 @@ export function TaskActivity({
   currentStep,
   audit,
   archived = false,
+  onRetry,
 }: {
   steps: readonly AgentStepEvent[];
   status: ActivityStatus;
   currentStep: string;
   archived?: boolean;
+  onRetry?: () => void;
   audit?: Pick<TaskRunLog, 'calls' | 'consents'>;
 }) {
   const [chosenOpen, setChosenOpen] = useState<boolean | null>(null);
@@ -24,6 +28,7 @@ export function TaskActivity({
   const actions = activityActions(steps, status);
   const readCount = pagesRead(steps);
   const sources = taskSources(steps);
+  const warnings = pageInstructionWarnings(steps);
   const [showTiming, setShowTiming] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const followLog = useRef(true);
@@ -31,6 +36,8 @@ export function TaskActivity({
     const log = logRef.current;
     if (log && followLog.current) log.scrollTop = log.scrollHeight;
   }, [steps.length]);
+  const plan = [...steps].reverse().find((step) => step.kind === 'plan');
+  const captureWarnings = [...new Set(steps.flatMap((step) => step.kind === 'warning' ? [step.message] : []))];
   const running = status === 'running';
   const failed = status === 'error';
   const open = chosenOpen ?? (running || failed);
@@ -63,6 +70,26 @@ export function TaskActivity({
         {actions.length > 0 && <span className="shrink-0 text-[11px] text-ink-secondary">{actions.length} {actions.length === 1 ? 'step' : 'steps'}</span>}
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={13} className="text-ink-secondary" />
       </button>
+      {/* Outside the collapsible log: a page that tried to steer the agent is
+          something to see without opening anything. */}
+      {warnings.length > 0 && (
+        <div role="note" aria-label="Page instructions ignored" className="border-t border-amber-300/60 bg-amber-50 px-3 py-2 text-ink-primary">
+          <p className="flex items-start gap-2">
+            <Icon name="alert" size={14} className="mt-0.5 shrink-0 text-amber-600" />
+            <span>
+              {warnings.length === 1 ? 'Text from a page' : `Text from ${warnings.length} pages`} read like instructions to the AI.
+              It was treated as page data and not followed.
+            </span>
+          </p>
+          <ul className="mt-1.5 space-y-1 pl-[22px]">
+            {warnings.map((warning) => (
+              <li key={warning.source} className="break-words text-[11px] text-ink-secondary">
+                <span className="font-medium text-ink-primary">{warning.label}</span>: “{warning.excerpt}”
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {open && (
         <div id={listId} ref={logRef} onScroll={(event) => {
           const log = event.currentTarget;
@@ -84,6 +111,10 @@ export function TaskActivity({
             }}>Export audit JSON</button>}
             <label className="text-ink-secondary"><input type="checkbox" checked={showTiming} onChange={(e) => setShowTiming(e.target.checked)} /> Show timing</label>
           </div>
+          {plan?.kind === 'plan' && <div aria-label="Task plan" className="mb-3"><p>{plan.detail}</p><ol>{plan.goals.map((goal) => <li key={goal.id}>{goal.status === 'completed' ? '✓' : goal.status === 'active' ? '→' : '○'} {goal.goal}</li>)}</ol></div>}
+          {captureWarnings.map((warning) => <p role="alert" key={warning} className="mb-2 text-ink-secondary">{warning}</p>)}
+          <TaskReplay steps={steps} />
+          {!archived && <AgentTabs steps={steps} />}
           {sources.length > 0 && <details className="mb-3">
             <summary className="cursor-pointer text-ink-primary">Sources ({sources.length})</summary>
             <ul className="mt-2 space-y-2">{sources.map((source) => <li key={source.url}>
@@ -94,7 +125,7 @@ export function TaskActivity({
           </details>}
           <ol role="log" aria-label="Browser task steps" aria-live="polite" aria-relevant="additions text" className="space-y-3">
             {actions.map((action) => (
-              <li key={action.id} className="flex items-start gap-2">
+              <li key={action.id} id={action.callId ? `call-${action.callId}` : undefined} className="flex items-start gap-2">
                 <Icon
                   name={action.state === 'running' ? 'progress' : action.state === 'completed' ? 'check-circle' : action.state === 'error' ? 'alert' : 'circle'}
                   size={14}
@@ -112,6 +143,7 @@ export function TaskActivity({
             ))}
           </ol>
           {failed && currentStep && !actions.some((action) => action.message?.trim() === currentStep.trim()) && <p role="alert" className="mt-2 break-words text-danger">{currentStep}</p>}
+          {failed && onRetry && <button type="button" className="mt-2 text-primary" onClick={onRetry}>Retry with session permissions</button>}
           {failed && /Web search is not configured/i.test(currentStep) && (
             <button type="button" onClick={() => useBrowserStore.getState().openSettings()}
               className="mt-3 rounded bg-primary px-3 py-2 text-sm text-white">Configure web search</button>

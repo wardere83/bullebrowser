@@ -320,6 +320,8 @@ var __bb = (function () {
     if (!o) {
       throw new Error('No option "' + option + '". The options are: ' + opts.slice(0, 25).map(function (x) { return clean(x.text); }).join(' | '));
     }
+    window.__bbBeforeValues = window.__bbBeforeValues || new Map();
+    if (!window.__bbBeforeValues.has(el)) window.__bbBeforeValues.set(el, String(el.value || ''));
     // The prototype setter, so React-style controlled selects see the change.
     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, o.value);
     el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -562,6 +564,7 @@ export const AGENT_CURSOR = `
         halo.classList.remove('go');
       }
 
+      window.__bbLastCursor = { x: x, y: y, at: Date.now() };
       if (opts.click) {
         ring.style.left = x + 'px';
         ring.style.top = y + 'px';
@@ -713,6 +716,8 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
   const w = window as unknown as PageWindow;
   const html = __bb.FindField(target);
   __bb.GuardField(html);
+  const changes = ((window as unknown as { __bbBeforeValues?: Map<HTMLElement, string> }).__bbBeforeValues ??= new Map());
+  if (!changes.has(html)) changes.set(html, String((html as HTMLInputElement).value ?? html.textContent ?? ''));
   const label = __bb.Label(html).slice(0, 80);
   const described = label ? `${html.tagName.toLowerCase()} "${label}"` : html.tagName.toLowerCase();
 
@@ -873,6 +878,8 @@ export function PREVIEW_FN(target: string | null): Record<string, unknown> {
     };
   }
   const fields: { label: string; value: string }[] = [];
+  const changes: { label: string; before: string; after: string }[] = [];
+  const beforeValues = (window as unknown as { __bbBeforeValues?: Map<HTMLElement, string> }).__bbBeforeValues;
   const files: { name: string; size?: number }[] = [];
   for (const f of Array.from(form.elements) as (HTMLInputElement & HTMLSelectElement & HTMLTextAreaElement)[]) {
     if (!f.name || f.disabled) continue;
@@ -889,6 +896,7 @@ export function PREVIEW_FN(target: string | null): Record<string, unknown> {
     else if (f.tagName === 'SELECT') value = Array.from(f.selectedOptions).map((o) => o.text.trim()).join(', ');
     else if (type === 'checkbox' || type === 'radio') value = f.value === 'on' ? 'checked' : f.value;
     else value = f.value;
+    if (beforeValues?.has(f) && type !== 'password' && beforeValues.get(f) !== value) changes.push({ label: name.slice(0, 60), before: cut(beforeValues.get(f)!), after: cut(value) });
     fields.push({ label: type === 'hidden' ? `${f.name} (hidden)` : name.slice(0, 60), value: cut(value) });
   }
   const action = el.formAction && el.formAction !== location.href ? el.formAction : form.action;
@@ -899,6 +907,7 @@ export function PREVIEW_FN(target: string | null): Record<string, unknown> {
     url: action,
     method,
     fields,
+    changes,
     ...(files.length ? { files } : {}),
   };
 }

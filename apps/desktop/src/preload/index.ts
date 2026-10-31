@@ -87,6 +87,7 @@ const bridge: BrowserBridge = {
   agent: {
     run: (req: AgentRunRequest) => ipcRenderer.invoke(IPC.AGENT_RUN, req),
     cancel: (runId) => ipcRenderer.invoke(IPC.AGENT_CANCEL, runId),
+    control: (runId, command) => ipcRenderer.invoke(IPC.AGENT_CONTROL, runId, command),
     onStep: (cb) => subscribe(IPC.AGENT_STEP, cb),
     onResult: (cb) => subscribe(IPC.AGENT_RESULT, cb),
     onConfirmRequest: (cb) => subscribe(IPC.AGENT_CONFIRM_REQUEST, cb),

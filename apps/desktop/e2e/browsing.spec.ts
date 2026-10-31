@@ -754,7 +754,8 @@ for (const option of [
       await win.locator('aside textarea.prompt-input-field').fill(option.answer);
       await holdActualPageRead(app, true);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
-      await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeHidden();
+      await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
+      await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect.poll(() => app.evaluate(async () => {
         const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
         return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_agent_cursor__')?.shadowRoot?.querySelector('.ptr'))");

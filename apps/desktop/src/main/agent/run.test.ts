@@ -50,13 +50,14 @@ vi.mock('../tabs/manager.js', () => ({ tabManager: {
 } }));
 vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {
   dispose() {}
+  authorizeSession() {}
   constructor(_confirm: unknown, activity: (tabId: string) => void) {
     mocks.pageActivity.mockImplementation(activity);
   }
 } }));
 vi.mock('./attachments.js', () => ({ buildAttachmentAppendix: () => '' }));
 
-const { startAgentRun, cancelAgentRun } = await import('./run.js');
+const { startAgentRun, cancelAgentRun, replyAgentConfirm } = await import('./run.js');
 
 const request: AgentRunRequest = {
   conversationId: 'conversation-1',
@@ -74,6 +75,8 @@ async function runTask(overrides: Partial<AgentRunRequest> = {}) {
   const send = vi.fn();
   const win = { webContents: { send } } as unknown as BrowserWindow;
   const handle = await startAgentRun(win, { ...request, ...overrides });
+  const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
+  if (consent) replyAgentConfirm(handle.runId, consent.id, true);
   await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
   const result = send.mock.calls.find(([channel]) => channel === IPC.AGENT_RESULT)![1] as AgentResultEvent;
   return { send, result, handle };
@@ -198,7 +201,9 @@ describe('agent task results for live voice', () => {
     });
     const send = vi.fn();
     const handle = await startAgentRun({ webContents: { send } } as unknown as BrowserWindow, request);
-    expect(mocks.setBrowsingActivity).toHaveBeenCalledTimes(1);
+    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)![1];
+    replyAgentConfirm(handle.runId, consent.id, true);
+    await vi.waitFor(() => expect(mocks.setBrowsingActivity).toHaveBeenCalledTimes(1));
     cancelAgentRun(handle.runId);
     expect(mocks.clearBrowsingActivity).toHaveBeenCalledWith(handle.runId);
     release();
@@ -233,4 +238,25 @@ describe('agent task results for live voice', () => {
   expect(input.userMessage).toContain('not verified web evidence');
   expect(input.userRequest).toBe(request.userMessage);
   expect(mocks.appendMessage.mock.calls[0]![1].content).toBe(request.userMessage);
+});
+
+
+describe('session permission handshake', () => {
+  it('does not start the agent before consent and records denial', async () => {
+    const send = vi.fn();
+    const win = { webContents: { send } } as unknown as BrowserWindow;
+    const handle = await startAgentRun(win, request);
+    expect(mocks.runAgent).not.toHaveBeenCalled();
+    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
+    expect(consent.kind).toBe('browse_access');
+    replyAgentConfirm(handle.runId, consent.id, false);
+    await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
+    expect(mocks.runAgent).not.toHaveBeenCalled();
+    expect(mocks.appendTaskRun.mock.calls[0]?.[1].consents).toContainEqual(expect.objectContaining({ kind: 'browse_access', approved: false }));
+  });
+  it('allows product identity questions without browser permission', async () => {
+    mocks.runAgent.mockResolvedValue('BulleBrowser is built by Bulle Consulting.');
+    const { send } = await runTask({ userMessage: 'Who created BulleBrowser?' });
+    expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)).toBe(false);
+  });
 });
