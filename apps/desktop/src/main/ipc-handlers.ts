@@ -35,6 +35,7 @@ import {
 } from './storage/secrets.js';
 import {
   cancelAgentRun,
+  controlAgentRun,
   replyAgentConfirm,
   startAgentRun,
 } from './agent/run.js';
@@ -150,6 +151,7 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
   // agent
   handle(IPC.AGENT_RUN, (_e, req: AgentRunRequest) => startAgentRun(win, req));
   handle(IPC.AGENT_CANCEL, (_e, runId: string) => cancelAgentRun(runId));
+  handle(IPC.AGENT_CONTROL, (_e, runId: string, command: string) => controlAgentRun(runId, command));
   handle(
     IPC.AGENT_CONFIRM_REPLY,
     (_e, runId: string, id: string, approved: boolean) =>

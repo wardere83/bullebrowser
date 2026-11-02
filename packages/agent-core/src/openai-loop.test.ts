@@ -106,6 +106,19 @@ describe('runAgent with ChatGPT', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it('plans with the large model, executes cheaply, verifies and synthesizes with the large model', async () => {
+    fetchMock.mockResolvedValueOnce(reply(assistantText('["Read source","Verify result"]')))
+      .mockResolvedValueOnce(reply(assistantText('The page has grant information.')))
+      .mockResolvedValueOnce(reply(assistantText('The page describes grants [source](https://example.com).')));
+    const context = makeContext();
+    const steps: AgentStep[] = [];
+    const result = await runAgent({ planning: true, apiKey: 'test', model: 'gpt-4o', systemPrompt: '', history: [], userMessage: 'Summarize this source', context, onStep: (step) => steps.push(step) });
+    expect(fetchMock.mock.calls.map((call) => JSON.parse(call[1].body).model)).toEqual(['gpt-4o', 'gpt-4o-mini', 'gpt-4o']);
+    expect(context.runtime.readPage).toHaveBeenCalledTimes(2);
+    expect(result).toContain('https://example.com');
+    expect(steps.some((step) => step.type === 'plan')).toBe(true);
+  });
+
   it('protects unexpected self-identification before emitting the provider reply', async () => {
     fetchMock.mockResolvedValueOnce(reply(assistantText('I am ChatGPT, built by OpenAI.')));
     const steps: AgentStep[] = [];

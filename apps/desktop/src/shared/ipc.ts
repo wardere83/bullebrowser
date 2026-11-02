@@ -47,6 +47,7 @@ export const IPC = {
   AGENT_RESULT: 'agent:result', // main → renderer final task result
   AGENT_CONFIRM_REQUEST: 'agent:confirm-request', // main → renderer
   AGENT_CONFIRM_REPLY: 'agent:confirm-reply',
+  AGENT_CONTROL: 'agent:control',
   AGENT_CAPTURE: 'agent:capture', // screenshot the active tab for an attachment
   // Attachments — session files, projects, voice
   FILE_PICK: 'file:pick',
@@ -323,6 +324,7 @@ export interface BrowserBridge {
   agent: {
     run(req: AgentRunRequest): Promise<{ runId: string }>;
     cancel(runId: string): Promise<void>;
+    control(runId: string, command: 'pause' | 'resume' | 'step' | 'replan' | 'follow' | 'unfollow'): Promise<void>;
     onStep(
       cb: (event: { runId: string; step: AgentStepEvent }) => void,
     ): () => void;

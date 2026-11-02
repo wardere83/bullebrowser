@@ -576,13 +576,19 @@ for (const interaction of ['click', 'keyboard', 'middle', 'same-window fallback'
 }
 
 test('an unexecuted action is reported incomplete across chat and task result events', async () => {
+  const server = createServer((_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end('<html><title>Save fixture</title><body><button>Save</button><p>Nothing has been saved.</p></body></html>'); });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as { port: number };
   const { app, win, userData } = await launch({ openAiOnly: true });
   try {
+    await win.evaluate((url) => window.bullebrowser.tabs.create(url), `http://127.0.0.1:${address.port}/`);
     await app.evaluate(() => {
       const original = globalThis.fetch;
       (globalThis as Record<string, unknown>).__taskRequestCount = 0;
       globalThis.fetch = async (input, init) => {
         if (String(input).startsWith('https://api.openai.com/v1/chat/completions')) {
+          const body = JSON.parse(String(init?.body));
+          if (body.messages?.[0]?.content?.includes('Create a short public task plan')) return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '["Click Save","Verify the result"]' } }] }));
           (globalThis as Record<string, number>).__taskRequestCount += 1;
           return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: 'Done. Everything completed successfully.' } }] }));
         }
@@ -599,11 +605,12 @@ test('an unexecuted action is reported incomplete across chat and task result ev
     });
     await win.locator('aside textarea.prompt-input-field').fill('Click "Save"');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect.poll(() => win.evaluate(() => (window as unknown as { __taskResults: Array<{ status: string }> }).__taskResults[0]?.status)).toBe('failed');
     await expect(win.locator('.md-prose')).toContainText('Task incomplete');
     await expect(win.locator('.md-prose')).not.toContainText('Everything completed successfully');
-    expect(await app.evaluate(() => (globalThis as Record<string, number>).__taskRequestCount)).toBe(3);
-  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
+    expect(await app.evaluate(() => (globalThis as Record<string, number>).__taskRequestCount)).toBe(4);
+  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); await new Promise<void>((resolve) => server.close(() => resolve())); }
 });
 
 

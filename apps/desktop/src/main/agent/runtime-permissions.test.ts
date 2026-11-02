@@ -59,3 +59,14 @@ describe('site action permissions', () => {
     expect(request).toHaveBeenLastCalledWith('Submit again?', preview);
   });
 });
+
+
+it('session authorization never counts as consent to a consequential action', async () => {
+  const request = vi.fn(async () => false);
+  const runtime = new DesktopToolRuntime({ request });
+  runtime.authorizeSession();
+  expect(await runtime.checkPermission('tab', 'full', { action: 'submit' })).toBe('granted');
+  expect(request).not.toHaveBeenCalled();
+  expect(await runtime.confirmDestructive('Submit application?')).toBe(false);
+  expect(request).toHaveBeenCalledOnce();
+});

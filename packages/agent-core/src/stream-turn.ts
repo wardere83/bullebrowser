@@ -11,6 +11,7 @@ export async function consumeTurn(
   if (!(Symbol.asyncIterator in source)) return source;
   const content: Anthropic.ContentBlock[] = [];
   const json = new Map<number, string>();
+  const dispatched = new Set<number>();
   let stop_reason: Anthropic.Message['stop_reason'] = null;
   for await (const event of source) {
     if (event.type === 'content_block_start') {
@@ -20,7 +21,20 @@ export async function consumeTurn(
       if (!block) throw new Error('Stream delta arrived before its content block.');
       const delta = event.delta;
       if (delta.type === 'text_delta' && block.type === 'text') block.text += delta.text;
-      else if (delta.type === 'input_json_delta') json.set(event.index, (json.get(event.index) ?? '') + delta.partial_json);
+      else if (delta.type === 'input_json_delta') {
+        const raw = (json.get(event.index) ?? '') + delta.partial_json;
+        if (dispatched.has(event.index) && delta.partial_json.trim()) throw new Error('A dispatched tool call changed in the stream.');
+        json.set(event.index, raw);
+        if (block.type === 'tool_use' && !dispatched.has(event.index)) {
+          let parsed: unknown;
+          try { parsed = JSON.parse(raw); } catch { /* Incomplete JSON must never execute. */ }
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            block.input = parsed;
+            dispatched.add(event.index);
+            onTool(structuredClone(block));
+          }
+        }
+      }
       else if (delta.type === 'thinking_delta' && block.type === 'thinking') block.thinking += delta.thinking;
       else if (delta.type === 'signature_delta' && block.type === 'thinking') block.signature += delta.signature;
       else if (delta.type === 'citations_delta' && block.type === 'text') (block.citations ??= []).push(delta.citation);
@@ -29,7 +43,7 @@ export async function consumeTurn(
       if (block?.type === 'tool_use') {
         const raw = json.get(event.index);
         if (raw !== undefined) block.input = JSON.parse(raw);
-        onTool(block);
+        if (!dispatched.has(event.index)) { dispatched.add(event.index); onTool(block); }
       }
     } else if (event.type === 'message_delta') stop_reason = event.delta.stop_reason;
   }

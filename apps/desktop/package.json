@@ -16,8 +16,9 @@
     "package:linux": "node scripts/prepare-speech-model.mjs && electron-vite build && electron-builder --linux --config electron-builder.yml",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run --exclude 'e2e/**' --passWithNoTests && node --test scripts/native-voice-check.cjs scripts/updater-relaunch-check.cjs",
-    "test:e2e": "playwright test"
+    "test": "vitest run --exclude 'e2e/**' --exclude 'benchmarks/**' --passWithNoTests && node --test scripts/native-voice-check.cjs scripts/updater-relaunch-check.cjs",
+    "test:e2e": "playwright test",
+    "benchmark": "playwright test --config benchmark.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

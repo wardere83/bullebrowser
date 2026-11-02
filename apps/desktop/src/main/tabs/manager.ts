@@ -68,7 +68,7 @@ class TabManager {
     return this.tabs.map((t) => this.toState(t));
   }
 
-  async create(url?: string, openerId?: string): Promise<TabState> {
+  async create(url?: string, openerId?: string, background = false): Promise<TabState> {
     if (!this.win) throw new Error('No window attached');
     const destination = url ?? getDefaultHome();
     assertAllowedDestination(destination);
@@ -104,7 +104,8 @@ class TabManager {
     }
     this.win.contentView.addChildView(view);
     this.wireEvents(tab);
-    this.activate(id);
+    if (!background || !this.activeId) this.activate(id);
+    else this.relayout();
     // A failed load is published to the chrome, which owns the retry page.
     // Keep tab creation usable even when the network or target is unavailable.
     void view.webContents.loadURL(tab.url).catch(() => {});

@@ -60,6 +60,62 @@ export function neutralizeDeep<T>(value: T): T {
   return value;
 }
 
+// Sealing keeps the model from obeying page text, but the user never saw that
+// a page tried. These patterns spot text written to steer an AI assistant
+// rather than to inform the reader, so the app can say so. They are kept
+// narrow on purpose: ordinary pages (forum "User:" lines, emoji joiners, docs
+// that say "the user") must not raise a warning. Containment never depends on
+// them; every page is sealed whether or not anything matches.
+export type PageInstructionSignal = 'override' | 'addressed-to-ai' | 'conceal' | 'impersonation';
+
+const INSTRUCTION_PATTERNS: { signal: PageInstructionSignal; pattern: RegExp }[] = [
+  {
+    signal: 'override',
+    pattern:
+      /\b(?:ignore|disregard|forget|override|bypass)\b[^.!?\n]{0,40}?\b(?:previous|prior|preceding|above|earlier|all|any|your|system|original)\b[^.!?\n]{0,30}?\b(?:instructions?|prompts?|rules|directives|guidelines|guardrails)\b/i,
+  },
+  {
+    signal: 'addressed-to-ai',
+    pattern:
+      /\b(?:(?:note|message|instructions?|attention|important)\s+(?:to|for)\s+(?:the\s+|any\s+|all\s+)?(?:ai|llms?|language models?|ai assistants?|ai agents?|assistants?|chatbots?)\b|if\s+you\s+are\s+(?:an?\s+)?(?:ai|llm|(?:large\s+)?language\s+model|ai\s+assistant|ai\s+agent|automated\s+agent|chatbot)\b|(?:ai|llm)\s+(?:assistants?|agents?|models?)\s+(?:reading|processing|summari[sz]ing|browsing)\s+this\b)/i,
+  },
+  {
+    signal: 'conceal',
+    pattern: /\b(?:do\s+not|don't|never)\s+(?:tell|inform|mention)\b[^.!?\n]{0,30}?\bthe\s+user\b|\bwithout\s+(?:telling|informing)\s+the\s+user\b/i,
+  },
+  {
+    signal: 'impersonation',
+    pattern:
+      /<\s*\/?\s*(?:untrusted_page_data|system|system-reminder|tool_use|tool_result|function_calls?|function_results?|invoke|antml:[\w-]+|\|?im_start\|?|\|?im_end\|?)\b|"type"\s*:\s*"(?:tool_use|tool_result)"/i,
+  },
+];
+
+export interface PageInstructionFinding {
+  signals: PageInstructionSignal[];
+  /** The first matching passage with a little context, for the user to judge. */
+  excerpt: string;
+}
+
+const EXCERPT_CONTEXT = 60;
+const EXCERPT_MAX = 240;
+
+export function detectPageInstructions(text: string): PageInstructionFinding | null {
+  const signals: PageInstructionSignal[] = [];
+  let first: { index: number; length: number } | null = null;
+  for (const { signal, pattern } of INSTRUCTION_PATTERNS) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    signals.push(signal);
+    if (!first || match.index < first.index) first = { index: match.index, length: match[0].length };
+  }
+  if (!first) return null;
+  const start = Math.max(0, first.index - EXCERPT_CONTEXT);
+  const end = Math.min(text.length, first.index + first.length + EXCERPT_CONTEXT);
+  let excerpt = text.slice(start, end).replace(HIDDEN_CHARS, '').replace(/\s+/g, ' ').trim();
+  if (excerpt.length > EXCERPT_MAX) excerpt = `${excerpt.slice(0, EXCERPT_MAX - 1)}…`;
+  return { signals, excerpt: `${start > 0 ? '…' : ''}${excerpt}${end < text.length && !excerpt.endsWith('…') ? '…' : ''}` };
+}
+
 export function wrapUntrusted(text: string, source: string): string {
   const src = source.replace(/[^\w:./@-]/g, '_').slice(0, 80);
   return `<${UNTRUSTED_TAG} source="${src}">\n${neutralize(text)}\n</${UNTRUSTED_TAG}>`;
