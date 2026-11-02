@@ -1,5 +1,12 @@
 name: Funding portal evaluator
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/**'
+      - 'apps/desktop/benchmarks/**'
+      - 'apps/desktop/benchmark.config.ts'
+      - '.github/workflows/funding-evaluator.yml'
   schedule:
     - cron: '43 9 * * *'
   workflow_dispatch:
