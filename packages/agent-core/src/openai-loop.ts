@@ -72,6 +72,7 @@ export async function createOpenAiCompletion(
   // Another address for the same endpoint: a gateway, or a test server.
   url: string = OPENAI_URL,
   transport: typeof fetch = fetch,
+  onTool?: (call: OpenAiToolCall) => void,
 ): Promise<OpenAiResponse> {
   const response = await transport(url, {
     method: 'POST',
@@ -79,7 +80,7 @@ export async function createOpenAiCompletion(
       'content-type': 'application/json',
       authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(onTool ? { ...body, stream: true, stream_options: { include_usage: true } } : body),
     signal,
   });
 
@@ -96,6 +97,7 @@ export async function createOpenAiCompletion(
     throw new OpenAiError(detail || `OpenAI request failed (${response.status}).`, response.status);
   }
 
+  if (onTool && response.headers?.get('content-type')?.includes('text/event-stream')) return consumeOpenAiStream(response, onTool);
   return (await response.json()) as OpenAiResponse;
 }
 
@@ -127,4 +129,65 @@ export function parseToolArguments(call: OpenAiToolCall): {
   } catch {
     return { name, input: {}, error: `Tool arguments were not valid JSON: ${raw}` };
   }
+}
+
+
+/** Assemble SSE deltas without waiting for the terminal model turn to dispatch complete calls. */
+export async function consumeOpenAiStream(response: Response, onTool: (call: OpenAiToolCall) => void): Promise<OpenAiResponse> {
+  if (!response.body) throw new Error('OpenAI returned an empty stream.');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const calls = new Map<number, OpenAiToolCall>();
+  const dispatched = new Set<number>();
+  let nextDispatch = 0;
+  let pending = '', content = '', finish = '', model: string | undefined;
+  let usage: OpenAiResponse['usage'];
+  const processLine = (line: string) => {
+    if (!line.startsWith('data:')) return;
+    const data = line.slice(5).trim();
+    if (!data || data === '[DONE]') return;
+    const event = JSON.parse(data);
+    if (event.error) throw new Error('The model stream reported an error.');
+    if (event.model) model = event.model;
+    if (event.usage) usage = event.usage;
+    const choice = event.choices?.find((item: { index: number }) => item.index === 0);
+    if (!choice) return;
+    if (choice.finish_reason) finish = choice.finish_reason;
+    const delta = choice.delta ?? {};
+    if (typeof delta.content === 'string') content += delta.content;
+    if (typeof delta.refusal === 'string') content += delta.refusal;
+    for (const part of delta.tool_calls ?? []) {
+      if (!Number.isInteger(part.index) || part.index < 0 || part.index > 1024) throw new Error('Invalid streamed tool index.');
+      const call = calls.get(part.index) ?? { id: '', type: 'function', function: { name: '', arguments: '' } };
+      if (dispatched.has(part.index) && (part.id || part.function?.name || part.function?.arguments?.trim())) throw new Error('A dispatched tool call changed in the stream.');
+      if (part.id) call.id += part.id;
+      if (part.function?.name) call.function.name += part.function.name;
+      if (part.function?.arguments) call.function.arguments += part.function.arguments;
+      calls.set(part.index, call);
+      // Preserve provider call order across interleaved argument fragments.
+      for (;;) {
+        const ready = calls.get(nextDispatch);
+        if (!ready?.id || !ready.function.name || !ready.function.arguments.trim() || parseToolArguments(ready).error) break;
+        dispatched.add(nextDispatch++);
+        onTool(structuredClone(ready));
+      }
+    }
+  };
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      pending += decoder.decode(value, { stream: !done });
+      let end: number;
+      while ((end = pending.indexOf('\n')) >= 0) { processLine(pending.slice(0, end).replace(/\r$/, '')); pending = pending.slice(end + 1); }
+      if (done) break;
+    }
+    if (pending.trim()) processLine(pending);
+    if (!finish) throw new Error('The assistant stream ended before a complete turn.');
+    const ordered = [...calls.entries()].sort(([a], [b]) => a - b);
+    for (const [index, call] of ordered) {
+      if (!call.id || !call.function.name) throw new Error('Incomplete streamed tool call.');
+      if (!dispatched.has(index)) onTool(call);
+    }
+    return { model, usage, choices: [{ finish_reason: finish, message: { content, ...(calls.size ? { tool_calls: ordered.map(([, call]) => call) } : {}) } }] };
+  } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }

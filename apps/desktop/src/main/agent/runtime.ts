@@ -32,6 +32,7 @@ import {
   CLICK_FN,
   CLICK_SPOT_FN,
   EXTRACT_READABLE_TEXT,
+  FIRST_VIEWPORT_FN,
   EXTRACT_STRUCTURED,
   LIST_LINKS,
   PAGE_HELPERS,
@@ -237,16 +238,7 @@ export class DesktopToolRuntime implements ToolRuntime {
   async readPage(tabId: string) {
     const wc = this.wcFor(tabId);
     if (this.onViewport) {
-      const first = await wc.executeJavaScript(`(() => {
-        const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
-        let node, count = 0, text = '';
-        while ((node = walker.nextNode()) && count++ < 2000 && text.length < 8000) {
-          const el = node.parentElement; if (!el || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)) continue;
-          const rect = el.getBoundingClientRect();
-          if (rect.width && rect.height && rect.bottom > 0 && rect.top < innerHeight) text += node.textContent.trim() + '\\n';
-        }
-        return { url: location.href, title: document.title, text: text.slice(0, 8000) };
-      })()`) as { url: string; title: string; text: string };
+      const first = await wc.executeJavaScript(`(${FIRST_VIEWPORT_FN.toString()})()`) as { url: string; title: string; text: string };
       assertAllowedDestination(first.url);
       if (first.text.trim()) this.onViewport(first);
     }

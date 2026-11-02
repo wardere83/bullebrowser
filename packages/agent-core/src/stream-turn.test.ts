@@ -17,7 +17,7 @@ describe('streamed tool dispatch', () => {
       yield { type: 'content_block_start', index: 1, content_block: tool('first', 'navigate') };
       yield { type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '{"url":"https://' } };
       yield { type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: 'agency.gov"}' } };
-      expect(dispatch).not.toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledOnce();
       yield { type: 'content_block_stop', index: 1 };
       await hold.promise;
       yield { type: 'message_delta', delta: { stop_reason: 'tool_use', stop_sequence: null, container: null, stop_details: null }, usage: { output_tokens: 20, input_tokens: null, cache_creation_input_tokens: null, cache_read_input_tokens: null, server_tool_use: null } };

@@ -1,6 +1,6 @@
 # Agent browser benchmark execution
 
-The repository owns the runner (`scripts/run-agent-benchmarks.mjs`) and release validator. It does not ship benchmark datasets, model credentials, evaluation accounts, an approved baseline, or human citation audit results. Unit-test fixtures must never be used as release evidence.
+The repository owns the runner (`scripts/run-agent-benchmarks.mjs`), release validator, and an executable [funding portal evaluator](evaluator/README.md) with eight synthetic tasks, actual desktop/model execution, citation scoring, saved evidence and a nightly workflow. It does not ship the external public benchmark environments, model credentials, evaluation accounts, an approved baseline, or human citation audit results. Unit-test fixtures must never be used as release evidence.
 
 ## Configuration
 

@@ -911,3 +911,18 @@ export function PREVIEW_FN(target: string | null): Record<string, unknown> {
     ...(files.length ? { files } : {}),
   };
 }
+
+
+/** A bounded first-viewport read, published while the complete page read follows. */
+export function FIRST_VIEWPORT_FN() {
+  const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT);
+  let node: Node | null, count = 0, text = '';
+  while ((node = walker.nextNode()) && count++ < 2000 && text.length < 8000) {
+    const el = node.parentElement;
+    if (!el || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)) continue;
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height || rect.bottom <= 0 || rect.top >= innerHeight || getComputedStyle(el).visibility === 'hidden') continue;
+    text += (node.textContent ?? '').trim() + '\n';
+  }
+  return { url: location.href, title: document.title, text: text.slice(0, 8000) };
+}

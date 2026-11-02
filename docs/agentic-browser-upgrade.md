@@ -4,8 +4,8 @@ This upgrade is a tested foundation for the requested work. It is not evidence t
 
 ## Implemented
 
-- The default provider now streams tool blocks. Each complete tool-use block is dispatched immediately through the existing consent, destination and privacy checks. Partial JSON never executes. Results are reused by call ID, so receiving the final model turn cannot repeat an action. Private thinking remains in the provider transcript.
-- A shared dispatch queue overlaps only metadata, selection, link and tab-list reads. Navigation, page/ref reads, browser mutations and unknown host tools form barriers. The other provider uses this queue after its buffered response; it does not yet stream.
+- The default provider now streams tool blocks. Each complete tool-call JSON object is dispatched immediately through the existing consent, destination and privacy checks. Partial JSON never executes. Results are reused by call ID, so receiving the final model turn cannot repeat an action. Private thinking remains in the provider transcript.
+- A shared dispatch queue overlaps only metadata, selection, link and tab-list reads. Navigation, page/ref reads, browser mutations and unknown host tools form barriers. Both providers dispatch streamed complete tool calls into this queue; malformed/incomplete arguments never execute.
 - The extra 380 ms presentation delay and 550 ms page-reading delay are removed. Actual click/type/select/scroll actions paint their cursor before a 150 ms animation delay. Target refs appear in the overlay. Tool toasts and scroll glow/arrows are driven by actual actions. Reduced-motion handling for the existing cursor is preserved.
 - The approved navigation origin is preconnected through Chromium's session. No prefetch or background visit to a speculative destination is introduced.
 - Element maps are cached for two seconds per tab, URL and query. Browser mutations and navigation invalidate them; ref fingerprints still resolve targets. Runtime listeners are removed at task completion. Unsolicited DOM changes within the TTL can still require a fresh scan.
@@ -42,7 +42,7 @@ Evidence JSON has top-level `revision`, `completedAt`, `suites`, `latency`, `act
 ## Outstanding requirements
 
 - Actual public/private benchmark adapters, datasets, accounts, model credentials, approved baseline and random citation audit. No real benchmark score is claimed.
-- Measured p95 timing and 300 ms plan streaming, OpenAI streaming, search prewarming and approved domain shortlist.
+- Measured p95 timing and 300 ms plan streaming, search prewarming and approved domain shortlist.
 - OS-level permission integration, permission-sheet timing measurements, and full session scope UI.
 - Every-claim passage validation and primary/secondary authority review.
 - Complete replay coverage (including frames/background tabs), one-click combined Markdown/GIF export, and replay storage capacity testing.
@@ -55,3 +55,5 @@ Run agent-core tests with coverage, desktop unit/native tests, typechecks, lint,
 Follow-up local validation: 1,980 desktop unit tests, 13 native checks, 8 benchmark runner/gate contract tests, desktop typechecks, lint (two existing AttachMenu warnings), production build and product-language checks passed. A new headless scratchpad save/reload/forget test is included for GitHub CI. These checks do not substitute for real benchmark evidence.
 
 Current upgrade validation: 1,984 desktop unit tests plus 13 native checks passed before three additional permission regression tests (all 17 targeted tests passed). Desktop and core typechecks, lint (two existing AttachMenu warnings), production build, and 12 benchmark contract tests passed. GIF bytes were independently decoded with Pillow. Real suite evaluation and new GitHub end-to-end results remain required.
+
+Repository-owned evaluator added: `benchmarks/evaluator/README.md` documents eight executable funding-portal tasks, real desktop/model execution, exact-source citation scoring, corpus hashing, optional baseline regression comparison, nightly GitHub workflow and 30-day evidence artifacts. Missing model credentials produce a blocked readiness record. The synthetic portal suite does not replace external benchmark environments or independent release review.

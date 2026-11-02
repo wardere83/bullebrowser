@@ -1,0 +1,53 @@
+name: Funding portal evaluator
+on:
+  schedule:
+    - cron: '43 9 * * *'
+  workflow_dispatch:
+    inputs:
+      provider:
+        type: choice
+        options: [anthropic, openai]
+        default: anthropic
+permissions:
+  contents: read
+concurrency:
+  group: funding-evaluator-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  evaluate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    env:
+      BULLE_EVAL_PROVIDER: ${{ inputs.provider || 'anthropic' }}
+      BULLE_EVAL_REVISION: ${{ github.sha }}
+      BULLE_EVAL_OUTPUT: ${{ github.workspace }}/benchmark-results
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check real evaluator prerequisites
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node benchmarks/evaluator/preflight.mjs
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Install virtual display
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Build actual desktop application
+        run: pnpm --filter @bullebrowser/desktop build
+      - name: Evaluate real agent against funding corpus
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        working-directory: apps/desktop
+        run: xvfb-run -a --server-args="-screen 0 1280x800x24" pnpm exec playwright test --config benchmark.config.ts
+      - name: Save readiness and measured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: funding-evaluator-evidence
+          path: benchmark-results/*.json
+          retention-days: 30
+          if-no-files-found: error

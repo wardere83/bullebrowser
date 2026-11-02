@@ -996,13 +996,27 @@ async function runOpenAiTurns(args: {
     await planner?.ensure();
     onStep({ type: 'thinking', detail: 'Thinking…' });
 
+    const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
+      if (context.signal.aborted) throw new Error('cancelled');
+      await planner?.ensure();
+      const charge = budget.charge(toolUse.name);
+      if (!charge.ok) return { text: budgetExhausted(budget, onStep), isError: true };
+      const outcome = await executeToolCall(toolUse.id, toolUse.name, toolUse.input,
+        context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
+      if (charge.warn) budgetWarning(budget, outcome, onStep);
+      return outcome;
+    }, new Set(extraTools.keys()));
     const response = await createOpenAiCompletion(
       input.apiKey as string,
       { model: planner?.model ?? input.model, messages: [{ role: 'system', content: system + (planner?.instructions ?? '') }, ...messages.slice(1)], tools, tool_choice: 'auto', max_tokens: MAX_TOKENS_PER_TURN },
       context.signal,
       undefined,
       input.modelFetch,
-    );
+      (call) => {
+        const { name, input: parsedInput, error } = parseToolArguments(call);
+        if (!error) void dispatch.enqueue({ type: 'tool_use', id: call.id, name, input: parsedInput });
+      },
+    ).finally(() => dispatch.settled());
 
     const choice = response.choices?.[0];
     if (!choice) throw new Error('OpenAI returned no choices.');
@@ -1054,16 +1068,6 @@ async function runOpenAiTurns(args: {
     // Every tool_call must get a matching 'tool' message or the next request is
     // rejected — so this loop must not skip any call, even past the limit.
     const images: string[] = [];
-    const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
-      if (context.signal.aborted) throw new Error('cancelled');
-      await planner?.ensure();
-      const charge = budget.charge(toolUse.name);
-      if (!charge.ok) return { text: budgetExhausted(budget, onStep), isError: true };
-      const outcome = await executeToolCall(toolUse.id, toolUse.name, toolUse.input,
-        context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
-      if (charge.warn) budgetWarning(budget, outcome, onStep);
-      return outcome;
-    }, new Set(extraTools.keys()));
     const outcomes = await Promise.all(calls.map(async (call) => {
       const { name, input: parsedInput, error } = parseToolArguments(call);
       if (error) {
