@@ -32,7 +32,7 @@ import {
   toToolError,
   type ToolErrorCode,
 } from './errors.js';
-import { detectPageInstructions, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
+import { detectPageInstructions, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES, type PageInstructionFinding } from './untrusted.js';
 import { requiredLevel } from './permissions.js';
 import { StepBudget } from './budget.js';
 import { PRODUCT_IDENTITY_INSTRUCTIONS, productQuestionReply, protectAssistantIdentity, protectConversationIdentity } from './product-identity.js';
@@ -221,6 +221,19 @@ function pageStrings(value: unknown, out: string[] = []): string[] {
   return out;
 }
 
+// Look for instructions in the raw text first: it is cheap, and most pages
+// have none. On a match, take the excerpt from a redacted copy instead. Cutting
+// first could split a signed URL so the redactor no longer recognizes it, and
+// key-based redaction (a `password` or `token` field) needs the keys, which
+// the joined text has lost. A match only inside a redacted field is not shown.
+// `limit` matches what the model is given: tool results are cut at 100,000
+// characters, reference documents are not cut at all.
+function findPageInstructions(value: unknown, policy: PrivacyPolicyEngine, limit = 100_000): PageInstructionFinding | null {
+  const text = (v: unknown) => truncate(pageStrings(v).join('\n'), limit);
+  if (!detectPageInstructions(text(value))) return null;
+  return detectPageInstructions(text(policy.redact(value)));
+}
+
 // Tell the user when page-derived text tried to steer the agent. The model
 // already gets the text sealed as data; this makes the attempt visible.
 async function warnOnPageInstructions(
@@ -229,7 +242,7 @@ async function warnOnPageInstructions(
   policy: PrivacyPolicyEngine,
   onStep: AgentStepHandler,
 ): Promise<void> {
-  const finding = detectPageInstructions(truncate(pageStrings(output).join('\n'), 100_000));
+  const finding = findPageInstructions(output, policy);
   if (!finding) return;
   const source = typeof label === 'string' ? label : await label().catch(() => 'the current page');
   onStep({
@@ -239,12 +252,28 @@ async function warnOnPageInstructions(
   });
 }
 
-// The page a browser tool read from: its own URL when it reports one,
-// otherwise the active tab's.
-function browserSource(output: unknown, context: ToolContext): string | (() => Promise<string>) {
-  const url = output && typeof output === 'object' ? (output as { url?: unknown }).url : undefined;
-  if (typeof url === 'string' && url) return url;
-  return async () => (await context.runtime.listTabs()).find((tab) => tab.id === context.activeTabId)?.url || 'the current page';
+// Attribute a browser tool's page text to the page it came from. A tab list
+// holds text from several pages, so each tab answers for its own title. Other
+// results name their own URL, or else the tab the tool was pointed at, which
+// need not be the active one.
+async function warnOnBrowserOutput(
+  output: unknown,
+  input: Record<string, unknown>,
+  context: ToolContext,
+  policy: PrivacyPolicyEngine,
+  onStep: AgentStepHandler,
+): Promise<void> {
+  const record = output && typeof output === 'object' ? (output as { url?: unknown; tabs?: unknown }) : undefined;
+  if (Array.isArray(record?.tabs)) {
+    for (const tab of record.tabs as { url?: unknown }[]) {
+      await warnOnPageInstructions(tab, typeof tab?.url === 'string' && tab.url ? tab.url : 'a tab', policy, onStep);
+    }
+    return;
+  }
+  if (typeof record?.url === 'string' && record.url) return warnOnPageInstructions(output, record.url, policy, onStep);
+  const tabId = typeof input.tabId === 'string' ? input.tabId : context.activeTabId;
+  await warnOnPageInstructions(output,
+    async () => (await context.runtime.listTabs()).find((tab) => tab.id === tabId)?.url || 'the current page', policy, onStep);
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -447,7 +476,8 @@ export async function executeToolCall(
         return fail(new ToolError('UNKNOWN', 'The screenshot came back empty.'));
       }
 
-      await warnOnPageInstructions(output, browserSource(output, context), policy, onStep);
+      // The validated input: a tabId the tool's schema drops was not used.
+      await warnOnBrowserOutput(output, (parsed ?? {}) as Record<string, unknown>, context, policy, onStep);
       const text = typeof output === 'string' ? neutralize(output) : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), name), isError: false });
     } catch (error) {
@@ -643,7 +673,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   // Scan full document/reference text before either cloud or keyless execution.
   // Warnings are bounded/redacted; the original reference remains sealed as data.
   for (const item of input.referenceContext ?? []) {
-    const finding = detectPageInstructions(item.text);
+    const finding = findPageInstructions(item.text, policy, Infinity);
     if (!finding) continue;
     const source = `Document: ${(item.label.trim() || 'reference').slice(0, 160)}`;
     onStep({ type: 'page_instructions', detail: policy.redact(source) as string,
