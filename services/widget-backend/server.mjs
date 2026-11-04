@@ -19,12 +19,16 @@
 // method awaits the matching /tool-result before returning.
 
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
+import { RequestError, readJson, validId, validateStart, validateResult, createLimiter, serviceConfig, logRequest } from './hardening.mjs';
 import { runAgent, webSearchTool } from '@bullebrowser/agent-core';
 import { eeoTools } from './eeo-tools.mjs';
 import { verifyIdentity, ownsSession, canUseAccountApi } from './auth.mjs';
 
 const PORT = process.env.PORT || 8787;
-const MODEL = 'claude-opus-4-7';
+const { model: MODEL, origins: ALLOWED } = serviceConfig();
+const requestLimit = createLimiter({ limit: 180 });
+const startLimit = createLimiter({ limit: 10 });
 
 // EEO Dashboard Secure API. The key is account-level (X-Public-ID / X-Secret-Key),
 // so it stays here in env vars — never in the widget or the page. If either is
@@ -64,7 +68,8 @@ const CRM_SYSTEM = [
 const sessions = new Map();
 
 function send(session, event) {
-  if (session.res.writableEnded) return;
+  if (session.res.writableEnded || session.res.destroyed) return;
+  if (session.res.writableLength > 1024 * 1024) { session.abort(); session.res.end(); return; }
   session.res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
@@ -72,15 +77,13 @@ function send(session, event) {
 function callBrowserTool(session, name, input) {
   const id = `t${session.seq++}`;
   return new Promise((resolve, reject) => {
-    session.pending.set(id, { resolve, reject });
-    send(session, { type: 'tool_call', id, name, input });
-    // Safety timeout so a lost page can't hang the run forever.
-    setTimeout(() => {
-      if (session.pending.has(id)) {
-        session.pending.delete(id);
-        reject(new Error(`The page did not respond to ${name} in time.`));
-      }
+    const timer = setTimeout(() => {
+      session.pending.delete(id);
+      reject(new Error('The page did not respond in time.'));
     }, 30_000);
+    session.pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
+    send(session, { type: 'tool_call', id, name, input });
+
   });
 }
 
@@ -142,35 +145,12 @@ async function start(session, prompt, url, title) {
     if (completionIssue) send(session, { type: 'error', message: completionIssue });
     else send(session, { type: 'done' });
   } catch (err) {
-    send(session, { type: 'error', message: err?.message || 'The assistant hit an error.' });
+    send(session, { type: 'error', message: 'The assistant could not complete this request. Please retry.' });
   } finally {
     session.res.end();
-    sessions.delete(session.id);
+    if (sessions.get(session.id) === session) sessions.delete(session.id);
   }
 }
-
-function body(req) {
-  return new Promise((resolve) => {
-    let b = '';
-    req.on('data', (c) => (b += c));
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(b || '{}'));
-      } catch {
-        resolve({});
-      }
-    });
-  });
-}
-
-// Only these origins may call the backend. Set ALLOWED_ORIGINS to a
-// comma-separated list (your CRM, and any dashboard that embeds the widget).
-// With credentials, CORS cannot use "*", so we echo the caller only if it's on
-// the list. Empty list = reflect any origin (dev only — lock this down).
-const ALLOWED = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
 
 // CRM-server-issued user identities only. No static shared-token fallback.
 const WIDGET_AUTH_SECRET = process.env.WIDGET_AUTH_SECRET || '';
@@ -180,53 +160,57 @@ function authed(req, u, payload) {
   return verifyIdentity(token, WIDGET_AUTH_SECRET);
 }
 
-http
-  .createServer(async (req, res) => {
+export async function handleRequest(req, res) {
     const origin = req.headers.origin;
+    if (origin && ALLOWED.length && !ALLOWED.includes(origin)) throw new RequestError(403, 'Origin is not allowed');
+    const retry = requestLimit(req.socket.remoteAddress || 'unknown');
+    if (retry) { res.setHeader('Retry-After', String(retry)); throw new RequestError(429, 'Too many requests'); }
     if (origin && (ALLOWED.length === 0 || ALLOWED.includes(origin))) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Headers', 'content-type');
+      res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     }
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
 
     const u = new URL(req.url, 'http://x');
     if (u.pathname === '/health' && req.method === 'GET') return res.writeHead(200).end('ok');
 
-    if (u.pathname === '/stream') {
+    if (u.pathname === '/stream' && req.method === 'GET') {
       // The endpoint wields an account-level key, so a caller must present the
       // widget token. EventSource can't send headers, so the token rides in the
       // query. See authed().
       const identity = authed(req, u);
       if (!identity) return res.writeHead(401).end('unauthorized');
       const id = u.searchParams.get('sessionId');
-      if (!id || id.length > 128 || sessions.has(id)) return res.writeHead(409).end('invalid or existing session');
+      if (!validId(id) || sessions.has(id)) return res.writeHead(409).end('invalid or existing session');
+      if (sessions.size >= 200 || [...sessions.values()].filter(s => s.owner === identity.sub).length >= 3) throw new RequestError(429, 'Too many open sessions');
       res.writeHead(200, {
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         connection: 'keep-alive',
       });
-      const expires = setTimeout(() => {
-        const session = sessions.get(id);
-        session?.abort();
-        res.end();
-        sessions.delete(id);
-      }, Math.max(0, identity.exp * 1000 - Date.now()));
-      sessions.set(id, { id, owner: identity.sub, identity, res, pending: new Map(), seq: 0, abort: () => {} });
-      req.on('close', () => {
+      const session = { id, owner: identity.sub, identity, res, pending: new Map(), seq: 0, abort: () => {} };
+      const expires = setTimeout(() => { session.abort(); res.end(); }, Math.max(0, identity.exp * 1000 - Date.now()));
+      sessions.set(id, session);
+      res.once('close', () => {
         clearTimeout(expires);
-        const s = sessions.get(id);
-        if (s) s.abort();
-        sessions.delete(id);
+        session.abort();
+        for (const pending of session.pending.values()) pending.reject(new Error('Session closed'));
+        session.pending.clear();
+        if (sessions.get(id) === session) sessions.delete(id);
       });
       return;
     }
 
     if (u.pathname === '/start' && req.method === 'POST') {
-      const payload = await body(req);
+      const payload = await readJson(req);
       const identity = authed(req, u, payload);
       if (!identity) return res.writeHead(401).end('unauthorized');
+      validateStart(payload, ALLOWED);
+      const retry = startLimit(identity.sub);
+      if (retry) { res.setHeader('Retry-After', String(retry)); throw new RequestError(429, 'Too many tasks'); }
       const { sessionId, prompt, url, title } = payload;
       const session = sessions.get(sessionId);
       if (!ownsSession(session, identity)) return res.writeHead(403).end('forbidden');
@@ -237,20 +221,21 @@ http
       res.writeHead(200).end('ok');
       // Give the EventSource a tick to connect, then run.
       setTimeout(() => {
-        const s = sessions.get(sessionId);
-        if (s) void start(s, prompt, url, title);
+        if (sessions.get(sessionId) === session && !session.res.writableEnded) void start(session, prompt, url, title);
       }, 150);
       return;
     }
 
     if (u.pathname === '/tool-result' && req.method === 'POST') {
-      const payload = await body(req);
+      const payload = await readJson(req);
       const identity = authed(req, u, payload);
       if (!identity) return res.writeHead(401).end('unauthorized');
+      validateResult(payload);
       const { sessionId, id, result, error } = payload;
       const s = sessions.get(sessionId);
       if (!ownsSession(s, identity)) return res.writeHead(403).end('forbidden');
       const p = s?.pending.get(id);
+      if (!p) throw new RequestError(409, 'Tool result is no longer pending');
       if (p) {
         s.pending.delete(id);
         error ? p.reject(new Error(error)) : p.resolve(result);
@@ -260,5 +245,23 @@ http
     }
 
     res.writeHead(404).end('not found');
-  })
-  .listen(PORT, () => console.log(`BulleBrowser widget backend on :${PORT}`));
+}
+
+export function createWidgetServer() {
+  return http.createServer({ requestTimeout: 30000, headersTimeout: 10000 }, (req, res) => {
+    const startedAt = Date.now();
+    let pathname;
+    try { pathname = new URL(req.url, 'http://widget.invalid').pathname; }
+    catch { res.writeHead(400).end('Invalid request URL'); return; }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.once('finish', () => logRequest(console.info, { method: req.method, pathname, status: res.statusCode, startedAt }));
+    void handleRequest(req, res).catch(error => {
+      if (!res.headersSent) res.writeHead(error instanceof RequestError ? error.status : 500);
+      if (!res.writableEnded) res.end(error instanceof RequestError ? error.message : 'Request could not be completed');
+    });
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  createWidgetServer().listen(PORT, () => console.log(`BulleBrowser widget backend on :${PORT}`));
+}

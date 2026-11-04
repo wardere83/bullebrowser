@@ -51,7 +51,9 @@ jobs:
       - name: Desktop unit tests
         run: pnpm --filter @bullebrowser/desktop test
       - name: Widget authorization tests
-        run: node --test services/widget-backend/auth.test.mjs
+        run: |
+          node services/widget-backend/build.mjs
+          node --test services/widget-backend/*.test.mjs
       - name: Shared cloud authentication and billing safety tests
         run: |
           node --test services/cloud/cloud.test.mjs
