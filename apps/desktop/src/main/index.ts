@@ -6,7 +6,7 @@ import { product } from '@bullebrowser/brand-tokens';
 import { createBrowserWindow, runsHidden } from './window.js';
 import { registerIpc } from './ipc-handlers.js';
 import { tabManager } from './tabs/manager.js';
-import { getUpdateStatus, setupAutoUpdate } from './updater.js';
+import { getUpdateStatus, isUpdateRestartPending, setupAutoUpdate } from './updater.js';
 import { setupPermissions } from './permissions.js';
 import { setupAppMenu } from './menu.js';
 import { trackNetwork } from './agent/browser/net-activity.js';
@@ -123,6 +123,8 @@ app.on('window-all-closed', () => {
 // Snapshot at the user's actual quit, not at an earlier Update click. Tabs may
 // have changed while a verified update was waiting in the background.
 app.on('before-quit', () => {
+  // Explicit activation already saved before the native updater closed windows.
+  if (isUpdateRestartPending()) return;
   const status = getUpdateStatus();
   if (status.state === 'ready' || status.state === 'deferred') {
     try { saveUpdateTabs(tabManager.list()); }

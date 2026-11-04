@@ -384,18 +384,43 @@ test('updates expose real progress and stage without closing tabs or interruptin
     });
     await expect(dialog.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
     await dialog.getByRole('button', { name: 'Prepare update — restart later' }).click();
-    await expect(update).toHaveText('Restart required');
-    await expect(dialog).toContainText('Restart BulleBrowser when convenient');
+    await expect(win.getByRole('button', { name: 'Restart to update', exact: true })).toBeVisible();
+    await expect(dialog).toContainText('Ready to finish — restart required');
     expect(await app.evaluate(() => (globalThis as Record<string, unknown>).__appliedVersions)).toEqual(['0.2.80']);
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(composer).toHaveValue('Keep my draft through this update.');
     await win.reload();
-    await expect(update).toHaveText('Restart required');
+    await expect(win.getByRole('button', { name: 'Restart to update', exact: true })).toBeVisible();
     await expect(win.getByRole('complementary', { name: 'Assistant chat' })).toBeVisible();
   } finally {
     await app.close();
     rmSync(userData, { recursive: true, force: true });
   }
+});
+
+test('one ready update control click saves the draft and requests activation without claiming completion', async () => {
+  const { app, win, userData } = await launch({ withoutKeys: true });
+  try {
+    const composer = win.locator('aside textarea.prompt-input-field');
+    await expect(composer).toBeEnabled();
+    await composer.fill('Restore this draft after restart.');
+    await app.evaluate(({ ipcMain, BrowserWindow }) => {
+      const state = globalThis as Record<string, unknown>;
+      state.__finishedVersions = [];
+      ipcMain.removeHandler('update:finish');
+      ipcMain.handle('update:finish', (_event, version: string) => {
+        (state.__finishedVersions as string[]).push(version);
+      });
+      ipcMain.removeHandler('update:details');
+      ipcMain.handle('update:details', () => ({ installedVersion: '0.2.84', completedVersion: null, activationIssue: null }));
+      BrowserWindow.getAllWindows()[0].webContents.send('update:status', { state: 'ready', version: '0.2.85' });
+    });
+    await win.getByRole('button', { name: 'Restart to update', exact: true }).click();
+    await expect.poll(() => app.evaluate(() => (globalThis as Record<string, unknown>).__finishedVersions)).toEqual(['0.2.85']);
+    expect(await win.evaluate(() => JSON.parse(localStorage.getItem('bullebrowser:update-chat') ?? 'null')?.draft)).toBe('Restore this draft after restart.');
+    await expect(win.getByText(/Update Completed/)).toHaveCount(0);
+    await expect(composer).toHaveValue('Restore this draft after restart.');
+  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
 });
 
  test('update failures stay visible and give recovery without quitting', async () => {
