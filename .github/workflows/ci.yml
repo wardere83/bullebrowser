@@ -28,6 +28,8 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
+      - name: Dependency security and compatibility contracts
+        run: node --test scripts/security-dependencies.test.mjs
       - name: Guard workflow condition syntax (no secrets in step-level if)
         shell: bash
         run: |
