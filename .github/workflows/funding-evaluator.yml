@@ -13,8 +13,8 @@ on:
     inputs:
       provider:
         type: choice
-        options: [anthropic, openai]
-        default: anthropic
+        options: [auto, anthropic, openai]
+        default: auto
 permissions:
   contents: read
 concurrency:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 35
     env:
-      BULLE_EVAL_PROVIDER: ${{ inputs.provider || 'anthropic' }}
+      BULLE_EVAL_PROVIDER: ${{ inputs.provider || vars.BULLE_EVAL_PROVIDER || 'auto' }}
       BULLE_EVAL_REVISION: ${{ github.sha }}
       BULLE_EVAL_OUTPUT: ${{ github.workspace }}/benchmark-results
     steps:
@@ -34,6 +34,7 @@ jobs:
         with:
           node-version: '20'
       - name: Check real evaluator prerequisites
+        id: preflight
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -46,6 +47,7 @@ jobs:
         run: pnpm --filter @bullebrowser/desktop build
       - name: Evaluate real agent against funding corpus
         env:
+          BULLE_EVAL_PROVIDER: ${{ steps.preflight.outputs.provider }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         working-directory: apps/desktop

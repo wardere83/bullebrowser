@@ -35,3 +35,7 @@ Validate the scorer without a model or browser:
 ```sh
 node --test benchmarks/evaluator/score.test.mjs
 ```
+
+## Nightly provider selection
+
+The workflow defaults to `auto`: it selects Anthropic when its credential is configured, otherwise OpenAI. Set repository variable `BULLE_EVAL_PROVIDER` to explicitly select a provider for nightly runs, or choose one during manual dispatch. An explicit selection never silently switches providers. Missing credentials still fail readiness; readiness is not measured benchmark evidence and does not approve a release.
