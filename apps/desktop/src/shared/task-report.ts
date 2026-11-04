@@ -65,7 +65,7 @@ export function taskReport(steps: readonly AgentStepEvent[], audit?: Pick<TaskRu
   for (const source of taskSources(steps)) lines.push(`- ${source.read ? 'Read' : 'Opened, unverified'}: <${source.url}>`, ...(source.excerpt ? ['', ...source.excerpt.split('\n').map((line) => '> ' + line), ''] : []));
   const warnings = pageInstructionWarnings(steps);
   if (warnings.length) {
-    lines.push('', '## Page instructions ignored', '', 'This text read like instructions to the AI. It was treated as page data and not followed.', '');
+    lines.push('', '## Possible source instructions', '', 'This text read like instructions to the AI. It was supplied as untrusted reference data.', '');
     for (const warning of warnings) lines.push(`- ${/^https?:/.test(warning.source) ? `<${warning.source}>` : warning.source}`, '', `> ${warning.excerpt}`, '');
   }
   lines.push('', '## Timeline', '');

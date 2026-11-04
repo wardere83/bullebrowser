@@ -640,6 +640,16 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   const memory = new SessionMemoryStore();
   const gate = createBrowseGate(input.requestBrowseAccess);
 
+  // Scan full document/reference text before either cloud or keyless execution.
+  // Warnings are bounded/redacted; the original reference remains sealed as data.
+  for (const item of input.referenceContext ?? []) {
+    const finding = detectPageInstructions(item.text);
+    if (!finding) continue;
+    const source = `Document: ${(item.label.trim() || 'reference').slice(0, 160)}`;
+    onStep({ type: 'page_instructions', detail: policy.redact(source) as string,
+      data: policy.redact({ source, excerpt: finding.excerpt, signals: finding.signals }) });
+  }
+
   if (!input.apiKey) {
     onStep({ type: 'thinking', detail: 'BulleBrowser Agentic AI is working…' });
     return runLocalAgent(input, (name, args) => executeToolCall(
