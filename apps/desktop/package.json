@@ -55,17 +55,17 @@
     "@types/yauzl": "3.4.0",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.5.2",
-    "electron": "^39.8.5",
-    "electron-builder": "25.1.8",
-    "electron-builder-squirrel-windows": "25.1.8",
+    "electron": "^42.11.18",
+    "electron-builder": "26.18.0",
+    "electron-builder-squirrel-windows": "26.18.0",
     "electron-vite": "^3.1.0",
     "license-checker": "^25.0.1",
     "playwright": "^1.60.0",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "vite": "^6.4.3",
-    "vitest": "^4.1.10"
+    "vite": "^6.4.5",
+    "vitest": "^4.1.12"
   },
   "author": {
     "name": "Bulle Consulting",
