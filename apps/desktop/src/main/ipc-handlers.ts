@@ -17,6 +17,7 @@ import {
   type LayoutBounds,
 } from '../shared/ipc.js';
 import { tabManager } from './tabs/manager.js';
+import { saveUpdateTabs } from './storage/update-session.js';
 import { historyStore } from './storage/history.js';
 import { bookmarkStore } from './storage/bookmarks.js';
 import { getSettings, setSettings } from './storage/settings.js';
@@ -34,6 +35,7 @@ import {
   setApiKey,
 } from './storage/secrets.js';
 import {
+  hasActiveAgentRuns,
   cancelAgentRun,
   controlAgentRun,
   replyAgentConfirm,
@@ -123,7 +125,12 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     return next;
   });
   handle(IPC.UPDATE_APPLY, (_e, version: string) => applyUpdate(version));
-  handle(IPC.UPDATE_FINISH, (_e, version: string) => finishUpdate(version));
+  handle(IPC.UPDATE_FINISH, (event, version: string) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Updates are only available from the app window.');
+    }
+    return finishUpdate(version, () => saveUpdateTabs(tabManager.list()), hasActiveAgentRuns);
+  });
   handle(IPC.UPDATE_GET_STATUS, () => getUpdateStatus());
   handle(IPC.UPDATE_PREPARE, (_e, version: string) => prepareUpdate(version));
   handle(IPC.UPDATE_RETRY, () => retryUpdate());

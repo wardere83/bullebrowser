@@ -10,6 +10,7 @@ export function UpdateBanner() {
   const [status, setStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [checking, setChecking] = useState(false);
   const [staging, setStaging] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState('');
   const [details, setDetails] = useState<{ installedVersion: string; activationIssue: string | null; completedVersion: string | null } | null>(null);
@@ -85,7 +86,13 @@ export function UpdateBanner() {
   };
   const finish = async () => {
     if (inFlight.current || (status.state !== 'ready' && status.state !== 'deferred')) return;
+    const agent = useAgentStore.getState();
+    if (agent.status === 'running' || Object.values(agent.activities).some((activity) => activity.status === 'running')) {
+      setError('Wait for the active task to finish before restarting.');
+      return;
+    }
     inFlight.current = true;
+    setFinishing(true);
     setError('');
     try {
       const snapshot = new CustomEvent<UpdateChatSnapshot>(SAVE_UPDATE_CHAT_EVENT, { detail: {} });
@@ -96,7 +103,7 @@ export function UpdateBanner() {
       await window.bullebrowser.updates.finish(status.state === 'ready' ? status.version : status.preparedVersion);
     } catch {
       setError('Could not finish installing the update. Your browser remains open. Retry or download the latest installer.');
-    } finally { inFlight.current = false; }
+    } finally { inFlight.current = false; setFinishing(false); }
   };
   const downloading = status.state === 'downloading';
   const ready = status.state === 'ready' || status.state === 'deferred';
@@ -104,20 +111,20 @@ export function UpdateBanner() {
   const progress = ready ? 100 : downloading
     ? status.phase === 'preparing' ? undefined : status.percent === undefined ? undefined : Math.min(99, status.percent)
     : undefined;
-  const label = checking ? 'Checking…' : downloading
+  const label = finishing ? 'Restarting…' : checking ? 'Checking…' : downloading
     ? status.phase === 'preparing' ? 'Preparing…' : `Updating${progress === undefined ? '…' : ` ${progress}%`}`
-    : scheduled ? 'Restart required' : ready ? 'Update' : status.state === 'error' || error ? 'Update issue' : details?.completedVersion ? 'Update Completed' : 'Updates';
+    : ready ? 'Restart to update' : status.state === 'error' || error ? 'Update issue' : details?.completedVersion ? 'Update Completed' : 'Updates';
   const show = () => {
     openUpdates();
     if (status.state === 'idle' || status.state === 'error') void check();
-    else if (ready && !scheduled) void prepare();
+    else if (ready) void finish();
   };
 
   return <>
-    <button type="button" onClick={show} aria-label="Update" aria-haspopup="dialog"
-      title="View update progress and choose when to restart to activate native changes."
+    <button type="button" onClick={show} disabled={finishing} aria-label={ready ? 'Restart to update' : 'Update'} aria-haspopup="dialog"
+      title={ready ? 'Restart now to install the verified update and restore your tabs and chat draft.' : 'View update progress. Downloads run in the background.'}
       className="update-control no-drag relative shrink-0 overflow-hidden rounded px-3 py-1.5 text-xs font-semibold text-white"
-      data-active={downloading || checking || staging}>
+      data-active={downloading || checking || staging || finishing}>
       <span className="relative z-10">{label}</span>
       {progress !== undefined && <span aria-hidden className="update-fill" style={{ width: `${progress}%` }} />}
     </button>
@@ -128,7 +135,7 @@ export function UpdateBanner() {
         {details?.activationIssue && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3">{details.activationIssue}</p>}
         <p role="status">{checking ? 'Checking for published updates…' : downloading
           ? status.phase === 'preparing' ? 'Download complete. Verifying and preparing the signed update…' : `Downloading v${status.version} in the background.`
-          : ready ? `v${status.state === 'deferred' ? status.preparedVersion : status.version} is downloaded and verified. Restart BulleBrowser when convenient to activate it.`
+          : ready ? `v${status.state === 'deferred' ? status.preparedVersion : status.version} is downloaded and verified. Ready to finish — restart required.`
           : status.state === 'error' ? status.message : checked ? 'No newer published release was found.' : details?.completedVersion ? 'The installed update is active.' : 'Check for the latest published release.'}</p>
         {(downloading || ready) && <div>
           <div role="progressbar" aria-label="Update download progress" aria-valuemin={0} aria-valuemax={100}
@@ -142,8 +149,8 @@ export function UpdateBanner() {
         {status.state === 'deferred' && <p className="text-xs">v{status.version} is also available and will download after the prepared version activates.</p>}
         {error && <p role="alert" className="text-danger">{error}</p>}
         <div className="flex flex-wrap gap-2">
-          {ready && <button type="button" disabled={staging} onClick={() => void finish()}
-            className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">Finish update and reopen</button>}
+          {ready && <button type="button" disabled={staging || finishing} onClick={() => void finish()}
+            className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">{finishing ? 'Restarting…' : 'Finish update and reopen'}</button>}
           {ready && !scheduled && <button type="button" disabled={staging} onClick={() => void prepare()}
             className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">{staging ? 'Preparing…' : 'Prepare update — restart later'}</button>}
           <button type="button" disabled={checking || downloading || staging || (status.state === 'error' && status.retryable === false)}

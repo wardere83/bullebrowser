@@ -12,7 +12,7 @@ export function takeUpdateTabs(): UpdateTabSession | null {
   const session = store.get('session');
   store.set('session', null);
   if (!session || !Array.isArray(session.urls)) return null;
-  const urls = session.urls.filter((url) => typeof url === 'string' &&
+  const safeTabs = session.urls.map((url, index) => ({ url, index })).filter(({ url }) => typeof url === 'string' &&
     (url === 'about:blank' || /^https?:\/\//i.test(url)) && !isBlockedDestination(url));
-  return { urls, activeIndex: Math.max(0, urls.indexOf(session.urls[session.activeIndex] ?? '')) };
+  return { urls: safeTabs.map(({ url }) => url), activeIndex: Math.max(0, safeTabs.findIndex(({ index }) => index === session.activeIndex)) };
 }

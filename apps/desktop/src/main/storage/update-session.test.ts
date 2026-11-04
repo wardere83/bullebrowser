@@ -10,6 +10,10 @@ describe('tabs across an explicit update', () => {
     expect(takeUpdateTabs()).toEqual({ urls: ['https://agency.gov/grant-a', 'https://funder.org/grant-b'], activeIndex: 1 });
     expect(takeUpdateTabs()).toBeNull();
   });
+  it('preserves the selected duplicate URL rather than selecting its first occurrence', () => {
+    saveUpdateTabs([{ url: 'about:blank', active: false }, { url: 'about:blank', active: true }]);
+    expect(takeUpdateTabs()).toEqual({ urls: ['about:blank', 'about:blank'], activeIndex: 1 });
+  });
   it('filters unsafe stored URLs while preserving the selected safe tab', () => {
     saveUpdateTabs([{ url: 'javascript:alert(1)', active: false }, { url: 'https://agency.gov/', active: true }]);
     expect(takeUpdateTabs()).toEqual({ urls: ['https://agency.gov/'], activeIndex: 0 });

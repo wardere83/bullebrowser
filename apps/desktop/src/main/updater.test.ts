@@ -84,7 +84,7 @@ function deferred<T>() {
 describe('explicit update activation', () => {
   it('rejects finishing when no verified update is ready', async () => {
     const api = await start();
-    expect(() => api.finishUpdate('0.2.38')).toThrow('not ready');
+    expect(() => api.finishUpdate('0.2.38', vi.fn())).toThrow('not ready');
     expect(updater.quitAndInstall).not.toHaveBeenCalled();
   });
 
@@ -93,15 +93,76 @@ describe('explicit update activation', () => {
     const api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
     expect(updater.quitAndInstall).not.toHaveBeenCalled();
-    expect(() => api.finishUpdate('0.2.39')).toThrow('not ready');
-    api.finishUpdate('0.2.38');
-    expect(updater.quitAndInstall).toHaveBeenCalledWith(false, true);
+    expect(() => api.finishUpdate('0.2.39', vi.fn())).toThrow('not ready');
+    api.finishUpdate('0.2.38', vi.fn());
+    expect(updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+  });
+
+  it('saves the session before a silent install and enables Mac relaunch', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    nativeEvents.emit('update-downloaded', {}, '', '', new Date(), 'http://127.0.0.1:12345/update.zip');
+    const save = vi.fn(() => expect(updater.quitAndInstall).not.toHaveBeenCalled());
+    api.finishUpdate('0.2.38', save);
+    expect(api.isUpdateRestartPending()).toBe(true);
+    api.finishUpdate('0.2.38', save);
+    expect(save).toHaveBeenCalledOnce();
+    expect(updater.quitAndInstall).toHaveBeenCalledOnce();
+    expect(updater.autoRunAppAfterInstall).toBe(true);
+    expect(updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+  });
+
+  it('does not quit when saving the session fails', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    expect(() => api.finishUpdate('0.2.38', () => { throw new Error('Disk full'); })).toThrow('Disk full');
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(updater.autoRunAppAfterInstall).toBe(false);
+  });
+
+  it('allows retry if the native installer throws before taking ownership', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    updater.quitAndInstall.mockImplementationOnce(() => { throw new Error('Installer unavailable'); });
+    expect(() => api.finishUpdate('0.2.38', vi.fn())).toThrow('Installer unavailable');
+    expect(api.isUpdateRestartPending()).toBe(false);
+    expect(updater.autoRunAppAfterInstall).toBe(false);
+    api.finishUpdate('0.2.38', vi.fn());
+    expect(api.isUpdateRestartPending()).toBe(true);
+  });
+
+  it('allows retry after an asynchronous native installation error', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    api.finishUpdate('0.2.38', vi.fn());
+    events.emit('error', new Error('Installer could not start'));
+    expect(api.isUpdateRestartPending()).toBe(false);
+    expect(api.getUpdateStatus()).toMatchObject({ state: 'ready', version: '0.2.38' });
+    api.finishUpdate('0.2.38', vi.fn());
+    expect(updater.quitAndInstall).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves active tasks and tabs intact until the task finishes', async () => {
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    const api = await start();
+    events.emit('update-downloaded', { version: '0.2.38' });
+    const save = vi.fn();
+    expect(() => api.finishUpdate('0.2.38', save, () => true)).toThrow('active task');
+    expect(save).not.toHaveBeenCalled();
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    api.finishUpdate('0.2.38', save, () => false);
+    expect(save).toHaveBeenCalledOnce();
+    expect(updater.quitAndInstall).toHaveBeenCalledOnce();
   });
 
   it('does not offer unsupported native installation on Linux', async () => {
     const api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
-    expect(() => api.finishUpdate('0.2.38')).toThrow('not supported');
+    expect(() => api.finishUpdate('0.2.38', vi.fn())).toThrow('not supported');
     expect(updater.quitAndInstall).not.toHaveBeenCalled();
   });
 });

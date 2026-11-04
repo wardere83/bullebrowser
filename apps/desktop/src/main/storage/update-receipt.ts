@@ -15,10 +15,11 @@ export function recordPreparedUpdate(version: string, installedVersion: string, 
 
 /** Checked against the running binary, never inferred from download completion. */
 export function reconcilePreparedUpdate(installedVersion: string, appPath: string): string | null {
+  activatedVersion = null;
   const pending = receipt().get('pending');
   if (!pending || !valid(pending.version) || !valid(installedVersion)) return null;
   if (compare(installedVersion, pending.version) >= 0) {
-    activatedVersion = pending.version;
+    if (compare(installedVersion, pending.version) === 0) activatedVersion = installedVersion;
     receipt().set('pending', null);
     return null;
   }

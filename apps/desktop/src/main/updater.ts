@@ -1,5 +1,5 @@
 // Published, signed releases download in the background without interrupting
-// browsing. Update clicks stage the verified release without quitting.
+// browsing. An explicit Restart to update click activates the verified release.
 // Native binaries activate on the next normal quit and launch.
 
 import { app, autoUpdater as nativeAutoUpdater, type BrowserWindow } from 'electron';
@@ -21,6 +21,9 @@ let highestVersion: string | undefined;
 let acknowledgedVersion: string | undefined;
 let requestCheck: (() => Promise<void>) | undefined;
 let activationIssue: string | null = null;
+let restartPending = false;
+
+export function isUpdateRestartPending(): boolean { return restartPending; }
 let stageUpdate: ((version: string) => void) | undefined;
 let notifyStatus: (() => void) | undefined;
 let bindWindow: ((win: BrowserWindow) => void) | undefined;
@@ -81,14 +84,25 @@ export async function applyUpdate(version: string, saveSession: () => void = () 
 }
 
 /** Explicit, user-consented activation. Electron must replace the native process. */
-export function finishUpdate(version: string): void {
+export function finishUpdate(version: string, saveSession: () => void, hasActiveTasks: () => boolean = () => false): void {
+  if (restartPending) return;
   const status = getUpdateStatus();
   const prepared = status.state === 'ready' ? status.version : status.state === 'deferred' ? status.preparedVersion : null;
   if (!app.isPackaged || prepared !== version) throw new Error('This update is not ready to install.');
   if (process.platform === 'linux') throw new Error('Automatic installation is not supported for this Linux package.');
-  // The renderer saves chat drafts before invoking this handler. Native updater
-  // takes ownership of the controlled quit/install/relaunch sequence.
-  autoUpdater.quitAndInstall(false, true);
+  if (hasActiveTasks()) throw new Error('Wait for the active task to finish before restarting.');
+  // Save before handing control to the native installer: before-quit may run
+  // after windows close. A failed snapshot must leave the current process alive.
+  saveSession();
+  // MacUpdater uses this flag (not the forceRunAfter argument) to reopen.
+  restartPending = true;
+  autoUpdater.autoRunAppAfterInstall = true;
+  try { autoUpdater.quitAndInstall(true, true); }
+  catch (error) {
+    restartPending = false;
+    autoUpdater.autoRunAppAfterInstall = false;
+    throw error;
+  }
 }
 
 export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null; completedVersion: string | null } {
@@ -214,6 +228,13 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   const failed = (err: Error) => {
     if (disposed) return;
     console.warn('[updater] error:', err?.message ?? err);
+    if (restartPending) {
+      restartPending = false;
+      autoUpdater.autoRunAppAfterInstall = false;
+      activationIssue = 'The installer could not restart BulleBrowser. Your update remains prepared; retry when ready.';
+      publish();
+      return;
+    }
     const phase = stagingVersion ? 'prepare' : downloadVersion ? 'download' : 'check';
     const version = stagingVersion ?? downloadVersion ?? (latest.state === 'error' ? latest.version : undefined);
     if (!version) return; // An unrelated feed failure cannot hide a ready update.

@@ -23,5 +23,6 @@ describe('verified activation receipts', () => {
   });
   it('accepts a newer installed version without reporting a failed older update', () => {
     expect(reconcilePreparedUpdate('0.2.66', '/Applications/BulleBrowser.app')).toBeNull();
+    expect(getActivatedUpdateVersion()).toBeNull();
   });
 });
