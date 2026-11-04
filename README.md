@@ -41,7 +41,8 @@ browser task. Without a cloud key, spoken browser commands use the local assista
 
 ### Privacy
 
-- Local mode processes page summaries on your device; optional cloud mode sends prompts directly to the selected provider.
+- Model reasoning uses Anthropic or OpenAI. Prompts and relevant page/document content are sent to the selected provider.
+- The keyless command engine runs explicit browser commands and extractive page summaries on the device. It is rule-based, not a local reasoning model.
 - Optional provider keys are encrypted and stored on your device.
 - History, bookmarks, and conversations stay on your device.
 - No analytics. No telemetry.

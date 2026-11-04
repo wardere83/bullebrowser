@@ -1,5 +1,7 @@
 # BulleBrowser Identity Platform Specification
 
+> Current implementation: local storage and browser control do not imply local model reasoning. Reasoning uses Anthropic or OpenAI and sends relevant context to that provider. Local model adapters in this specification are planned capabilities, not shipped features.
+
 ## 1. Purpose
 
 This document defines the implementation contract for adding enterprise identity capabilities to BulleBrowser without breaking the current local-first desktop architecture.

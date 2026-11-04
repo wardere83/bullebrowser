@@ -133,7 +133,9 @@ export function SettingsModal() {
             Connect {assistantLabel} for written analysis: profile proposals, summaries of
             funding documents, alignment assessments and proposal guides. Your key is encrypted
             and stored on this device. When you ask for analysis, relevant excerpts of your
-            documents go directly to the provider you connect, under your own key.
+            documents go directly to the provider you connect, under your own key. Model reasoning
+            uses Anthropic or OpenAI; no on-device reasoning model is bundled. Keyless browser
+            commands and extractive summaries use a rule-based engine.
           </p>
           {hasKey ? (
             <div className="mt-2 flex items-center gap-2">

@@ -1,5 +1,7 @@
 # BulleBrowser Enterprise Engineering Library
 
+> Current implementation: local storage and browser control do not imply local model reasoning. Reasoning uses Anthropic or OpenAI and sends relevant context to that provider. Local model adapters in this specification are planned capabilities, not shipped features.
+
 This directory is the implementation source of truth for the enterprise evolution of BulleBrowser. It translates product intent into dependency-aware specifications that Codex and engineering contributors can execute against the current monorepo.
 
 ## Current repository baseline

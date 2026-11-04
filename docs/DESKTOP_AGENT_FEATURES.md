@@ -47,13 +47,13 @@ the user scrolls up, a pointer button appears to jump back down (`AiPanel.tsx`).
 ### Brand-mark home
 The BulleBrowser mark beside "+" opens `bullebrowser.com` in a new tab.
 
-### Keyless local assistant
+### Keyless command engine
 
-No setup key is needed to summarize a page, list tabs, show page details, list
+The keyless engine is rule-based, not a local reasoning model. No setup key is needed to produce an extractive page summary, list tabs, show page details, list
 links, extract page data, open a URL, click a quoted target, or type quoted text
 into a quoted field. Unsupported requests show the local command capabilities;
-they do not produce invented model answers. Cloud keys are optional in the
-collapsed Settings section for open-ended reasoning and cloud-specific skills.
+they do not produce invented model answers. Open-ended reasoning requires an Anthropic or OpenAI key in Settings and sends
+relevant prompts, page text and document excerpts to that provider.
 
 ### Voice — dictation and spoken Voice Mode
 
@@ -68,7 +68,7 @@ collapsed Settings section for open-ended reasoning and cloud-specific skills.
 - Both use **Whisper tiny.en via Transformers.js** in main. Mono 16 kHz audio
   stays on the device, and speech needs no OpenAI key. The English model
   downloads on first use into `userData/voice-models` and works offline afterward.
-  Local summaries and explicit browser commands need no key. Cloud synthesis is optional.
+  Extractive summaries and explicit browser commands need no key; model reasoning uses a connected cloud provider.
 - Replies are spoken by a **bundled Supertonic neural voice** (`main/speech.ts`),
   a US English female preset generated on the device at 44.1 kHz with no key,
   download, or network call. `shared/speech.ts` turns the Markdown reply into

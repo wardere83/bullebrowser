@@ -37,6 +37,11 @@ export default function PrivacyPage() {
             Linux: <code>~/.config/{product.name}</code>
           </li>
         </ul>
+        <p className="mt-4">
+          Model reasoning uses your connected cloud provider and sends the relevant context
+          to that provider. BulleBrowser does not bundle an on-device reasoning model. Its keyless
+          browser commands and extractive page summaries are rule-based.
+        </p>
         <p>
           Older installations may also hold organization profiles, documents, saved opportunities
           and analyses. Removing a screen from the app does not delete previously stored records.
