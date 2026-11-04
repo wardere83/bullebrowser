@@ -388,3 +388,26 @@ describe('native browsing navigation recovery', () => {
     expect(manager.list().find((tab) => tab.id === id)?.loadError).toBeDefined();
   });
 });
+
+
+describe('closing tabs in every position', () => {
+  it.each([0, 1, 2, 3])('closes position %i without losing other tabs', async (index) => {
+    const { manager, id } = await createManager();
+    const ids = [id];
+    for (let i = 0; i < 3; i++) ids.push((await manager.create()).id);
+    manager.activate(ids[index]!);
+    await manager.close(ids[index]!);
+    expect(manager.list().map(tab => tab.id)).toEqual(ids.filter((_, i) => i !== index));
+    expect(manager.list().filter(tab => tab.active)).toHaveLength(1);
+    expect(manager.getActiveId()).toBe(ids[index + 1] ?? ids[index - 1]);
+  });
+  it('closes the only tab and allows a new tab immediately afterward', async () => {
+    const { manager, id } = await createManager();
+    await manager.close(id);
+    expect(manager.list()).toEqual([]);
+    expect(manager.getActiveId()).toBeNull();
+    const next = await manager.create();
+    expect(manager.list()).toHaveLength(1);
+    expect(manager.getActiveId()).toBe(next.id);
+  });
+});
