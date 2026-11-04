@@ -1,5 +1,7 @@
 # Volume 2: Product Requirements
 
+> Current implementation: local storage and browser control do not imply local model reasoning. Reasoning uses Anthropic or OpenAI and sends relevant context to that provider. Local model adapters in this specification are planned capabilities, not shipped features.
+
 ## 1. Objective
 
 Evolve BulleBrowser into a secure enterprise work platform while preserving the existing Electron desktop shell, React/TypeScript renderer, typed preload and IPC boundary, `WebContentsView` tab runtime, Chrome DevTools Protocol browser control, BYOK model access, and modular agent architecture in `packages/agent-core`.

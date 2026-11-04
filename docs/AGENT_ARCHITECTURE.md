@@ -22,14 +22,15 @@ The implementation lives in `packages/agent-core` and is runtime-injected from d
 - `policy.ts`: privacy and safety policy decisions + redaction
 - `retrieval.ts`: page-first retrieval with local memory fallback
 - `memory.ts`: session memory store with TTL and sensitive-key blocking
-- `provider.ts`: provider gateway (`local-default` and optional `anthropic`)
+- `provider.ts`: provider gateway (Anthropic and OpenAI; keyless commands use a separate rule-based engine)
 - `audit.ts`: structured audit trail for stage decisions
 - `tools/index.ts`: typed inspectable tool registry with safe foundational tools
 
 ## Privacy and safety defaults
 
-- Local-first execution and summarization by default.
-- External synthesis is optional and gated by policy.
+- Browser actions and stored records are managed on the device.
+- Model reasoning uses Anthropic or OpenAI and sends relevant context to that provider.
+- Keyless extractive summaries and explicit commands are rule-based; no local reasoning model is bundled.
 - Sensitive-field interactions are blocked or require confirmation.
 - Structured redaction is applied before logs/step payloads are emitted.
 - Session memory does not persist credential-like keys.
