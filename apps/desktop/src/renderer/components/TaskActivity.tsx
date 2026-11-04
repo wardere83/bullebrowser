@@ -73,12 +73,12 @@ export function TaskActivity({
       {/* Outside the collapsible log: a page that tried to steer the agent is
           something to see without opening anything. */}
       {warnings.length > 0 && (
-        <div role="note" aria-label="Page instructions ignored" className="border-t border-amber-300/60 bg-amber-50 px-3 py-2 text-ink-primary">
+        <div role="note" aria-label="Possible source instructions" className="border-t border-amber-300/60 bg-amber-50 px-3 py-2 text-ink-primary">
           <p className="flex items-start gap-2">
             <Icon name="alert" size={14} className="mt-0.5 shrink-0 text-amber-600" />
             <span>
-              {warnings.length === 1 ? 'Text from a page' : `Text from ${warnings.length} pages`} read like instructions to the AI.
-              It was treated as page data and not followed.
+              {warnings.length === 1 ? 'Text from an external source' : `Text from ${warnings.length} external sources`} read like instructions to the AI.
+              It was supplied as untrusted reference data.
             </span>
           </p>
           <ul className="mt-1.5 space-y-1 pl-[22px]">
