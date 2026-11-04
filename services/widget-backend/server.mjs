@@ -20,7 +20,7 @@
 
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
-import { RequestError, readJson, validId, validateStart, validateResult, createLimiter, serviceConfig, logRequest } from './hardening.mjs';
+import { RequestError, readJson, validId, validateStart, validateResult, createLimiter, serviceConfig, logRequest, pageReference } from './hardening.mjs';
 import { runAgent, webSearchTool } from '@bullebrowser/agent-core';
 import { eeoTools } from './eeo-tools.mjs';
 import { verifyIdentity, ownsSession, canUseAccountApi } from './auth.mjs';
@@ -129,7 +129,8 @@ async function start(session, prompt, url, title) {
     const answer = await runAgent({
       apiKey: process.env.ANTHROPIC_API_KEY,
       model: MODEL,
-      systemPrompt: `${CRM_SYSTEM}\n\nThe user is currently on: ${title} — ${url}`,
+      systemPrompt: CRM_SYSTEM,
+      referenceContext: [pageReference(title, url)],
       history: [],
       userMessage: prompt,
       extraTools: [webSearchTool({ apiKey: process.env.BRAVE_SEARCH_API_KEY, signal: controller.signal }), ...(canUseAccountApi(session.identity) ? API_TOOLS : [])],

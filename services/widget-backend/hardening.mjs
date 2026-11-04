@@ -78,3 +78,6 @@ export function logRequest(logger, { method, pathname, status, startedAt, reques
   // Deliberate allowlist: no token, URL query, prompt, model response, user ID, or exception text.
   logger(JSON.stringify({ event: 'widget.request', requestId, method: ['GET', 'POST', 'OPTIONS'].includes(method) ? method : 'other', route: ['/health', '/stream', '/start', '/tool-result'].includes(pathname) ? pathname : 'unknown', status, durationMs: Math.max(0, Date.now() - startedAt) }));
 }
+
+// Page metadata is reference data, never an extension of the trusted system prompt.
+export function pageReference(title, url) { return { label: 'widget_page', text: `Page title: ${title}\nPage address: ${url}` }; }
