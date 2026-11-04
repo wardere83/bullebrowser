@@ -44,6 +44,8 @@ jobs:
           node scripts/check-product-language.mjs
           node scripts/check-privacy-claims.mjs
           node --test scripts/check-privacy-claims.test.mjs
+      - name: Architecture source paths
+        run: node --test scripts/architecture-paths.test.mjs
       - run: pnpm -r typecheck
       - name: Type-check funding evaluator harness
         working-directory: apps/desktop
