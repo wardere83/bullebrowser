@@ -76,7 +76,9 @@ win:
         - x64
         - arm64
   icon: resources/icon.ico
-  publisherName: Bulle Consulting
+  # electron-builder 26 moved signtool settings under signtoolOptions.
+  signtoolOptions:
+    publisherName: Bulle Consulting
 
 nsis:
   oneClick: false
@@ -95,10 +97,12 @@ linux:
         - x64
         - arm64
   icon: resources/icon.png
+  # electron-builder 26 nests the .desktop keys under entry.
   desktop:
-    Name: BulleBrowser
-    Comment: The agentic AI web browser
-    Categories: Network;WebBrowser;
+    entry:
+      Name: BulleBrowser
+      Comment: The agentic AI web browser
+      Categories: Network;WebBrowser;
 
 
 publish:
