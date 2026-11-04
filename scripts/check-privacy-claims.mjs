@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 export function misleadingPrivacyClaim(text) {
-  return /data never leaves (?:your|the user'?s?) (?:device|machine)|reasoning runs (?:entirely )?locally|local-first execution and summarization by default|local mode processes page summaries on your device; optional cloud mode|integrates a high-performance LLM directly into (?:your|user) local hardware/i.test(text);
+  return /replies are generated on\s+your device|data never leaves (?:your|the user'?s?) (?:device|machine)|reasoning runs (?:entirely )?locally|local-first execution and summarization by default|local mode processes page summaries on your device; optional cloud mode|integrates a high-performance LLM directly into (?:your|user) local hardware/i.test(text);
 }
 function files(path) {
   return readdirSync(path, { withFileTypes: true }).flatMap(entry => {
