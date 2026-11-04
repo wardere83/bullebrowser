@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "node dist/server.mjs",
-    "dev": "node server.mjs"
+    "dev": "node server.mjs",
+    "test": "node build.mjs && node --test *.test.mjs"
   }
 }
