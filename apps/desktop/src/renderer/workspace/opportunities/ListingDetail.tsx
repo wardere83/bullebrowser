@@ -20,6 +20,7 @@ import {
   text,
 } from '../ui/index.js';
 import { awardDisplay, shownStatus } from './listing.js';
+import { EligibilityScreening } from './EligibilityScreening.js';
 
 function DetailBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -76,6 +77,8 @@ export function ListingDetail({ detail, shown }: ListingDetailProps) {
           <p className={text.small}>The source gives no description for this listing.</p>
         )}
       </DetailBlock>
+
+      <EligibilityScreening key={fresh.id} opportunity={fresh} />
 
       <DetailBlock label="More from the listing">
         <DefinitionList>
