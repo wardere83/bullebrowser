@@ -34,10 +34,11 @@ to work in your browser. Both buttons sit on the right of the message composer.
 Browser tasks retain their normal progress feed and confirmation controls.
 
 Voice uses local English Whisper transcription and a natural-sounding female
-voice that ships with the app, with no speech API key. Replies are generated on
-your device; the recognition model downloads on first use and works offline afterward.
+voice that ships with the app, with no speech API key. Speech audio is synthesized
+on your device; model-generated reply text uses your connected cloud provider.
+The recognition model downloads on first use and works offline afterward.
 Mute pauses capture; **Stop Voice Mode** releases the microphone and cancels its
-browser task. Without a cloud key, spoken browser commands use the local assistant.
+browser task. Without a cloud key, spoken browser commands use the rule-based command engine.
 
 ### Privacy
 
