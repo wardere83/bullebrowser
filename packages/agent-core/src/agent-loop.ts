@@ -221,23 +221,43 @@ function pageStrings(value: unknown, out: string[] = []): string[] {
   return out;
 }
 
-// Normalize complete values before redaction: an invisible character can hide
-// a URL scheme or credential key. Keep field names for key-based redaction.
-function normalizeWarningValue(value: unknown): unknown {
-  if (typeof value === 'string') return removeHiddenCharacters(value);
-  if (Array.isArray(value)) return value.map(normalizeWarningValue);
-  if (value && typeof value === 'object') return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [removeHiddenCharacters(key), normalizeWarningValue(item)]),
-  );
-  return value;
+// Keep a bounded source region before redaction expands URLs. Never cut a
+// credential token in half: omit the final partial word at the boundary.
+// Singleton objects preserve field-based redaction without collapsing keys
+// that become equal when invisible characters are removed.
+function warningValue(value: unknown, limit: number): unknown {
+  let remaining = limit;
+  const walk = (item: unknown): unknown => {
+    if (remaining <= 0) return '';
+    if (typeof item === 'string') {
+      const text = removeHiddenCharacters(item);
+      let bounded = text.slice(0, remaining);
+      if (text.length > remaining) bounded = bounded.replace(/\S+$/, '');
+      remaining -= Math.min(text.length, remaining) + 1;
+      return bounded;
+    }
+    if (Array.isArray(item)) {
+      const result: unknown[] = [];
+      for (const child of item) { if (remaining <= 0) break; result.push(walk(child)); }
+      return result;
+    }
+    if (item && typeof item === 'object') {
+      const result: unknown[] = [];
+      for (const [key, child] of Object.entries(item)) {
+        if (remaining <= 0) break;
+        result.push({ [removeHiddenCharacters(key)]: walk(child) });
+      }
+      return result;
+    }
+    return item;
+  };
+  return walk(value);
 }
 
 function findPageInstructions(value: unknown, policy: PrivacyPolicyEngine, limit = 100_000): PageInstructionFinding | null {
-  const normalized = normalizeWarningValue(value);
-  if (!detectPageInstructions(truncate(pageStrings(normalized).join('\n'), limit))) return null;
-  // Do not cap again after redaction: replacement text can expand a URL and
-  // move an originally visible instruction beyond the input's character cap.
-  return detectPageInstructions(pageStrings(policy.redact(normalized)).join('\n'));
+  const bounded = warningValue(value, limit);
+  if (!detectPageInstructions(pageStrings(bounded).join('\n'))) return null;
+  return detectPageInstructions(pageStrings(policy.redact(bounded)).join('\n'));
 }
 
 // Tell the user when page-derived text tried to steer the agent. The model
@@ -250,7 +270,7 @@ async function warnOnPageInstructions(
 ): Promise<void> {
   const finding = findPageInstructions(output, policy);
   if (!finding) return;
-  const source = typeof label === 'string' ? label : await label().catch(() => 'the current page');
+  const source = removeHiddenCharacters(typeof label === 'string' ? label : await label().catch(() => 'the current page'));
   onStep({
     type: 'page_instructions',
     detail: policy.redact(source) as string,
@@ -263,6 +283,7 @@ async function warnOnPageInstructions(
 // results name their own URL, or else the tab the tool was pointed at, which
 // need not be the active one.
 async function warnOnBrowserOutput(
+  toolName: string,
   output: unknown,
   input: Record<string, unknown>,
   context: ToolContext,
@@ -270,7 +291,7 @@ async function warnOnBrowserOutput(
   onStep: AgentStepHandler,
 ): Promise<void> {
   const record = output && typeof output === 'object' ? (output as { url?: unknown; tabs?: unknown }) : undefined;
-  if (Array.isArray(record?.tabs)) {
+  if ((toolName === 'list_tabs' || toolName === 'listTabs') && Array.isArray(record?.tabs)) {
     for (const tab of record.tabs as { url?: unknown }[]) {
       await warnOnPageInstructions(tab, typeof tab?.url === 'string' && tab.url ? tab.url : 'a tab', policy, onStep);
     }
@@ -483,7 +504,7 @@ export async function executeToolCall(
       }
 
       // The validated input: a tabId the tool's schema drops was not used.
-      await warnOnBrowserOutput(output, (parsed ?? {}) as Record<string, unknown>, context, policy, onStep);
+      await warnOnBrowserOutput(name, output, (parsed ?? {}) as Record<string, unknown>, context, policy, onStep);
       const text = typeof output === 'string' ? neutralize(output) : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), name), isError: false });
     } catch (error) {
@@ -681,7 +702,8 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   for (const item of input.referenceContext ?? []) {
     const finding = findPageInstructions(item.text, policy, Infinity);
     if (!finding) continue;
-    const source = `Document: ${(item.label.trim() || 'reference').slice(0, 160)}`;
+    const safeLabel = policy.redact(removeHiddenCharacters(item.label.trim() || 'reference')) as string;
+    const source = `Document: ${safeLabel.slice(0, 160)}`;
     onStep({ type: 'page_instructions', detail: policy.redact(source) as string,
       data: policy.redact({ source, excerpt: finding.excerpt, signals: finding.signals }) });
   }
