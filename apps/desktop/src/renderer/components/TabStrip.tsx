@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBrowserStore } from '../state/browser-store.js';
 import type { TabState } from '../../shared/ipc.js';
 
 export function TabStrip() {
   const tabs = useBrowserStore((s) => s.tabs);
   const [dragId, setDragId] = useState<string | null>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
+
 
   const onDragStart = (id: string) => setDragId(id);
   const onDragOver = (e: React.DragEvent, overId: string) => {
@@ -22,7 +22,6 @@ export function TabStrip() {
 
   return (
     <div
-      ref={stripRef}
       role="region"
       aria-label="Browser tabs"
       className="flex h-9 items-end gap-0.5 border-b border-line bg-white px-2 pt-1 text-ink-primary"
@@ -63,12 +62,17 @@ export function BrowserTab({
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
 }) {
+  const tabRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (tab.active) tabRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [tab.active]);
   const close = (e: React.MouseEvent) => {
     e.stopPropagation();
     void window.bullebrowser.tabs.close(tab.id);
   };
   return (
     <div
+      ref={tabRef}
       role="group"
       aria-label="Browser tab"
       draggable
@@ -80,7 +84,7 @@ export function BrowserTab({
         if (e.button === 1) close(e);
       }}
       title={tab.title || tab.url}
-      className={`relative flex h-7 w-[180px] shrink-0 items-center gap-2 rounded-t-md px-2 text-left text-xs transition-colors ${
+      className={`relative flex h-7 w-[180px] shrink-0 items-center rounded-t-md text-left text-xs transition-colors ${
         tab.active
           ? 'z-10 bg-surface-light font-medium text-ink-primary shadow-[inset_0_-3px_0_0_#20BAD1,0_0_10px_rgba(32,186,209,0.45)]'
           : 'bg-surface-muted text-ink-secondary hover:bg-surface-muted'
@@ -88,7 +92,7 @@ export function BrowserTab({
     >
       <button type="button" aria-label={`Switch to ${tab.title || 'New Tab'}`} aria-pressed={tab.active}
         onClick={() => window.bullebrowser.tabs.switch(tab.id)}
-        className="flex h-full min-w-0 flex-1 items-center gap-2 overflow-hidden text-left">
+        className="flex h-full min-w-0 flex-1 items-center gap-2 overflow-hidden pl-2 pr-1 text-left">
       {tab.faviconUrl ? (
         <img src={tab.faviconUrl} alt="" width={14} height={14} className="rounded-sm" />
       ) : (
@@ -103,7 +107,7 @@ export function BrowserTab({
         aria-label="Close tab"
         title="Close tab"
         onClick={close}
-        className="grid h-5 w-5 shrink-0 place-items-center rounded opacity-80 hover:bg-black/15 hover:opacity-100 focus-visible:outline focus-visible:outline-2"
+        className="grid h-full w-8 shrink-0 place-items-center rounded opacity-80 hover:bg-black/15 hover:opacity-100 focus-visible:outline focus-visible:outline-2"
       >
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M6 6l12 12M6 18L18 6" />
