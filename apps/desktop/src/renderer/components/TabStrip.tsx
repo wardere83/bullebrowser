@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBrowserStore } from '../state/browser-store.js';
 import type { TabState } from '../../shared/ipc.js';
 
 export function TabStrip() {
   const tabs = useBrowserStore((s) => s.tabs);
   const [dragId, setDragId] = useState<string | null>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
+
 
   const onDragStart = (id: string) => setDragId(id);
   const onDragOver = (e: React.DragEvent, overId: string) => {
@@ -22,12 +22,13 @@ export function TabStrip() {
 
   return (
     <div
-      ref={stripRef}
+      role="region"
+      aria-label="Browser tabs"
       className="flex h-9 items-end gap-0.5 border-b border-line bg-white px-2 pt-1 text-ink-primary"
     >
-      <div className="flex flex-1 items-end gap-0.5 overflow-x-auto">
+      <div className="flex h-full min-w-0 flex-1 items-end gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => (
-          <Tab
+          <BrowserTab
             key={t.id}
             tab={t}
             onDragStart={() => onDragStart(t.id)}
@@ -40,7 +41,7 @@ export function TabStrip() {
         type="button"
         aria-label="New tab"
         onClick={() => window.bullebrowser.tabs.create()}
-        className="ml-1 grid h-7 w-7 place-items-center rounded-md hover:bg-surface-muted"
+        className="ml-1 grid h-7 w-7 shrink-0 place-items-center rounded-md hover:bg-surface-muted"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 5v14M5 12h14" />
@@ -50,7 +51,7 @@ export function TabStrip() {
   );
 }
 
-function Tab({
+export function BrowserTab({
   tab,
   onDragStart,
   onDragOver,
@@ -61,29 +62,50 @@ function Tab({
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
 }) {
+  const tabRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = tabRef.current;
+    if (!tab.active || !element?.parentElement) return;
+    const reveal = () => element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(element.parentElement);
+    return () => observer.disconnect();
+  }, [tab.active]);
   const close = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (e.detail === 0 && document.activeElement === e.currentTarget) {
+      const element = tabRef.current;
+      const adjacent = element?.nextElementSibling ?? element?.previousElementSibling;
+      const next = adjacent?.querySelector<HTMLButtonElement>('button[title="Close tab"]')
+        ?? element?.parentElement?.parentElement?.querySelector<HTMLButtonElement>('button[aria-label="New tab"]');
+      next?.focus();
+    }
     void window.bullebrowser.tabs.close(tab.id);
   };
   return (
-    <button
-      type="button"
+    <div
+      ref={tabRef}
+      role="group"
+      aria-label="Browser tab"
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onClick={() => window.bullebrowser.tabs.switch(tab.id)}
       // Middle-click closes, as in every other browser.
       onAuxClick={(e) => {
         if (e.button === 1) close(e);
       }}
       title={tab.title || tab.url}
-      className={`group relative flex h-7 w-[180px] items-center gap-2 rounded-t-md px-2 text-left text-xs transition-colors ${
+      className={`relative flex h-7 w-[180px] shrink-0 items-center rounded-t-md text-left text-xs transition-colors ${
         tab.active
           ? 'z-10 bg-surface-light font-medium text-ink-primary shadow-[inset_0_-3px_0_0_#20BAD1,0_0_10px_rgba(32,186,209,0.45)]'
           : 'bg-surface-muted text-ink-secondary hover:bg-surface-muted'
       }`}
     >
+      <button type="button" aria-label={`Switch to ${tab.title || 'New Tab'}`} aria-pressed={tab.active}
+        onClick={() => window.bullebrowser.tabs.switch(tab.id)}
+        className="flex h-full min-w-0 flex-1 items-center gap-2 overflow-hidden pl-2 pr-1 text-left">
       {tab.faviconUrl ? (
         <img src={tab.faviconUrl} alt="" width={14} height={14} className="rounded-sm" />
       ) : (
@@ -92,23 +114,18 @@ function Tab({
       <span className="flex-1 truncate">
         {tab.loading ? 'Loading…' : tab.title || 'New Tab'}
       </span>
-      {/* Always shown on the active tab — the one a site just opened on top
-          of your page — and on hover for the rest. It used to be invisible
-          until hovered, and a 16px target, so a tab that covered the page was
-          hard to get rid of. */}
-      <span
-        role="button"
-        aria-label="Close tab"
-        title="Close tab (⌘W)"
+      </button>
+      <button
+        type="button"
+        aria-label={`Close tab: ${tab.title || tab.url || 'New Tab'}`}
+        title="Close tab"
         onClick={close}
-        className={`grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-black/15 ${
-          tab.active ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`}
+        className="grid h-full w-8 shrink-0 place-items-center rounded opacity-80 hover:bg-black/15 hover:opacity-100 focus-visible:outline focus-visible:outline-2"
       >
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M6 6l12 12M6 18L18 6" />
         </svg>
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }

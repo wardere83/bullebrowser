@@ -659,3 +659,65 @@ test('session scratchpad saves, reloads, and forgets notes without a model call'
     rmSync(userData, { recursive: true, force: true });
   }
 });
+
+
+test('every tab has a stable visible close button including the far-right and only tab', async () => {
+  const { app, win, userData } = await launch({ withoutKeys: true });
+  try {
+    for (const index of [0, 1, 2, 3]) {
+      await win.evaluate(async () => {
+        for (const tab of await window.bullebrowser.tabs.list()) await window.bullebrowser.tabs.close(tab.id);
+        for (let i = 0; i < 4; i++) await window.bullebrowser.tabs.create('about:blank');
+      });
+      const close = win.getByRole('button', { name: /^Close tab:/ });
+      await expect(close).toHaveCount(4);
+      const strip = win.getByRole('region', { name: 'Browser tabs' });
+      const before = await strip.boundingBox();
+      for (let i = 0; i < 4; i++) {
+        await expect(close.nth(i)).toBeVisible();
+        expect(await close.nth(i).evaluate(el => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0);
+      }
+      await close.nth(index).click();
+      await expect(close).toHaveCount(3);
+      expect((await strip.boundingBox())?.height).toBe(before?.height);
+      for (const tab of await strip.getByRole('group', { name: 'Browser tab' }).all()) expect((await tab.boundingBox())?.width).toBe(180);
+    }
+    const close = win.getByRole('button', { name: /^Close tab:/ });
+    for (let remaining = await close.count(); remaining > 0; remaining--) {
+      await close.last().focus(); await win.keyboard.press('Enter');
+      await expect(close).toHaveCount(remaining - 1);
+      if (remaining > 1) await expect(close.last()).toBeFocused();
+      else await expect(win.getByRole('button', { name: 'New tab', exact: true })).toBeFocused();
+    }
+    await expect(win.getByRole('region', { name: 'Browser tabs' })).toBeVisible();
+    await win.getByRole('button', { name: 'New tab', exact: true }).click();
+    await expect(close).toHaveCount(1);
+  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
+});
+
+
+test('overflowing tabs reveal the active tab and the selection surface has no dead padding', async () => {
+  const { app, win, userData } = await launch({ withoutKeys: true });
+  try {
+    await win.evaluate(async () => {
+      for (const tab of await window.bullebrowser.tabs.list()) await window.bullebrowser.tabs.close(tab.id);
+      for (let i = 0; i < 12; i++) await window.bullebrowser.tabs.create('about:blank');
+    });
+    const strip = win.getByRole('region', { name: 'Browser tabs' });
+    const groups = strip.getByRole('group', { name: 'Browser tab', exact: true });
+    await expect(groups).toHaveCount(12);
+    const stripBounds = await strip.boundingBox();
+    const tabBounds = await groups.last().boundingBox();
+    expect(tabBounds!.y).toBeGreaterThanOrEqual(stripBounds!.y);
+    expect(tabBounds!.y + tabBounds!.height).toBeLessThanOrEqual(stripBounds!.y + stripBounds!.height);
+
+    await expect(groups.last()).toBeInViewport({ ratio: 1 });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(960, 800));
+    await expect(groups.last()).toBeInViewport({ ratio: 1 });
+    const ids = await win.evaluate(async () => (await window.bullebrowser.tabs.list()).map(t => t.id));
+    await win.evaluate(id => window.bullebrowser.tabs.switch(id), ids[0]);
+    await expect(groups.first()).toBeInViewport({ ratio: 1 });
+    await groups.nth(1).getByRole('button', { name: /Switch to/ }).click({ position: { x: 2, y: 10 } });
+    await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.tabs.list()).find(t => t.active)?.id)).toBe(ids[1]);
+  } finally { await app.close(); rmSync(userData, { recursive: true, force: true }); }
+});
