@@ -64,10 +64,23 @@ export function BrowserTab({
 }) {
   const tabRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (tab.active) tabRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const element = tabRef.current;
+    if (!tab.active || !element?.parentElement) return;
+    const reveal = () => element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(element.parentElement);
+    return () => observer.disconnect();
   }, [tab.active]);
   const close = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (e.detail === 0 && document.activeElement === e.currentTarget) {
+      const element = tabRef.current;
+      const adjacent = element?.nextElementSibling ?? element?.previousElementSibling;
+      const next = adjacent?.querySelector<HTMLButtonElement>('button[title="Close tab"]')
+        ?? element?.parentElement?.parentElement?.querySelector<HTMLButtonElement>('button[aria-label="New tab"]');
+      next?.focus();
+    }
     void window.bullebrowser.tabs.close(tab.id);
   };
   return (
@@ -104,7 +117,7 @@ export function BrowserTab({
       </button>
       <button
         type="button"
-        aria-label="Close tab"
+        aria-label={`Close tab: ${tab.title || tab.url || 'New Tab'}`}
         title="Close tab"
         onClick={close}
         className="grid h-full w-8 shrink-0 place-items-center rounded opacity-80 hover:bg-black/15 hover:opacity-100 focus-visible:outline focus-visible:outline-2"

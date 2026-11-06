@@ -669,7 +669,7 @@ test('every tab has a stable visible close button including the far-right and on
         for (const tab of await window.bullebrowser.tabs.list()) await window.bullebrowser.tabs.close(tab.id);
         for (let i = 0; i < 4; i++) await window.bullebrowser.tabs.create('about:blank');
       });
-      const close = win.getByRole('button', { name: 'Close tab', exact: true });
+      const close = win.getByRole('button', { name: /^Close tab:/ });
       await expect(close).toHaveCount(4);
       const strip = win.getByRole('region', { name: 'Browser tabs' });
       const before = await strip.boundingBox();
@@ -682,10 +682,12 @@ test('every tab has a stable visible close button including the far-right and on
       expect((await strip.boundingBox())?.height).toBe(before?.height);
       for (const tab of await strip.getByRole('group', { name: 'Browser tab' }).all()) expect((await tab.boundingBox())?.width).toBe(180);
     }
-    const close = win.getByRole('button', { name: 'Close tab', exact: true });
+    const close = win.getByRole('button', { name: /^Close tab:/ });
     for (let remaining = await close.count(); remaining > 0; remaining--) {
       await close.last().focus(); await win.keyboard.press('Enter');
       await expect(close).toHaveCount(remaining - 1);
+      if (remaining > 1) await expect(close.last()).toBeFocused();
+      else await expect(win.getByRole('button', { name: 'New tab', exact: true })).toBeFocused();
     }
     await expect(win.getByRole('region', { name: 'Browser tabs' })).toBeVisible();
     await win.getByRole('button', { name: 'New tab', exact: true }).click();
@@ -704,6 +706,8 @@ test('overflowing tabs reveal the active tab and the selection surface has no de
     const strip = win.getByRole('region', { name: 'Browser tabs' });
     const groups = strip.getByRole('group', { name: 'Browser tab', exact: true });
     await expect(groups).toHaveCount(12);
+    await expect(groups.last()).toBeInViewport({ ratio: 1 });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(960, 800));
     await expect(groups.last()).toBeInViewport({ ratio: 1 });
     const ids = await win.evaluate(async () => (await window.bullebrowser.tabs.list()).map(t => t.id));
     await win.evaluate(id => window.bullebrowser.tabs.switch(id), ids[0]);
