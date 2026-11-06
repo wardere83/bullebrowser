@@ -40,6 +40,10 @@ const JSON_TOOL = /"type"\s*:\s*"(tool_use|tool_result|function_call|function)"/
 // Invisible and direction-changing characters used to hide instructions.
 const HIDDEN_CHARS = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
 
+export function removeHiddenCharacters(text: string): string {
+  return text.replace(HIDDEN_CHARS, '');
+}
+
 export function neutralize(text: string): string {
   return text
     .replace(HIDDEN_CHARS, '')
@@ -99,7 +103,10 @@ export interface PageInstructionFinding {
 const EXCERPT_CONTEXT = 60;
 const EXCERPT_MAX = 240;
 
-export function detectPageInstructions(text: string): PageInstructionFinding | null {
+export function detectPageInstructions(raw: string): PageInstructionFinding | null {
+  // Match what the model will read: neutralize() strips these characters, so
+  // "Ig\u200Bnore all previous instructions" reaches it whole.
+  const text = raw.replace(HIDDEN_CHARS, '');
   const signals: PageInstructionSignal[] = [];
   let first: { index: number; length: number } | null = null;
   for (const { signal, pattern } of INSTRUCTION_PATTERNS) {
@@ -111,7 +118,7 @@ export function detectPageInstructions(text: string): PageInstructionFinding | n
   if (!first) return null;
   const start = Math.max(0, first.index - EXCERPT_CONTEXT);
   const end = Math.min(text.length, first.index + first.length + EXCERPT_CONTEXT);
-  let excerpt = text.slice(start, end).replace(HIDDEN_CHARS, '').replace(/\s+/g, ' ').trim();
+  let excerpt = text.slice(start, end).replace(/\s+/g, ' ').trim();
   if (excerpt.length > EXCERPT_MAX) excerpt = `${excerpt.slice(0, EXCERPT_MAX - 1)}…`;
   return { signals, excerpt: `${start > 0 ? '…' : ''}${excerpt}${end < text.length && !excerpt.endsWith('…') ? '…' : ''}` };
 }

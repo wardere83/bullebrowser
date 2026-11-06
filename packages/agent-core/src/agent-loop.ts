@@ -32,7 +32,7 @@ import {
   toToolError,
   type ToolErrorCode,
 } from './errors.js';
-import { detectPageInstructions, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
+import { detectPageInstructions, removeHiddenCharacters, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES, type PageInstructionFinding } from './untrusted.js';
 import { requiredLevel } from './permissions.js';
 import { StepBudget } from './budget.js';
 import { PRODUCT_IDENTITY_INSTRUCTIONS, productQuestionReply, protectAssistantIdentity, protectConversationIdentity } from './product-identity.js';
@@ -221,6 +221,45 @@ function pageStrings(value: unknown, out: string[] = []): string[] {
   return out;
 }
 
+// Keep a bounded source region before redaction expands URLs. Never cut a
+// credential token in half: omit the final partial word at the boundary.
+// Singleton objects preserve field-based redaction without collapsing keys
+// that become equal when invisible characters are removed.
+function warningValue(value: unknown, limit: number): unknown {
+  let remaining = limit;
+  const walk = (item: unknown): unknown => {
+    if (remaining <= 0) return '';
+    if (typeof item === 'string') {
+      const text = removeHiddenCharacters(item);
+      let bounded = text.slice(0, remaining);
+      if (text.length > remaining) bounded = bounded.replace(/\S+$/, '');
+      remaining -= Math.min(text.length, remaining) + 1;
+      return bounded;
+    }
+    if (Array.isArray(item)) {
+      const result: unknown[] = [];
+      for (const child of item) { if (remaining <= 0) break; result.push(walk(child)); }
+      return result;
+    }
+    if (item && typeof item === 'object') {
+      const result: unknown[] = [];
+      for (const [key, child] of Object.entries(item)) {
+        if (remaining <= 0) break;
+        result.push({ [removeHiddenCharacters(key)]: walk(child) });
+      }
+      return result;
+    }
+    return item;
+  };
+  return walk(value);
+}
+
+function findPageInstructions(value: unknown, policy: PrivacyPolicyEngine, limit = 100_000): PageInstructionFinding | null {
+  const bounded = warningValue(value, limit);
+  if (!detectPageInstructions(pageStrings(bounded).join('\n'))) return null;
+  return detectPageInstructions(pageStrings(policy.redact(bounded)).join('\n'));
+}
+
 // Tell the user when page-derived text tried to steer the agent. The model
 // already gets the text sealed as data; this makes the attempt visible.
 async function warnOnPageInstructions(
@@ -229,9 +268,9 @@ async function warnOnPageInstructions(
   policy: PrivacyPolicyEngine,
   onStep: AgentStepHandler,
 ): Promise<void> {
-  const finding = detectPageInstructions(truncate(pageStrings(output).join('\n'), 100_000));
+  const finding = findPageInstructions(output, policy);
   if (!finding) return;
-  const source = typeof label === 'string' ? label : await label().catch(() => 'the current page');
+  const source = removeHiddenCharacters(typeof label === 'string' ? label : await label().catch(() => 'the current page'));
   onStep({
     type: 'page_instructions',
     detail: policy.redact(source) as string,
@@ -239,12 +278,29 @@ async function warnOnPageInstructions(
   });
 }
 
-// The page a browser tool read from: its own URL when it reports one,
-// otherwise the active tab's.
-function browserSource(output: unknown, context: ToolContext): string | (() => Promise<string>) {
-  const url = output && typeof output === 'object' ? (output as { url?: unknown }).url : undefined;
-  if (typeof url === 'string' && url) return url;
-  return async () => (await context.runtime.listTabs()).find((tab) => tab.id === context.activeTabId)?.url || 'the current page';
+// Attribute a browser tool's page text to the page it came from. A tab list
+// holds text from several pages, so each tab answers for its own title. Other
+// results name their own URL, or else the tab the tool was pointed at, which
+// need not be the active one.
+async function warnOnBrowserOutput(
+  toolName: string,
+  output: unknown,
+  input: Record<string, unknown>,
+  context: ToolContext,
+  policy: PrivacyPolicyEngine,
+  onStep: AgentStepHandler,
+): Promise<void> {
+  const record = output && typeof output === 'object' ? (output as { url?: unknown; tabs?: unknown }) : undefined;
+  if ((toolName === 'list_tabs' || toolName === 'listTabs') && Array.isArray(record?.tabs)) {
+    for (const tab of record.tabs as { url?: unknown }[]) {
+      await warnOnPageInstructions(tab, typeof tab?.url === 'string' && tab.url ? tab.url : 'a tab', policy, onStep);
+    }
+    return;
+  }
+  if (typeof record?.url === 'string' && record.url) return warnOnPageInstructions(output, record.url, policy, onStep);
+  const tabId = typeof input.tabId === 'string' ? input.tabId : context.activeTabId;
+  await warnOnPageInstructions(output,
+    async () => (await context.runtime.listTabs()).find((tab) => tab.id === tabId)?.url || 'the current page', policy, onStep);
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -447,7 +503,8 @@ export async function executeToolCall(
         return fail(new ToolError('UNKNOWN', 'The screenshot came back empty.'));
       }
 
-      await warnOnPageInstructions(output, browserSource(output, context), policy, onStep);
+      // The validated input: a tabId the tool's schema drops was not used.
+      await warnOnBrowserOutput(name, output, (parsed ?? {}) as Record<string, unknown>, context, policy, onStep);
       const text = typeof output === 'string' ? neutralize(output) : JSON.stringify(neutralizeDeep(output));
       return record({ text: sealed(truncate(text, 100_000), name), isError: false });
     } catch (error) {
@@ -643,9 +700,10 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   // Scan full document/reference text before either cloud or keyless execution.
   // Warnings are bounded/redacted; the original reference remains sealed as data.
   for (const item of input.referenceContext ?? []) {
-    const finding = detectPageInstructions(item.text);
+    const finding = findPageInstructions(item.text, policy, Infinity);
     if (!finding) continue;
-    const source = `Document: ${(item.label.trim() || 'reference').slice(0, 160)}`;
+    const safeLabel = policy.redact(removeHiddenCharacters(item.label.trim() || 'reference')) as string;
+    const source = `Document: ${safeLabel.slice(0, 160)}`;
     onStep({ type: 'page_instructions', detail: policy.redact(source) as string,
       data: policy.redact({ source, excerpt: finding.excerpt, signals: finding.signals }) });
   }
