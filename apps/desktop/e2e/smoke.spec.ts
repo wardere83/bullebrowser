@@ -706,6 +706,11 @@ test('overflowing tabs reveal the active tab and the selection surface has no de
     const strip = win.getByRole('region', { name: 'Browser tabs' });
     const groups = strip.getByRole('group', { name: 'Browser tab', exact: true });
     await expect(groups).toHaveCount(12);
+    const stripBounds = await strip.boundingBox();
+    const tabBounds = await groups.last().boundingBox();
+    expect(tabBounds!.y).toBeGreaterThanOrEqual(stripBounds!.y);
+    expect(tabBounds!.y + tabBounds!.height).toBeLessThanOrEqual(stripBounds!.y + stripBounds!.height);
+
     await expect(groups.last()).toBeInViewport({ ratio: 1 });
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(960, 800));
     await expect(groups.last()).toBeInViewport({ ratio: 1 });

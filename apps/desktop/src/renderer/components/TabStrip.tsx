@@ -26,7 +26,7 @@ export function TabStrip() {
       aria-label="Browser tabs"
       className="flex h-9 items-end gap-0.5 border-b border-line bg-white px-2 pt-1 text-ink-primary"
     >
-      <div className="flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto">
+      <div className="flex h-full min-w-0 flex-1 items-end gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => (
           <BrowserTab
             key={t.id}
