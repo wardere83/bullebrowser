@@ -40,7 +40,7 @@ test('actual packaging schema accepts the full installer configuration and prese
     { ...config, linux: { ...config.linux, desktop: { Name: 'BulleBrowser' } } },
   ]) await assert.rejects(validateConfiguration(invalid, { isEnabled: false }), /Invalid configuration/);
   const helper = new LinuxTargetHelper({
-    appInfo: { productName: config.productName, sanitizedProductName: config.productName, description: 'The agentic AI web browser' },
+    appInfo: { productName: config.productName, sanitizedProductName: config.productName, description: desktop('./package.json').description },
     executableName: config.executableName,
     info: { metadata: { desktopName: 'BulleBrowser.desktop' } },
     config, platformSpecificBuildOptions: config.linux, fileAssociations: [],
@@ -48,6 +48,6 @@ test('actual packaging schema accepts the full installer configuration and prese
   const entry = await helper.computeDesktopEntry(config.linux);
   assert.match(entry, /^Name=BulleBrowser$/m);
   assert.match(entry, /^Comment=The agentic AI web browser$/m);
-  assert.match(entry, /^Categories=Network;$/m);
+  assert.match(entry, /^Categories=Network;WebBrowser;$/m);
   assert.match(entry, /^Exec=\/opt\/BulleBrowser\/BulleBrowser %U$/m);
 });
