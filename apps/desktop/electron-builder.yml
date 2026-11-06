@@ -88,7 +88,8 @@ nsis:
   artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
 
 linux:
-  category: Network
+  category: Network;WebBrowser;
+  description: The agentic AI web browser
   artifactName: "${productName}-${version}-${arch}.${ext}"
   maintainer: Bulle Consulting <hello@bulleconsulting.com>
   target:
@@ -97,12 +98,6 @@ linux:
         - x64
         - arm64
   icon: resources/icon.png
-  # electron-builder 26 nests the .desktop keys under entry.
-  desktop:
-    entry:
-      Name: BulleBrowser
-      Comment: The agentic AI web browser
-      Categories: Network;WebBrowser;
 
 
 publish:
