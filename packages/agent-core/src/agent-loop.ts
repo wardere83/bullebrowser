@@ -32,7 +32,7 @@ import {
   toToolError,
   type ToolErrorCode,
 } from './errors.js';
-import { detectPageInstructions, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES, type PageInstructionFinding } from './untrusted.js';
+import { detectPageInstructions, removeHiddenCharacters, neutralize, neutralizeDeep, wrapUntrusted, UNTRUSTED_RULES, type PageInstructionFinding } from './untrusted.js';
 import { requiredLevel } from './permissions.js';
 import { StepBudget } from './budget.js';
 import { PRODUCT_IDENTITY_INSTRUCTIONS, productQuestionReply, protectAssistantIdentity, protectConversationIdentity } from './product-identity.js';
@@ -221,17 +221,23 @@ function pageStrings(value: unknown, out: string[] = []): string[] {
   return out;
 }
 
-// Look for instructions in the raw text first: it is cheap, and most pages
-// have none. On a match, take the excerpt from a redacted copy instead. Cutting
-// first could split a signed URL so the redactor no longer recognizes it, and
-// key-based redaction (a `password` or `token` field) needs the keys, which
-// the joined text has lost. A match only inside a redacted field is not shown.
-// `limit` matches what the model is given: tool results are cut at 100,000
-// characters, reference documents are not cut at all.
+// Normalize complete values before redaction: an invisible character can hide
+// a URL scheme or credential key. Keep field names for key-based redaction.
+function normalizeWarningValue(value: unknown): unknown {
+  if (typeof value === 'string') return removeHiddenCharacters(value);
+  if (Array.isArray(value)) return value.map(normalizeWarningValue);
+  if (value && typeof value === 'object') return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [removeHiddenCharacters(key), normalizeWarningValue(item)]),
+  );
+  return value;
+}
+
 function findPageInstructions(value: unknown, policy: PrivacyPolicyEngine, limit = 100_000): PageInstructionFinding | null {
-  const text = (v: unknown) => truncate(pageStrings(v).join('\n'), limit);
-  if (!detectPageInstructions(text(value))) return null;
-  return detectPageInstructions(text(policy.redact(value)));
+  const normalized = normalizeWarningValue(value);
+  if (!detectPageInstructions(truncate(pageStrings(normalized).join('\n'), limit))) return null;
+  // Do not cap again after redaction: replacement text can expand a URL and
+  // move an originally visible instruction beyond the input's character cap.
+  return detectPageInstructions(pageStrings(policy.redact(normalized)).join('\n'));
 }
 
 // Tell the user when page-derived text tried to steer the agent. The model
