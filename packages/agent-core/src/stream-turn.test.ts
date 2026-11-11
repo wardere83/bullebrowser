@@ -46,6 +46,16 @@ describe('streamed tool dispatch', () => {
     expect(dispatch.mock.calls.map(([call]) => [call.name, call.input])).toEqual([['read_page', {}], ['list_tabs', {}]]);
     expect(turn.content.map((block) => (block as Anthropic.ToolUseBlock).input)).toEqual([{}, {}]);
   });
+  it('fails closed when a call streams only whitespace', async () => {
+    async function* stream(): AsyncGenerator<Anthropic.RawMessageStreamEvent> {
+      yield { type: 'content_block_start', index: 0, content_block: tool('read', 'read_page') };
+      yield { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: ' \n\t' } };
+      yield { type: 'content_block_stop', index: 0 };
+    }
+    const dispatch = vi.fn();
+    await expect(consumeTurn(stream(), dispatch)).rejects.toThrow(SyntaxError);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
   it('fails closed on truncated or malformed streams', async () => {
     async function* truncated(): AsyncGenerator<Anthropic.RawMessageStreamEvent> {
       yield { type: 'content_block_start', index: 0, content_block: tool('first') };

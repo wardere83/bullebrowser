@@ -43,8 +43,9 @@ export async function consumeTurn(
       if (block?.type === 'tool_use') {
         const raw = json.get(event.index);
         // A call with no arguments streams nothing, or one empty delta: its
-        // input is the {} the block started with. Malformed JSON still throws.
-        if (raw?.trim()) block.input = JSON.parse(raw);
+        // input is the {} the block started with. Anything else must parse;
+        // whitespace alone is malformed and still throws.
+        if (raw) block.input = JSON.parse(raw);
         if (!dispatched.has(event.index)) { dispatched.add(event.index); onTool(block); }
       }
     } else if (event.type === 'message_delta') stop_reason = event.delta.stop_reason;
