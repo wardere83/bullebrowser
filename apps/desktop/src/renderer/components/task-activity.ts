@@ -42,6 +42,13 @@ const ACTIONS: Record<string, string> = {
   reload: 'Reloading the page',
   find_elements: 'Finding page controls',
   select_option: 'Choosing an option',
+  // Host-supplied tools. Without these the log fell back to the raw tool
+  // name ("Running funding search opportunities").
+  web_search: 'Searching the web',
+  funding_search_opportunities: 'Searching funding opportunities',
+  funding_get_opportunity: 'Checking a funding listing',
+  org_get_profile: "Reviewing your organization's profile",
+  org_search_knowledge: "Searching your organization's documents",
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -65,7 +72,7 @@ function actionLabel(step: Extract<AgentStepEvent, { kind: 'tool_call' }>): stri
   const verb = ACTIONS[step.toolName] ?? `Running ${step.toolName.replace(/[_-]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()}`;
   const input = record(step.input);
   const host = sourceHost(input?.url);
-  if (host) return `${verb} ${host}`;
+  if (host) return step.toolName === 'new_tab' ? `Opening ${host} in a new tab` : `${verb} ${host}`;
   // Never show typed text, raw tool arguments or page contents in the log.
   const target = typeof input?.target === 'string' && ['click', 'clickElement', 'find_elements'].includes(step.toolName)
     ? input.target.trim().slice(0, 100)

@@ -29,6 +29,23 @@ describe('streamed tool dispatch', () => {
     hold.resolve();
     expect((await result).content[0]).toMatchObject({ thinking: 'private', signature: 'signature' });
   });
+  // The API streams a lone empty delta for a call with no arguments
+  // (read_page or list_tabs on the active tab). Parsing it crashed the task
+  // with "Unexpected end of JSON input".
+  it('dispatches a call with no arguments as an empty input', async () => {
+    async function* stream(): AsyncGenerator<Anthropic.RawMessageStreamEvent> {
+      yield { type: 'content_block_start', index: 0, content_block: tool('read', 'read_page') };
+      yield { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '' } };
+      yield { type: 'content_block_stop', index: 0 };
+      yield { type: 'content_block_start', index: 1, content_block: tool('tabs', 'list_tabs') };
+      yield { type: 'content_block_stop', index: 1 };
+      yield { type: 'message_delta', delta: { stop_reason: 'tool_use', stop_sequence: null, container: null, stop_details: null }, usage: { output_tokens: 5, input_tokens: null, cache_creation_input_tokens: null, cache_read_input_tokens: null, server_tool_use: null } };
+    }
+    const dispatch = vi.fn();
+    const turn = await consumeTurn(stream(), dispatch);
+    expect(dispatch.mock.calls.map(([call]) => [call.name, call.input])).toEqual([['read_page', {}], ['list_tabs', {}]]);
+    expect(turn.content.map((block) => (block as Anthropic.ToolUseBlock).input)).toEqual([{}, {}]);
+  });
   it('fails closed on truncated or malformed streams', async () => {
     async function* truncated(): AsyncGenerator<Anthropic.RawMessageStreamEvent> {
       yield { type: 'content_block_start', index: 0, content_block: tool('first') };
