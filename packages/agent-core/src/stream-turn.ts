@@ -1,6 +1,14 @@
 import type Anthropic from '@anthropic-ai/sdk';
 
 type DispatchCall = Pick<Anthropic.ToolUseBlock, 'id' | 'name' | 'input' | 'type'>;
+
+/** The stream stopped without a final stop reason: a dropped connection, not a reply. */
+export class StreamInterruptedError extends Error {
+  constructor() {
+    super('The assistant stream ended before a complete turn.');
+    this.name = 'StreamInterruptedError';
+  }
+}
 type Turn = Pick<Anthropic.Message, 'content' | 'stop_reason'>;
 /** Consume complete content blocks, never partial JSON. Private thinking stays in the provider transcript. */
 export async function consumeTurn(
@@ -47,7 +55,7 @@ export async function consumeTurn(
       }
     } else if (event.type === 'message_delta') stop_reason = event.delta.stop_reason;
   }
-  if (!stop_reason) throw new Error('The assistant stream ended before a complete turn.');
+  if (!stop_reason) throw new StreamInterruptedError();
   return { content, stop_reason };
 }
 

@@ -1,5 +1,5 @@
 import { GoalPlanner } from './planning.js';
-import { consumeTurn, ToolDispatchQueue } from './stream-turn.js';
+import { consumeTurn, StreamInterruptedError, ToolDispatchQueue } from './stream-turn.js';
 import { TaskOutcomeTracker } from './task-outcome.js';
 import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
 import { browserTask } from './browser-tasks.js';
@@ -20,6 +20,7 @@ import { assertAllowedToolDestination } from './destinations.js';
 // renderer through `onStep`.
 
 import Anthropic from '@anthropic-ai/sdk';
+import { APIConnectionError, APIError, APIUserAbortError } from '@anthropic-ai/sdk/error';
 import { SessionMemoryStore } from './memory.js';
 import { PrivacyPolicyEngine } from './policy.js';
 import { retrieveContext } from './retrieval.js';
@@ -301,6 +302,22 @@ async function warnOnBrowserOutput(
   const tabId = typeof input.tabId === 'string' ? input.tabId : context.activeTabId;
   await warnOnPageInstructions(output,
     async () => (await context.runtime.listTabs()).find((tab) => tab.id === tabId)?.url || 'the current page', policy, onStep);
+}
+
+// The SDK retries a failed request, but not a reply that breaks while it
+// streams: a dropped connection (the SDK then ends the stream silently) or a
+// mid-stream "overloaded" event. Either ended the whole task. Such a turn is
+// asked again, but only while none of its tool calls has been dispatched.
+// Until then nothing has happened in the browser, so nothing can repeat.
+const TURN_RETRY_DELAYS_MS = [1000, 3000];
+
+function isInterruptedTurn(error: unknown): boolean {
+  if (error instanceof StreamInterruptedError || error instanceof APIConnectionError) return true;
+  if (error instanceof APIUserAbortError) return false;
+  // An error event inside the stream carries no HTTP status.
+  if (error instanceof APIError) return error.status === undefined && ['overloaded_error', 'api_error'].includes(String(error.type));
+  // The socket closing under the response body.
+  return error instanceof TypeError && /\b(?:terminated|network|socket|ECONNRESET)\b/i.test(error.message);
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -842,23 +859,31 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       return outcome;
     }, new Set(extraTools.keys()));
     const response = await withTurnSignal(context.signal, async (signal) => {
-      try {
-        const source = await client.messages.create(
-          {
-            model: planner?.model ?? input.model,
-            stream: true,
-            max_tokens: maxTokens,
-            ...(!planner && thinking ? { thinking } : {}),
-            system: system + (planner?.instructions ?? ''),
-            tools: toolDefs,
-            messages,
-          },
-          { signal },
-        );
-        return await consumeTurn(source, (tool) => { void dispatch.enqueue(tool); });
-      } finally {
-        // Never leave browser work detached if the model stream fails.
-        await dispatch.settled();
+      for (let attempt = 0; ; attempt++) {
+        let dispatched = 0;
+        try {
+          const source = await client.messages.create(
+            {
+              model: planner?.model ?? input.model,
+              stream: true,
+              max_tokens: maxTokens,
+              ...(!planner && thinking ? { thinking } : {}),
+              system: system + (planner?.instructions ?? ''),
+              tools: toolDefs,
+              messages,
+            },
+            { signal },
+          );
+          return await consumeTurn(source, (tool) => { dispatched += 1; void dispatch.enqueue(tool); });
+        } catch (error) {
+          const delay = TURN_RETRY_DELAYS_MS[attempt];
+          if (dispatched || delay === undefined || context.signal.aborted || !isInterruptedTurn(error)) throw error;
+          onStep({ type: 'thinking', detail: 'The connection to the AI service dropped. Retrying…' });
+          await sleep(delay, context.signal);
+        } finally {
+          // Never leave browser work detached if the model stream fails.
+          await dispatch.settled();
+        }
       }
     });
 
