@@ -24,7 +24,9 @@ export function browserSearch(options: { runtime: ToolRuntime; activeTabId: () =
     if (!tabId) throw new Error('Open a browser tab to search.');
     const url = new URL('https://www.bing.com/search');
     const fundingOnly = options.fundingOnly || isFundingDiscoveryRequest(query);
-    url.searchParams.set('q', fundingSearchQuery(query, fundingOnly));
+    // Grant-search services are filtered from the links below, not excluded
+    // in the query: the -site: operators derail Bing's results.
+    url.searchParams.set('q', fundingSearchQuery(query, fundingOnly, { siteExclusions: false }));
     assertAllowedDestination(url);
     await options.presentAction?.(tabId, 'navigate', options.signal);
     check();

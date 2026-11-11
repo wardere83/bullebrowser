@@ -29,8 +29,7 @@ it('searches visibly without a key and filters prohibited or duplicate result UR
   expect(await tool.execute({ query: 'school grants', count: 2 })).toMatchObject({ mode: 'browser', results: [{ url: 'https://agency.gov/program' }, { url: 'https://school.edu/funding' }] });
   const destination = new URL(f.navigate.mock.calls[0]![1]);
   expect(destination.origin).toBe('https://www.bing.com');
-  expect(destination.searchParams.get('q')).toContain('school grants official grant program');
-  expect(destination.searchParams.get('q')).toContain('-site:instrumentl.com');
+  expect(destination.searchParams.get('q')).toBe('school grants official grant program eligibility');
   expect(fetch).not.toHaveBeenCalled();
 });
 it('rejects a prohibited search redirect before reading links', async () => {
