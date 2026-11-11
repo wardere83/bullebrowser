@@ -307,7 +307,9 @@ async function warnOnBrowserOutput(
 // The SDK retries a failed request, but not a reply that breaks while it
 // streams: a dropped connection (the SDK then ends the stream silently) or a
 // mid-stream "overloaded" event. Either ended the whole task. Such a turn is
-// asked again, but only while none of its tool calls has been dispatched.
+// asked again, but only once its stream had begun (an outright request failure
+// already had the SDK's retries) and while none of its tool calls has been
+// dispatched.
 // Until then nothing has happened in the browser, so nothing can repeat.
 const TURN_RETRY_DELAYS_MS = [1000, 3000];
 
@@ -861,6 +863,9 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     const response = await withTurnSignal(context.signal, async (signal) => {
       for (let attempt = 0; ; attempt++) {
         let dispatched = 0;
+        // Only a reply that broke after it began streaming is asked again. A
+        // request that failed outright has already had the SDK's retries.
+        let streaming = false;
         try {
           const source = await client.messages.create(
             {
@@ -874,10 +879,11 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
             },
             { signal },
           );
+          streaming = true;
           return await consumeTurn(source, (tool) => { dispatched += 1; void dispatch.enqueue(tool); });
         } catch (error) {
           const delay = TURN_RETRY_DELAYS_MS[attempt];
-          if (dispatched || delay === undefined || context.signal.aborted || !isInterruptedTurn(error)) throw error;
+          if (!streaming || dispatched || delay === undefined || context.signal.aborted || !isInterruptedTurn(error)) throw error;
           onStep({ type: 'thinking', detail: 'The connection to the AI service dropped. Retrying…' });
           await sleep(delay, context.signal);
         } finally {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TERMINOLOGY_INSTRUCTIONS } from './terminology.js';
 import { BROWSER_SYSTEM } from './browser-host.js';
 import type { AgentInput, AgentStep, ToolContext } from './types.js';
-import { APIError } from '@anthropic-ai/sdk/error';
+import { APIConnectionError, APIError } from '@anthropic-ai/sdk/error';
 
 // Mock the Anthropic SDK so the loop can be driven with scripted responses.
 const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
@@ -234,6 +234,23 @@ describe('runAgent Claude tool-use loop', () => {
       await settled;
       expect(createMock).toHaveBeenCalledTimes(1);
       expect(pressKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a request that never connected to the SDK retries', async () => {
+      createMock.mockRejectedValueOnce(new APIConnectionError({ message: 'Connection error.' }));
+      await expect(run([])).rejects.toThrow('Connection error.');
+      expect(createMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks again when the connection drops mid-reply', async () => {
+      createMock
+        .mockResolvedValueOnce(broken(partialText, new APIConnectionError({ message: 'Connection error.' })))
+        .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [toolUseBlock('tu1', 'read_page', {})] })
+        .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('This page explains grants and deadlines.')] });
+      const result = run([]);
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(await result).toContain('grants and deadlines');
+      expect(createMock).toHaveBeenCalledTimes(3);
     });
 
     it('does not retry a request the service rejected', async () => {
