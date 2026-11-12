@@ -134,7 +134,7 @@ const OPTION_SCRIPTS: Script[] = [
     start: {},
     steps: [
       { do: 'ask', text: questions[1]! },
-      { do: 'reply', text: 'Harborline Community Foundation. We’re a 501(c)(3) CBO in Newark, NJ and Los Angeles.' },
+      { do: 'reply', text: 'Harborline Community Foundation. We’re a 501(c)(3) CBO in Newark, NJ and Los Angeles running a youth leadership and job-readiness program.' },
       { do: 'access' },
       { do: 'plan', goals: ['Open the funder’s official website', 'Read its priorities', 'Check grant guidelines and deadlines', 'Summarize fit and next steps'] },
       act('Opening harborline-foundation.example', 'navigate'), ...go('funder-home'), { do: 'goal' },
@@ -142,7 +142,7 @@ const OPTION_SCRIPTS: Script[] = [
       act('Reading the page', 'read_page'), ...check('fd-p1'), ...check('fd-p2'), ...read('fd-p3'), { do: 'goal' },
       act('Clicking Grants', 'click'), ...press('fd-nav-grants'), ...go('funder-grants'),
       act('Extracting page information', 'extract'), ...check('fd-elig'), ...check('fd-range'), ...check('fd-region'), ...check('fd-loi'),
-      point('fd-apply', 900), { do: 'goal' }, { do: 'goal' },
+      point('fd-apply', 900), { do: 'goal' },
       { do: 'answer', answer: {
         lead: 'Harborline Community Foundation is a strong fit:',
         items: [
@@ -161,15 +161,13 @@ const OPTION_SCRIPTS: Script[] = [
       { do: 'ask', text: questions[2]! },
       { do: 'reply', text: 'We’re a 501(c)(3) CBO in Newark, NJ and Los Angeles. Compare federal, international and foundation funding for our youth program.' },
       { do: 'access' },
-      { do: 'plan', goals: ['Open each program’s official page', 'Extract award amounts and deadlines', 'Check eligibility for your organization', 'Compare them side by side'] },
-      act('Opening grants.gov', 'navigate'), ...go('grants-detail'), { do: 'goal' },
-      act('Extracting page information', 'extract'), ...check('gg-award'), ...check('gg-close'), ...check('gg-elig'),
+      { do: 'plan', goals: ['Read the Grants.gov listing', 'Read the international call', 'Read the funder’s guidelines', 'Compare award, deadline and eligibility'] },
+      act('Opening grants.gov', 'navigate'), ...go('grants-detail'),
+      act('Extracting page information', 'extract'), ...check('gg-award'), ...check('gg-close'), ...check('gg-elig'), { do: 'goal' },
       act('Opening a new tab', 'new_tab'), ...go('intl-call'),
-      act('Extracting page information', 'extract'), ...check('intl-budget'), ...check('intl-deadline'), ...check('intl-elig'),
-      { do: 'goal' },
+      act('Extracting page information', 'extract'), ...check('intl-budget'), ...check('intl-deadline'), ...check('intl-elig'), { do: 'goal' },
       act('Opening a new tab', 'new_tab'), ...go('funder-grants'),
-      act('Extracting page information', 'extract'), ...check('fd-elig'), ...check('fd-range'), ...check('fd-loi'), ...check('fd-region'),
-      { do: 'goal' }, { do: 'goal' },
+      act('Extracting page information', 'extract'), ...check('fd-elig'), ...check('fd-range'), ...check('fd-loi'), ...check('fd-region'), { do: 'goal' },
       { do: 'answer', answer: {
         lead: 'All three accept organizations like yours. Side by side:',
         items: [],
@@ -194,7 +192,7 @@ const OPTION_SCRIPTS: Script[] = [
       act('Extracting page information', 'extract'), ...check('gg-elig'), ...check('gg-close'), { do: 'goal' },
       act('Clicking Related documents', 'click'), ...press('gg-docs-tab'), ...go('grants-docs'),
       act('Reading the page', 'read_page'), ...check('gg-file-1'), ...check('gg-file-2'), ...check('gg-file-3'), ...check('gg-file-4'),
-      { do: 'goal' }, { do: 'goal' },
+      { do: 'goal' },
       { do: 'answer', answer: {
         lead: 'Yes. Nonprofits with 501(c)(3) status, including CBOs, may apply. The package needs:',
         items: [
@@ -217,8 +215,8 @@ const SOURCE_SCRIPTS: Record<SiteId, Script> = {
       { do: 'access' },
       ...GRANTS_SEARCH,
       { do: 'answer', answer: {
-        lead: 'On Grants.gov, one listing fits a community empowerment program:',
-        items: [{ status: 'match', title: 'Community Empowerment Pathways Program', detail: 'Up to $250,000 · Closes Mar 15, 2027 · Nonprofits, including CBOs', source: 'grants.gov' }],
+        lead: 'The most relevant Grants.gov listing for community empowerment:',
+        items: [{ status: 'info', title: 'Community Empowerment Pathways Program', detail: 'Up to $250,000 · Closes Mar 15, 2027 · Nonprofits, including CBOs', source: 'grants.gov' }],
       } },
     ],
   },
@@ -248,7 +246,7 @@ const SOURCE_SCRIPTS: Record<SiteId, Script> = {
       { do: 'answer', answer: {
         lead: 'Harborline Community Foundation’s priorities and guidelines, as published:',
         items: [
-          { status: 'match', title: 'Priorities', detail: 'Economic mobility and youth leadership', source: 'harborline-foundation.example' },
+          { status: 'info', title: 'Priorities', detail: 'Economic mobility, youth leadership and neighborhood health', source: 'harborline-foundation.example' },
           { status: 'info', title: 'Guidelines', detail: '$25,000–$100,000 · Letter of inquiry due February 1, 2027', source: 'harborline-foundation.example' },
         ],
       } },
@@ -325,6 +323,8 @@ export function BrowserWalkthrough() {
     // Every wait re-checks that this run is still current, so an older run
     // can never write into the new one's transcript or page.
     const pause = async (ms: number) => { await sleep(ms); return live(); };
+    let plan: string[] = [];
+    let finished = 0;
     void (async () => {
       if (!(await pause(350))) return;
       for (const step of script.steps) {
@@ -354,7 +354,10 @@ export function BrowserWalkthrough() {
             if (!(await pause(700))) return;
             break;
           case 'plan':
+            plan = step.goals;
+            finished = 0;
             setTask((current) => current && { ...current, goals: step.goals.map((text, i) => ({ text, status: i === 0 ? 'active' : 'pending' })) });
+            setAnnounce(`Task plan: ${plan.join('; ')}.`);
             if (!(await pause(900))) return;
             break;
           case 'goal':
@@ -367,6 +370,12 @@ export function BrowserWalkthrough() {
               if (next) next.status = 'active';
               return { ...current, goals };
             });
+            if (plan[finished]) {
+              const next = plan[finished + 1];
+              setAnnounce(`Completed: ${plan[finished]}.${next ? ` Next: ${next}.` : ''}`);
+              finished += 1;
+              if (!(await pause(500))) return;
+            }
             break;
           case 'act':
             setTask((current) => current && {
