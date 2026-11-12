@@ -332,6 +332,7 @@ export function BrowserWalkthrough() {
           case 'ask':
           case 'note':
             setItems((list) => [...list, { kind: step.do, text: step.text }]);
+            setAnnounce(step.text);
             if (!(await pause(900))) return;
             break;
           case 'reply': {
@@ -343,6 +344,7 @@ export function BrowserWalkthrough() {
             if (!(await pause(350))) return;
             setDraft('');
             setItems((list) => [...list, { kind: 'user', text: step.text }]);
+            setAnnounce(`Your answer: ${step.text}`);
             if (!(await pause(700))) return;
             break;
           }
@@ -398,7 +400,7 @@ export function BrowserWalkthrough() {
             });
             setScene((s) => ({ ...s, halo: null, toast: null }));
             setItems((list) => [...list, { kind: 'answer', answer: step.answer }]);
-            setAnnounce('Task complete');
+            setAnnounce(`Task complete. ${step.answer.lead} ${[...step.answer.items.map((item) => `${item.title}: ${item.detail}.`), ...(step.answer.compare ?? []).map((row) => `${row.name}: ${row.amount}, ${row.deadline}.`)].join(' ')}`);
             break;
         }
       }
@@ -731,6 +733,7 @@ function TaskCard({ task, running }: { task: Task; running: boolean }) {
                 >
                   {goal.status === 'done' ? '✓' : goal.status === 'active' ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-teal" /> : ''}
                 </span>
+                <span className="sr-only">{goal.status === 'done' ? 'Completed: ' : goal.status === 'active' ? 'In progress: ' : 'Pending: '}</span>
                 {goal.text}
               </li>
             ))}
@@ -752,7 +755,10 @@ function TaskCard({ task, running }: { task: Task; running: boolean }) {
                 ) : (
                   <Icon name="check" className="h-3 w-3 text-brand-teal" />
                 )}
-                <span className="truncate">{action.label}</span>
+                <span className="truncate">
+                  <span className="sr-only">{action.status === 'running' ? 'Running: ' : action.status === 'stopped' ? 'Stopped: ' : 'Done: '}</span>
+                  {action.label}
+                </span>
               </li>
             ))}
           </ul>
@@ -788,15 +794,26 @@ function AnswerCard({ answer, onReplay }: { answer: Answer; onReplay: () => void
         </ul>
       )}
       {answer.compare && (
-        <div className="mt-2.5 overflow-hidden rounded-lg border border-brand-navy/10 text-[11px]">
-          <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 bg-brand-ice px-2.5 py-1.5 font-semibold text-brand-navy">
-            <span>Program</span><span>Award</span><span>Deadline</span>
-          </div>
-          {answer.compare.map((row) => (
-            <div key={row.name} className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 border-t border-brand-navy/10 px-2.5 py-1.5 text-ink-secondary">
-              <span className="font-medium text-brand-navy">{row.name}</span><span>{row.amount}</span><span>{row.deadline}</span>
-            </div>
-          ))}
+        <div className="mt-2.5 overflow-hidden rounded-lg border border-brand-navy/10">
+          <table className="w-full table-fixed text-left text-[11px]">
+            <caption className="sr-only">Programs compared by award and deadline</caption>
+            <thead className="bg-brand-ice text-brand-navy">
+              <tr>
+                <th scope="col" className="w-[42%] px-2.5 py-1.5 font-semibold">Program</th>
+                <th scope="col" className="px-2.5 py-1.5 font-semibold">Award</th>
+                <th scope="col" className="px-2.5 py-1.5 font-semibold">Deadline</th>
+              </tr>
+            </thead>
+            <tbody>
+              {answer.compare.map((row) => (
+                <tr key={row.name} className="border-t border-brand-navy/10 align-top text-ink-secondary">
+                  <th scope="row" className="px-2.5 py-1.5 font-medium text-brand-navy">{row.name}</th>
+                  <td className="px-2.5 py-1.5">{row.amount}</td>
+                  <td className="px-2.5 py-1.5">{row.deadline}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       {answer.next && <p className="mt-2.5 text-xs text-ink-secondary">{answer.next}</p>}
