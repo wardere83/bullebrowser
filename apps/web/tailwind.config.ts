@@ -30,6 +30,14 @@ const config: Config = {
           DEFAULT: '#E5E7EB',
           strong: '#CBD5E1',
         },
+        // BulleBrowser's own palette (packages/brand-tokens), for illustrations
+        // of the app itself.
+        brand: {
+          teal: '#20BAD1',
+          gold: '#E8D833',
+          navy: '#071422',
+          ice: '#EFF7F8',
+        },
       },
       fontFamily: {
         ui: ['Inter', 'system-ui', 'sans-serif'],

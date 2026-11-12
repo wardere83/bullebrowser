@@ -13,7 +13,7 @@ export const ptPT: Messages = {
   'company.h2': 'Na web, as oportunidades tornam-se ação.',
   'company.eyebrow': 'Desenvolvido pela Bulle Consulting',
   'preview.body':
-    'Experimente esta demonstração ilustrada. Escolha uma opção para ver a pergunta e explore os separadores de exemplo. A interface da aplicação está em inglês.',
+    'Escolha uma opção e veja o BulleBrowser percorrer fontes de exemplo passo a passo, tal como na aplicação. Cada separador de fonte mostra a sua própria demonstração. A interface da aplicação está em inglês.',
   'preview.h2': 'Uma conversa que faz avançar o navegador.',
   'preview.eyebrow': 'Dentro do navegador',
   'app.eyebrow': 'Sobre a aplicação',
