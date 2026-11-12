@@ -4,22 +4,57 @@ export const normalize = (value) => String(value ?? '').normalize('NFKC').replac
 export const datasetHash = (dataset) => createHash('sha256').update(JSON.stringify(dataset)).digest('hex');
 
 /**
+ * Bumped whenever accepting or scoring rules change, so a baseline measured
+ * under different rules is never compared with a new candidate.
+ * 2: replies may wrap their JSON (sentence, code fence, source line) and may
+ *    return the facts as a bare list.
+ */
+export const SCORER_REVISION = 2;
+
+/** Each complete JSON value in the text, from its opening bracket to the matching close. */
+function* jsonValues(text) {
+  for (let start = 0; start < text.length; start++) {
+    if (text[start] !== '{' && text[start] !== '[') continue;
+    let depth = 0;
+    let inString = false;
+    for (let i = start; i < text.length; i++) {
+      const char = text[i];
+      if (inString) {
+        if (char === '\\') i++;
+        else if (char === '"') inString = false;
+      } else if (char === '"') inString = true;
+      else if (char === '{' || char === '[') depth++;
+      else if (char === '}' || char === ']') {
+        if (--depth === 0) { yield text.slice(start, i + 1); break; }
+      }
+    }
+  }
+}
+
+/**
  * The JSON the agent returned. The app's agent cites its sources, so a reply
- * can surround the JSON with a sentence, a code fence and a "Source:" line.
- * Content is still scored strictly below; only the wrapper is tolerated, and
- * `strictFormat` records whether the reply was bare JSON. Throws if none.
+ * can surround the JSON with a sentence, a code fence and a "Source:" line
+ * (possibly a Markdown link). Content is still scored strictly; only the
+ * wrapper is tolerated, and `strictFormat` records whether the reply was bare
+ * JSON. Throws if there is none.
  */
 export function extractAnswerJson(answer) {
   const text = String(answer ?? '').trim();
-  const candidates = [text, ...[...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].map((match) => match[1])];
-  const start = text.search(/[[{]/);
-  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
-  if (start >= 0 && end > start) candidates.push(text.slice(start, end + 1));
-  for (const [index, candidate] of candidates.entries()) {
+  const parse = (candidate) => {
     try {
       const value = JSON.parse(candidate.trim());
-      if (value && typeof value === 'object') return { value, strictFormat: index === 0 };
-    } catch { /* try the next candidate */ }
+      return value && typeof value === 'object' ? value : undefined;
+    } catch { return undefined; }
+  };
+  const whole = parse(text);
+  if (whole) return { value: whole, strictFormat: true };
+  for (const match of text.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)) {
+    const fenced = parse(match[1]);
+    if (fenced) return { value: fenced, strictFormat: false };
+  }
+  for (const candidate of jsonValues(text)) {
+    const embedded = parse(candidate);
+    if (embedded) return { value: embedded, strictFormat: false };
   }
   throw new Error('No JSON value in the answer.');
 }
@@ -51,7 +86,7 @@ export function summarize(results, dataset, revision) {
   const successes = results.filter((result) => result.success);
   const measured = results.length === dataset.tasks.length && results.every((result) => result.executed === true);
   return {
-    schemaVersion: 1, suite: 'bulle-funding-portals', datasetRevision: dataset.version, taskSetHash: datasetHash(dataset), revision,
+    schemaVersion: 1, suite: 'bulle-funding-portals', scorerRevision: SCORER_REVISION, datasetRevision: dataset.version, taskSetHash: datasetHash(dataset), revision,
     completedAt: new Date().toISOString(), status: measured ? 'measured' : 'incomplete', releaseApproved: false,
     tasks: results.length, expectedTasks: dataset.tasks.length,
     successRate: measured ? successes.length / results.length : null,
@@ -70,6 +105,7 @@ export function regressionFailures(candidate, baseline) {
   if (candidate.status !== 'measured') errors.push('A complete measured run is required.');
   if (baseline) {
     if (baseline.status !== 'measured' || baseline.taskSetHash !== candidate.taskSetHash || baseline.datasetRevision !== candidate.datasetRevision || baseline.tasks !== candidate.tasks) errors.push('Baseline must use the identical measured dataset/task set.');
+    else if (baseline.scorerRevision !== candidate.scorerRevision) errors.push('Baseline was scored under different rules; measure a new baseline with this scorer.');
     else if (baseline.successRate - candidate.successRate > 0.020000000001) errors.push('Task success regressed by more than two percentage points.');
   }
   if (candidate.successRate < 0.9 || candidate.successRate === null) errors.push('Internal task success is below 90%.');
