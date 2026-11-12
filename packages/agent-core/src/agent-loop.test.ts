@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TERMINOLOGY_INSTRUCTIONS } from './terminology.js';
 import { BROWSER_SYSTEM } from './browser-host.js';
 import type { AgentInput, AgentStep, ToolContext } from './types.js';
+import { APIConnectionError, APIError } from '@anthropic-ai/sdk/error';
 
 // Mock the Anthropic SDK so the loop can be driven with scripted responses.
 const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
@@ -180,6 +181,83 @@ describe('runAgent Claude tool-use loop', () => {
     // Read as the open tab and again by read_page: one page, one warning.
     expect(readPage).toHaveBeenCalledTimes(2);
     expect(steps.filter((s) => s.type === 'page_instructions').map((s) => s.detail)).toEqual(['https://example.com']);
+  });
+
+  // A reply that breaks while streaming used to end the task ("The assistant
+  // stream ended before a complete turn."). It is asked again only while none
+  // of its tool calls has run, so no browser action can repeat.
+  describe('interrupted replies', () => {
+    async function* broken(events: unknown[], error?: Error) {
+      for (const event of events) yield event;
+      if (error) throw error;
+    }
+    const partialText = [
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Let me' } },
+    ];
+    const run = (steps: AgentStep[], context = makeContext()) => runAgent({ apiKey: 'test-key', model: DEFAULT_MODEL,
+      systemPrompt: '', history: [], userMessage: 'summarize this page', context, onStep: (s) => steps.push(s) });
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('asks again after a dropped stream and a mid-stream overload', async () => {
+      createMock
+        .mockResolvedValueOnce(broken(partialText))
+        .mockResolvedValueOnce(broken(partialText, new APIError(undefined, { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } }, undefined, undefined, 'overloaded_error')))
+        .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [toolUseBlock('tu1', 'read_page', {})] })
+        .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('This page explains grants and deadlines.')] });
+      const steps: AgentStep[] = [];
+      const result = run(steps);
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(await result).toContain('grants and deadlines');
+      expect(createMock).toHaveBeenCalledTimes(4);
+      expect(steps.filter((s) => s.detail?.includes('Retrying'))).toHaveLength(2);
+    });
+
+    it('gives up after two retries', async () => {
+      createMock.mockResolvedValue(broken(partialText));
+      const result = run([]);
+      const settled = expect(result).rejects.toThrow('ended before a complete turn');
+      await vi.advanceTimersByTimeAsync(4000);
+      await settled;
+      expect(createMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('never repeats a turn whose tool call already ran', async () => {
+      const pressKey = vi.fn(async (_id: string, key: string) => ({ pressed: key }));
+      createMock.mockResolvedValueOnce(broken([
+        { type: 'content_block_start', index: 0, content_block: toolUseBlock('tu1', 'press_key', {}) },
+        { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"key":"Tab"}' } },
+      ]));
+      const settled = expect(run([], makeContext({ pressKey }))).rejects.toThrow('ended before a complete turn');
+      await vi.advanceTimersByTimeAsync(4000);
+      await settled;
+      expect(createMock).toHaveBeenCalledTimes(1);
+      expect(pressKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a request that never connected to the SDK retries', async () => {
+      createMock.mockRejectedValueOnce(new APIConnectionError({ message: 'Connection error.' }));
+      await expect(run([])).rejects.toThrow('Connection error.');
+      expect(createMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks again when the connection drops mid-reply', async () => {
+      createMock
+        .mockResolvedValueOnce(broken(partialText, new APIConnectionError({ message: 'Connection error.' })))
+        .mockResolvedValueOnce({ stop_reason: 'tool_use', content: [toolUseBlock('tu1', 'read_page', {})] })
+        .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('This page explains grants and deadlines.')] });
+      const result = run([]);
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(await result).toContain('grants and deadlines');
+      expect(createMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not retry a request the service rejected', async () => {
+      createMock.mockRejectedValueOnce(new APIError(400, { type: 'error', error: { type: 'invalid_request_error', message: 'Bad' } }, 'Bad', undefined, 'invalid_request_error'));
+      await expect(run([])).rejects.toThrow('Bad');
+      expect(createMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('blocks destructive actions when the user declines confirmation', async () => {
