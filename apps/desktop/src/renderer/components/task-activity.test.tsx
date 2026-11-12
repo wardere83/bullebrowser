@@ -45,6 +45,25 @@ describe('real browser task activity', () => {
     expect(active).toContain('aria-label="Browser progress"');
   });
 
+  // The labels from a real funding task, which read "Running funding search
+  // opportunities" and "Opening a new tab seattle.gov".
+  it('names host tools and new tabs in plain language', () => {
+    const steps = [
+      call('funding_search_opportunities', { query: 'Seattle business' }),
+      call('web_search', { query: 'Seattle small business grants' }),
+      call('new_tab', { url: 'https://www.seattle.gov/economic-development/grants-and-funding' }),
+      call('new_tab', {}),
+      call('org_search_knowledge', { query: 'mission' }),
+    ];
+    expect(activityActions(steps, 'running').map((action) => action.label)).toEqual([
+      'Searching funding opportunities',
+      'Searching the web',
+      'Opening seattle.gov in a new tab',
+      'Opening a new tab',
+      "Searching your organization's documents",
+    ]);
+  });
+
   it('marks a step complete only after its matching tool result', () => {
     const steps = [call('navigate', { url: 'https://www.example.org/funding?private=secret' })];
     expect(activityActions(steps, 'running')).toMatchObject([{ label: 'Opening example.org', state: 'running' }]);
