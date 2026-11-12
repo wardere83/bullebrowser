@@ -9,8 +9,9 @@ export const datasetHash = (dataset) => createHash('sha256').update(JSON.stringi
  * a new candidate.
  * 2: replies may wrap their JSON (sentence, code fence, source line) and may
  *    return the facts as a bare list.
- * 3: the task prompt states the quotation rules the scorer applies: copied
- *    character for character, including the field label, 12+ characters.
+ * 3: quotations must also include the field label, and the task prompt
+ *    states every quotation rule: text found in a page actually read (case
+ *    and spacing aside), containing the value and the label, 12+ characters.
  */
 export const SCORER_REVISION = 3;
 
@@ -75,7 +76,7 @@ export function scoreTask(task, program, answer, receipts, status) {
     const correct = known && normalize(fact.value) === normalize(program.facts[fact.key]);
     const receipt = receipts.find((source) => source.url === fact.url && typeof source.text === 'string');
     const quote = typeof fact.quote === 'string' ? fact.quote.trim() : '';
-    const cited = !!receipt && quote.length >= 12 && normalize(receipt.text).includes(normalize(quote)) && normalize(quote).includes(normalize(fact.value)) && correct;
+    const cited = !!receipt && quote.length >= 12 && normalize(receipt.text).includes(normalize(quote)) && normalize(quote).includes(normalize(fact.value)) && normalize(quote).includes(normalize(fact.key)) && correct;
     return { key: fact?.key ?? null, value: fact?.value ?? null, url: fact?.url ?? null, quote, correct: !!correct, cited };
   });
   const missingKeys = task.keys.filter((key) => !scored.some((fact) => fact.key === key && fact.correct && fact.cited));

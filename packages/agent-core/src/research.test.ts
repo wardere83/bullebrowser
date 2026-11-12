@@ -62,16 +62,23 @@ describe('research source minimum', () => {
     for (const request of [
       'Find the workforce program for Washington organizations.\nUse only this local test directory. Open and read the relevant listing.',
       'Find grants on this site. Only browse this website.',
-      'Find youth funding but stick to only the county portal.',
+      'Find youth funding but stick to only my county portal.',
+      'Find youth funding. Use this site only.',
       'Research the program and do not browse elsewhere.',
+      'Find the deadline and do not browse outside this portal.',
     ]) expect(researchSourceMinimum(undefined, request)).toBe(1);
   });
 
-  it('keeps three sources for general constraints and ordinary research', () => {
+  it('keeps three sources for broad constraints and ordinary research', () => {
     for (const request of [
       'Find youth grants. Use only official sources.',
       'Find grants for a food bank in Ohio.',
       'Use only government websites to find workforce grants.',
+      'Do not browse outside government websites.',
+      'Do not search outside the United States.',
+      'Use only the official website of each funder.',
+      'Stick to only the county portal.',
+      'Use only this list of sites: each funder page.',
     ]) expect(researchSourceMinimum(undefined, request)).toBe(3);
     expect(researchSourceMinimum('explore_page', 'anything')).toBe(1);
   });

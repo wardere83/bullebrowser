@@ -12,15 +12,30 @@ export function isResearchRequest(request: string): boolean {
 
 /** Match evidence requirements to the scope the user selected. */
 // The user confined the task to one named place: "use only this directory",
-// "only browse this site", "do not browse elsewhere". A general constraint such
-// as "use only official sources" is not a single place and keeps the minimum.
-const SINGLE_SCOPE = /\b(?:use|browse|search|stay on|stick to)\s+only\s+(?:this|that|the|my)\b[^.\n]{0,40}?\b(?:site|website|page|directory|portal|listing|domain)\b|\bonly\s+(?:use|browse|search)\s+(?:this|that|the|my)\b[^.\n]{0,40}?\b(?:site|website|page|directory|portal|listing|domain)\b|\b(?:do not|don't|never)\s+(?:browse|search|go|navigate)\s+(?:elsewhere|anywhere else|outside)\b/i;
+// "use this site only", "do not browse elsewhere". Only an unmistakable single
+// place counts: a demonstrative ("this", "that", "my") or "elsewhere". Broad
+// constraints such as "use only official sources", "do not browse outside
+// government websites" or "the website of each funder" keep the minimum.
+const PLACE = String.raw`(?:site|website|page|directory|portal|listing|domain)`;
+const SINGLE_SCOPE = new RegExp([
+  String.raw`\b(?:use|browse|search|stay on|stick to)\s+only\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b`,
+  String.raw`\bonly\s+(?:use|browse|search)\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b`,
+  String.raw`\b(?:use|browse|search|stay on|stick to)\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\s+only\b`,
+  String.raw`\b(?:do not|don't|never)\s+(?:browse|search|go|navigate)\s+(?:elsewhere|anywhere else|outside\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b)`,
+].join('|'), 'i');
+const BROAD = /\b(?:each|every|all|any)\b/i;
+
+/** Whether the user confined the task to one named site, page or directory. */
+export function isSingleScopeRequest(request: string): boolean {
+  const match = request.match(SINGLE_SCOPE);
+  return !!match && !BROAD.test(match[0]);
+}
 
 export function researchSourceMinimum(task: BrowserTaskId | undefined, request: string): number {
   if (task === 'explore_page') return 1;
   // Three independent sources cannot be required once the user forbids going
   // anywhere else; an agent that obeys would otherwise be reported as failed.
-  if (SINGLE_SCOPE.test(request)) return 1;
+  if (isSingleScopeRequest(request)) return 1;
   if (task === 'compare_grants') {
     const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
     if (provided.size >= 2) return Math.min(3, provided.size);

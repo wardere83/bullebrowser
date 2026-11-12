@@ -1,7 +1,7 @@
 import { PLAN_STEP_TOOL, type AgentInput, type AgentStep } from './types.js';
 import type { ToolCallRecord } from './agent-loop.js';
 import type { StepBudget } from './budget.js';
-import { ResearchProgress, isResearchRequest, researchSourceMinimum } from './research.js';
+import { ResearchProgress, isResearchRequest, isSingleScopeRequest, researchSourceMinimum } from './research.js';
 import { isFundingDiscoveryRequest } from './funding-sources.js';
 
 export interface TaskOutcome { status: 'completed' | 'incomplete'; reason?: string; verifiedSourceCount: number }
@@ -74,11 +74,14 @@ export class TaskOutcomeTracker {
   private followUps = 0;
   private declined = false;
   private finalOutcome?: TaskOutcome;
+  /** A one-place task must read its target; the page open at the start does not count. */
+  private readonly scoped: boolean;
   constructor(private readonly input: AgentInput) {
     const request = input.userRequest ?? input.userMessage;
     const funding = ['find_grants', 'research_funder', 'compare_grants'].includes(input.browserTask ?? '') || isFundingDiscoveryRequest(request);
     this.research = new ResearchProgress(Boolean(input.browserTask || (input.researchMode && isResearchRequest(request))), !input.browserTask, funding, researchSourceMinimum(input.browserTask, request));
     this.intents = intentsFor(request, input.context.activeTabId);
+    this.scoped = input.browserTask !== 'explore_page' && isSingleScopeRequest(request);
     if (input.browserTask === 'compare_grants' || input.browserTask === 'explore_page') {
       this.requiredSources = [...new Set((request.match(/https?:\/\/[^\s<>"']+/g) ?? [])
         .map((url) => canonical(url.replace(/[),.;!?]+$/, ''))).filter((url): url is string => Boolean(url)))];
@@ -97,6 +100,7 @@ export class TaskOutcomeTracker {
     this.records.push(record);
   }
   observeContext(url?: string, text?: string): void {
+    if (this.scoped) return;
     if (url && text) this.research.observe({ type: 'tool_result', toolName: 'read_page', data: { url, text } });
   }
   followUp(text: string, budget: StepBudget): string | null {
