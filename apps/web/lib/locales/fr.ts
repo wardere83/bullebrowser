@@ -13,7 +13,7 @@ const text: Messages = {
   'company.h2': 'C’est sur le web que les opportunités deviennent concrètes.',
   'company.eyebrow': 'Développé par Bulle Consulting',
   'preview.body':
-    'Essayez cette présentation illustrée. Choisissez une option pour voir sa question, puis explorez les onglets d’exemple. L’interface de l’application est en anglais.',
+    'Choisissez une option et regardez BulleBrowser parcourir des sources d’exemple étape par étape, comme dans l’application. Chaque onglet de source présente sa propre démonstration. L’interface de l’application est en anglais.',
   'preview.h2': 'Une conversation qui fait avancer le navigateur.',
   'preview.eyebrow': 'Dans le navigateur',
   'app.eyebrow': 'À propos de l’application',

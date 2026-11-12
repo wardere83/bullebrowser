@@ -13,7 +13,7 @@ export const es419: Messages = {
   'company.h2': 'En la web las oportunidades se convierten en acción.',
   'company.eyebrow': 'Creado por Bulle Consulting',
   'preview.body':
-    'Prueba este recorrido ilustrado. Elige una opción para ver su pregunta y explora las pestañas de ejemplo. La interfaz de la app está en inglés.',
+    'Elige una opción y mira cómo BulleBrowser recorre fuentes de ejemplo paso a paso, como lo hace la app. Cada pestaña de fuente muestra su propio recorrido. La interfaz de la app está en inglés.',
   'preview.h2': 'Una conversación que hace avanzar el navegador.',
   'preview.eyebrow': 'Dentro del navegador',
   'app.eyebrow': 'Acerca de la app',

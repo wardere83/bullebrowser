@@ -17,7 +17,7 @@ export const en = {
   'company.h2': 'The web is where opportunity becomes action.',
   'company.eyebrow': 'Built by Bulle Consulting',
   'preview.body':
-    'Try this illustrated walkthrough. Choose an option to see its question, then explore the sample source tabs. The app interface is in English.',
+    'Choose an option and watch BulleBrowser browse sample sources step by step, the way the app does. Each source tab plays its own walkthrough. The app interface is in English.',
   'preview.h2': 'A conversation that moves the browser forward.',
   'preview.eyebrow': 'Inside the browser',
   'app.eyebrow': 'About the app',
