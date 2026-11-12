@@ -87,6 +87,26 @@ function submitWithRetry(zipPath, creds, attempts = 2, waitTimeout = '20m') {
   }
 }
 
+// Stapling and validation fetch the ticket from Apple's CDN. A dropped
+// connection there ("The network connection was lost", stapler error 68)
+// failed the v0.2.94 release after Apple had already accepted the
+// notarization. Retry these online checks a few times with growing waits; a
+// genuinely invalid ticket still fails on the last attempt.
+function runWithRetry(command, args, label, attempts = 4) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      execFileSync(command, args, { stdio: 'inherit' });
+      return;
+    } catch (error) {
+      if (attempt >= attempts) throw error;
+      const waitSeconds = 10 * 2 ** (attempt - 1);
+      console.warn(`notarize: ${label} failed (attempt ${attempt}/${attempts}); retrying in ${waitSeconds}s…`);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitSeconds * 1000);
+    }
+  }
+}
+exports.runWithRetry = runWithRetry;
+
 exports.default = async function afterSign(context) {
   if (context.electronPlatformName !== 'darwin') return;
 
@@ -134,13 +154,11 @@ exports.default = async function afterSign(context) {
   }
 
   console.log('notarize: stapling the ticket to the .app…');
-  execFileSync('xcrun', ['stapler', 'staple', appPath], { stdio: 'inherit' });
+  runWithRetry('xcrun', ['stapler', 'staple', appPath], 'stapling');
 
   console.log('notarize: validating staple + Gatekeeper acceptance…');
-  execFileSync('xcrun', ['stapler', 'validate', appPath], { stdio: 'inherit' });
-  execFileSync('spctl', ['--assess', '--type', 'execute', '--verbose=4', appPath], {
-    stdio: 'inherit',
-  });
+  runWithRetry('xcrun', ['stapler', 'validate', appPath], 'staple validation');
+  runWithRetry('spctl', ['--assess', '--type', 'execute', '--verbose=4', appPath], 'Gatekeeper assessment');
 
   console.log(`notarize: ✔ ${appName}.app is Developer ID–signed, notarized, stapled, and Gatekeeper-accepted.`);
 };
