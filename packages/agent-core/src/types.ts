@@ -18,6 +18,12 @@ export type OpenAiModelId = 'gpt-4o' | 'gpt-4o-mini';
 
 export type ModelId = ClaudeModelId | OpenAiModelId;
 
+/**
+ * The planner's bookkeeping tool. Marking a goal complete is not part of the
+ * user's task, so its refusals never count as a failed browser operation.
+ */
+export const PLAN_STEP_TOOL = 'update_plan_step';
+
 export function providerFor(model: ModelId): ProviderId {
   return model.startsWith('claude') ? 'anthropic' : 'openai';
 }

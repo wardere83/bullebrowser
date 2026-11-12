@@ -1,4 +1,4 @@
-import type { AgentInput, AgentStep } from './types.js';
+import { PLAN_STEP_TOOL, type AgentInput, type AgentStep } from './types.js';
 import type { ToolCallRecord } from './agent-loop.js';
 import type { StepBudget } from './budget.js';
 import { ResearchProgress, isResearchRequest, researchSourceMinimum } from './research.js';
@@ -89,7 +89,13 @@ export class TaskOutcomeTracker {
     if (step.type === 'budget' && (step.data as { exhausted?: boolean } | undefined)?.exhausted) this.exhausted = true;
     if (step.type === 'error' && ['USER_DECLINED', 'BLOCKED_BY_POLICY', 'PERMISSION_DENIED'].includes((step.data as { code?: string } | undefined)?.code ?? '')) this.declined = true;
   }
-  record(record: ToolCallRecord): void { this.records.push(record); }
+  record(record: ToolCallRecord): void {
+    // A refused plan update ("complete the goal only after an observation") is
+    // the planner's own bookkeeping, not an attempted operation of the task.
+    // Counting it marked fully answered tasks "Task incomplete".
+    if (record.name === PLAN_STEP_TOOL) return;
+    this.records.push(record);
+  }
   observeContext(url?: string, text?: string): void {
     if (url && text) this.research.observe({ type: 'tool_result', toolName: 'read_page', data: { url, text } });
   }

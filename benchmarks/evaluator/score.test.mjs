@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { regressionFailures, scoreTask, summarize } from './score.mjs';
+import { SCORER_REVISION, regressionFailures, scoreTask, summarize } from './score.mjs';
 
 const dataset = JSON.parse(readFileSync(new URL('./tasks.json', import.meta.url), 'utf8'));
 const task = dataset.tasks[0];
@@ -42,4 +42,32 @@ test('the two-point regression boundary is exact and dataset changes cannot be c
   assert.deepEqual(regressionFailures(candidate, baseline), []);
   assert.ok(regressionFailures({ ...candidate, successRate: 0.949 }, baseline).length);
   assert.ok(regressionFailures(candidate, { ...baseline, taskSetHash: 'different' }).length);
+});
+test('reads the JSON an agent wraps in prose, a code fence and a source line, still scoring content strictly', () => {
+  const wrapped = `The listing is open.\n\n\`\`\`json\n${answer}\n\`\`\`\n\nSource: Youth fund listing — ${url}`;
+  const scored = scoreTask(task, program, wrapped, receipts, 'completed');
+  assert.equal(scored.success, true);
+  assert.equal(scored.strictFormat, false);
+  assert.equal(scoreTask(task, program, answer, receipts, 'completed').strictFormat, true);
+  // A bare list of facts carries the same content.
+  const list = JSON.stringify(JSON.parse(answer).facts);
+  assert.equal(scoreTask(task, program, `\`\`\`json\n${list}\n\`\`\``, receipts, 'completed').success, true);
+  // Wrapping never rescues wrong content or a missing receipt.
+  const invented = JSON.parse(answer); invented.facts[0].value = 'Everyone worldwide';
+  assert.equal(scoreTask(task, program, `\`\`\`json\n${JSON.stringify(invented)}\n\`\`\``, receipts, 'completed').success, false);
+  assert.equal(scoreTask(task, program, wrapped, [], 'completed').success, false);
+  assert.equal(scoreTask(task, program, 'No JSON here: {not valid}', receipts, 'completed').formatError, true);
+});
+test('finds bare JSON followed by a Markdown source link, including brackets inside strings', () => {
+  const linked = `${answer}\n\nSource: [Youth fund listing](${url})`;
+  assert.equal(scoreTask(task, program, linked, receipts, 'completed').success, true);
+  const tricky = JSON.parse(answer); tricky.note = 'see [1] and {braces}';
+  assert.equal(scoreTask(task, program, `Result: ${JSON.stringify(tricky)} — [source](${url})`, receipts, 'completed').success, true);
+});
+test('a baseline scored under different rules is never compared', () => {
+  const results = dataset.tasks.map((item) => ({ id: item.id, executed: true, success: true, steps: 3, facts: [{ cited: true, correct: true }] }));
+  const candidate = summarize(results, dataset, 'a'.repeat(40));
+  assert.equal(candidate.scorerRevision, SCORER_REVISION);
+  assert.deepEqual(regressionFailures(candidate, { ...candidate }), []);
+  assert.match(regressionFailures(candidate, { ...candidate, scorerRevision: 1 }).join(' '), /different rules/);
 });
