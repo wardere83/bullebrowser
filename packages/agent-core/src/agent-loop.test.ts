@@ -5,11 +5,11 @@ import type { AgentInput, AgentStep, ToolContext } from './types.js';
 import { APIConnectionError, APIError } from '@anthropic-ai/sdk/error';
 
 // Mock the Anthropic SDK so the loop can be driven with scripted responses.
-const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
+const { createMock, clientOptions } = vi.hoisted(() => ({ createMock: vi.fn(), clientOptions: [] as unknown[] }));
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class {
     messages = { create: createMock };
-    constructor(_opts: unknown) {}
+    constructor(opts: unknown) { clientOptions.push(opts); }
   },
 }));
 
@@ -654,6 +654,32 @@ function run(overrides: Partial<AgentInput>, steps: AgentStep[] = []): Promise<s
     ...overrides,
   });
 }
+
+describe('credentials in place of a saved key', () => {
+  const credentials = vi.fn(async () => ({ token: 'test-access', expiresAt: null }));
+  beforeEach(() => { createMock.mockReset(); clientOptions.length = 0; });
+
+  it('runs Claude with federated credentials and keeps environment keys out', async () => {
+    createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Done with federated access.')] });
+    const answer = await run({ apiKey: undefined, anthropicCredentials: credentials });
+    expect(answer).toContain('Done with federated access.');
+    expect(createMock).toHaveBeenCalledTimes(1);
+    expect(clientOptions[0]).toMatchObject({ apiKey: null, authToken: null, credentials });
+  });
+
+  it('prefers a saved key over credentials', async () => {
+    createMock.mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Done with the key.')] });
+    await run({ apiKey: 'test-key', anthropicCredentials: credentials });
+    expect(clientOptions[0]).toEqual({ apiKey: 'test-key' });
+  });
+
+  it('never treats Claude credentials as access to another provider', async () => {
+    const steps: AgentStep[] = [];
+    await run({ apiKey: undefined, anthropicCredentials: credentials, model: 'gpt-4o' }, steps);
+    expect(createMock).not.toHaveBeenCalled();
+    expect(steps.some((step) => step.detail === 'BulleBrowser Agentic AI is working…')).toBe(true);
+  });
+});
 
 const textOf = (steps: AgentStep[]): string[] =>
   steps.filter((step) => step.type === 'text').map((step) => step.detail ?? '');

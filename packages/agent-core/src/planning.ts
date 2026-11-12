@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createOpenAiCompletion } from './openai-loop.js';
 import { consumeTurn } from './stream-turn.js';
+import { anthropicAuth } from './anthropic-auth.js';
 import { wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
 import { providerFor, type AgentInput, type ApiTool, type ModelId } from './types.js';
 import type { ToolCallRecord } from './agent-loop.js';
@@ -85,7 +86,7 @@ async function requestPlan(input: AgentInput, diagnostics: string[]): Promise<st
     const result = await createOpenAiCompletion(input.apiKey!, { model: 'gpt-4o', messages: [{ role: 'system', content: system }, { role: 'user', content: message }], max_tokens: 1024 }, input.context.signal, undefined, input.modelFetch);
     return result.choices[0]?.message.content ?? '';
   }
-  const client = new Anthropic({ apiKey: input.apiKey, ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
+  const client = new Anthropic({ ...anthropicAuth(input), ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
   const source = await client.messages.create({ model: 'claude-opus-4-7', stream: true, max_tokens: 1024, system, messages: [{ role: 'user', content: message }] }, { signal: input.context.signal });
   const result = await consumeTurn(source, () => { throw new Error('Planner cannot execute tools.'); });
   return result.content.filter((block) => block.type === 'text').map((block) => block.text).join('');

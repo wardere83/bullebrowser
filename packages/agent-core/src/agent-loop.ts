@@ -5,6 +5,7 @@ import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js
 import { browserTask } from './browser-tasks.js';
 import type { ResearchProgress } from './research.js';
 import { runLocalAgent } from './local-agent.js';
+import { anthropicAuth, hasModelAccess } from './anthropic-auth.js';
 import { assertAllowedToolDestination } from './destinations.js';
 // The BulleBrowser agent loop.
 //
@@ -727,7 +728,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       data: policy.redact({ source, excerpt: finding.excerpt, signals: finding.signals }) });
   }
 
-  if (!input.apiKey) {
+  if (!hasModelAccess(input)) {
     onStep({ type: 'thinking', detail: 'BulleBrowser Agentic AI is working…' });
     return runLocalAgent(input, (name, args) => executeToolCall(
       `local-${name}`, name, args, context, policy, onStep, gate, new Map((input.extraTools ?? []).map((t) => [t.name, t])),
@@ -817,7 +818,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     return runOpenAiTurns({ input, system, toolDefs, policy, gate, extraTools, budget, userTurnText, research, progress, planner });
   }
 
-  const client = new Anthropic({ apiKey: input.apiKey, ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
+  const client = new Anthropic({ ...anthropicAuth(input), ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
 
   // Adaptive thinking lets the model reason between tool calls, which markedly
   // improves multi-step browsing. Supported on the Opus/Sonnet tiers but not on

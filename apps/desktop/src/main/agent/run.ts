@@ -33,6 +33,7 @@ import { sessionFileStore } from '../storage/session-files.js';
 import { projectStore } from '../storage/projects.js';
 import { tabManager } from '../tabs/manager.js';
 import { getApiKey } from '../storage/secrets.js';
+import { federatedAnthropicCredentials } from './federated-credentials.js';
 import { getSettings } from '../storage/settings.js';
 import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError } from './errors.js';
@@ -80,7 +81,11 @@ export async function startAgentRun(
   // provider's key, so fetching the wrong provider's key would fail with a
   // confusing 401.
   const model = req.model ?? getSettings().defaultModel ?? DEFAULT_MODEL;
-  const apiKey = getApiKey(providerFor(model));
+  const provider = providerFor(model);
+  const apiKey = getApiKey(provider);
+  // A test build in GitHub Actions has no saved key; it reaches Claude through
+  // workload identity federation instead. Installed builds never do.
+  const anthropicCredentials = !apiKey && provider === 'anthropic' ? federatedAnthropicCredentials() : null;
 
   const controller = new AbortController();
   const runId = randomUUID();
@@ -246,9 +251,10 @@ export async function startAgentRun(
       if (!approved) throw new ToolError('PERMISSION_DENIED', 'Browser access was declined. Use Retry to review session permissions.');
       runtime.authorizeSession();
       assistantText = await runAgent({
-        planning: !!apiKey,
+        planning: !!apiKey || !!anthropicCredentials,
         shouldReplan: () => control.takeReplan(),
         apiKey: apiKey ?? undefined,
+        ...(anthropicCredentials ? { anthropicCredentials } : {}),
         researchMode: true,
         browserTask: req.browserTask,
         model,
