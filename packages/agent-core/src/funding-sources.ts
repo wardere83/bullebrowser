@@ -18,10 +18,18 @@ export function isFundingDiscoveryRequest(request: string): boolean {
   return /\b(?:grants?|funding|funders?|rfps?|nofos?)\b/i.test(request);
 }
 
-/** Guidance is advisory; source URLs are still filtered after search returns. */
-export function fundingSearchQuery(query: string, fundingOnly: boolean): string {
+/**
+ * Guidance is advisory; source URLs are still filtered after search returns.
+ * `siteExclusions: false` leaves out the -site: operators. Bing treats a query
+ * carrying six of them as noise and answers with unrelated pages ("youth
+ * mentoring grants Newark NJ" returned Wikipedia's "Youth" and an IMDb page),
+ * while the same query without them returns the official programs.
+ */
+export function fundingSearchQuery(query: string, fundingOnly: boolean, { siteExclusions = true } = {}): string {
   // Search engines need topic words, not the assistant's command prefix.
   // Keep ordinary product/title searches untouched (for example Find My).
   const topic = fundingOnly ? query.trim().replace(/^(?:(?:please|can you|could you)\s+)*(?:find|search(?: the web)?(?: for)?|look for)\s+/i, '') : query;
-  return fundingOnly ? `${topic} official grant program eligibility -site:instrumentl.com -site:grantable.co -site:grantwatch.com -site:grantstation.com -site:grantforward.com -site:fundsforngos.org` : query;
+  if (!fundingOnly) return query;
+  const exclusions = siteExclusions ? ' -site:instrumentl.com -site:grantable.co -site:grantwatch.com -site:grantstation.com -site:grantforward.com -site:fundsforngos.org' : '';
+  return `${topic} official grant program eligibility${exclusions}`;
 }
