@@ -49,7 +49,7 @@ jobs:
       - run: pnpm -r typecheck
       - name: Type-check funding evaluator harness
         working-directory: apps/desktop
-        run: pnpm exec tsc --noEmit --target ES2023 --module ESNext --moduleResolution Bundler --jsx react-jsx --skipLibCheck --strict benchmark.config.ts benchmarks/funding.spec.ts
+        run: pnpm exec tsc --noEmit --target ES2023 --module ESNext --moduleResolution Bundler --jsx react-jsx --skipLibCheck --strict benchmark.config.ts benchmarks/funding.spec.ts benchmarks/global-setup.ts
       - run: pnpm -r lint
       - name: Tests with coverage gate
         run: pnpm --filter @bullebrowser/agent-core test

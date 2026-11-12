@@ -3,12 +3,35 @@ import { createHash } from 'node:crypto';
 export const normalize = (value) => String(value ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
 export const datasetHash = (dataset) => createHash('sha256').update(JSON.stringify(dataset)).digest('hex');
 
+/**
+ * The JSON the agent returned. The app's agent cites its sources, so a reply
+ * can surround the JSON with a sentence, a code fence and a "Source:" line.
+ * Content is still scored strictly below; only the wrapper is tolerated, and
+ * `strictFormat` records whether the reply was bare JSON. Throws if none.
+ */
+export function extractAnswerJson(answer) {
+  const text = String(answer ?? '').trim();
+  const candidates = [text, ...[...text.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].map((match) => match[1])];
+  const start = text.search(/[[{]/);
+  const end = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  if (start >= 0 && end > start) candidates.push(text.slice(start, end + 1));
+  for (const [index, candidate] of candidates.entries()) {
+    try {
+      const value = JSON.parse(candidate.trim());
+      if (value && typeof value === 'object') return { value, strictFormat: index === 0 };
+    } catch { /* try the next candidate */ }
+  }
+  throw new Error('No JSON value in the answer.');
+}
+
 /** Closed-answer scoring: only an actual read receipt can support a citation. */
 export function scoreTask(task, program, answer, receipts, status) {
   let parsed;
-  try { parsed = JSON.parse(answer.trim().replace(/^```(?:json)?\s*|\s*```$/g, '')); }
-  catch { return { id: task.id, success: false, formatError: true, facts: [], missingKeys: task.keys, reason: 'Final answer was not the required JSON object.' }; }
-  const facts = Array.isArray(parsed?.facts) ? parsed.facts : [];
+  let strictFormat;
+  try { ({ value: parsed, strictFormat } = extractAnswerJson(answer)); }
+  catch { return { id: task.id, success: false, formatError: true, facts: [], missingKeys: task.keys, reason: 'Final answer contained no JSON facts.' }; }
+  // A bare list of facts is the same content as { facts: [...] }.
+  const facts = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.facts) ? parsed.facts : [];
   const scored = facts.map((fact) => {
     const known = typeof fact?.key === 'string' && Object.hasOwn(program.facts, fact.key);
     const correct = known && normalize(fact.value) === normalize(program.facts[fact.key]);
@@ -18,8 +41,9 @@ export function scoreTask(task, program, answer, receipts, status) {
     return { key: fact?.key ?? null, value: fact?.value ?? null, url: fact?.url ?? null, quote, correct: !!correct, cited };
   });
   const missingKeys = task.keys.filter((key) => !scored.some((fact) => fact.key === key && fact.correct && fact.cited));
-  const outlineValid = !task.outline || (Array.isArray(parsed.outline) && parsed.outline.length >= 3 && parsed.outline.every((section) => typeof section === 'string' && section.trim()));
-  return { id: task.id, success: status === 'completed' && !missingKeys.length && scored.length >= task.keys.length && scored.every((fact) => fact.correct && fact.cited) && outlineValid, facts: scored, missingKeys, outlineValid, status };
+  const outline = Array.isArray(parsed) ? undefined : parsed.outline;
+  const outlineValid = !task.outline || (Array.isArray(outline) && outline.length >= 3 && outline.every((section) => typeof section === 'string' && section.trim()));
+  return { id: task.id, success: status === 'completed' && !missingKeys.length && scored.length >= task.keys.length && scored.every((fact) => fact.correct && fact.cited) && outlineValid, facts: scored, missingKeys, outlineValid, strictFormat, status };
 }
 
 export function summarize(results, dataset, revision) {

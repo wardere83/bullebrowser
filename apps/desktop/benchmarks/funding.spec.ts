@@ -1,6 +1,6 @@
 import { test, expect, _electron as electron } from '@playwright/test';
 import { createServer } from 'node:http';
-import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,21 @@ const repository = resolve(appRoot, '../..');
 const dataset = JSON.parse(readFileSync(resolve(repository, 'benchmarks/evaluator/tasks.json'), 'utf8'));
 const output = resolve(process.env.BULLE_EVAL_OUTPUT || resolve(repository, 'benchmark-results'));
 const revision = process.env.BULLE_EVAL_REVISION || '';
-const results: Record<string, unknown>[] = [];
+// Playwright replaces the worker after any failed task, which resets module
+// state. Each task's record is appended to a file instead (cleared by
+// global-setup.ts), and every afterAll summarizes the whole file, so the
+// final report covers every task rather than only the last worker's.
+const resultsFile = resolve(output, 'funding-results.jsonl');
+const recordResult = (record: Record<string, unknown>) => appendFileSync(resultsFile, JSON.stringify(record) + '\n');
+function readResults(): Record<string, unknown>[] {
+  if (!existsSync(resultsFile)) return [];
+  const byId = new Map<unknown, Record<string, unknown>>();
+  for (const line of readFileSync(resultsFile, 'utf8').split('\n').filter(Boolean)) {
+    const record = JSON.parse(line) as Record<string, unknown>;
+    byId.set(record.id, record);
+  }
+  return [...byId.values()];
+}
 let origin: string;
 const escape = (s: string) => s.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 const server = createServer((req, res) => {
@@ -49,7 +63,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   if (server.listening) await new Promise<void>((done) => server.close(() => done()));
-  const report = summarize(results, dataset, revision);
+  const report = summarize(readResults(), dataset, revision);
   const baseline = process.env.BULLE_EVAL_BASELINE ? JSON.parse(readFileSync(process.env.BULLE_EVAL_BASELINE, 'utf8')) : undefined;
   const failures = regressionFailures(report, baseline);
   writeFileSync(resolve(output, 'funding-report.json'), JSON.stringify({ ...report, validation: { passed: !failures.length, failures, baselineCompared: !!baseline } }, null, 2) + '\n');
@@ -107,12 +121,17 @@ for (const task of dataset.tasks) {
       });
       const program = dataset.programs.find((item: { id: string }) => item.id === task.program);
       const scored = scoreTask(task, program, answer.text, receipts, answer.status);
-      const record = { ...scored, executed: true, durationMs: Date.now() - started, steps: log?.calls?.length ?? 0, readUrls: [...new Set(receipts.map((source: { url: string }) => source.url))], injectionWarning: log?.steps.some((step) => step.kind === 'page_instructions') ?? false };
+      // Diagnostics: how the run ended, and whether the cloud planner ran (the
+      // keyless engine never plans), so a failed score can be explained.
+      const record = { ...scored, executed: true, runStatus: answer.status, ...(answer.error ? { runError: answer.error.slice(0, 300) } : {}),
+        answerExcerpt: answer.text.slice(0, 300), answerTail: answer.text.slice(-300),
+        failedCalls: (log?.calls ?? []).filter((call) => !call.ok).map((call) => ({ name: call.name, errorCode: call.errorCode ?? null, result: call.result.slice(0, 200) })),
+        planned: log?.steps.some((step) => step.kind === 'plan') ?? false, durationMs: Date.now() - started, steps: log?.calls?.length ?? 0, readUrls: [...new Set(receipts.map((source: { url: string }) => source.url))], injectionWarning: log?.steps.some((step) => step.kind === 'page_instructions') ?? false };
       if (task.injection && !record.injectionWarning) record.success = false;
-      results.push(record);
+      recordResult(record);
       expect(record.success, `Task ${task.id}: see funding-report.json for grounded scoring`).toBe(true);
     } catch (error) {
-      if (!results.some((result) => result.id === task.id)) results.push({ id: task.id, executed: false, success: false, facts: [], reason: 'Browser/model execution did not produce a scoreable result.', durationMs: Date.now() - started, steps: 0 });
+      if (!readResults().some((result) => result.id === task.id)) recordResult({ id: task.id, executed: false, success: false, facts: [], reason: 'Browser/model execution did not produce a scoreable result.', durationMs: Date.now() - started, steps: 0 });
       throw error;
     } finally {
       await app?.close();

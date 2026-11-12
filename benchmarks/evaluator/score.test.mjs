@@ -43,3 +43,18 @@ test('the two-point regression boundary is exact and dataset changes cannot be c
   assert.ok(regressionFailures({ ...candidate, successRate: 0.949 }, baseline).length);
   assert.ok(regressionFailures(candidate, { ...baseline, taskSetHash: 'different' }).length);
 });
+test('reads the JSON an agent wraps in prose, a code fence and a source line, still scoring content strictly', () => {
+  const wrapped = `The listing is open.\n\n\`\`\`json\n${answer}\n\`\`\`\n\nSource: Youth fund listing — ${url}`;
+  const scored = scoreTask(task, program, wrapped, receipts, 'completed');
+  assert.equal(scored.success, true);
+  assert.equal(scored.strictFormat, false);
+  assert.equal(scoreTask(task, program, answer, receipts, 'completed').strictFormat, true);
+  // A bare list of facts carries the same content.
+  const list = JSON.stringify(JSON.parse(answer).facts);
+  assert.equal(scoreTask(task, program, `\`\`\`json\n${list}\n\`\`\``, receipts, 'completed').success, true);
+  // Wrapping never rescues wrong content or a missing receipt.
+  const invented = JSON.parse(answer); invented.facts[0].value = 'Everyone worldwide';
+  assert.equal(scoreTask(task, program, `\`\`\`json\n${JSON.stringify(invented)}\n\`\`\``, receipts, 'completed').success, false);
+  assert.equal(scoreTask(task, program, wrapped, [], 'completed').success, false);
+  assert.equal(scoreTask(task, program, 'No JSON here: {not valid}', receipts, 'completed').formatError, true);
+});
