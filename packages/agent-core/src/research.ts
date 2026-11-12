@@ -11,8 +11,16 @@ export function isResearchRequest(request: string): boolean {
 }
 
 /** Match evidence requirements to the scope the user selected. */
+// The user confined the task to one named place: "use only this directory",
+// "only browse this site", "do not browse elsewhere". A general constraint such
+// as "use only official sources" is not a single place and keeps the minimum.
+const SINGLE_SCOPE = /\b(?:use|browse|search|stay on|stick to)\s+only\s+(?:this|that|the|my)\b[^.\n]{0,40}?\b(?:site|website|page|directory|portal|listing|domain)\b|\bonly\s+(?:use|browse|search)\s+(?:this|that|the|my)\b[^.\n]{0,40}?\b(?:site|website|page|directory|portal|listing|domain)\b|\b(?:do not|don't|never)\s+(?:browse|search|go|navigate)\s+(?:elsewhere|anywhere else|outside)\b/i;
+
 export function researchSourceMinimum(task: BrowserTaskId | undefined, request: string): number {
   if (task === 'explore_page') return 1;
+  // Three independent sources cannot be required once the user forbids going
+  // anywhere else; an agent that obeys would otherwise be reported as failed.
+  if (SINGLE_SCOPE.test(request)) return 1;
   if (task === 'compare_grants') {
     const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
     if (provided.size >= 2) return Math.min(3, provided.size);
