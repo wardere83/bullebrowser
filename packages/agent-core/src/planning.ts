@@ -3,7 +3,7 @@ import { createOpenAiCompletion } from './openai-loop.js';
 import { consumeTurn } from './stream-turn.js';
 import { anthropicAuth } from './anthropic-auth.js';
 import { wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
-import { providerFor, type AgentInput, type ApiTool, type ModelId } from './types.js';
+import { PLAN_STEP_TOOL, providerFor, type AgentInput, type ApiTool, type ModelId } from './types.js';
 import type { ToolCallRecord } from './agent-loop.js';
 
 export interface PublicGoal { id: string; goal: string; status: 'pending' | 'active' | 'completed' }
@@ -37,7 +37,7 @@ export class GoalPlanner {
   beginSynthesis(): void { this.synthesizing = true; }
   requestReplan(): void { this.dirty = true; this.synthesizing = false; }
   observe(record: ToolCallRecord): void {
-    if (record.name === 'update_plan_step') return;
+    if (record.name === PLAN_STEP_TOOL) return;
     if (record.ok) this.observationsSinceGoal++;
     else {
       this.failures++;
@@ -62,7 +62,7 @@ export class GoalPlanner {
     try { await this.pending; } finally { this.pending = undefined; }
   }
   readonly tool: ApiTool = {
-    name: 'update_plan_step',
+    name: PLAN_STEP_TOOL,
     description: 'Mark the active goal completed after verifying it with tools. This does not authorize any browser action.',
     inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false },
     execute: async (args) => {
