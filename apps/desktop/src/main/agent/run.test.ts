@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   activate: vi.fn(),
   clearBrowsingActivity: vi.fn(),
   pageActivity: vi.fn<(tabId: string) => void>(),
+  savedKey: 'test-api-key' as string | null,
+  federated: null as null | (() => Promise<{ token: string; expiresAt: number | null }>),
+  federationChecks: 0,
 }));
 
 vi.mock('@bullebrowser/agent-core', async (importOriginal) => ({
@@ -21,7 +24,7 @@ vi.mock('@bullebrowser/agent-core', async (importOriginal) => ({
   FUNDING_RULES: 'Rules for funding work.',
   FUNDING_WORKFLOW_IDS: ['find_opportunities', 'assess_alignment', 'funder_priorities', 'proposal_guide'],
   findSkill: () => undefined,
-  providerFor: () => 'openai',
+  providerFor: (model: string) => (model.startsWith('claude') ? 'anthropic' : 'openai'),
   runAgent: mocks.runAgent,
 }));
 vi.mock('../connectors/service.js', () => ({ enabledConnectors: () => [], connectorCatalog: () => [] }));
@@ -40,7 +43,8 @@ vi.mock('../funding/grounding.js', () => ({
 }));
 vi.mock('../storage/session-files.js', () => ({ sessionFileStore: {} }));
 vi.mock('../storage/projects.js', () => ({ projectStore: {} }));
-vi.mock('../storage/secrets.js', () => ({ getApiKey: () => 'test-api-key' }));
+vi.mock('../storage/secrets.js', () => ({ getApiKey: () => mocks.savedKey }));
+vi.mock('./federated-credentials.js', () => ({ federatedAnthropicCredentials: () => { mocks.federationChecks += 1; return mocks.federated; } }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ defaultModel: 'gpt-4o', stepBudget: 40 }) }));
 vi.mock('../tabs/manager.js', () => ({ tabManager: {
   getActiveId: () => 'tab-1',
@@ -69,6 +73,9 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.conversation.messages = [];
   mocks.conversation.scratchpad = '';
+  mocks.savedKey = 'test-api-key';
+  mocks.federated = null;
+  mocks.federationChecks = 0;
 });
 
 async function runTask(overrides: Partial<AgentRunRequest> = {}) {
@@ -258,5 +265,40 @@ describe('session permission handshake', () => {
     mocks.runAgent.mockResolvedValue('BulleBrowser is built by Bulle Consulting.');
     const { send } = await runTask({ userMessage: 'Who created BulleBrowser?' });
     expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)).toBe(false);
+  });
+});
+
+describe('Claude access without a saved key', () => {
+  const credentials = async () => ({ token: 'test-access', expiresAt: null });
+
+  it('runs Claude with federated credentials in a test build', async () => {
+    mocks.savedKey = null;
+    mocks.federated = credentials;
+    mocks.runAgent.mockResolvedValue('Answered with federated access.');
+    await runTask({ model: 'claude-opus-4-7' });
+    const input = mocks.runAgent.mock.calls[0]![0];
+    expect(input.apiKey).toBeUndefined();
+    expect(input.anthropicCredentials).toBe(credentials);
+    expect(input.planning).toBe(true);
+  });
+
+  it('uses the saved key without consulting federation', async () => {
+    mocks.federated = credentials;
+    mocks.runAgent.mockResolvedValue('Answered with the saved key.');
+    await runTask({ model: 'claude-opus-4-7' });
+    const input = mocks.runAgent.mock.calls[0]![0];
+    expect(input.apiKey).toBe('test-api-key');
+    expect(input).not.toHaveProperty('anthropicCredentials');
+    expect(mocks.federationChecks).toBe(0);
+  });
+
+  it('never offers Claude credentials to another provider', async () => {
+    mocks.savedKey = null;
+    mocks.federated = credentials;
+    mocks.runAgent.mockResolvedValue('Answered by the keyless engine.');
+    await runTask({ model: 'gpt-4o' });
+    const input = mocks.runAgent.mock.calls[0]![0];
+    expect(input).not.toHaveProperty('anthropicCredentials');
+    expect(input.planning).toBe(false);
   });
 });

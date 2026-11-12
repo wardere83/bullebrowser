@@ -2,6 +2,10 @@ import type { TaskOutcome } from './task-outcome.js';
 import type { BrowserTaskId } from './browser-tasks.js';
 import type { z } from 'zod';
 import type { ToolCallRecord } from './agent-loop.js';
+import type { ClientOptions } from '@anthropic-ai/sdk';
+
+/** Mints short-lived Claude access tokens; the SDK caches and refreshes them. */
+export type AnthropicCredentials = NonNullable<ClientOptions['credentials']>;
 
 export type ProviderId = 'anthropic' | 'openai';
 
@@ -273,6 +277,11 @@ export interface AgentInput {
   /** Require live multi-source research for research prompts. */
   researchMode?: boolean;
   apiKey?: string;
+  /**
+   * Short-lived Claude access in place of a saved key, such as workload
+   * identity federation in CI. Claude models only; a saved key takes priority.
+   */
+  anthropicCredentials?: AnthropicCredentials;
   /** Native host transport: credentials remain in the OS vault, outside page JavaScript. */
   modelFetch?: typeof fetch;
   model: ModelId;

@@ -24,10 +24,21 @@ jobs:
   evaluate:
     runs-on: ubuntu-22.04
     timeout-minutes: 35
+    permissions:
+      contents: read
+      # Claude access through Anthropic workload identity federation: the job's
+      # GitHub OIDC token is exchanged for short-lived access, so no Anthropic
+      # key is stored. The rule accepts runs of this repository on main only.
+      id-token: write
     env:
       BULLE_EVAL_PROVIDER: ${{ inputs.provider || vars.BULLE_EVAL_PROVIDER || 'auto' }}
       BULLE_EVAL_REVISION: ${{ github.sha }}
       BULLE_EVAL_OUTPUT: ${{ github.workspace }}/benchmark-results
+      # Identifiers, not secrets: the rule decides which runs they work for.
+      ANTHROPIC_FEDERATION_RULE_ID: fdrl_01MgMtp6hrCoAd8Xsku67473
+      ANTHROPIC_ORGANIZATION_ID: 0947157a-677e-4e12-ad91-972be518bf6d
+      ANTHROPIC_SERVICE_ACCOUNT_ID: svac_01JMdrmfMKTmvCYtyCMs9aWC
+      ANTHROPIC_WORKSPACE_ID: wrkspc_016brURpSrL9t4smUHo5UNXT
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

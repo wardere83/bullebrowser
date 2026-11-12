@@ -10,6 +10,8 @@ import type { ModelId } from '@bullebrowser/agent-core';
 // Pure JS scoring also runs without Electron or model credentials.
 // @ts-expect-error evaluator intentionally has a runtime-independent JS interface
 import { regressionFailures, scoreTask, summarize } from '../../../benchmarks/evaluator/score.mjs';
+// @ts-expect-error evaluator intentionally has a runtime-independent JS interface
+import { federationSetup } from '../../../benchmarks/evaluator/preflight.mjs';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repository = resolve(appRoot, '../..');
@@ -34,8 +36,12 @@ const server = createServer((req, res) => {
 
 test.beforeAll(async () => {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('Run evaluator preflight with the exact source revision first.');
-  const key = process.env.BULLE_EVAL_PROVIDER === 'openai' ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY;
-  if (!key?.trim()) throw new Error('A securely configured model credential is required for measured evaluation.');
+  // Claude may also authenticate through workload identity federation; the app
+  // then exchanges GitHub's OIDC token itself and no key is passed to it.
+  const credential = process.env.BULLE_EVAL_PROVIDER === 'openai'
+    ? !!process.env.OPENAI_API_KEY?.trim()
+    : !!process.env.ANTHROPIC_API_KEY?.trim() || federationSetup(process.env).state === 'complete';
+  if (!credential) throw new Error('A securely configured model credential is required for measured evaluation.');
   mkdirSync(output, { recursive: true });
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
   origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
