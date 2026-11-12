@@ -33,13 +33,17 @@ export function isSingleScopeRequest(request: string): boolean {
 
 export function researchSourceMinimum(task: BrowserTaskId | undefined, request: string): number {
   if (task === 'explore_page') return 1;
+  const comparing = task === 'compare_grants' || /\bcompar(?:e|es|ing|ison)\b/i.test(request);
+  if (comparing) {
+    const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
+    if (provided.size >= 2) return Math.min(3, provided.size);
+    // A comparison reads at least two programs, even within one site.
+    if (isSingleScopeRequest(request)) return 2;
+    return 3;
+  }
   // Three independent sources cannot be required once the user forbids going
   // anywhere else; an agent that obeys would otherwise be reported as failed.
   if (isSingleScopeRequest(request)) return 1;
-  if (task === 'compare_grants') {
-    const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
-    if (provided.size >= 2) return Math.min(3, provided.size);
-  }
   return 3;
 }
 

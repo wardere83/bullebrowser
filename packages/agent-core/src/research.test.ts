@@ -82,4 +82,13 @@ describe('research source minimum', () => {
     ]) expect(researchSourceMinimum(undefined, request)).toBe(3);
     expect(researchSourceMinimum('explore_page', 'anything')).toBe(1);
   });
+
+  it('never lets a comparison rest on one page', () => {
+    const scoped = 'Compare the grants in this directory. Use only this directory.';
+    expect(researchSourceMinimum('compare_grants', scoped)).toBe(2);
+    expect(researchSourceMinimum(undefined, scoped)).toBe(2);
+    expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x and https://b.org/y')).toBe(2);
+    expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x, https://b.org/y and https://c.org/z')).toBe(3);
+    expect(researchSourceMinimum('compare_grants', 'Compare youth workforce grants.')).toBe(3);
+  });
 });
