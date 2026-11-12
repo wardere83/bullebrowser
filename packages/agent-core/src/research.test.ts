@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ResearchProgress, isResearchRequest } from './research.js';
+import { ResearchProgress, isResearchRequest, researchSourceMinimum } from './research.js';
 import { StepBudget } from './budget.js';
 
 const read = (url: string, text = 'Source text') => ({ type: 'tool_result' as const, toolName: 'read_page' as const, data: { url, text } });
@@ -54,5 +54,41 @@ describe('live research requirements', () => {
     const budget = new StepBudget(4);
     budget.charge('navigate'); budget.charge('read_page');
     expect(new ResearchProgress(true).followUp('Partial results.', budget)).toBeNull();
+  });
+});
+
+describe('research source minimum', () => {
+  it('asks for one source when the user confines the task to one place', () => {
+    for (const request of [
+      'Find the workforce program for Washington organizations.\nUse only this local test directory. Open and read the relevant listing.',
+      'Find grants on this site. Only browse this website.',
+      'Find youth funding but stick to only my county portal.',
+      'Find youth funding. Use this site only.',
+      'Research the program and do not browse elsewhere.',
+      'Find the deadline and do not browse outside this portal.',
+    ]) expect(researchSourceMinimum(undefined, request)).toBe(1);
+  });
+
+  it('keeps three sources for broad constraints and ordinary research', () => {
+    for (const request of [
+      'Find youth grants. Use only official sources.',
+      'Find grants for a food bank in Ohio.',
+      'Use only government websites to find workforce grants.',
+      'Do not browse outside government websites.',
+      'Do not search outside the United States.',
+      'Use only the official website of each funder.',
+      'Stick to only the county portal.',
+      'Use only this list of sites: each funder page.',
+    ]) expect(researchSourceMinimum(undefined, request)).toBe(3);
+    expect(researchSourceMinimum('explore_page', 'anything')).toBe(1);
+  });
+
+  it('never lets a comparison rest on one page', () => {
+    const scoped = 'Compare the grants in this directory. Use only this directory.';
+    expect(researchSourceMinimum('compare_grants', scoped)).toBe(2);
+    expect(researchSourceMinimum(undefined, scoped)).toBe(2);
+    expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x and https://b.org/y')).toBe(2);
+    expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x, https://b.org/y and https://c.org/z')).toBe(3);
+    expect(researchSourceMinimum('compare_grants', 'Compare youth workforce grants.')).toBe(3);
   });
 });

@@ -105,7 +105,7 @@ for (const task of dataset.tasks) {
           if (request.kind === 'destructive') void window.bullebrowser.agent.replyConfirm(request.runId, request.id, false);
         });
       });
-      const prompt = `${task.request}\nUse only this local test directory. Open and read the relevant listing. Return only a JSON object with facts [{key,value,url,quote}]${task.outline ? ' and outline [three recommended section strings]' : ''}. Use keys ${task.keys.join(', ')}. Values must copy the exact listing text. Each quote must contain its value and match text actually read; cite the complete listing URL. Do not submit, upload, download, purchase or send anything.`;
+      const prompt = `${task.request}\nUse only this local test directory. Open and read the relevant listing. Return only a JSON object with facts [{key,value,url,quote}]${task.outline ? ' and outline [three recommended section strings]' : ''}. Use keys ${task.keys.join(', ')}. Values must copy the exact listing text. Each quote must contain its value, include the field label, be at least 12 characters, and be copied character for character from text actually read, adding no punctuation (such as a colon between a label and its value); cite the complete listing URL. Do not submit, upload, download, purchase or send anything.`;
       const composer = win.locator('aside textarea.prompt-input-field');
       await expect(composer).toBeEnabled();
       await composer.fill(prompt);

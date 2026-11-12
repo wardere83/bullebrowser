@@ -33,3 +33,17 @@ describe('task outcome and the planner', () => {
     expect(tracker.finalize('The page says nonprofits are eligible.')).toBe('Task incomplete. An attempted operation failed and no matching recovery was verified.');
   });
 });
+
+describe('a task confined to one place', () => {
+  const scopedInput = { ...input, researchMode: true, userMessage: 'Find the youth program. Use only this local test directory. Open and read the relevant listing.' } as unknown as AgentInput;
+
+  it('needs the target read during the task, not the page open at the start', () => {
+    const tracker = new TaskOutcomeTracker(scopedInput);
+    tracker.observeContext('http://127.0.0.1:4000/', 'Test funding directory');
+    expect(tracker.finalize('{"facts":[]}')).toMatch(/^Task incomplete/);
+    const read = new TaskOutcomeTracker(scopedInput);
+    read.observeContext('http://127.0.0.1:4000/', 'Test funding directory');
+    read.observe({ type: 'tool_result', toolName: 'read_page', data: { url: 'http://127.0.0.1:4000/program/youth', text: 'ages 14 through 18' } });
+    expect(read.finalize('{"facts":[]}')).toBe('{"facts":[]}');
+  });
+});
