@@ -4,12 +4,15 @@ export const normalize = (value) => String(value ?? '').normalize('NFKC').replac
 export const datasetHash = (dataset) => createHash('sha256').update(JSON.stringify(dataset)).digest('hex');
 
 /**
- * Bumped whenever accepting or scoring rules change, so a baseline measured
- * under different rules is never compared with a new candidate.
+ * Bumped whenever the task instructions or the accepting and scoring rules
+ * change, so a baseline measured under different rules is never compared with
+ * a new candidate.
  * 2: replies may wrap their JSON (sentence, code fence, source line) and may
  *    return the facts as a bare list.
+ * 3: the task prompt states the quotation rules the scorer applies: copied
+ *    character for character, including the field label, 12+ characters.
  */
-export const SCORER_REVISION = 2;
+export const SCORER_REVISION = 3;
 
 /** Each complete JSON value in the text, from its opening bracket to the matching close. */
 function* jsonValues(text) {
