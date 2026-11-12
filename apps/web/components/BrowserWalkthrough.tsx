@@ -111,7 +111,7 @@ const OPTION_SCRIPTS: Script[] = [
     start: {},
     steps: [
       { do: 'ask', text: questions[0]! },
-      { do: 'reply', text: 'We’re a CBO in Newark, NJ and Los Angeles. We need funding for a community empowerment program for young adults.' },
+      { do: 'reply', text: 'We’re a 501(c)(3) CBO in Newark, NJ and Los Angeles. We need funding for a community empowerment program for young adults.' },
       { do: 'access' },
       { do: 'plan', goals: ['Search official federal listings', 'Check international calls', 'Verify eligibility, amounts and deadlines', 'Report matches with sources'] },
       ...GRANTS_SEARCH,
@@ -134,7 +134,7 @@ const OPTION_SCRIPTS: Script[] = [
     start: {},
     steps: [
       { do: 'ask', text: questions[1]! },
-      { do: 'reply', text: 'Harborline Community Foundation.' },
+      { do: 'reply', text: 'Harborline Community Foundation. We’re a 501(c)(3) CBO in Newark, NJ and Los Angeles.' },
       { do: 'access' },
       { do: 'plan', goals: ['Open the funder’s official website', 'Read its priorities', 'Check grant guidelines and deadlines', 'Summarize fit and next steps'] },
       act('Opening harborline-foundation.example', 'navigate'), ...go('funder-home'), { do: 'goal' },
@@ -159,7 +159,7 @@ const OPTION_SCRIPTS: Script[] = [
     start: {},
     steps: [
       { do: 'ask', text: questions[2]! },
-      { do: 'reply', text: 'Compare federal, international and foundation funding for our youth program.' },
+      { do: 'reply', text: 'We’re a 501(c)(3) CBO in Newark, NJ and Los Angeles. Compare federal, international and foundation funding for our youth program.' },
       { do: 'access' },
       { do: 'plan', goals: ['Open each program’s official page', 'Extract award amounts and deadlines', 'Check eligibility for your organization', 'Compare them side by side'] },
       act('Opening grants.gov', 'navigate'), ...go('grants-detail'), { do: 'goal' },
@@ -187,7 +187,7 @@ const OPTION_SCRIPTS: Script[] = [
     start: { tabs: ['grants'], page: 'grants-detail' },
     steps: [
       { do: 'ask', text: questions[3]! },
-      { do: 'reply', text: 'Do we qualify, and what does the application need?' },
+      { do: 'reply', text: 'We’re a 501(c)(3) CBO. Do we qualify, and what does the application need?' },
       { do: 'access' },
       { do: 'plan', goals: ['Read the page you have open', 'Check the eligibility rules', 'Follow the relevant links', 'Summarize what you need'] },
       act('Reading the page', 'read_page'), ...read('gg-award'), { do: 'goal' },
@@ -246,7 +246,7 @@ const SOURCE_SCRIPTS: Record<SiteId, Script> = {
       { do: 'access' },
       ...FUNDER_TOUR,
       { do: 'answer', answer: {
-        lead: 'Harborline Community Foundation funds work like yours:',
+        lead: 'Harborline Community Foundation’s priorities and guidelines, as published:',
         items: [
           { status: 'match', title: 'Priorities', detail: 'Economic mobility and youth leadership', source: 'harborline-foundation.example' },
           { status: 'info', title: 'Guidelines', detail: '$25,000–$100,000 · Letter of inquiry due February 1, 2027', source: 'harborline-foundation.example' },
@@ -260,7 +260,7 @@ const SOURCE_SCRIPTS: Record<SiteId, Script> = {
 interface Task {
   title: string;
   access: boolean;
-  goals: { text: string; status: 'pending' | 'active' | 'done' }[];
+  goals: { text: string; status: 'pending' | 'active' | 'done' | 'stopped' }[];
   actions: { label: string; status: 'running' | 'done' | 'stopped' }[];
 }
 type Item =
@@ -400,7 +400,7 @@ export function BrowserWalkthrough() {
             });
             setScene((s) => ({ ...s, halo: null, toast: null }));
             setItems((list) => [...list, { kind: 'answer', answer: step.answer }]);
-            setAnnounce(`Task complete. ${step.answer.lead} ${[...step.answer.items.map((item) => `${item.title}: ${item.detail}.`), ...(step.answer.compare ?? []).map((row) => `${row.name}: ${row.amount}, ${row.deadline}.`)].join(' ')}`);
+            setAnnounce(`Task complete. ${step.answer.lead} ${[...step.answer.items.map((item) => `${item.title}: ${item.detail}.`), ...(step.answer.compare ?? []).map((row) => `${row.name}: ${row.amount}, ${row.deadline}.`), step.answer.next ?? ''].join(' ').trim()}`);
             break;
         }
       }
@@ -412,7 +412,11 @@ export function BrowserWalkthrough() {
     stopRun();
     setStatus('stopped');
     setDraft('');
-    setTask((current) => current && { ...current, actions: current.actions.map((action) => (action.status === 'running' ? { ...action, status: 'stopped' } : action)) });
+    setTask((current) => current && {
+      ...current,
+      goals: current.goals.map((goal) => (goal.status === 'active' ? { ...goal, status: 'stopped' } : goal)),
+      actions: current.actions.map((action) => (action.status === 'running' ? { ...action, status: 'stopped' } : action)),
+    });
     setScene((s) => ({ ...s, loading: false, halo: null, toast: null, glow: false }));
     setItems((list) => [...list, { kind: 'stopped' }]);
     setAnnounce('Stopped');
@@ -727,16 +731,16 @@ function TaskCard({ task, running }: { task: Task; running: boolean }) {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-secondary">Task plan</p>
           <ol className="mt-1.5 space-y-1">
             {task.goals.map((goal) => (
-              <li key={goal.text} className={`flex items-center gap-2 ${goal.status === 'pending' ? 'text-ink-secondary' : 'text-brand-navy'}`}>
+              <li key={goal.text} className={`flex items-center gap-2 ${goal.status === 'pending' || goal.status === 'stopped' ? 'text-ink-secondary' : 'text-brand-navy'}`}>
                 <span
                   aria-hidden="true"
                   className={`grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border text-[8px] ${
                     goal.status === 'done' ? 'border-brand-teal bg-brand-teal text-white' : goal.status === 'active' ? 'border-brand-teal' : 'border-brand-navy/20'
                   }`}
                 >
-                  {goal.status === 'done' ? '✓' : goal.status === 'active' ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-teal" /> : ''}
+                  {goal.status === 'done' ? '✓' : goal.status === 'active' ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-teal" /> : goal.status === 'stopped' ? <span className="h-1.5 w-1.5 rounded-[1px] bg-ink-secondary" /> : ''}
                 </span>
-                <span className="sr-only">{goal.status === 'done' ? 'Completed: ' : goal.status === 'active' ? 'In progress: ' : 'Pending: '}</span>
+                <span className="sr-only">{goal.status === 'done' ? 'Completed: ' : goal.status === 'active' ? 'In progress: ' : goal.status === 'stopped' ? 'Stopped: ' : 'Pending: '}</span>
                 {goal.text}
               </li>
             ))}
