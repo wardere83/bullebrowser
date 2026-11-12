@@ -58,7 +58,7 @@ const BLANK: Scene = {
 const go = (page: PageId, extra: Partial<Scene> = {}): Step[] => [
   { do: 'scene', set: (s) => {
     const site = PAGES[page].site;
-    return { page, loading: true, typed: '', results: false, filtered: false, halo: null, scrollTo: null,
+    return { page, loading: true, typed: '', results: false, filtered: false, cursor: null, halo: null, scrollTo: null,
       tabs: !site || s.tabs.includes(site) ? s.tabs : [...s.tabs, site], ...extra };
   }, wait: 800 },
   { do: 'scene', set: { loading: false }, wait: 450 },
@@ -100,7 +100,7 @@ const FUNDER_TOUR: Step[] = [
   act('Clicking Priorities', 'click'), ...press('fd-nav-priorities'), ...go('funder-priorities'),
   act('Reading the page', 'read_page'), ...check('fd-p1'), ...check('fd-p2'), ...read('fd-p3'),
   act('Clicking Grants', 'click'), ...press('fd-nav-grants'), ...go('funder-grants'),
-  act('Extracting page information', 'extract'), ...check('fd-range'), ...check('fd-region'), ...check('fd-loi'),
+  act('Extracting page information', 'extract'), ...check('fd-elig'), ...check('fd-range'), ...check('fd-region'), ...check('fd-loi'),
 ];
 
 interface Script { title: string; start: Partial<Scene>; steps: Step[] }
@@ -141,13 +141,13 @@ const OPTION_SCRIPTS: Script[] = [
       act('Clicking Priorities', 'click'), ...press('fd-nav-priorities'), ...go('funder-priorities'),
       act('Reading the page', 'read_page'), ...check('fd-p1'), ...check('fd-p2'), ...read('fd-p3'), { do: 'goal' },
       act('Clicking Grants', 'click'), ...press('fd-nav-grants'), ...go('funder-grants'),
-      act('Extracting page information', 'extract'), ...check('fd-range'), ...check('fd-region'), ...check('fd-loi'),
+      act('Extracting page information', 'extract'), ...check('fd-elig'), ...check('fd-range'), ...check('fd-region'), ...check('fd-loi'),
       point('fd-apply', 900), { do: 'goal' }, { do: 'goal' },
       { do: 'answer', answer: {
         lead: 'Harborline Community Foundation is a strong fit:',
         items: [
           { status: 'match', title: 'Priorities match', detail: 'Economic mobility and youth leadership', source: 'harborline-foundation.example' },
-          { status: 'match', title: 'Serves your region', detail: 'New Jersey and Southern California', source: 'harborline-foundation.example' },
+          { status: 'match', title: 'You can apply', detail: 'Nonprofits and fiscally sponsored community groups in New Jersey and Southern California', source: 'harborline-foundation.example' },
           { status: 'info', title: 'Grant range and timing', detail: '$25,000–$100,000 · Letter of inquiry due February 1, 2027', source: 'harborline-foundation.example' },
         ],
         next: 'Next step: start a letter of inquiry. I stopped at the button; nothing is submitted without your approval.',
@@ -168,7 +168,7 @@ const OPTION_SCRIPTS: Script[] = [
       act('Extracting page information', 'extract'), ...check('intl-budget'), ...check('intl-deadline'), ...check('intl-elig'),
       { do: 'goal' },
       act('Opening a new tab', 'new_tab'), ...go('funder-grants'),
-      act('Extracting page information', 'extract'), ...check('fd-range'), ...check('fd-loi'), ...check('fd-region'),
+      act('Extracting page information', 'extract'), ...check('fd-elig'), ...check('fd-range'), ...check('fd-loi'), ...check('fd-region'),
       { do: 'goal' }, { do: 'goal' },
       { do: 'answer', answer: {
         lead: 'All three accept organizations like yours. Side by side:',
@@ -452,6 +452,9 @@ export function BrowserWalkthrough() {
       const x = r.x + Math.min(r.w / 2, 48);
       // Keep the label inside the view near the right edge.
       setPointer({ x, y: r.y + r.h / 2, flip: x > box.width - 110 });
+    } else if (scene.cursor) {
+      // Its element is gone (the page changed): never point at unrelated content.
+      setPointer(null);
     }
     const haloTarget = find(scene.halo);
     if (haloTarget) {
@@ -525,7 +528,7 @@ export function BrowserWalkthrough() {
                     <button
                       key={site}
                       type="button"
-                      aria-pressed={selected?.kind === 'source' && selected.site === site}
+                      aria-pressed={active}
                       onClick={() => start(SOURCE_SCRIPTS[site], { kind: 'source', site })}
                       className={`group flex max-w-[12rem] shrink-0 items-center gap-2 rounded-t-lg px-3 py-2 text-[11px] transition-colors ${
                         active

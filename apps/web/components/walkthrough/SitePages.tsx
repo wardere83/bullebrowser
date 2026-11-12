@@ -416,6 +416,7 @@ function FunderGrants({ state }: { state: PageState }) {
         <p className="font-[Georgia,serif] text-[18px] leading-tight">Grant guidelines</p>
         <div className="mt-3 overflow-hidden rounded-lg border border-[#e8e2d3] bg-white">
           {[
+            ['Eligible applicants', <Mark key="e" name="fd-elig" state={state}>Nonprofits and fiscally sponsored community groups</Mark>],
             ['Grant range', <Mark key="r" name="fd-range" state={state}>$25,000 – $100,000</Mark>],
             ['Geography', <Mark key="g" name="fd-region" state={state}>New Jersey and Southern California</Mark>],
             ['Letter of inquiry', <Mark key="l" name="fd-loi" state={state}>Due February 1, 2027</Mark>],
