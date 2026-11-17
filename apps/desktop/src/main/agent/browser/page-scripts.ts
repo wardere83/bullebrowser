@@ -527,6 +527,10 @@ export const AGENT_CURSOR = `
             '<path d="M5 3l14 8.5-6.2 1.4L9.8 19 5 3z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/>' +
           '</svg>' +
           '<div class="ring"></div><div class="halo"></div><div class="label" hidden></div><div class="toast" hidden></div><div class="scroll-glow" hidden></div>';
+        // A new page starts with the pointer just above it, where the address
+        // bar is: it glides in to the first thing the agent acts on, never
+        // appearing parked on the page (a site's logo) doing nothing.
+        root.querySelector('.ptr').style.transform = 'translate(' + Math.round(innerWidth / 2) + 'px,-40px)';
       }
       var root2 = host.shadowRoot;
       var ptr = root2.querySelector('.ptr');
@@ -536,6 +540,9 @@ export const AGENT_CURSOR = `
       ptr.style.transition = reduced ? 'none' : '';
       ring.style.animation = reduced ? 'none' : '';
       halo.style.transition = reduced ? 'none' : '';
+      // Only make sure the overlay exists (for a status toast): the pointer
+      // stays where it is.
+      if (opts.stay) return;
 
       var x, y, r;
       if (opts.at) {
@@ -589,8 +596,11 @@ export const AGENT_CURSOR = `
     }
   };
 
+  // A status line for an action with no element. The pointer is left where it
+  // is: jumping to a fixed spot parked it on whatever was there, such as a
+  // search engine's logo, while the agent read or searched.
   window.__bbToolToast = function (text) {
-    window.__bbCursorTo(Math.round(innerWidth * .32), Math.round(innerHeight * .35));
+    window.__bbCursor(null, { stay: true });
     var host = document.getElementById('__bb_agent_cursor__');
     var toast = host && host.shadowRoot && host.shadowRoot.querySelector('.toast');
     if (!toast) return;

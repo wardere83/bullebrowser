@@ -44,6 +44,7 @@ export const IPC = {
   AGENT_RUN: 'agent:run',
   AGENT_CANCEL: 'agent:cancel',
   AGENT_STEP: 'agent:step', // main → renderer stream
+  AGENT_ADDRESS: 'agent:address', // main → renderer: the agent types a destination
   AGENT_RESULT: 'agent:result', // main → renderer final task result
   AGENT_CONFIRM_REQUEST: 'agent:confirm-request', // main → renderer
   AGENT_CONFIRM_REPLY: 'agent:confirm-reply',
@@ -330,6 +331,8 @@ export interface BrowserBridge {
     ): () => void;
     onResult(cb: (event: AgentResultEvent) => void): () => void;
     onConfirmRequest(cb: (event: AgentConfirmRequest) => void): () => void;
+    /** The agent is typing `text` into the address bar of `tabId`, over `durationMs`. */
+    onAddress(cb: (event: { runId: string; tabId: string; text: string; durationMs: number }) => void): () => void;
     replyConfirm(runId: string, id: string, approved: boolean): Promise<void>;
     // Capture the active tab as a PNG so the composer can show a thumbnail and
     // attach it to the next run. Null when there's no capturable tab.

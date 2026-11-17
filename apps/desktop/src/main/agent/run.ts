@@ -35,6 +35,7 @@ import { tabManager } from '../tabs/manager.js';
 import { getApiKey } from '../storage/secrets.js';
 import { federatedAnthropicCredentials } from './federated-credentials.js';
 import { getSettings } from '../storage/settings.js';
+import { addressText, typingDuration } from '../../shared/address-typing.js';
 import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError } from './errors.js';
 import { buildAttachmentAppendix, type AttachmentSources } from './attachments.js';
@@ -188,7 +189,18 @@ export async function startAgentRun(
       if (control.follow && tabManager.getActiveId() !== tabId) tabManager.activate(tabId);
       tabManager.setBrowsingActivity(runId, tabId);
     }
-  }, 'default', controller.signal, () => control.follow, (source) => publishEvent({ kind: 'source', ...source, ts: Date.now() }));
+  }, 'default', controller.signal, () => control.follow, (source) => publishEvent({ kind: 'source', ...source, ts: Date.now() }), async (tabId, url) => {
+    // Typed only where the user is watching; a background tab just loads.
+    if (controller.signal.aborted || !control.follow || tabManager.getActiveId() !== tabId || win.isDestroyed()) return;
+    const text = addressText(url);
+    const durationMs = typingDuration(text);
+    win.webContents.send(IPC.AGENT_ADDRESS, { runId, tabId, text, durationMs });
+    await new Promise<void>((resolve) => {
+      const done = () => { clearTimeout(timer); controller.signal.removeEventListener('abort', done); resolve(); };
+      const timer = setTimeout(done, durationMs);
+      controller.signal.addEventListener('abort', done, { once: true });
+    });
+  });
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
   const isFundingWorkflow = !!skill && (FUNDING_WORKFLOW_IDS as readonly string[]).includes(skill.id);

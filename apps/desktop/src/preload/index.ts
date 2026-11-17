@@ -91,6 +91,7 @@ const bridge: BrowserBridge = {
     onStep: (cb) => subscribe(IPC.AGENT_STEP, cb),
     onResult: (cb) => subscribe(IPC.AGENT_RESULT, cb),
     onConfirmRequest: (cb) => subscribe(IPC.AGENT_CONFIRM_REQUEST, cb),
+    onAddress: (cb) => subscribe(IPC.AGENT_ADDRESS, cb),
     replyConfirm: (runId, id, approved) =>
       ipcRenderer.invoke(IPC.AGENT_CONFIRM_REPLY, runId, id, approved),
     captureScreenshot: () => ipcRenderer.invoke(IPC.AGENT_CAPTURE),

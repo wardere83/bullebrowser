@@ -33,6 +33,10 @@ describe('OpenAI streamed tool dispatch', () => {
     await expect(consumeOpenAiStream(new Response(body), onTool)).rejects.toThrow('complete turn');
     expect(onTool).not.toHaveBeenCalled();
   });
+  it('reports a stream cut off inside its last event as interrupted, not as a JSON error', async () => {
+    const body = event({ content: 'Partial' }) + 'data: {"choices":[{"index":0,"delta":{"content":"cut';
+    await expect(consumeOpenAiStream(new Response(body), vi.fn())).rejects.toThrow('ended before a complete turn');
+  });
   it('refuses a changed call after dispatch instead of executing it again', async () => {
     const onTool = vi.fn();
     const body = event({ tool_calls: [{ index: 0, id: 'x', function: { name: 'read_page', arguments: '{}' } }] }) + event(part('{"changed":true}'));

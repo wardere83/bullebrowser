@@ -78,6 +78,9 @@ export class DesktopToolRuntime implements ToolRuntime {
     private readonly signal?: AbortSignal,
     private readonly followsAgent: () => boolean = () => true,
     private readonly onViewport?: (source: { url: string; title: string; text: string }) => void,
+    // Shows the agent typing a destination into the address bar; resolves
+    // when the typing is done, so the page loads after it, as for a person.
+    private readonly onAddress?: (tabId: string, url: string) => Promise<void>,
   ) {
     signal?.addEventListener('abort', () => {
       for (const wc of this.touched) {
@@ -171,6 +174,8 @@ export class DesktopToolRuntime implements ToolRuntime {
     assertWebUrl(url);
     const wc = this.wcFor(tabId, true);
     const mode = opts.wait ?? 'idle';
+    await this.onAddress?.(tabId, url);
+    if (this.signal?.aborted) throw new Error('cancelled');
     // Chromium warms only the already-approved destination; never prefetch page content.
     try { wc.session.preconnect({ url: new URL(url).origin, numSockets: 1 }); } catch { /* A performance hint must never prevent navigation. */ }
     let status: number | undefined;
@@ -214,13 +219,9 @@ export class DesktopToolRuntime implements ToolRuntime {
     assertAllowedDestination(tabManager.getNavigationUrl(tabId) ?? '');
     const extra = await this.afterLoad(wc, mode);
     this.onPageActivity?.(tabId);
-    // A page load wipes the overlay with the old document; put the pointer
-    // back where a person's would be, so the user can follow the agent.
-    await wc
-      .executeJavaScript(
-        `${AGENT_CURSOR}; window.__bbCursorTo(Math.round(window.innerWidth * 0.28), Math.round(window.innerHeight * 0.3));`,
-      )
-      .catch(() => {});
+    // The pointer is not parked on the new page: after typing an address a
+    // person's pointer is up at the address bar, not resting on the site's
+    // logo. It glides in from the top on the next thing the agent acts on.
     if (status !== undefined && status >= 400) {
       throw new ToolError(
         'HTTP_ERROR',
@@ -503,9 +504,18 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async newTab(url?: string): Promise<TabSummary> {
     if (url) assertWebUrl(url);
+    // A tab the user watches opens blank and shows the agent typing its
+    // address before it loads, as navigate does.
+    const typed = Boolean(url && this.onAddress && this.followsAgent());
     // Opened from the tab the agent is on, so closing it returns the user there.
-    const tab = await tabManager.create(url, tabManager.getActiveId() ?? undefined, !this.followsAgent());
+    const tab = await tabManager.create(typed ? 'about:blank' : url, tabManager.getActiveId() ?? undefined, !this.followsAgent());
     this.onPageActivity?.(tab.id);
+    if (typed) {
+      await this.onAddress!(tab.id, url!);
+      if (this.signal?.aborted) throw new Error('cancelled');
+      // Starts the load at once; the wait below covers it.
+      void tabManager.navigate(tab.id, url!);
+    }
     // create() starts the load without waiting for it; the agent's next step
     // is almost always read_page, which then read a blank or half-built page.
     if (url) {
@@ -529,6 +539,8 @@ export class DesktopToolRuntime implements ToolRuntime {
       }
       await pageQuiet(wc);
       assertAllowedDestination(tabManager.getNavigationUrl(tab.id) ?? '');
+      // Back from the source must not land on the blank page it was typed in.
+      if (typed) wc.navigationHistory.clear();
       const extra = await this.afterLoad(wc, 'idle');
       const now = tabManager.list().find((t) => t.id === tab.id);
       return { id: tab.id, title: now?.title ?? wc.getTitle(), url: wc.getURL(), active: true, ...extra };

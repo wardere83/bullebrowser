@@ -304,6 +304,39 @@ describe('runAgent Claude tool-use loop', () => {
     expect(out).toContain('did not submit');
   });
 
+  // The owner's run ended with "Unexpected end of JSON input": a streamed
+  // reply ran out of room inside a tool call. Streamed end to end here.
+  it('recovers from a streamed tool call the output limit cut off, running only the complete one', async () => {
+    const usage = { output_tokens: 1, input_tokens: null, cache_creation_input_tokens: null, cache_read_input_tokens: null, server_tool_use: null };
+    const call = (id: string, json: string, stop: 'max_tokens' | 'tool_use') => (async function* () {
+      yield { type: 'content_block_start', index: 0, content_block: { type: 'tool_use', caller: { type: 'direct' }, id, name: 'navigate', input: {} } };
+      yield { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: json } };
+      yield { type: 'content_block_stop', index: 0 };
+      yield { type: 'message_delta', delta: { stop_reason: stop, stop_sequence: null, container: null, stop_details: null }, usage };
+    })();
+    createMock
+      .mockResolvedValueOnce(call('cut', '{"url":"https://agen', 'max_tokens'))
+      .mockResolvedValueOnce(call('whole', '{"url":"https://agency.gov/"}', 'tool_use'))
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Opened agency.gov.')] });
+    const context = makeContext();
+
+    const out = await runAgent({
+      apiKey: 'test-key',
+      model: DEFAULT_MODEL,
+      systemPrompt: 'You are the BulleBrowser agent.',
+      history: [],
+      userMessage: 'open agency.gov',
+      context,
+      onStep: () => {},
+    });
+
+    expect(out).toContain('Opened agency.gov.');
+    expect(context.runtime.navigate).toHaveBeenCalledOnce();
+    expect(context.runtime.navigate).toHaveBeenCalledWith(expect.any(String), 'https://agency.gov/');
+    const [first, second] = createMock.mock.calls.map(([request]) => (request as { max_tokens: number }).max_tokens);
+    expect(second).toBeGreaterThan(first!);
+  });
+
   it('asks again with more room when the output limit cuts off a tool call', async () => {
     createMock
       .mockResolvedValueOnce({ stop_reason: 'max_tokens', content: [], truncatedToolCalls: 1 })

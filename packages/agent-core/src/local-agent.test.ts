@@ -79,6 +79,15 @@ async function ask(userMessage: string, overrides: Partial<AgentInput> = {}): Pr
 }
 
 describe('follow-up continuity without a connected assistant', () => {
+  // A result past 100,000 characters is shortened, so its text is not valid
+  // JSON: reading it ended the task with "Unexpected end of JSON input".
+  it('summarizes a page too long for its result text to be whole', async () => {
+    const long = { ...PAGE, text: `${PAGE.text} ${'Program details continue. '.repeat(8000)}` };
+    const result = await ask('Summarize this page', { context: makeContext({ readPage: vi.fn(async () => long) }) });
+    expect(result.reply).toContain('City Arts Fund');
+    expect(result.reply).not.toMatch(/JSON|could not be read/);
+  });
+
   it('understands repeated retries from the original user request, not assistant text', async () => {
     const result = await ask('Try again', { history: [
       { role: 'user', content: 'Summarize this page' },
