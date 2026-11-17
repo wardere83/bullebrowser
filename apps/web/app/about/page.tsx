@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { product } from '@bullebrowser/brand-tokens';
 import { PageHero } from '@/components/PageHero';
 import { ArrowLink } from '@/components/ArrowLink';
+import { keepCase } from '@/components/KeepCase';
 import { button } from '@/components/styles';
 import { useT } from '@/lib/i18n';
 
@@ -20,7 +21,7 @@ export default function AboutPage() {
         <div className="grid gap-12 md:grid-cols-[0.8fr_1.2fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-ink-secondary">
-              {t('company.eyebrow')}
+              {keepCase(t('company.eyebrow'))}
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight">{t('company.h2')}</h2>
           </div>

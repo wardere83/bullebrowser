@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useT } from '@/lib/i18n';
 import { WORKFLOWS } from '@/lib/terms';
 import { Icon, type IconName } from './Icon';
+import { keepCase } from './KeepCase';
 import { BrandMark } from './BrandMark';
 import { PAGES, SITES, SitePage, type PageId, type PageState, type SiteId } from './walkthrough/SitePages';
 
@@ -503,7 +504,7 @@ export function BrowserWalkthrough() {
       <div className="mb-10 grid gap-5 lg:grid-cols-2 lg:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-ink-secondary">
-            {t('preview.eyebrow')}
+            {keepCase(t('preview.eyebrow'))}
           </p>
           <h2 id="walkthrough-title" className="mt-4 max-w-xl text-3xl font-semibold tracking-tight md:text-4xl">
             {t('preview.h2')}

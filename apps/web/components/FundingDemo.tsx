@@ -21,6 +21,7 @@ import { useEnglishLang, useT, type Translate } from '@/lib/i18n';
 import { ASSISTANT_NAME, SCREENS, WORKFLOWS } from '@/lib/terms';
 import { LISTINGS, REQUIREMENTS, buildFrames, type Finding, type Frame } from './demo-script';
 import { Icon, type IconName } from './Icon';
+import { keepCase } from './KeepCase';
 import { StatusChip } from './StatusChip';
 
 const FINDING_LOOK: Record<Finding, { icon: IconName; colours: string }> = {
@@ -325,7 +326,7 @@ function Panel({ frame, t }: { frame: Frame; t: Translate }) {
 }
 
 function Caption({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">{children}</p>;
+  return <p className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">{keepCase(children)}</p>;
 }
 
 function Source({ children }: { children: React.ReactNode }) {
