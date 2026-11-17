@@ -59,13 +59,16 @@ export const LIST_LINKS = `
   (function () {
     const out = [];
     const seen = new Set();
-    // Bing navigation, account and advertising links aren't organic sources.
-    // Limit search-page discovery to result headings, including tracked links
-    // whose actual destination is decoded by browserSearch.
+    // A search engine's navigation, account and advertising links aren't
+    // organic sources. Limit search-page discovery to result headings,
+    // including Bing's tracked links, whose destination browserSearch decodes.
     const bingSearch = /(^|\\.)bing\\.com$/.test(location.hostname) && location.pathname === '/search';
+    const startpageSearch = /(^|\\.)startpage\\.com$/.test(location.hostname) && /^\\/(?:do|sp)\\/search/.test(location.pathname);
     const selector = bingSearch
       ? '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)'
-      : 'a[href]';
+      : startpageSearch
+        ? '.w-gl .result a.result-title[href]'
+        : 'a[href]';
     for (const a of Array.from(document.querySelectorAll(selector))) {
       // Skip links the user cannot see and non-navigational hrefs, so the
       // model isn't handed a mega-menu it can't act on.
@@ -73,6 +76,7 @@ export const LIST_LINKS = `
       if (!href || !/^https?:/i.test(href)) continue;
       if (seen.has(href)) continue;
       if (bingSearch && a.closest('.b_ad, .b_adTop, .b_adBottom, .b_ans, [aria-hidden="true"], [inert]')) continue;
+      if (startpageSearch && a.closest('[aria-hidden="true"], [inert]')) continue;
       const style = getComputedStyle(a);
       if (style.visibility === 'hidden' || style.display === 'none') continue;
       // Inline/display:contents links can have no box even though their text
