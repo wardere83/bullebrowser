@@ -297,3 +297,40 @@ it('stops at once when Stop is pressed while waiting for results to render', asy
   controller.abort();
   await result;
 });
+
+// A runtime that can type: the page is the engine's home until Enter is
+// pressed in its box, then its results.
+function typing({ typeFails = false } = {}) {
+  let current = 'about:blank';
+  const navigate = vi.fn(async (_tabId: string, url: string) => { current = url; return { url, title: 'Search' }; });
+  const type = vi.fn(async () => { if (typeFails) throw Object.assign(new Error('No field matches #q'), { code: 'ELEMENT_NOT_FOUND' }); return { matched: 'input' }; });
+  const pressKey = vi.fn(async () => { current = 'https://www.startpage.com/sp/search'; return { pressed: 'Enter' }; });
+  const readPage = vi.fn(async () => ({ url: current, title: 'Search', text: 'Results' }));
+  const listLinks = vi.fn(async () => (/\/(sp|do)\/search/.test(current) ? [{ text: 'NJEDA programs', href: 'https://www.njeda.gov/activeprograms/' }] : []));
+  const waitFor = vi.fn(async () => ({ matched: true }));
+  const controller = new AbortController();
+  const runtime = { navigate, type, pressKey, readPage, listLinks, waitFor } as unknown as ToolRuntime;
+  return { navigate, type, pressKey, controller, search: browserSearch({ runtime, activeTabId: () => 'tab', signal: controller.signal }) };
+}
+
+it('opens the engine and types the query into its box, like a person', async () => {
+  const f = typing();
+  expect(await f.search('New Jersey small business grants', 3)).toMatchObject({ engine: 'Startpage', results: [{ url: 'https://www.njeda.gov/activeprograms/' }] });
+  expect(f.navigate.mock.calls.map(([, url]) => url)).toEqual(['https://www.startpage.com/']);
+  expect(f.type).toHaveBeenCalledWith('tab', '#q', 'New Jersey small business grants official grant program eligibility');
+  expect(f.pressKey).toHaveBeenCalledWith('tab', 'Enter');
+});
+
+it('loads the results page directly when the search box cannot be used', async () => {
+  const f = typing({ typeFails: true });
+  expect(await f.search('school grants', 3)).toMatchObject({ engine: 'Startpage' });
+  expect(f.navigate.mock.calls.map(([, url]) => new URL(url).pathname)).toEqual(['/', '/do/search']);
+  expect(f.pressKey).not.toHaveBeenCalled();
+});
+
+it('does not fall back to another page when Stop is pressed while typing', async () => {
+  const f = typing();
+  f.type.mockImplementation(async () => { f.controller.abort(); throw new Error('cancelled'); });
+  await expect(f.search('school grants', 3)).rejects.toThrow('cancelled');
+  expect(f.navigate).toHaveBeenCalledOnce();
+});

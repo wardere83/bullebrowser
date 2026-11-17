@@ -29,9 +29,56 @@ export function TopBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const addressActivity = useInputActivity();
 
+  // The agent types where it is going before the page loads, as a person
+  // would. The page's own address always replaces the typed text: it wins
+  // over typing still in progress, and is restored after a navigation that
+  // did not change it (a reload of the same page).
+  const activeIdRef = useRef(active?.id);
+  activeIdRef.current = active?.id;
+  const activeUrlRef = useRef(active?.url);
+  activeUrlRef.current = active?.url;
+  const typing = useRef<{ interval?: ReturnType<typeof setInterval>; restore?: ReturnType<typeof setTimeout> }>({});
+  const [agentTyping, setAgentTyping] = useState(false);
+  const stopTyping = () => {
+    clearInterval(typing.current.interval);
+    clearTimeout(typing.current.restore);
+    typing.current = {};
+    setAgentTyping(false);
+  };
+
   useEffect(() => {
+    stopTyping();
     setDraftUrl(active?.url === 'about:blank' ? '' : (active?.url ?? ''));
   }, [active?.id, active?.url]);
+
+  useEffect(() => {
+    const off = window.bullebrowser.agent.onAddress?.(({ tabId, text, durationMs }) => {
+      // Never type over the user's own typing, or into a tab they are not on.
+      if (tabId !== activeIdRef.current || document.activeElement === inputRef.current) return;
+      stopTyping();
+      let shown = 0;
+      setAgentTyping(true);
+      setDraftUrl('');
+      // Finish a little before the page starts loading.
+      const interval = setInterval(() => {
+        shown += 1;
+        setDraftUrl(text.slice(0, shown));
+        if (shown < text.length) return;
+        clearInterval(interval);
+        setAgentTyping(false);
+        typing.current.restore = setTimeout(() => {
+          if (document.activeElement === inputRef.current) return;
+          const url = activeUrlRef.current;
+          setDraftUrl(url === 'about:blank' ? '' : (url ?? ''));
+        }, 3000);
+      }, Math.max(8, (durationMs * 0.85) / Math.max(1, text.length)));
+      typing.current.interval = interval;
+    });
+    return () => {
+      stopTyping();
+      off?.();
+    };
+  }, []);
 
   useEffect(() => {
     const handler = () => inputRef.current?.select();
@@ -104,8 +151,9 @@ export function TopBar() {
 
       <form onSubmit={submit} className="no-drag min-w-0 flex-1">
         <div
-          className={`h-7 prompt-input-shell prompt-input-shell--${addressActivity.state}`}
-          data-activity-state={addressActivity.state}
+          className={`h-7 prompt-input-shell prompt-input-shell--${agentTyping ? 'typing' : addressActivity.state}`}
+          data-activity-state={agentTyping ? 'typing' : addressActivity.state}
+          data-agent-typing={agentTyping || undefined}
         >
           <input
             ref={inputRef}

@@ -7,6 +7,9 @@ export type SearchEngineId = 'startpage' | 'bing';
 interface SearchEngine {
   name: string;
   host: RegExp;
+  /** The page a person starts a search from, and its search box. */
+  home: string;
+  box: string;
   url(query: string): URL;
   /** A rendered organic result link: the links listLinks returns on this page. */
   results: string;
@@ -22,6 +25,8 @@ export const SEARCH_ENGINES: Record<SearchEngineId, SearchEngine> = {
   startpage: {
     name: 'Startpage',
     host: /(^|\.)startpage\.com$/,
+    home: 'https://www.startpage.com/',
+    box: '#q',
     url: (query) => { const url = new URL('https://www.startpage.com/do/search'); url.searchParams.set('q', query); return url; },
     results: '.w-gl .result a.result-title[href]',
     // Its results render after the page loads, sometimes six seconds later.
@@ -30,6 +35,8 @@ export const SEARCH_ENGINES: Record<SearchEngineId, SearchEngine> = {
   bing: {
     name: 'Bing',
     host: /(^|\.)bing\.com$/,
+    home: 'https://www.bing.com/',
+    box: '#sb_form_q',
     url: (query) => { const url = new URL('https://www.bing.com/search'); url.searchParams.set('q', query); return url; },
     results: '#b_results h2 a[href], #b_results [role="heading"] a[href], #b_results a[href]:has(h2)',
     readyMs: 4000,
@@ -99,18 +106,47 @@ function searchWith(options: { runtime: ToolRuntime; activeTabId: () => string; 
     const fundingOnly = options.fundingOnly || isFundingDiscoveryRequest(query);
     // Grant-search services are filtered from the links below, not excluded
     // in the query: the -site: operators derail the engines' results.
-    const url = engine.url(fundingSearchQuery(query, fundingOnly, { siteExclusions: false }));
+    const text = fundingSearchQuery(query, fundingOnly, { siteExclusions: false });
+    const url = engine.url(text);
     assertAllowedDestination(url);
+    assertAllowedDestination(engine.home);
     await options.presentAction?.(tabId, 'navigate', options.signal);
     check();
-    try {
-      await options.runtime.navigate(tabId, url.href);
-    } catch (error) {
+    const open = async (destination: string) => {
+      try {
+        await options.runtime.navigate(tabId, destination);
+      } catch (error) {
+        check();
+        if (engineFailure(error)) throw new EngineUnavailable(`${engine.name} could not answer: ${(error as Error).message}`);
+        throw error;
+      }
       check();
-      if (engineFailure(error)) throw new EngineUnavailable(`${engine.name} could not answer: ${(error as Error).message}`);
-      throw error;
+    };
+    // Search the way a person does: open the engine, type the query into its
+    // box with the visible pointer, press Enter. Where the box cannot be used
+    // (a consent screen, a changed page), load the results page directly.
+    const { runtime } = options;
+    let typed = false;
+    if (typeof runtime.type === 'function' && typeof runtime.pressKey === 'function') {
+      await open(engine.home);
+      // No box (a consent screen, a redirect): skip typing at once rather than
+      // waiting for a field that is not there.
+      const boxes = runtime.queryDom ? (await runtime.queryDom(tabId, engine.box).catch(() => ({ matches: 0 }))).matches : 1;
+      check();
+      if (boxes > 0) {
+        try {
+          await runtime.type(tabId, engine.box, text);
+          check();
+          await runtime.pressKey(tabId, 'Enter');
+          typed = true;
+        } catch (error) {
+          check();
+          if ((error as { code?: unknown } | null)?.code === 'BLOCKED_BY_POLICY') throw error;
+        }
+      }
+      check();
     }
-    check();
+    if (!typed) await open(url.href);
     await options.presentAction?.(tabId, 'read_page', options.signal);
     check();
     let page = await options.runtime.readPage(tabId);

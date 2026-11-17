@@ -493,16 +493,27 @@ test('no search key searches Startpage first and reads its direct result links',
       session.defaultSession.protocol.handle('https', (request) => {
         const url = new URL(request.url);
         if (url.hostname !== 'www.startpage.com') return new Response('Unexpected search engine', { status: 404 });
+        // Its home page has the search box the agent types into; Enter
+        // submits to /sp/search, which only typing reaches.
+        if (url.pathname === '/') return new Response('<html><head><title>Startpage</title></head><body><a href="/en/about">About</a><form action="/sp/search" method="get"><input id="q" name="query" type="text" aria-label="Search"></form></body></html>', { headers: { 'Content-Type': 'text/html' } });
         const result = (href: string, title: string) => `<div class="result"><a class="result-title result-link" href="${href}"><h2>${title}</h2></a></div>`;
         return new Response(`<html><head><title>Startpage Search Results</title></head><body><a href="https://www.startpage.com/en/privacy-policy/">Privacy</a><section id="main"><div class="w-gl">${result('https://www.startpage.com/av/proxy?u=x', 'Anonymous view')}${result('https://grantable.co/', 'Grant writing service')}${result(`${base}/one`, 'School grants program')}${result(`${base}/two`, 'School grants application')}</div></section></body></html>`, { headers: { 'Content-Type': 'text/html' } });
       });
     }, { base: source.url });
+    await win.evaluate(() => {
+      const typed: string[] = [];
+      (window as unknown as { __typed: string[] }).__typed = typed;
+      window.bullebrowser.agent.onAddress(({ text }) => typed.push(text));
+    });
     await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
     await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
     const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
-    expect(tabs.some((tab) => tab.url.startsWith('https://www.startpage.com/do/search'))).toBe(true);
+    // The query was typed into the box and submitted, not loaded as a URL.
+    expect(tabs.some((tab) => tab.url.startsWith('https://www.startpage.com/sp/search?query='))).toBe(true);
+    // The address bar showed the agent typing where it went.
+    expect(await win.evaluate(() => (window as unknown as { __typed: string[] }).__typed)).toContain('www.startpage.com');
     expect(tabs.some((tab) => /(^|\.)grantable\.co$/.test(new URL(tab.url).hostname))).toBe(false);
   } finally { await close(); await source.close(); }
 });
