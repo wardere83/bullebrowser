@@ -202,11 +202,21 @@ describe('grounding a chat in the active organization', () => {
           query: 'workforce',
           levels: ['federal'],
           statuses: ['active'],
+          kinds: ['grant'],
           place: { country: 'US', region: 'NJ', county: 'Essex', city: 'Newark' },
         }),
         organization: { country: 'US', region: 'NJ', county: 'Essex', city: 'Newark' },
         profileTerms: [{ term: 'training', field: 'programs' }],
       }),
+    );
+  });
+
+  it('searches contract solicitations only when asked for them', async () => {
+    const parts = sources();
+    const grounding = await ground(parts, identity(organization({ documentAnalysisAt: 5, liveFundingSearchAt: 6 })));
+    await tool(grounding, 'funding_search_opportunities').execute({ query: 'janitorial', kinds: ['contract_solicitation'] });
+    expect(parts.opportunities.search).toHaveBeenCalledWith(
+      expect.objectContaining({ filters: expect.objectContaining({ kinds: ['contract_solicitation'] }) }),
     );
   });
 

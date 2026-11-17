@@ -786,7 +786,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   const referenceNote = referenceBlocks.length > 0 ? `\n\n${REFERENCE_NOTE}` : '';
 
   const system =
-    `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${browserTask(input.browserTask)?.instruction ?? ''}\n${input.browserTask ? 'The user has already answered the short clarifying question. Begin real browsing now. Use visible tabs as the work surface; leave viable options open and the strongest match selected. Limit the final chat response to a short outcome and essential caveats, without pasted page text.' : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
+    `${input.systemPrompt}\n\n${research.enabled ? research.instructions : ''}\n\n${browserTask(input.browserTask)?.instruction ?? ''}\n${input.browserTask ? 'The user has already answered the short clarifying question. Begin real browsing now. Browse visibly, as a person would: click through each site in the current tab so the user can follow the cursor, and keep the strongest match open and selected. Limit the final chat response to a short outcome and essential caveats, without pasted page text.' : ''}\n\n${PRODUCT_IDENTITY_INSTRUCTIONS}\n\n${TERMINOLOGY_INSTRUCTIONS}\n\n` +
     'Respect destination policy blocks. Never bypass them through alternate URLs, redirects or fallbacks, ' +
     'even if earlier conversation history did so. Use web_search for discovery. ' +
     'If search is unavailable, explain the failure or inspect an allowed source supplied by the user.\n\n' +
@@ -823,9 +823,13 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   // Adaptive thinking lets the model reason between tool calls, which markedly
   // improves multi-step browsing. Supported on the Opus/Sonnet tiers but not on
   // Haiku, so gate on the model. When on, give max_tokens extra headroom since
-  // thinking tokens count against it.
+  // thinking tokens count against it. A reply the limit cuts off inside a tool
+  // call is asked again with more room, up to the ceiling.
   const supportsThinking = !input.model.startsWith('claude-haiku');
-  const maxTokens = supportsThinking ? 8192 : MAX_TOKENS_PER_TURN;
+  let maxTokens = supportsThinking ? 16000 : MAX_TOKENS_PER_TURN;
+  const maxTokensCeiling = supportsThinking ? 32000 : 16000;
+  // Told to the model with the next tool results when a call was cut off.
+  let truncatedNote = '';
   const thinking: Anthropic.ThinkingConfigParam | undefined = supportsThinking
     ? { type: 'adaptive' }
     : undefined;
@@ -893,6 +897,24 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
         }
       }
     });
+
+    // The output limit cut a tool call off before its input was complete, so it
+    // never ran. That used to end the task with "Unexpected end of JSON input".
+    if (response.truncatedToolCalls) {
+      const ran = response.content.some((block) => block.type === 'tool_use');
+      if (!ran && maxTokens < maxTokensCeiling) {
+        // Nothing happened in the browser: ask the same turn again with more room.
+        maxTokens = Math.min(maxTokensCeiling, maxTokens * 2);
+        onStep({ type: 'thinking', detail: 'Planning the next step…' });
+        continue;
+      }
+      truncatedNote = TRUNCATED_CALL_NOTE;
+      if (!ran) {
+        appendUserNote(messages, TRUNCATED_CALL_NOTE);
+        truncatedNote = '';
+        continue;
+      }
+    }
 
     // The product's wording is applied to the text itself, before the identity
     // check: that check ends the run whenever it changes anything, and a
@@ -967,7 +989,8 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       toolResults.push(toAnthropicToolResult(toolUse.id, outcomes[index]!));
     }
 
-    messages.push({ role: 'user', content: toolResults });
+    messages.push({ role: 'user', content: truncatedNote ? [...toolResults, { type: 'text', text: truncatedNote }] : toolResults });
+    truncatedNote = '';
   }
 
   if (!terminalAnswer) {
@@ -978,6 +1001,21 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   // Once more over the whole answer: a reply continued after the length limit
   // can split a phrase between two turns.
   return applyTerminology(finalText) || NO_ANSWER;
+}
+
+const TRUNCATED_CALL_NOTE =
+  'Your last tool call was cut off at the length limit before its input was complete, so it did not run. ' +
+  'Send it again if it is still needed, keeping its input short.';
+
+/** Add a note to the last user turn, or start one, so turns keep alternating. */
+function appendUserNote(messages: Anthropic.MessageParam[], note: string): void {
+  const last = messages[messages.length - 1];
+  if (last?.role !== 'user') {
+    messages.push({ role: 'user', content: note });
+    return;
+  }
+  const blocks: Anthropic.ContentBlockParam[] = typeof last.content === 'string' ? [{ type: 'text', text: last.content }] : last.content;
+  last.content = [...blocks, { type: 'text', text: note }];
 }
 
 // Shrink tool results from all but the last few tool-result turns, in place.

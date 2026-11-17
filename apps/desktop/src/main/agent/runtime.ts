@@ -305,9 +305,14 @@ export class DesktopToolRuntime implements ToolRuntime {
           await evalPage<void>(
             frame,
             this.prelude(wc)(frame, target),
+            // The marked element can also vanish during CLICK_FN's own dwell,
+            // which rejects rather than throws: retry the target then too. It
+            // rejects only before pressing, so nothing is clicked twice.
             `(function (t) {
-              try { return (${CLICK_FN.toString()})(${JSON.stringify(spot.ref)}); }
-              catch (e) { return (${CLICK_FN.toString()})(t); }
+              var click = ${CLICK_FN.toString()};
+              var retry = function (e) { if (e && /cancelled/.test(e.message)) throw e; return click(t); };
+              try { return Promise.resolve(click(${JSON.stringify(spot.ref)})).catch(retry); }
+              catch (e) { return retry(e); }
             })(${JSON.stringify(target.replace(/^\s*@\d+\.(\d+)\s*$/, '@$1'))})`,
           );
         } catch (e) {
@@ -366,7 +371,7 @@ export class DesktopToolRuntime implements ToolRuntime {
         return new Promise(function (resolve, reject) { setTimeout(function () {
           if (window.__bbCancelledRun === window.__bbRunId) return reject(new Error('cancelled'));
           resolve(__bb.Select(__bb.FindField(t), o));
-        }, 150); });
+        }, window.__bbDwell ? window.__bbDwell() : 150); });
       })(${JSON.stringify(t)}, ${JSON.stringify(option)})`,
     );
     return { matched: value };

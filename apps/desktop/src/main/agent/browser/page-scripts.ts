@@ -502,7 +502,7 @@ export const AGENT_CURSOR = `
         var cursorStyle =
           ':host{all:initial}' +
           '.ptr{position:fixed;width:22px;height:22px;margin:-2px 0 0 -2px;' +
-            'transition:transform .15s cubic-bezier(.22,1,.36,1);will-change:transform;' +
+            'transition:transform .45s cubic-bezier(.45,.05,.25,1);will-change:transform;' +
             'filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}' +
           '.ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;' +
             'border:2px solid #20BAD1;opacity:0;pointer-events:none}' +
@@ -596,6 +596,12 @@ export const AGENT_CURSOR = `
     window.__bbToastTimer = setTimeout(function () { toast.hidden = true; }, 1800);
   };
 
+  // How long an action waits once the pointer starts moving: long enough for
+  // its glide to land on the target, so the user sees where it went first.
+  window.__bbDwell = function () {
+    return window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 450;
+  };
+
   // Move the pointer to a viewport point, no element involved.
   window.__bbCursorTo = function (x, y) {
     window.__bbCursor(null, { at: { x: x, y: y }, halo: false });
@@ -615,6 +621,8 @@ declare const __bb: {
 };
 type PageWindow = Window & {
   __bbCursor(el: Element | null, opts?: Record<string, unknown>): void;
+  /** Pause for the pointer's glide; absent where the cursor script is not loaded. */
+  __bbDwell?(): number;
 };
 
 export interface ClickSpot {
@@ -663,26 +671,36 @@ export function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
       const host = top ? (top.getRootNode() as ShadowRoot).host : null;
       const onTop = !!top && (top === node || node.contains(top) || top.contains(node) || (!!host && node.contains(host)));
       resolve({ matched: label ? `${tag} "${label}"` : tag, x, y, onTop, ref: `[data-bb-click="${token}"]` });
-    }, 150);
+    }, w.__bbDwell?.() ?? 150);
   });
 }
 
 export function CLICK_FN(target: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<string> {
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   const w = window as unknown as PageWindow;
-  const node = __bb.FindClickable(target);
-  node.scrollIntoView({ block: 'center', inline: 'nearest' });
+  const first = __bb.FindClickable(target);
+  first.scrollIntoView({ block: 'center', inline: 'nearest' });
   // Paint the cursor first, then dwell briefly before actually clicking.
   // Without the pause the click fires in the same frame the cursor appears, so
   // the page changes before the user's eye has anywhere to land — the whole
   // point is to show them where it went.
-  w.__bbCursor(node, { click: true, label: /^@/.test(target) ? target : undefined });
-  const label = __bb.Label(node).slice(0, 80);
-  const tag = node.tagName.toLowerCase();
+  w.__bbCursor(first, { click: true, label: /^@/.test(target) ? target : undefined });
   return new Promise<string>((resolve, reject) => {
     setTimeout(() => {
-      // The full press a mouse makes, not a bare click(): menus, date pickers
       if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) return reject(new Error('cancelled'));
+      // A page can re-render during the dwell and replace the element; press
+      // the one now on the page, as CLICK_SPOT_FN does, not a detached node.
+      let node = first;
+      if (!node.isConnected) {
+        try {
+          node = __bb.FindClickable(target);
+        } catch (e) {
+          return reject(e);
+        }
+      }
+      const label = __bb.Label(node).slice(0, 80);
+      const tag = node.tagName.toLowerCase();
+      // The full press a mouse makes, not a bare click(): menus, date pickers
       // and many design-system buttons act on pointerdown/mousedown and
       // ignore a lone click event.
       const r = node.getBoundingClientRect();
@@ -707,14 +725,14 @@ export function CLICK_FN(target: string, actionId = (window as unknown as { __bb
       }
       node.click();
       resolve(label ? `${tag} "${label}"` : tag);
-    }, 150);
+    }, w.__bbDwell?.() ?? 150);
   });
 }
 
 export async function TYPE_FN(target: string, text: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<{ matched: string; native: boolean }> {
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   const w = window as unknown as PageWindow;
-  const html = __bb.FindField(target);
+  let html = __bb.FindField(target);
   __bb.GuardField(html);
   const changes = ((window as unknown as { __bbBeforeValues?: Map<HTMLElement, string> }).__bbBeforeValues ??= new Map());
   if (!changes.has(html)) changes.set(html, String((html as HTMLInputElement).value ?? html.textContent ?? ''));
@@ -723,8 +741,15 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
 
   html.scrollIntoView({ block: 'center' });
   w.__bbCursor(html, { click: true, hold: 4000, label: /^@/.test(target) ? target : undefined });
-  await new Promise<void>((resolve) => setTimeout(resolve, 150));
+  await new Promise<void>((resolve) => setTimeout(resolve, w.__bbDwell?.() ?? 150));
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
+  // A page can re-render during the dwell and replace the field; type into
+  // the one now on the page, not a detached node.
+  if (!html.isConnected) {
+    html = __bb.FindField(target);
+    __bb.GuardField(html);
+    if (!changes.has(html)) changes.set(html, String((html as HTMLInputElement).value ?? html.textContent ?? ''));
+  }
 
   // A dropdown takes a choice, not keystrokes. Writing .value through the
   // input setter threw "Illegal invocation" on a <select>.

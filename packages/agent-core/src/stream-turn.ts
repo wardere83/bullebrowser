@@ -9,7 +9,13 @@ export class StreamInterruptedError extends Error {
     this.name = 'StreamInterruptedError';
   }
 }
-type Turn = Pick<Anthropic.Message, 'content' | 'stop_reason'>;
+type Turn = Pick<Anthropic.Message, 'content' | 'stop_reason'> & {
+  /**
+   * Tool calls the output limit cut off before their input was complete. They
+   * were never dispatched and are left out of `content`.
+   */
+  truncatedToolCalls?: number;
+};
 /** Consume complete content blocks, never partial JSON. Private thinking stays in the provider transcript. */
 export async function consumeTurn(
   source: AsyncIterable<Anthropic.RawMessageStreamEvent> | Turn,
@@ -20,9 +26,15 @@ export async function consumeTurn(
   const content: Anthropic.ContentBlock[] = [];
   const json = new Map<number, string>();
   const dispatched = new Set<number>();
+  // Calls whose input never became valid JSON, with the parse error.
+  const incomplete = new Map<number, unknown>();
   let stop_reason: Anthropic.Message['stop_reason'] = null;
   for await (const event of source) {
     if (event.type === 'content_block_start') {
+      // Only the last block can be cut off. A block after an unparseable call
+      // means the stream is malformed: stop before a call that may depend on
+      // it (a click after a failed switch_tab) runs.
+      if (incomplete.size) throw incomplete.values().next().value;
       content[event.index] = structuredClone(event.content_block) as Anthropic.ContentBlock;
     } else if (event.type === 'content_block_delta') {
       const block = content[event.index];
@@ -52,14 +64,21 @@ export async function consumeTurn(
         const raw = json.get(event.index);
         // A call with no arguments streams nothing, or one empty delta: its
         // input is the {} the block started with. Anything else must parse;
-        // whitespace alone is malformed and still throws.
-        if (raw) block.input = JSON.parse(raw);
+        // whitespace alone is malformed. Input that does not parse is never
+        // dispatched: the output limit may have cut it off mid-call.
+        if (raw) {
+          try { block.input = JSON.parse(raw); } catch (error) { incomplete.set(event.index, error); continue; }
+        }
         if (!dispatched.has(event.index)) { dispatched.add(event.index); onTool(block); }
       }
     } else if (event.type === 'message_delta') stop_reason = event.delta.stop_reason;
   }
+  // Only the output limit explains a call that never finished. Anything else
+  // is a malformed stream, and still fails closed.
+  if (incomplete.size && stop_reason !== 'max_tokens') throw incomplete.values().next().value;
   if (!stop_reason) throw new StreamInterruptedError();
-  return { content, stop_reason };
+  if (!incomplete.size) return { content, stop_reason };
+  return { content: content.filter((_, index) => !incomplete.has(index)), stop_reason, truncatedToolCalls: incomplete.size };
 }
 
 /** Dispatch immediately, retaining order: an active-tab mutation is a barrier. */
