@@ -955,7 +955,12 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
         const verified = await dispatch.enqueue({ type: 'tool_use', id: `verify-${turn}`, name: 'read_page', input: { tabId: context.activeTabId } });
         if (verified.isError) throw new Error('Final page verification failed; the task cannot be reported as complete.');
         planner.beginSynthesis();
-        messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\nNow synthesize the result with citations to pages read.` });
+        // Keep the turn it just wrote, so the request below reads as a reply
+        // and can draw on it. The answer itself starts over: a draft continued
+        // past the length limit would otherwise be glued to its front.
+        if (turnText) messages.push({ role: 'assistant', content: response.content });
+        finalText = '';
+        messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\n${FINAL_ANSWER_REQUEST}` });
         continue;
       }
 
@@ -1002,6 +1007,13 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
   // can split a phrase between two turns.
   return applyTerminology(finalText) || NO_ANSWER;
 }
+
+// Only the reply to this request becomes the answer. Asked to "synthesize",
+// the model pointed back at results it wrote in an earlier turn ("The JSON
+// object above is the verified result"), leaving the answer without them.
+const FINAL_ANSWER_REQUEST =
+  'Now write the final answer in full, citing the pages read. The user sees only this reply, so include every ' +
+  'result in it, including any JSON or list that was asked for, and do not refer to earlier messages.';
 
 const TRUNCATED_CALL_NOTE =
   'Your last tool call was cut off at the length limit before its input was complete, so it did not run. ' +
@@ -1181,7 +1193,10 @@ async function runOpenAiTurns(args: {
         const verified = await executeToolCall(`verify-${turn}`, 'read_page', { tabId: context.activeTabId }, context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
         if (verified.isError) throw new Error('Final page verification failed; the task cannot be reported as complete.');
         planner.beginSynthesis();
-        messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\nNow synthesize the result with citations to pages read.` });
+        // As for Claude: keep the reply it drew the result from, start the answer over.
+        if (turnText) messages.push({ role: 'assistant', content: turnText });
+        finalText = '';
+        messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\n${FINAL_ANSWER_REQUEST}` });
         continue;
       }
 

@@ -119,6 +119,17 @@ describe('runAgent with ChatGPT', () => {
     expect(steps.some((step) => step.type === 'plan')).toBe(true);
   });
 
+  it('gives the synthesizer the executor reply and asks for the whole answer', async () => {
+    fetchMock.mockResolvedValueOnce(reply(assistantText('["Read source"]')))
+      .mockResolvedValueOnce(reply(assistantText('{"facts":[{"key":"deadline"}]}')))
+      .mockResolvedValueOnce(reply(assistantText('Deadline found. {"facts":[{"key":"deadline"}]}')));
+    await runAgent({ planning: true, apiKey: 'test', model: 'gpt-4o', systemPrompt: '', history: [], userMessage: 'Find the deadline', context: makeContext(), onStep: () => {} });
+    const messages = JSON.parse(fetchMock.mock.calls[2]![1].body).messages as Array<{ role: string; content: string }>;
+    const [assistant, request] = messages.slice(-2);
+    expect(assistant).toMatchObject({ role: 'assistant', content: '{"facts":[{"key":"deadline"}]}' });
+    expect(request!.content).toMatch(/final answer in full[\s\S]*do not refer to earlier messages/);
+  });
+
   it('protects unexpected self-identification before emitting the provider reply', async () => {
     fetchMock.mockResolvedValueOnce(reply(assistantText('I am ChatGPT, built by OpenAI.')));
     const steps: AgentStep[] = [];
