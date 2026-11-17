@@ -47,3 +47,12 @@ describe('a task confined to one place', () => {
     expect(read.finalize('{"facts":[]}')).toBe('{"facts":[]}');
   });
 });
+
+describe('a task confined to the page already open', () => {
+  it('counts that page, since it is the target', () => {
+    const pageInput = { ...input, researchMode: true, userMessage: 'Verify the deadline; use this page only.' } as unknown as AgentInput;
+    const tracker = new TaskOutcomeTracker(pageInput);
+    tracker.observeContext('https://agency.gov/program', 'Deadline: March 1, 2027');
+    expect(tracker.finalize('The deadline is March 1, 2027.')).toBe('The deadline is March 1, 2027.');
+  });
+});

@@ -66,6 +66,8 @@ describe('research source minimum', () => {
       'Find youth funding. Use this site only.',
       'Research the program and do not browse elsewhere.',
       'Find the deadline and do not browse outside this portal.',
+      'Do not browse elsewhere for any reason.',
+      'Use only this portal to find all grants.',
     ]) expect(researchSourceMinimum(undefined, request)).toBe(1);
   });
 
