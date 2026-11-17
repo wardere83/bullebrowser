@@ -463,7 +463,9 @@ for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
       await app.evaluate(({ session }, { base, layout }) => {
         process.env.BRAVE_SEARCH_API_KEY = '';
         const tracked = (url: string) => `https://www.bing.com/ck/a?u=a1${Buffer.from(url).toString('base64url')}&ntb=1`;
-        session.defaultSession.protocol.handle('https', () => new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://\u0064uckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
+        // These layouts are Bing's. Startpage is tried first: send it on to Bing
+        // so the agent falls back at once.
+        session.defaultSession.protocol.handle('https', (request) => new URL(request.url).hostname === 'www.startpage.com' ? Response.redirect('https://www.bing.com/search?q=fallback', 302) : new Response(`<html><head>${layout === 'contents' ? '<style>h2 a { display: contents; }</style>' : ''}<title>Search results</title></head><body><a href="https://www.microsoft.com/">Not a search result</a><ol id="b_results"><li class="b_ad"><h2><a href="https://advertiser.example/">Sponsored funding</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://\u0064uckduckgo.com/')}">Blocked</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://www.instrumentl.com/grants')}">Grant search software</a></h2></li><li class="b_algo"><h2><a href="${tracked('https://grantable.co/')}">Grant writing service</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/one`)}">School grants program</a></h2></li><li class="b_algo"><h2><a href="${tracked(`${base}/two`)}">School grants application</a></h2></li></ol>${layout === 'delayed' ? `<script>const links = [...document.querySelectorAll('#b_results a')].map(a => ({a, href: a.href}));links.forEach(({a}) => a.href='https://www.bing.com/#pending');setTimeout(() => links.forEach(({a,href}) => a.href=href), 3500);</script>` : ''}</body></html>`.replaceAll('class="b_algo"', layout === 'semantic' ? 'class="result-card"' : 'class="b_algo"'), { headers: { 'Content-Type': 'text/html' } }));
       }, { base: source.url, layout });
       await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
@@ -481,6 +483,29 @@ for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
   });
 
 }
+
+test('no search key searches Startpage first and reads its direct result links', async () => {
+  const source = await fixture();
+  const { app, win, close } = await launch();
+  try {
+    await app.evaluate(({ session }, { base }) => {
+      process.env.BRAVE_SEARCH_API_KEY = '';
+      session.defaultSession.protocol.handle('https', (request) => {
+        const url = new URL(request.url);
+        if (url.hostname !== 'www.startpage.com') return new Response('Unexpected search engine', { status: 404 });
+        const result = (href: string, title: string) => `<div class="result"><a class="result-title result-link" href="${href}"><h2>${title}</h2></a></div>`;
+        return new Response(`<html><head><title>Startpage Search Results</title></head><body><a href="https://www.startpage.com/en/privacy-policy/">Privacy</a><section id="main"><div class="w-gl">${result('https://www.startpage.com/av/proxy?u=x', 'Anonymous view')}${result('https://grantable.co/', 'Grant writing service')}${result(`${base}/one`, 'School grants program')}${result(`${base}/two`, 'School grants application')}</div></section></body></html>`, { headers: { 'Content-Type': 'text/html' } });
+      });
+    }, { base: source.url });
+    await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+    await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
+    const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+    expect(tabs.some((tab) => tab.url.startsWith('https://www.startpage.com/do/search'))).toBe(true);
+    expect(tabs.some((tab) => /(^|\.)grantable\.co$/.test(new URL(tab.url).hostname))).toBe(false);
+  } finally { await close(); await source.close(); }
+});
 
 test('search-key settings are visible, masked and separate from model keys', async () => {
   const { win, close } = await launch();

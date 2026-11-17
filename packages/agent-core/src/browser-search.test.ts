@@ -20,7 +20,20 @@ function fixture(url = 'https://www.bing.com/search?q=grants') {
   const waitFor = vi.fn(async () => ({ matched: false }));
   const runtime = { navigate, readPage, listLinks, waitFor } as unknown as ToolRuntime;
   const controller = new AbortController();
-  return { navigate, readPage, listLinks, waitFor, controller, search: browserSearch({ runtime, activeTabId: () => 'tab', signal: controller.signal }) };
+  return { navigate, readPage, listLinks, waitFor, controller, search: browserSearch({ runtime, activeTabId: () => 'tab', signal: controller.signal, engines: ['bing'] }) };
+}
+
+// The default order: Startpage first, Bing when Startpage cannot answer. The
+// page shown is whatever the last navigation asked for, unless `redirect` says
+// where an engine sends the browser instead.
+function engines(links: (host: string) => { text: string; href: string }[], redirect: (url: string) => string = (url) => url) {
+  let current = 'about:blank';
+  const navigate = vi.fn(async (_tabId: string, url: string) => { current = redirect(url); return { url: current, title: 'Search' }; });
+  const readPage = vi.fn(async () => ({ url: current, title: 'Search', text: 'Results' }));
+  const listLinks = vi.fn(async () => links(new URL(current).hostname));
+  const waitFor = vi.fn(async () => ({ matched: false }));
+  const runtime = { navigate, readPage, listLinks, waitFor } as unknown as ToolRuntime;
+  return { navigate, listLinks, search: browserSearch({ runtime, activeTabId: () => 'tab', signal: new AbortController().signal }) };
 }
 it('searches visibly without a key and filters prohibited or duplicate result URLs', async () => {
   const f = fixture();
@@ -206,6 +219,44 @@ it('does not blame grant-service exclusions when only Bing placeholders are pres
     { text: 'Loading program', href: tracked('https://www.bing.com/search?q=program') },
   ]);
   const result = expect(f.search('Seattle grants', 2)).rejects.toThrow('The search page returned no usable source links');
+  await vi.runAllTimersAsync();
+  await result;
+});
+
+it('searches Startpage first, which returns its results as direct links', async () => {
+  const f = engines((host) => host === 'www.startpage.com'
+    ? [{ text: 'Anonymous view', href: 'https://www.startpage.com/av/proxy?u=x' }, { text: 'NJEDA programs', href: 'https://www.njeda.gov/activeprograms/' }]
+    : []);
+  const result = await f.search('New Jersey small business grants', 3);
+  expect(result).toMatchObject({ engine: 'Startpage', results: [{ url: 'https://www.njeda.gov/activeprograms/' }] });
+  expect(f.navigate).toHaveBeenCalledOnce();
+  const destination = new URL(f.navigate.mock.calls[0]![1]);
+  expect(destination.origin + destination.pathname).toBe('https://www.startpage.com/do/search');
+  expect(destination.searchParams.get('q')).toBe('New Jersey small business grants official grant program eligibility');
+});
+
+it('falls back to Bing when Startpage shows a challenge instead of results', async () => {
+  vi.useFakeTimers();
+  const f = engines((host) => host === 'www.bing.com' ? [{ text: 'Program', href: tracked('https://agency.gov/program') }] : []);
+  const result = f.search('school grants', 3);
+  await vi.runAllTimersAsync();
+  expect(await result).toMatchObject({ engine: 'Bing', results: [{ url: 'https://agency.gov/program' }] });
+  expect(f.navigate.mock.calls.map(([, url]) => new URL(url).hostname)).toEqual(['www.startpage.com', 'www.bing.com']);
+});
+
+it('falls back when Startpage redirects to another site, but never past a blocked one', async () => {
+  const away = engines((host) => host === 'www.bing.com' ? [{ text: 'Program', href: tracked('https://agency.gov/program') }] : [],
+    (url) => (url.includes('startpage') ? 'https://www.startpage.com.example/verify' : url));
+  expect(await away.search('school grants', 3)).toMatchObject({ engine: 'Bing' });
+  const blocked = engines(() => [], (url) => (url.includes('startpage') ? 'https://lite.\u0064uckduckgo.com/' : url));
+  await expect(blocked.search('school grants', 3)).rejects.toThrow('blocked');
+  expect(blocked.navigate).toHaveBeenCalledOnce();
+});
+
+it('reports excluded grant-search vendors when no engine found anything else', async () => {
+  vi.useFakeTimers();
+  const f = engines((host) => host === 'www.startpage.com' ? [{ text: 'Grants', href: 'https://grantable.co/' }] : []);
+  const result = expect(f.search('school grants', 3)).rejects.toThrow('Grant-search services are excluded');
   await vi.runAllTimersAsync();
   await result;
 });
