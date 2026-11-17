@@ -350,6 +350,32 @@ describe('runAgent Claude tool-use loop', () => {
     expect(JSON.stringify(last.messages.at(-1)!.content)).toMatch(/cut off at the length limit/);
   });
 
+  it('asks a planned run for the whole answer after the final check, keeping what it wrote', async () => {
+    createMock
+      // The plan, then a reply that ends the work, then the final answer.
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('["Read the listing"]')] })
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('{"facts":[{"key":"deadline"}]}')] })
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Deadline: March 1. {"facts":[{"key":"deadline"}]}')] });
+
+    const out = await runAgent({
+      apiKey: 'test-key',
+      model: DEFAULT_MODEL,
+      systemPrompt: 'You are the BulleBrowser agent.',
+      history: [],
+      userMessage: 'what is the deadline?',
+      planning: true,
+      context: makeContext(),
+      onStep: () => {},
+    });
+
+    expect(out).toContain('"facts"');
+    const last = createMock.mock.calls.at(-1)![0] as { messages: Array<{ role: string; content: unknown }> };
+    const [assistant, request] = last.messages.slice(-2);
+    expect(assistant!.role).toBe('assistant');
+    expect(JSON.stringify(assistant!.content)).toContain('facts');
+    expect(String(request!.content)).toMatch(/final answer in full[\s\S]*do not refer to earlier messages/);
+  });
+
   it('continues and accumulates a reply that was cut off at the token limit', async () => {
     createMock
       .mockResolvedValueOnce({
