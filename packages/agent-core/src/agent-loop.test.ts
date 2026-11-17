@@ -376,6 +376,27 @@ describe('runAgent Claude tool-use loop', () => {
     expect(String(request!.content)).toMatch(/final answer in full[\s\S]*do not refer to earlier messages/);
   });
 
+  it('starts the answer over after the final check, without a draft cut off before it', async () => {
+    createMock
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('["Read the listing"]')] })
+      .mockResolvedValueOnce({ stop_reason: 'max_tokens', content: [textBlock('{"facts":[{"key":')] })
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('"deadline"}]}')] })
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Final: {"facts":[{"key":"deadline"}]}')] });
+
+    const out = await runAgent({
+      apiKey: 'test-key',
+      model: DEFAULT_MODEL,
+      systemPrompt: 'You are the BulleBrowser agent.',
+      history: [],
+      userMessage: 'what is the deadline?',
+      planning: true,
+      context: makeContext(),
+      onStep: () => {},
+    });
+
+    expect(out).toBe('Final: {"facts":[{"key":"deadline"}]}');
+  });
+
   it('continues and accumulates a reply that was cut off at the token limit', async () => {
     createMock
       .mockResolvedValueOnce({

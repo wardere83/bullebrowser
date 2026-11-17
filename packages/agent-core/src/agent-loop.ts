@@ -955,8 +955,11 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
         const verified = await dispatch.enqueue({ type: 'tool_use', id: `verify-${turn}`, name: 'read_page', input: { tabId: context.activeTabId } });
         if (verified.isError) throw new Error('Final page verification failed; the task cannot be reported as complete.');
         planner.beginSynthesis();
-        // Keep the turn it just wrote, so the request below reads as a reply.
+        // Keep the turn it just wrote, so the request below reads as a reply
+        // and can draw on it. The answer itself starts over: a draft continued
+        // past the length limit would otherwise be glued to its front.
         if (turnText) messages.push({ role: 'assistant', content: response.content });
+        finalText = '';
         messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\n${FINAL_ANSWER_REQUEST}` });
         continue;
       }
@@ -1190,6 +1193,9 @@ async function runOpenAiTurns(args: {
         const verified = await executeToolCall(`verify-${turn}`, 'read_page', { tabId: context.activeTabId }, context, policy, onStep, gate, extraTools, { onRecord: input.onToolRecord });
         if (verified.isError) throw new Error('Final page verification failed; the task cannot be reported as complete.');
         planner.beginSynthesis();
+        // As for Claude: keep the reply it drew the result from, start the answer over.
+        if (turnText) messages.push({ role: 'assistant', content: turnText });
+        finalText = '';
         messages.push({ role: 'user', content: `Final verification observation:\n${verified.text}\n${FINAL_ANSWER_REQUEST}` });
         continue;
       }

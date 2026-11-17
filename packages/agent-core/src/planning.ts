@@ -80,7 +80,7 @@ export class GoalPlanner {
 }
 
 async function requestPlan(input: AgentInput, diagnostics: string[]): Promise<string> {
-  const system = `${input.systemPrompt}\n${UNTRUSTED_RULES}\nCreate a short public task plan. Return only a JSON array of one to eight step-goal strings. Do not provide private reasoning, factual findings, or tool calls. Preserve the user's constraints. Make each goal a browser step that tool calls achieve (search, open, read, compare, verify); extracting, summarizing and reporting belong to the final answer, not to goals, since a goal is completed only after a new tool observation.`;
+  const system = `${input.systemPrompt}\n${UNTRUSTED_RULES}\nCreate a short public task plan. Return only a JSON array of one to eight step-goal strings. Do not provide private reasoning, factual findings, or tool calls. Preserve the user's constraints. Make each goal a browser step that tool calls achieve (search, open, read, verify); extracting, comparing, summarizing and reporting belong to the final answer, not to goals, since a goal is completed only after a new tool observation.`;
   const message = `${input.userRequest ?? input.userMessage}\n${wrapUntrusted(JSON.stringify({ priorConversation: input.history, failures: diagnostics.slice(-8) }), 'planning_context')}`;
   if (providerFor(input.model) === 'openai') {
     const result = await createOpenAiCompletion(input.apiKey!, { model: 'gpt-4o', messages: [{ role: 'system', content: system }, { role: 'user', content: message }], max_tokens: 1024 }, input.context.signal, undefined, input.modelFetch);
