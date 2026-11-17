@@ -23,17 +23,30 @@ const SINGLE_SCOPE = new RegExp([
   String.raw`\b(?:use|browse|search|stay on|stick to)\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\s+only\b`,
   String.raw`\b(?:do not|don't|never)\s+(?:browse|search|go|navigate)\s+(?:elsewhere|anywhere else|outside\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b)`,
 ].join('|'), 'i');
-const BROAD = /\b(?:each|every|all|any)\b/i;
+const BROAD = /\b(?:each|every|all|any|other|others)\b/i;
 
 /** Whether the user confined the task to one named site, page or directory. */
 export function isSingleScopeRequest(request: string): boolean {
-  const match = request.match(SINGLE_SCOPE);
-  return !!match && !BROAD.test(match[0]);
+  const match = SINGLE_SCOPE.exec(request);
+  if (!match) return false;
+  // Judge the whole clause: "use only this portal or any other official
+  // website" permits several sites even though its start reads as one.
+  const clause = request.slice(match.index).split(/[.;\n]/)[0] ?? match[0];
+  return !BROAD.test(clause);
+}
+
+/** Whether the user asks for a comparison, ignoring "do not compare". */
+function asksToCompare(request: string): boolean {
+  for (const match of request.matchAll(/\bcompar(?:e|es|ing|ison)\b/gi)) {
+    const before = request.slice(Math.max(0, (match.index ?? 0) - 24), match.index);
+    if (!/\b(?:do not|don't|not|no|never|without)\b[^.;\n]*$/i.test(before)) return true;
+  }
+  return false;
 }
 
 export function researchSourceMinimum(task: BrowserTaskId | undefined, request: string): number {
   if (task === 'explore_page') return 1;
-  const comparing = task === 'compare_grants' || /\bcompar(?:e|es|ing|ison)\b/i.test(request);
+  const comparing = task === 'compare_grants' || asksToCompare(request);
   if (comparing) {
     const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
     if (provided.size >= 2) return Math.min(3, provided.size);

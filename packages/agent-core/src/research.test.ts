@@ -79,6 +79,8 @@ describe('research source minimum', () => {
       'Use only the official website of each funder.',
       'Stick to only the county portal.',
       'Use only this list of sites: each funder page.',
+      'Use only this portal or any other official website.',
+      'Use this site only, or other official sources if needed.',
     ]) expect(researchSourceMinimum(undefined, request)).toBe(3);
     expect(researchSourceMinimum('explore_page', 'anything')).toBe(1);
   });
@@ -90,5 +92,8 @@ describe('research source minimum', () => {
     expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x and https://b.org/y')).toBe(2);
     expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x, https://b.org/y and https://c.org/z')).toBe(3);
     expect(researchSourceMinimum('compare_grants', 'Compare youth workforce grants.')).toBe(3);
+    // "Do not compare" is not a comparison.
+    expect(researchSourceMinimum(undefined, 'Find the deadline. Use this page only; do not compare it with other programs.')).toBe(1);
+    expect(researchSourceMinimum(undefined, 'Use only this directory, without comparing programs.')).toBe(1);
   });
 });
