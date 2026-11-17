@@ -2,6 +2,7 @@
 
 import { useT } from '@/lib/i18n';
 import { Icon, type IconName } from './Icon';
+import { keepCase } from './KeepCase';
 import { SampleLabel } from './SampleLabel';
 
 // A picture of the organization profile as the Organization Knowledge Hub
@@ -79,7 +80,7 @@ function Statement({
   return (
     <div className="rounded-2xl border border-line p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">{field}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">{keepCase(field)}</p>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${TONES[tone]}`}
         >

@@ -1,3 +1,4 @@
+import { keepCase } from './KeepCase';
 import { eyebrow, eyebrowRule } from './styles';
 
 // The small uppercase line above a section heading, opened by a short teal
@@ -7,7 +8,8 @@ export function Eyebrow({ children, tone = 'light' }: { children: React.ReactNod
   return (
     <p className={tone === 'dark' ? eyebrow.onDark : eyebrow.onLight}>
       <span aria-hidden="true" className={eyebrowRule} />
-      {children}
+      {/* One flex item, so the text and a kept acronym flow as one line. */}
+      <span>{keepCase(children)}</span>
     </p>
   );
 }

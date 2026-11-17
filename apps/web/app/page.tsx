@@ -7,6 +7,7 @@ import { AppBenefits, AppAudiences } from '@/components/AppBenefits';
 import { ArrowLink } from '@/components/ArrowLink';
 import { BrandFilm } from '@/components/BrandFilm';
 import { Eyebrow } from '@/components/Eyebrow';
+import { keepCase } from '@/components/KeepCase';
 import { Reveal } from '@/components/Reveal';
 import { button, heading, lead } from '@/components/styles';
 import { useT } from '@/lib/i18n';
@@ -83,7 +84,7 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-[1.2fr_1fr] md:py-28">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-ink-secondary">
-              {t('company.eyebrow')}
+              {keepCase(t('company.eyebrow'))}
             </p>
             <h2 className="mt-5 text-3xl font-semibold tracking-tight md:text-4xl">
               {t('company.h2')}
