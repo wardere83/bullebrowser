@@ -85,6 +85,20 @@ describe('streamed tool dispatch', () => {
     await expect(consumeTurn(stream(), dispatch)).rejects.toThrow(SyntaxError);
     expect(dispatch).not.toHaveBeenCalled();
   });
+  it('never runs a call that follows a malformed one', async () => {
+    async function* stream(): AsyncGenerator<Anthropic.RawMessageStreamEvent> {
+      yield { type: 'content_block_start', index: 0, content_block: tool('switch', 'switch_tab') };
+      yield { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"tabId":' } };
+      yield { type: 'content_block_stop', index: 0 };
+      yield { type: 'content_block_start', index: 1, content_block: tool('click', 'click') };
+      yield { type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '{"target":"@3"}' } };
+      yield { type: 'content_block_stop', index: 1 };
+      yield { type: 'message_delta', delta: { stop_reason: 'max_tokens', stop_sequence: null, container: null, stop_details: null }, usage: { output_tokens: 5, input_tokens: null, cache_creation_input_tokens: null, cache_read_input_tokens: null, server_tool_use: null } };
+    }
+    const dispatch = vi.fn();
+    await expect(consumeTurn(stream(), dispatch)).rejects.toThrow(SyntaxError);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
   it('fails closed on truncated or malformed streams', async () => {
     async function* truncated(): AsyncGenerator<Anthropic.RawMessageStreamEvent> {
       yield { type: 'content_block_start', index: 0, content_block: tool('first') };

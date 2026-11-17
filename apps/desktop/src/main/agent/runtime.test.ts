@@ -37,6 +37,17 @@ it('cancels the pending click before the dwell ends', async () => {
   await rejection;
   expect(field.click).not.toHaveBeenCalled();
 });
+it('presses the element on the page when it was replaced during the dwell', async () => {
+  const replacement = { ...field, isConnected: true, click: vi.fn(), dispatchEvent: vi.fn(), focus: vi.fn(), getBoundingClientRect: () => ({ left: 0, top: 0, width: 10, height: 10 }), tagName: 'BUTTON' };
+  const stale = { ...replacement, isConnected: false, click: vi.fn() };
+  const find = vi.fn().mockReturnValueOnce(stale).mockReturnValueOnce(replacement);
+  vi.stubGlobal('__bb', { FindClickable: find, FindField: () => field, GuardField: vi.fn(), Label: () => 'test' });
+  const result = CLICK_FN('#link', 'run-2');
+  await vi.advanceTimersByTimeAsync(500);
+  await result;
+  expect(stale.click).not.toHaveBeenCalled();
+  expect(replacement.click).toHaveBeenCalledOnce();
+});
 it('stops typing without writing remaining characters', async () => {
   const result = TYPE_FN('#input', 'abcdef', 'run-1');
   const rejection = expect(result).rejects.toThrow('cancelled');

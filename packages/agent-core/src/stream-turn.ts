@@ -31,6 +31,10 @@ export async function consumeTurn(
   let stop_reason: Anthropic.Message['stop_reason'] = null;
   for await (const event of source) {
     if (event.type === 'content_block_start') {
+      // Only the last block can be cut off. A block after an unparseable call
+      // means the stream is malformed: stop before a call that may depend on
+      // it (a click after a failed switch_tab) runs.
+      if (incomplete.size) throw incomplete.values().next().value;
       content[event.index] = structuredClone(event.content_block) as Anthropic.ContentBlock;
     } else if (event.type === 'content_block_delta') {
       const block = content[event.index];

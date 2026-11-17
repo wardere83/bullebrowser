@@ -366,7 +366,7 @@ export class DesktopToolRuntime implements ToolRuntime {
         return new Promise(function (resolve, reject) { setTimeout(function () {
           if (window.__bbCancelledRun === window.__bbRunId) return reject(new Error('cancelled'));
           resolve(__bb.Select(__bb.FindField(t), o));
-        }, 150); });
+        }, window.__bbDwell ? window.__bbDwell() : 150); });
       })(${JSON.stringify(t)}, ${JSON.stringify(option)})`,
     );
     return { matched: value };

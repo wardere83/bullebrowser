@@ -678,19 +678,29 @@ export function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
 export function CLICK_FN(target: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<string> {
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   const w = window as unknown as PageWindow;
-  const node = __bb.FindClickable(target);
-  node.scrollIntoView({ block: 'center', inline: 'nearest' });
+  const first = __bb.FindClickable(target);
+  first.scrollIntoView({ block: 'center', inline: 'nearest' });
   // Paint the cursor first, then dwell briefly before actually clicking.
   // Without the pause the click fires in the same frame the cursor appears, so
   // the page changes before the user's eye has anywhere to land — the whole
   // point is to show them where it went.
-  w.__bbCursor(node, { click: true, label: /^@/.test(target) ? target : undefined });
-  const label = __bb.Label(node).slice(0, 80);
-  const tag = node.tagName.toLowerCase();
+  w.__bbCursor(first, { click: true, label: /^@/.test(target) ? target : undefined });
   return new Promise<string>((resolve, reject) => {
     setTimeout(() => {
-      // The full press a mouse makes, not a bare click(): menus, date pickers
       if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) return reject(new Error('cancelled'));
+      // A page can re-render during the dwell and replace the element; press
+      // the one now on the page, as CLICK_SPOT_FN does, not a detached node.
+      let node = first;
+      if (!node.isConnected) {
+        try {
+          node = __bb.FindClickable(target);
+        } catch (e) {
+          return reject(e);
+        }
+      }
+      const label = __bb.Label(node).slice(0, 80);
+      const tag = node.tagName.toLowerCase();
+      // The full press a mouse makes, not a bare click(): menus, date pickers
       // and many design-system buttons act on pointerdown/mousedown and
       // ignore a lone click event.
       const r = node.getBoundingClientRect();
@@ -731,7 +741,7 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
 
   html.scrollIntoView({ block: 'center' });
   w.__bbCursor(html, { click: true, hold: 4000, label: /^@/.test(target) ? target : undefined });
-  await new Promise<void>((resolve) => setTimeout(resolve, 150));
+  await new Promise<void>((resolve) => setTimeout(resolve, w.__bbDwell?.() ?? 150));
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
 
   // A dropdown takes a choice, not keystrokes. Writing .value through the
