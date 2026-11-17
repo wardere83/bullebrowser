@@ -304,7 +304,7 @@ export async function groundChat(
       description:
         'Searches official funding sources (federal, state, city, county and international) and returns listings with the status the app worked out for each (Active, Expired or Unverified) and the reason. ' +
         'Repeat each status exactly as returned. Every keyword in `query` must appear in a listing, so use one to three plain words. The organization\'s place is applied for you. ' +
-        'Funding means business grants and nonprofit grants alike: set `applicantTypes` only when the user or the approved profile fixes who is applying, and search for grants rather than government contracts unless the user asks for contracts.',
+        'Funding means business grants and nonprofit grants alike: set `applicantTypes` only when the user or the approved profile fixes who is applying, and leave `kinds` at its default (grants) unless the user asks for contracts.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -312,6 +312,11 @@ export async function groundChat(
           levels: { type: 'array', items: { type: 'string', enum: Object.keys(GEO_LEVEL_LABELS) } },
           categories: { type: 'array', items: { type: 'string', enum: Object.keys(FUNDING_CATEGORY_LABELS) } },
           applicantTypes: { type: 'array', items: { type: 'string', enum: Object.keys(APPLICANT_TYPE_LABELS) } },
+          kinds: {
+            type: 'array',
+            items: { type: 'string', enum: Object.keys(OPPORTUNITY_KIND_LABELS) },
+            description: 'Defaults to grants only. Add contract_solicitation only when the user asks for contracts or solicitations.',
+          },
           statuses: {
             type: 'array',
             items: { type: 'string', enum: Object.keys(OPPORTUNITY_STATUS_LABELS) },
@@ -333,6 +338,9 @@ export async function groundChat(
             levels: stringList(args.levels),
             categories: stringList(args.categories),
             applicantTypes: stringList(args.applicantTypes),
+            // Grants unless contracts were asked for: contract solicitations
+            // otherwise fill the listing limit for a grant search.
+            kinds: Array.isArray(args.kinds) && args.kinds.length > 0 ? stringList(args.kinds) : ['grant'],
             ...(Array.isArray(args.statuses) && args.statuses.length > 0 ? { statuses: stringList(args.statuses) } : {}),
             amountMin: typeof args.amountMin === 'number' ? args.amountMin : null,
             amountMax: typeof args.amountMax === 'number' ? args.amountMax : null,

@@ -732,7 +732,7 @@ export function CLICK_FN(target: string, actionId = (window as unknown as { __bb
 export async function TYPE_FN(target: string, text: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<{ matched: string; native: boolean }> {
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   const w = window as unknown as PageWindow;
-  const html = __bb.FindField(target);
+  let html = __bb.FindField(target);
   __bb.GuardField(html);
   const changes = ((window as unknown as { __bbBeforeValues?: Map<HTMLElement, string> }).__bbBeforeValues ??= new Map());
   if (!changes.has(html)) changes.set(html, String((html as HTMLInputElement).value ?? html.textContent ?? ''));
@@ -743,6 +743,13 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
   w.__bbCursor(html, { click: true, hold: 4000, label: /^@/.test(target) ? target : undefined });
   await new Promise<void>((resolve) => setTimeout(resolve, w.__bbDwell?.() ?? 150));
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
+  // A page can re-render during the dwell and replace the field; type into
+  // the one now on the page, not a detached node.
+  if (!html.isConnected) {
+    html = __bb.FindField(target);
+    __bb.GuardField(html);
+    if (!changes.has(html)) changes.set(html, String((html as HTMLInputElement).value ?? html.textContent ?? ''));
+  }
 
   // A dropdown takes a choice, not keystrokes. Writing .value through the
   // input setter threw "Illegal invocation" on a <select>.
