@@ -260,3 +260,40 @@ it('reports excluded grant-search vendors when no engine found anything else', a
   await vi.runAllTimersAsync();
   await result;
 });
+
+it('falls back to Bing when Startpage answers with an error status or cannot be reached', async () => {
+  for (const code of ['HTTP_ERROR', 'NAVIGATION_TIMEOUT', 'NETWORK_ERROR']) {
+    const f = engines((host) => host === 'www.bing.com' ? [{ text: 'Program', href: tracked('https://agency.gov/program') }] : []);
+    const navigate = f.navigate.getMockImplementation()!;
+    f.navigate.mockImplementation(async (tabId, url) => {
+      if (url.includes('startpage')) throw Object.assign(new Error('https://www.startpage.com/do/search answered HTTP 429.'), { code });
+      return navigate(tabId, url);
+    });
+    expect(await f.search('school grants', 3)).toMatchObject({ engine: 'Bing' });
+  }
+});
+
+it('does not fall back past a policy block or a closed tab', async () => {
+  for (const code of ['BLOCKED_BY_POLICY', 'TARGET_CLOSED']) {
+    const f = engines(() => []);
+    f.navigate.mockRejectedValue(Object.assign(new Error(code), { code }));
+    await expect(f.search('school grants', 3)).rejects.toThrow(code);
+    expect(f.navigate).toHaveBeenCalledOnce();
+  }
+});
+
+it('stops at once when Stop is pressed while waiting for results to render', async () => {
+  const controller = new AbortController();
+  const waitFor = vi.fn(() => new Promise<never>(() => {}));
+  const runtime = {
+    navigate: vi.fn(async (_tabId: string, url: string) => ({ url, title: 'Search' })),
+    readPage: vi.fn(async () => ({ url: 'https://www.startpage.com/do/search?q=x', title: 'Search', text: '' })),
+    listLinks: vi.fn(async () => []),
+    waitFor,
+  } as unknown as ToolRuntime;
+  const search = browserSearch({ runtime, activeTabId: () => 'tab', signal: controller.signal });
+  const result = expect(search('school grants', 3)).rejects.toThrow('cancelled');
+  await vi.waitFor(() => expect(waitFor).toHaveBeenCalled());
+  controller.abort();
+  await result;
+});

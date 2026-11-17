@@ -45,6 +45,22 @@ class EngineUnavailable extends Error {
   constructor(message: string, readonly vendorsOnly = false) { super(message); }
 }
 
+// Failures of the engine itself, which another engine may not share: an
+// error status (a 403 challenge, a 429 rate limit), a timeout, no network
+// route to it. A policy block or a closed tab is never one of these.
+const ENGINE_FAILURES = new Set(['HTTP_ERROR', 'NAVIGATION_TIMEOUT', 'NETWORK_ERROR', 'NETWORK_CHANGED']);
+const engineFailure = (error: unknown) => ENGINE_FAILURES.has(String((error as { code?: unknown } | null)?.code));
+
+/** Settle with the promise, or reject at once when the run is stopped. */
+function untilStopped<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(new Error('cancelled'));
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new Error('cancelled'));
+    signal.addEventListener('abort', abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
 /** Bing wraps organic links in /ck/a?u=a1<base64url>. Never cite the tracker. */
 function sourceUrl(href: string, base: string): URL {
   const link = new URL(href, base);
@@ -87,7 +103,13 @@ function searchWith(options: { runtime: ToolRuntime; activeTabId: () => string; 
     assertAllowedDestination(url);
     await options.presentAction?.(tabId, 'navigate', options.signal);
     check();
-    await options.runtime.navigate(tabId, url.href);
+    try {
+      await options.runtime.navigate(tabId, url.href);
+    } catch (error) {
+      check();
+      if (engineFailure(error)) throw new EngineUnavailable(`${engine.name} could not answer: ${(error as Error).message}`);
+      throw error;
+    }
     check();
     await options.presentAction?.(tabId, 'read_page', options.signal);
     check();
@@ -119,7 +141,8 @@ function searchWith(options: { runtime: ToolRuntime; activeTabId: () => string; 
     while (!hasSource() && Date.now() < deadline) {
       if (!waitedForHeading) {
         waitedForHeading = true;
-        await options.runtime.waitFor(tabId, { selector: engine.results, timeoutMs: Math.max(1, deadline - Date.now()) });
+        // The page-side wait cannot see Stop, so race it.
+        await untilStopped(options.runtime.waitFor(tabId, { selector: engine.results, timeoutMs: Math.max(1, deadline - Date.now()) }), options.signal);
       } else {
         await new Promise<void>((resolve, reject) => {
           const abort = () => {
