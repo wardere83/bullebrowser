@@ -59,9 +59,18 @@ export function TopBar() {
       let shown = 0;
       setAgentTyping(true);
       setDraftUrl('');
-      // Finish a little before the page starts loading.
+      // Finish a little before the page starts loading: at most one tick each
+      // 16 ms, several characters a tick for a long address.
+      const budget = durationMs * 0.85;
+      const ticks = Math.max(1, Math.min(text.length, Math.floor(budget / 16)));
+      const perTick = Math.ceil(text.length / ticks);
       const interval = setInterval(() => {
-        shown += 1;
+        // The user took the address bar: their typing wins.
+        if (document.activeElement === inputRef.current) {
+          stopTyping();
+          return;
+        }
+        shown = Math.min(text.length, shown + perTick);
         setDraftUrl(text.slice(0, shown));
         if (shown < text.length) return;
         clearInterval(interval);
@@ -71,7 +80,7 @@ export function TopBar() {
           const url = activeUrlRef.current;
           setDraftUrl(url === 'about:blank' ? '' : (url ?? ''));
         }, 3000);
-      }, Math.max(8, (durationMs * 0.85) / Math.max(1, text.length)));
+      }, budget / ticks);
       typing.current.interval = interval;
     });
     return () => {
@@ -160,11 +169,16 @@ export function TopBar() {
             type="text"
             value={draftUrl}
             onChange={(e) => {
+              stopTyping();
               setDraftUrl(e.target.value);
               addressActivity.onInputActivity();
             }}
             onPaste={() => addressActivity.onInputActivity()}
-            onFocus={addressActivity.onFocus}
+            onFocus={() => {
+              // Never type over the user: their focus ends the agent's typing.
+              stopTyping();
+              addressActivity.onFocus();
+            }}
             onBlur={addressActivity.onBlur}
             placeholder="Ask BulleBrowser or enter address"
             aria-label="Address bar"

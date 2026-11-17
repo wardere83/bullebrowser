@@ -504,9 +504,18 @@ export class DesktopToolRuntime implements ToolRuntime {
 
   async newTab(url?: string): Promise<TabSummary> {
     if (url) assertWebUrl(url);
+    // A tab the user watches opens blank and shows the agent typing its
+    // address before it loads, as navigate does.
+    const typed = Boolean(url && this.onAddress && this.followsAgent());
     // Opened from the tab the agent is on, so closing it returns the user there.
-    const tab = await tabManager.create(url, tabManager.getActiveId() ?? undefined, !this.followsAgent());
+    const tab = await tabManager.create(typed ? 'about:blank' : url, tabManager.getActiveId() ?? undefined, !this.followsAgent());
     this.onPageActivity?.(tab.id);
+    if (typed) {
+      await this.onAddress!(tab.id, url!);
+      if (this.signal?.aborted) throw new Error('cancelled');
+      // Starts the load at once; the wait below covers it.
+      void tabManager.navigate(tab.id, url!);
+    }
     // create() starts the load without waiting for it; the agent's next step
     // is almost always read_page, which then read a blank or half-built page.
     if (url) {
@@ -530,6 +539,8 @@ export class DesktopToolRuntime implements ToolRuntime {
       }
       await pageQuiet(wc);
       assertAllowedDestination(tabManager.getNavigationUrl(tab.id) ?? '');
+      // Back from the source must not land on the blank page it was typed in.
+      if (typed) wc.navigationHistory.clear();
       const extra = await this.afterLoad(wc, 'idle');
       const now = tabManager.list().find((t) => t.id === tab.id);
       return { id: tab.id, title: now?.title ?? wc.getTitle(), url: wc.getURL(), active: true, ...extra };

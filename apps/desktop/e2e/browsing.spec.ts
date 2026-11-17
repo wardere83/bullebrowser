@@ -513,7 +513,10 @@ test('no search key searches Startpage first and reads its direct result links',
     // The query was typed into the box and submitted, not loaded as a URL.
     expect(tabs.some((tab) => tab.url.startsWith('https://www.startpage.com/sp/search?query='))).toBe(true);
     // The address bar showed the agent typing where it went.
-    expect(await win.evaluate(() => (window as unknown as { __typed: string[] }).__typed)).toContain('www.startpage.com');
+    const typed = await win.evaluate(() => (window as unknown as { __typed: string[] }).__typed);
+    expect(typed).toContain('www.startpage.com');
+    // Sources opened in new tabs are typed too.
+    expect(typed).toContain(`${source.url.replace(/^https?:\/\//, '')}/one`);
     expect(tabs.some((tab) => /(^|\.)grantable\.co$/.test(new URL(tab.url).hostname))).toBe(false);
   } finally { await close(); await source.close(); }
 });
