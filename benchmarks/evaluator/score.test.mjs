@@ -71,3 +71,11 @@ test('a baseline scored under different rules is never compared', () => {
   assert.deepEqual(regressionFailures(candidate, { ...candidate }), []);
   assert.match(regressionFailures(candidate, { ...candidate, scorerRevision: 1 }).join(' '), /different rules/);
 });
+test('a quotation must include the field label', () => {
+  const unlabelled = JSON.parse(answer);
+  for (const fact of unlabelled.facts) fact.quote = `${program.facts[fact.key]} for this program`;
+  const receiptsWithout = [{ url, text: unlabelled.facts.map((fact) => fact.quote).join('\n') }];
+  const scored = scoreTask(task, program, JSON.stringify(unlabelled), receiptsWithout, 'completed');
+  assert.equal(scored.success, false);
+  assert.ok(scored.facts.every((fact) => fact.correct && !fact.cited));
+});

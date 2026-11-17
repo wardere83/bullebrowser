@@ -11,12 +11,66 @@ export function isResearchRequest(request: string): boolean {
 }
 
 /** Match evidence requirements to the scope the user selected. */
+// The user confined the task to one named place: "use only this directory",
+// "use this site only", "do not browse elsewhere". Only an unmistakable single
+// place counts: a demonstrative ("this", "that", "my") or "elsewhere". Broad
+// constraints such as "use only official sources", "do not browse outside
+// government websites" or "the website of each funder" keep the minimum.
+const PLACE = String.raw`(?:site|website|page|directory|portal|listing|domain)`;
+const SINGLE_SCOPE = new RegExp([
+  String.raw`\b(?:use|browse|search|stay on|stick to)\s+only\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b`,
+  String.raw`\bonly\s+(?:use|browse|search)\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b`,
+  String.raw`\b(?:use|browse|search|stay on|stick to)\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\s+only\b`,
+  String.raw`\b(?:do not|don't|never)\s+(?:browse|search|go|navigate)\s+(?:elsewhere|anywhere else|outside\s+(?:this|that|my)\b[^.\n]{0,40}?\b${PLACE}\b)`,
+].join('|'), 'i');
+// Words naming alternative sources ("or any other official website", "each
+// funder page"), as opposed to unrelated quantifiers ("for any reason",
+// "find all grants").
+const SOURCE_WORDS = String.raw`(?:web\s?sites?|sites?|pages?|sources?|portals?|domains?|directories|directory|listings?|funders?)`;
+const BROAD = new RegExp(String.raw`\b(?:any|every|each|all|other)\s+(?:other\s+)?(?:official\s+|government\s+|public\s+)?${SOURCE_WORDS}\b|\bof\s+(?:each|every|all)\b`, 'i');
+
+/**
+ * The one place a request is confined to, or null. A "site" (website,
+ * directory, portal, domain) means its landing page is incidental; a "page"
+ * (this page or listing, or "do not browse elsewhere") is the target itself.
+ */
+export function singleScope(request: string): 'page' | 'site' | null {
+  const match = SINGLE_SCOPE.exec(request);
+  if (!match) return null;
+  // Judge the whole clause: "use only this portal or any other official
+  // website" permits several sites even though its start reads as one.
+  const clause = request.slice(match.index).split(/[.;\n]/)[0] ?? match[0];
+  if (BROAD.test(clause)) return null;
+  return /\b(?:site|website|directory|portal|domain)\b/i.test(match[0]) ? 'site' : 'page';
+}
+
+/** Whether the user confined the task to one named site, page or directory. */
+export function isSingleScopeRequest(request: string): boolean {
+  return singleScope(request) !== null;
+}
+
+/** Whether the user asks for a comparison, ignoring "do not compare". */
+function asksToCompare(request: string): boolean {
+  for (const match of request.matchAll(/\bcompar(?:e|es|ing|ison)\b/gi)) {
+    const before = request.slice(Math.max(0, (match.index ?? 0) - 24), match.index);
+    if (!/\b(?:do not|don't|not|no|never|without)\b[^.;\n]*$/i.test(before)) return true;
+  }
+  return false;
+}
+
 export function researchSourceMinimum(task: BrowserTaskId | undefined, request: string): number {
   if (task === 'explore_page') return 1;
-  if (task === 'compare_grants') {
+  const comparing = task === 'compare_grants' || asksToCompare(request);
+  if (comparing) {
     const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
     if (provided.size >= 2) return Math.min(3, provided.size);
+    // A comparison reads at least two programs, even within one site.
+    if (isSingleScopeRequest(request)) return 2;
+    return 3;
   }
+  // Three independent sources cannot be required once the user forbids going
+  // anywhere else; an agent that obeys would otherwise be reported as failed.
+  if (isSingleScopeRequest(request)) return 1;
   return 3;
 }
 
