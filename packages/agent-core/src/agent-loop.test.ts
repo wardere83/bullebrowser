@@ -304,6 +304,52 @@ describe('runAgent Claude tool-use loop', () => {
     expect(out).toContain('did not submit');
   });
 
+  it('asks again with more room when the output limit cuts off a tool call', async () => {
+    createMock
+      .mockResolvedValueOnce({ stop_reason: 'max_tokens', content: [], truncatedToolCalls: 1 })
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Paris.')] });
+
+    const out = await runAgent({
+      apiKey: 'test-key',
+      model: DEFAULT_MODEL,
+      systemPrompt: 'You are the BulleBrowser agent.',
+      history: [],
+      userMessage: 'what is the capital of France?',
+      context: makeContext(),
+      onStep: () => {},
+    });
+
+    expect(out).toBe('Paris.');
+    const [first, second] = createMock.mock.calls.map(([request]) => request as { max_tokens: number; messages: unknown[] });
+    expect(second!.max_tokens).toBeGreaterThan(first!.max_tokens);
+    // Nothing ran, so the same turn is asked again: no partial reply or note
+    // was added to the conversation.
+    expect(second!.messages).toHaveLength(1);
+  });
+
+  it('tells the model a cut-off call did not run once there is no more room', async () => {
+    const cut = { stop_reason: 'max_tokens', content: [], truncatedToolCalls: 1 };
+    createMock
+      .mockResolvedValueOnce(cut)
+      .mockResolvedValueOnce(cut)
+      .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('Paris.')] });
+
+    const out = await runAgent({
+      apiKey: 'test-key',
+      model: DEFAULT_MODEL,
+      systemPrompt: 'You are the BulleBrowser agent.',
+      history: [],
+      userMessage: 'what is the capital of France?',
+      context: makeContext(),
+      onStep: () => {},
+    });
+
+    expect(out).toBe('Paris.');
+    const last = createMock.mock.calls[2]![0] as { messages: Array<{ role: string; content: unknown }> };
+    expect(last.messages.at(-1)!.role).toBe('user');
+    expect(JSON.stringify(last.messages.at(-1)!.content)).toMatch(/cut off at the length limit/);
+  });
+
   it('continues and accumulates a reply that was cut off at the token limit', async () => {
     createMock
       .mockResolvedValueOnce({

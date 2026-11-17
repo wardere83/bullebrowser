@@ -303,7 +303,8 @@ export async function groundChat(
       name: 'funding_search_opportunities',
       description:
         'Searches official funding sources (federal, state, city, county and international) and returns listings with the status the app worked out for each (Active, Expired or Unverified) and the reason. ' +
-        'Repeat each status exactly as returned. Every keyword in `query` must appear in a listing, so use one to three plain words. The organization\'s place is applied for you.',
+        'Repeat each status exactly as returned. Every keyword in `query` must appear in a listing, so use one to three plain words. The organization\'s place is applied for you. ' +
+        'Funding means business grants and nonprofit grants alike: set `applicantTypes` only when the user or the approved profile fixes who is applying, and search for grants rather than government contracts unless the user asks for contracts.',
       inputSchema: {
         type: 'object',
         properties: {

@@ -239,7 +239,7 @@ const toolDefinitions = {
 
   navigate: {
     name: 'navigate',
-    description: 'Navigate the active tab to a URL.',
+    description: "Navigate the active tab to a URL. Use it for a site's first page or a URL the user gave; to reach a page linked from the current one, click the link instead so the user can follow.",
     inputSchema: NavigateInput,
     outputSchema: NavigateOutput,
     execute: (input, ctx) =>
@@ -325,7 +325,7 @@ const toolDefinitions = {
 
   new_tab: {
     name: 'new_tab',
-    description: 'Open a new tab (optionally at a URL) and make it active. Waits for the page to load.',
+    description: 'Open a new tab (optionally at a URL) and make it active. Waits for the page to load. Only to keep a page you must return to: otherwise continue in the current tab by clicking links.',
     // Same allowlist as navigate: a new tab must not open file:, data: or
     // javascript: URLs any more than navigate may.
     inputSchema: z.object({ url: NavigateInput.shape.url.optional() }),
