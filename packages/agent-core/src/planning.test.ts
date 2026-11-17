@@ -23,6 +23,21 @@ describe('separate goal planning', () => {
     expect(request).toHaveBeenCalledTimes(2);
     expect(request.mock.calls[1]?.[1]).toEqual(['read_page: ELEMENT_NOT_FOUND', 'read_page: ELEMENT_NOT_FOUND']);
   });
+  it('asks again for a cut-off plan, then works to a plain plan, instead of ending the task', async () => {
+    const retried = vi.fn(async () => '["Read the list').mockResolvedValueOnce('["Read the list').mockResolvedValueOnce('["Read the list","Verify it"]');
+    const planner = new GoalPlanner(input(), retried);
+    await planner.ensure();
+    expect(retried).toHaveBeenCalledTimes(2);
+    expect(planner.goals.map((goal) => goal.goal)).toEqual(['Read the list', 'Verify it']);
+
+    const broken = new GoalPlanner(input(), async () => '');
+    await broken.ensure();
+    expect(broken.goals.map((goal) => goal.status)).toEqual(['active', 'pending']);
+  });
+  it('still ends the task when the plan request itself fails', async () => {
+    const planner = new GoalPlanner(input(), async () => { throw new Error('Your credit balance is too low'); });
+    await expect(planner.ensure()).rejects.toThrow('credit balance');
+  });
   it('requires a tool observation before completing the active goal', async () => {
     const planner = new GoalPlanner(input(), async () => '["Read","Verify"]');
     await planner.ensure();

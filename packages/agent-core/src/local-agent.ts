@@ -168,8 +168,15 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     if (result.isError) throw new Error(result.errorMessage ?? 'The requested action could not complete. Check the task activity for details.');
     // executeToolCall contains and neutralizes page data for cloud callers.
     // Local commands consume it only as data, never as another instruction.
+    // The output itself: the text is shortened on a long page, and parsing it
+    // ended the task with "Unexpected end of JSON input".
+    if (result.data && typeof result.data === 'object') return result.data as Record<string, unknown>;
     const data = result.text.replace(/^<untrusted_page_data[^>]*>\n/, '').replace(/\n<\/untrusted_page_data>$/, '');
-    return JSON.parse(data) as Record<string, unknown>;
+    try {
+      return JSON.parse(data) as Record<string, unknown>;
+    } catch {
+      throw new Error(`The ${name.replace(/_/g, ' ')} result could not be read in full. Try a narrower request.`);
+    }
   };
   const navigate = message.match(/^(?:please\s+)?(?:open|go to|navigate to)\s+(\S+)\s*$/i);
   const click = message.match(/^(?:please\s+)?(?:click|tap|press)\s+["']([^"']+)["']\s*$/i);

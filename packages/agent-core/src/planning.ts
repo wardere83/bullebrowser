@@ -51,7 +51,7 @@ export class GoalPlanner {
     this.pending = (async () => {
       if (this.revisions >= 4) throw new Error('The planner could not resolve repeated failures. Revise the task or complete the blocked step manually.');
       this.input.onStep({ type: 'plan', detail: this.revisions ? 'Replanning after repeated failures…' : 'Preparing step goals…', data: { goals: this.goals } });
-      const goals = parseGoals(await this.request(this.input, this.diagnostics));
+      const goals = await this.plan();
       this.goals = goals;
       this.revisions++;
       this.failures = 0;
@@ -60,6 +60,23 @@ export class GoalPlanner {
       this.input.onStep({ type: 'plan', detail: 'Task plan', data: { goals, revision: this.revisions } });
     })();
     try { await this.pending; } finally { this.pending = undefined; }
+  }
+  // A plan reply cut off or not in the expected form must not end the task
+  // (it did, with "Unexpected end of JSON input"): ask once more, then work
+  // to a plain plan. A failed request (no access, no credit, Stop) still ends it.
+  private async plan(): Promise<PublicGoal[]> {
+    const malformed = (error: unknown) => error instanceof SyntaxError || /did not return between one and eight/.test((error as Error)?.message ?? '');
+    try {
+      return parseGoals(await this.request(this.input, this.diagnostics));
+    } catch (error) {
+      if (!malformed(error)) throw error;
+    }
+    try {
+      return parseGoals(await this.request(this.input, [...this.diagnostics, 'planner: the last plan was not a JSON array of step-goal strings']));
+    } catch (error) {
+      if (!malformed(error)) throw error;
+    }
+    return parseGoals(JSON.stringify(['Carry out the request with browser tools', 'Verify the result on the page']));
   }
   readonly tool: ApiTool = {
     name: PLAN_STEP_TOOL,

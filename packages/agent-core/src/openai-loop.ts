@@ -181,7 +181,11 @@ export async function consumeOpenAiStream(response: Response, onTool: (call: Ope
       while ((end = pending.indexOf('\n')) >= 0) { processLine(pending.slice(0, end).replace(/\r$/, '')); pending = pending.slice(end + 1); }
       if (done) break;
     }
-    if (pending.trim()) processLine(pending);
+    // A stream cut off inside its last event leaves part of a JSON line: that
+    // is an interrupted turn, not a JSON error.
+    if (pending.trim()) {
+      try { processLine(pending); } catch (error) { if (!(error instanceof SyntaxError)) throw error; }
+    }
     if (!finish) throw new Error('The assistant stream ended before a complete turn.');
     const ordered = [...calls.entries()].sort(([a], [b]) => a - b);
     for (const [index, call] of ordered) {

@@ -179,6 +179,12 @@ export interface ToolCallOutcome {
   errorMessage?: string;
   text: string;
   isError: boolean;
+  /**
+   * The tool's output itself, for hosts that use it as data (the keyless
+   * assistant). `text` is shortened past 100,000 characters, so it is not
+   * always valid JSON.
+   */
+  data?: unknown;
   /** Base64 PNG, set only for a successful screenshot. */
   imagePngBase64?: string;
   /** Set when the call failed. */
@@ -425,8 +431,9 @@ export async function executeToolCall(
       await context.afterBrowserAction?.(name, input, callId);
       onStep({ type: 'tool_result', toolName: name, data: policy.redact(previewOutput(output)) });
       await warnOnPageInstructions(output, `${name.replace(/_/g, ' ')} results`, policy, onStep);
-      const text = typeof output === 'string' ? output : JSON.stringify(neutralizeDeep(output));
-      return record({ text: sealed(truncate(text, 100_000), `api:${name}`), isError: false });
+      const data = typeof output === 'string' ? output : neutralizeDeep(output);
+      const text = typeof data === 'string' ? data : JSON.stringify(data);
+      return record({ text: sealed(truncate(text, 100_000), `api:${name}`), isError: false, data });
     } catch (error) {
       return fail(error);
     }
@@ -525,8 +532,9 @@ export async function executeToolCall(
 
       // The validated input: a tabId the tool's schema drops was not used.
       await warnOnBrowserOutput(name, output, (parsed ?? {}) as Record<string, unknown>, context, policy, onStep);
-      const text = typeof output === 'string' ? neutralize(output) : JSON.stringify(neutralizeDeep(output));
-      return record({ text: sealed(truncate(text, 100_000), name), isError: false });
+      const data = typeof output === 'string' ? neutralize(output) : neutralizeDeep(output);
+      const text = typeof data === 'string' ? data : JSON.stringify(data);
+      return record({ text: sealed(truncate(text, 100_000), name), isError: false, data });
     } catch (error) {
       const err = toToolError(error);
       const delay = RETRY_DELAYS_MS[attempts - 1];
