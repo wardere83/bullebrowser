@@ -24,7 +24,8 @@ const BROWSE =
 const SUPPLIED = /\b(?:attached|attachment|uploaded|following|below|pasted|this text|the text|my (?:file|document|notes|draft))\b/i;
 const TEXT_WORK = /^(?:please\s+)?(?:summari[sz]e|read|extract|list)\b/i;
 const PAGE = /\b(?:this|the current|the open|that) (?:page|site|website|tab|article|document|listing|form)\b|\bon (?:the )?screen\b/i;
-const URL = /\bhttps?:\/\/\S+|\bwww\.\S+\.\S+|\b[a-z0-9-]+\.(?:com|org|gov|net|edu|io|co|us)\b/i;
+// A bare domain counts, but not the end of an email address.
+const URL = /\bhttps?:\/\/\S+|\bwww\.\S+\.\S+|(?<![@\w.-])[a-z0-9-]+\.(?:com|org|gov|net|edu|io|co|us)\b/i;
 
 // A reaction that opens with thanks or praise ("Thanks, that was really
 // helpful"), with no question and no new request in it.
@@ -35,7 +36,9 @@ const NEW_REQUEST = /\?|\b(?:but|now|also|next|can you|could you|please|find|sea
 // Questions that need current or sourced facts are browsed even when asked
 // as questions; "Explain binary search" is not one of them.
 const NEEDS_SOURCES =
-  /\b(?:latest|current|currently|today|this (?:week|month|year)|right now|recent|grants?|funders?|funding|deadlines?|eligib\w*|news|prices?|cost|open now|available)\b/i;
+  /\b(?:latest|today|this (?:week|month|year)|right now|recent(?:ly)?|grants?|funders?|funding|deadlines?|eligib\w*|news|prices?|current (?:deadline|rate|price|status|requirement|law|rule)s?)\b/i;
+// An explicit request to research, at the start of any sentence.
+const RESEARCH_ASK = /(?:^|[.!?]\s+)(?:please\s+)?(?:research|browse|search for|find|look up|compare|verify|check)\b/i;
 
 const QUESTION =
   /\?\s*$|^(?:what|what's|whats|who|whom|whose|when|where|why|how|which|is|are|am|was|were|can|could|should|would|will|do|does|did|has|have|explain|define|describe|tell me|help me understand)\b/i;
@@ -48,7 +51,7 @@ export function requestIntent(request: string, options: { browserTask?: string }
   if (CHAT.test(text) || CAPABILITY.test(text) || (REACTION.test(text) && !NEW_REQUEST.test(text))) return 'chat';
   if (TEXT_WORK.test(text) && SUPPLIED.test(text) && !PAGE.test(text) && !URL.test(text)) return 'question';
   if (BROWSE.test(text) || PAGE.test(text) || URL.test(text)) return 'browse';
-  if (QUESTION.test(text)) return NEEDS_SOURCES.test(text) ? 'browse' : 'question';
+  if (QUESTION.test(text)) return NEEDS_SOURCES.test(text) || RESEARCH_ASK.test(text) ? 'browse' : 'question';
   if (isResearchRequest(text)) return 'browse';
   // Anything else (write me…, draft…, a statement): answer it in the chat.
   return 'question';

@@ -100,6 +100,11 @@ function keywords(text: string): string[] {
   return [...new Set(words.map((word) => word.replace(/(?:ies)$/, 'y').replace(/(?<=[a-z]{3})s$/, '')))];
 }
 
+/** Page text shown as text: no image, link or other Markdown the page wrote. */
+export function plainMarkdown(text: string): string {
+  return text.replace(/[\\`*_{}[\]()#+!|<>~]/g, (character) => `\\${character}`);
+}
+
 /** The page's sentences that best match the question, in page order. */
 export function relevantPassages(text: string, words: string[], max = 3): string[] {
   if (!words.length) return [];
@@ -107,10 +112,11 @@ export function relevantPassages(text: string, words: string[], max = 3): string
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length >= 40 && sentence.length <= 360 && !/cookie|javascript|sign in|log in|subscribe/i.test(sentence));
   const needed = Math.min(2, words.length);
-  const scored = sentences.map((sentence, index) => {
-    const lower = sentence.toLowerCase();
-    return { sentence, index, score: words.filter((word) => lower.includes(word)).length };
-  }).filter((entry) => entry.score >= needed);
+  // Whole words, with plurals: "ada" must not match "Canada".
+  const patterns = words.map((word) => new RegExp(`\\b${word}(?:s|es)?\\b`, 'i'));
+  const scored = sentences.map((sentence, index) => ({
+    sentence, index, score: patterns.filter((pattern) => pattern.test(sentence)).length,
+  })).filter((entry) => entry.score >= needed);
   const seen = new Set<string>();
   return scored.sort((a, b) => b.score - a.score || a.index - b.index)
     .filter((entry) => !seen.has(entry.sentence) && seen.add(entry.sentence))
@@ -330,10 +336,10 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
         : exploring ? 'I checked this page but found no readable linked options. The page remains open on the left.'
           : 'Search returned no readable verified source pages. Try a more specific funding goal or an official website URL.';
     }
-  } else if (funding) {
-    report = FUNDING_REPLIES[funding] + (summaryRequested ? PAGE_SUMMARY_HINT : '');
   } else if (intent === 'chat') {
     report = chatReply(message);
+  } else if (funding) {
+    report = FUNDING_REPLIES[funding] + (summaryRequested ? PAGE_SUMMARY_HINT : '');
   } else if (RETRY.test(message)) {
     // A retry with nothing safe to repeat: ask rather than guess.
     report = "Tell me what you'd like me to try again, and I'll do it.";
@@ -381,7 +387,7 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     report = declined
       ? 'To answer that I need to look it up in the browser. Ask again and choose Allow Access when I ask, and I will show you what the sources say.'
       : found.length
-        ? `Here's what I found:\n\n${found.map((source) => `${source.passages.map((passage) => `> ${passage}`).join('\n>\n')}\n\nSource: [${source.title.replace(/[[\]]/g, '')}](${source.url})`).join('\n\n')}\n\n` +
+        ? `Here's what I found:\n\n${found.map((source) => `${source.passages.map((passage) => `> ${plainMarkdown(passage)}`).join('\n>\n')}\n\nSource: [${plainMarkdown(source.title)}](${source.url.replace(/[()<> ]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)})`).join('\n\n')}\n\n` +
           'These passages are quoted from the sources, which are open in tabs on the left. Want me to look further or check another source?'
         : 'I looked that up but could not find a readable source that answers it. Try rephrasing it, or ask me to open a specific website.';
   } else {

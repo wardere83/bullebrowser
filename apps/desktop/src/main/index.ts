@@ -13,13 +13,6 @@ import { trackNetwork } from './agent/browser/net-activity.js';
 import { loadDotEnv } from './env.js';
 import { installingUpdate, removeLeftoverUpdates, reopenWhenInstalled } from './update-guard.js';
 
-// Opened while macOS is installing an update, this copy would make the
-// install give up. It leaves at once instead, and BulleBrowser reopens,
-// updated, as soon as the install finishes.
-if (app.isPackaged && installingUpdate()) {
-  reopenWhenInstalled();
-  app.exit(0);
-}
 
 // In development, pick up ANTHROPIC_API_KEY (and any other vars) from a local
 // .env so the agent is connected without re-entering the key in Settings.
@@ -33,6 +26,15 @@ app.on('session-created', trackNetwork);
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
+}
+
+// Opened while macOS is installing an update (no other copy running), this
+// copy would make the install give up. It leaves at once instead, and
+// BulleBrowser reopens, updated, as soon as the install finishes. A copy
+// that is already open keeps the lock, and gets focused as usual.
+if (gotLock && app.isPackaged && installingUpdate()) {
+  reopenWhenInstalled();
+  app.exit(0);
 }
 
 app.setName(product.name);

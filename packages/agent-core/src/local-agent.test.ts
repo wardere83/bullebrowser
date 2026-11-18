@@ -453,6 +453,7 @@ describe('the keyless assistant', () => {
       ['Is this a good fit?', /^Could you tell me a bit more/],
       ['book a flight to Boston', /^BulleBrowser Agentic AI is ready\. I can summarize the current page/],
       ['Who is Ada Lovelace?', /^I can browse the web for you/],
+      ['Thanks for the grant information!', /^You're welcome!/],
     ])('replies in the chat without browsing: %s', async (request, expected) => {
       const { reply, context, requestBrowseAccess } = await ask(request);
       expect(reply).toMatch(expected);
@@ -472,9 +473,22 @@ describe('the keyless assistant', () => {
       const { reply } = await ask('What is a 501(c)(3) organization?', { context, extraTools: [search] });
       expect(search.execute).toHaveBeenCalledWith(expect.objectContaining({ query: 'What is a 501(c)(3) organization?' }));
       expect(reply).toContain("Here's what I found:");
-      expect(reply).toContain('> A 501(c)(3) organization is a nonprofit that the IRS exempts from federal income tax.');
+      expect(reply).toContain('> A 501\\(c\\)\\(3\\) organization is a nonprofit that the IRS exempts from federal income tax.');
       expect(reply).not.toContain('The weather was nice');
       expect(reply).toContain('Source: [Exempt organizations](https://www.irs.gov/charities)');
+    });
+
+    it('quotes passages as plain text and matches whole words only', async () => {
+      const text = 'Ada Lovelace wrote the first program ![x](https://tracker.example/pixel) for the engine. ' +
+        'Canada is a large country with many provinces and territories.';
+      const search = { name: 'web_search', description: 'search', inputSchema: { type: 'object' as const, properties: {} },
+        execute: vi.fn(async () => ({ results: [{ title: 'Ada (bio)', url: 'https://example.org/ada_(person)' }] })) };
+      const context = makeContext({ readPage: vi.fn(async () => ({ url: 'https://example.org/ada_(person)', title: 'Ada [bio]', text })) });
+      const { reply } = await ask('Who is Ada?', { context, extraTools: [search] });
+      expect(reply).not.toContain('![x](');
+      expect(reply).toContain('\\!\\[x\\]\\(https://tracker.example/pixel\\)');
+      expect(reply).not.toContain('Canada');
+      expect(reply).toContain('Source: [Ada \\[bio\\]](https://example.org/ada_%28person%29)');
     });
   });
 
