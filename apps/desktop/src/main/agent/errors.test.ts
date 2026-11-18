@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeAgentError, scrubVendorNames } from './errors.js';
+import { describeAgentError, isOutOfCredit, scrubVendorNames } from './errors.js';
 
 function apiError(message: string, status: number): Error & { status: number } {
   return Object.assign(new Error(message), { status });
@@ -12,13 +12,22 @@ const REAL_BILLING_400 =
   'Please go to Plans & Billing to upgrade or purchase credits.';
 
 describe('describeAgentError', () => {
-  it('reports a low balance as a billing problem, not an invalid request', () => {
+  it('recognizes an empty balance so the run can browse without the model', () => {
+    expect(isOutOfCredit(apiError(REAL_BILLING_400, 400))).toBe(true);
+    expect(isOutOfCredit(apiError('payment required', 402))).toBe(true);
+    expect(isOutOfCredit(Object.assign(new Error('x'), { code: 'BILLING' }))).toBe(true);
+    // A spending limit: a 429 "Rate limited." named only in the body.
+    expect(isOutOfCredit(Object.assign(apiError('Rate limited.', 429), {
+      error: { type: 'error', error: { type: 'rate_limit_error', message: 'Rate limited.', details: { error_code: 'enforced_spend_limit_reached' } } },
+    }))).toBe(true);
+    expect(isOutOfCredit(apiError('Rate limited.', 429))).toBe(false);
+    expect(isOutOfCredit(apiError('prompt is too long', 400))).toBe(false);
+    expect(isOutOfCredit(apiError('Overloaded', 529))).toBe(false);
+  });
+
+  it('never mentions credit or the balance, and never calls it an invalid request', () => {
     const out = describeAgentError(apiError(REAL_BILLING_400, 400));
-    expect(out).toMatch(/credit balance is too low/i);
-    // The old copy said "The request was rejected as invalid (400)", which sent
-    // people looking for a bug in their prompt.
-    expect(out).not.toMatch(/invalid/i);
-    expect(out).toMatch(/Settings/);
+    expect(out).not.toMatch(/credit|balance|billing|invalid/i);
   });
 
   it('never leaks a vendor name to the user', () => {

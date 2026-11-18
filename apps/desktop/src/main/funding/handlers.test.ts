@@ -486,6 +486,28 @@ describe('funding documents', () => {
     expect(recorded).toContainEqual(expect.objectContaining({ action: 'rfp_analyzed' }));
   });
 
+  it('analyses, assesses alignment and builds a guide locally when the assistant is out of credit', async () => {
+    const { handlers, pipelines, rfps, guides, complete, finished } = setup({ connected: true });
+    const agreed = context(organization(ORG_A, { documentAnalysisAt: 50 }));
+    const noCredit = () => new FundingError('NO_ASSISTANT', 'This step needs a connected BulleBrowser AI assistant.');
+
+    pipelines.analyzeRfp.mockRejectedValueOnce(noCredit());
+    expect((await finished((await handlers.rfps.analyze(agreed, RFP)).jobId))?.state).toBe('completed');
+    expect(pipelines.analyzeRfp).toHaveBeenNthCalledWith(1, expect.objectContaining({ complete }));
+    expect(pipelines.analyzeRfp).toHaveBeenNthCalledWith(2, expect.objectContaining({ complete: null }));
+    expect(rfps.saveAnalysis).toHaveBeenCalledWith(ORG_A, analysis);
+
+    pipelines.assessAlignment.mockRejectedValueOnce(noCredit());
+    expect((await finished((await handlers.rfps.assessAlignment(agreed, RFP)).jobId))?.state).toBe('completed');
+    expect(pipelines.assessAlignment).toHaveBeenLastCalledWith(expect.objectContaining({ complete: null }));
+    expect(rfps.saveAlignment).toHaveBeenCalled();
+
+    pipelines.buildGuide.mockRejectedValueOnce(noCredit());
+    expect((await finished((await handlers.guides.start(agreed, '')).jobId))?.state).toBe('completed');
+    expect(pipelines.buildGuide).toHaveBeenLastCalledWith(expect.objectContaining({ complete: null }));
+    expect(guides.save).toHaveBeenCalled();
+  });
+
   it('says why an analysis failed', async () => {
     const { handlers, pipelines, rfps, finished } = setup();
     pipelines.analyzeRfp.mockRejectedValueOnce(new FundingError('ASSISTANT_ERROR', 'Try again.'));

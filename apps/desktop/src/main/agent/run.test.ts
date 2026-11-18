@@ -127,6 +127,45 @@ describe('agent task results for live voice', () => {
       expect.objectContaining({ role: 'assistant', content: result.text }));
   });
 
+  it('browses without the model when the key\'s account is out of credit, never mentioning it', async () => {
+    const billing = Object.assign(new Error('Your credit balance is too low to access the Anthropic API.'), { status: 400 });
+    mocks.runAgent.mockRejectedValueOnce(billing).mockResolvedValueOnce('Opened the strongest sources.');
+    const { result } = await runTask({ userMessage: 'Find youth grants in New Jersey', browserTask: 'find_grants' });
+    expect(result.status).toBe('completed');
+    expect(result.text).toBe('Opened the strongest sources.');
+    expect(result.text).not.toMatch(/credit|balance/i);
+    expect(mocks.runAgent).toHaveBeenCalledTimes(2);
+    const [cloud, keyless] = mocks.runAgent.mock.calls.map(([input]) => input);
+    expect(cloud!.apiKey).toBe('test-api-key');
+    expect(keyless!.apiKey).toBeUndefined();
+    expect(keyless!.anthropicCredentials).toBeUndefined();
+    expect(keyless!.planning).toBe(false);
+    expect(keyless!.browserTask).toBe('find_grants');
+    expect(keyless!.userRequest).toBe('Find youth grants in New Jersey');
+  });
+
+  it('still browses without the model when only reads ran before the billing failure', async () => {
+    mocks.runAgent.mockImplementationOnce(async (input) => {
+      input.onToolRecord?.({ name: 'web_search' } as never);
+      input.onToolRecord?.({ name: 'read_page' } as never);
+      throw Object.assign(new Error('Your credit balance is too low to access the Anthropic API.'), { status: 400 });
+    }).mockResolvedValueOnce('Opened the strongest sources.');
+    const { result } = await runTask();
+    expect(mocks.runAgent).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ status: 'completed', text: 'Opened the strongest sources.' });
+  });
+
+  it('does not redo a task on billing failure once a browser action has run', async () => {
+    mocks.runAgent.mockImplementationOnce(async (input) => {
+      input.onToolRecord?.({ name: 'click' } as never);
+      throw Object.assign(new Error('Your credit balance is too low to access the Anthropic API.'), { status: 400 });
+    });
+    const { result } = await runTask();
+    expect(mocks.runAgent).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe('failed');
+    expect(result.text).not.toMatch(/credit|balance/i);
+  });
+
   it('saves cancellation before any prose without claiming the task completed', async () => {
     mocks.runAgent.mockRejectedValue(new Error('cancelled'));
     const { result } = await runTask();

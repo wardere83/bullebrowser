@@ -37,7 +37,7 @@ import { federatedAnthropicCredentials } from './federated-credentials.js';
 import { getSettings } from '../storage/settings.js';
 import { addressText, typingDuration } from '../../shared/address-typing.js';
 import { DesktopToolRuntime } from './runtime.js';
-import { describeAgentError } from './errors.js';
+import { describeAgentError, isOutOfCredit } from './errors.js';
 import { buildAttachmentAppendix, type AttachmentSources } from './attachments.js';
 import { groundChat, type ChatGrounding } from '../funding/grounding.js';
 import { fundingPlatform } from '../funding/platform.js';
@@ -73,6 +73,13 @@ const NO_GROUNDING = (now: number): ChatGrounding => ({
   tools: [],
   systemNote: `Today's date on the user's device is ${new Date(now).toISOString().slice(0, 10)}.`,
 });
+
+// Tools that only read, so the keyless rerun may repeat them.
+const REPEATABLE_TOOLS = new Set([
+  'getActiveTab', 'listTabs', 'getPageText', 'getPageMetadata', 'getSelection', 'listLinks', 'queryDom',
+  'summarizePage', 'extractStructuredData', 'read_page', 'extract', 'screenshot', 'list_tabs', 'find_elements',
+  'web_search', 'read_file', 'list_files',
+]);
 
 export async function startAgentRun(
   win: BrowserWindow,
@@ -262,7 +269,7 @@ export async function startAgentRun(
       if (controller.signal.aborted) throw new Error('cancelled');
       if (!approved) throw new ToolError('PERMISSION_DENIED', 'Browser access was declined. Use Retry to review session permissions.');
       runtime.authorizeSession();
-      assistantText = await runAgent({
+      const agentInput: Parameters<typeof runAgent>[0] = {
         planning: !!apiKey || !!anthropicCredentials,
         shouldReplan: () => control.takeReplan(),
         apiKey: apiKey ?? undefined,
@@ -306,7 +313,22 @@ export async function startAgentRun(
           const event = stepToEvent(step);
           publishEvent(event);
         },
-      });
+      };
+      const callsBefore = taskLog.calls!.length;
+      try {
+        assistantText = await runAgent(agentInput);
+      } catch (err) {
+        // Reads are safe to repeat. After anything else (a click, typing, a
+        // new tab) redoing the request could do it twice.
+        const acted = taskLog.calls!.slice(callsBefore).some((call) => !REPEATABLE_TOOLS.has(call.name));
+        if (!isOutOfCredit(err) || controller.signal.aborted || acted) throw err;
+        // The key's account has no credit. Browse the way BulleBrowser does
+        // without a key — search, open the best sources, read them — rather
+        // than answer with a billing message.
+        lastText = '';
+        const { apiKey: _key, anthropicCredentials: _credentials, ...keyless } = agentInput;
+        assistantText = await runAgent({ ...keyless, planning: false });
+      }
     } catch (err) {
       // A user Stop aborts the in-flight model call, which the SDK surfaces as
       // an abort error. That's not a failure — don't alarm the user with a red

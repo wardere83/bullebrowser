@@ -586,6 +586,7 @@ describe('Claude transport failures', () => {
     [422, 'invalid_request_error', 'The request could not be processed.', 'BAD_REQUEST'],
     [400, 'invalid_request_error', NO_CREDIT, 'BILLING'],
     [402, 'billing_error', 'Payment is required.', 'BILLING'],
+    [400, 'invalid_request_error', 'Insufficient funds on this account.', 'BILLING'],
     [400, 'invalid_request_error', TOO_LONG, 'INPUT_TOO_LARGE'],
     [413, 'request_too_large', 'Request exceeds the maximum allowed size.', 'INPUT_TOO_LARGE'],
   ] as const)('does not repeat a %i %s (%s)', async (status, type, text, code) => {
