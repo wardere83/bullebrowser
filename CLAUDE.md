@@ -23,7 +23,7 @@ app releases, searches or talks to people.
   chat, questions are answered and browse only when they need a source, and
   browser access is asked for up front only for browsing requests.
 - Search without a key uses Startpage (Google's results), then Bing.
-  BulleBrowser hides Startpage's ads for every user. DuckDuckGo is blocked by
-  the owner's policy. Never try to get around a CAPTCHA.
+  BulleBrowser hides Startpage's ads for every user. Engines blocked by the
+  destination policy stay blocked. Never try to get around a CAPTCHA.
 - Never suggest options that charge for API usage (search APIs, paid
   services). Free options only.
