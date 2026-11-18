@@ -594,6 +594,7 @@ export function AiPanel() {
           onOpen={openConversation}
           onDelete={deleteConversation}
           onDeleteAll={deleteAllConversations}
+          busy={!!runId}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -868,6 +869,7 @@ function HistoryList({
   onOpen,
   onDelete,
   onDeleteAll,
+  busy,
   onClose,
 }: {
   conversations: ConversationSummary[];
@@ -875,6 +877,8 @@ function HistoryList({
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onDeleteAll: () => void;
+  /** A task is running; its chat must not be deleted under it. */
+  busy: boolean;
   onClose: () => void;
 }) {
   const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -888,11 +892,13 @@ function HistoryList({
           {sorted.length > 0 && (
             <button
               type="button"
+              disabled={busy}
+              title={busy ? 'Wait for the current task to finish' : undefined}
               onClick={() => {
                 const count = sorted.length;
                 if (confirm(`Delete all ${count} ${count === 1 ? 'chat' : 'chats'}? This cannot be undone.`)) onDeleteAll();
               }}
-              className="text-xs text-ink-secondary hover:text-danger"
+              className="text-xs text-ink-secondary hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
             >
               Delete all
             </button>

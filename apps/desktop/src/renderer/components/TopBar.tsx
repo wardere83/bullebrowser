@@ -109,9 +109,12 @@ export function TopBar() {
       setDraftUrl(!active || active.url === 'about:blank' ? '' : active.url);
       return;
     }
-    // With every tab closed, the address opens in a new tab.
+    // With every tab closed, the address opens in a new tab. The tab comes
+    // first, so an address that policy refuses shows why, as it does in any tab.
     if (!active) {
-      void window.bullebrowser.tabs.create(action.url).catch(() => {});
+      void window.bullebrowser.tabs.create('about:blank')
+        .then((tab) => window.bullebrowser.tabs.navigate(tab.id, action.url))
+        .catch(() => {});
       return;
     }
     // Main publishes the page's visible policy/load error before rejecting.

@@ -20,6 +20,9 @@ const CAPABILITY =
 // Doing something in the browser, or on the page in front of the user.
 const BROWSE =
   /^(?:(?:can|could|would|will) you\s+|please\s+|i (?:want|need) you to\s+|let'?s\s+)?(?:open|go to|navigate|visit|browse|search|look up|look for|find|show me|pull up|compare|research|investigate|check|verify|click|tap|press|type|enter|fill|sign (?:in|up)|log ?in|book|buy|order|download|upload|scroll|summari[sz]e|read|extract|list (?:the )?(?:links|tabs)|explore)\b/i;
+// Work on text the person supplied (an attachment, pasted text), not on a page.
+const SUPPLIED = /\b(?:attached|attachment|uploaded|following|below|pasted|this text|the text|my (?:file|document|notes|draft))\b/i;
+const TEXT_WORK = /^(?:please\s+)?(?:summari[sz]e|read|extract|list)\b/i;
 const PAGE = /\b(?:this|the current|the open|that) (?:page|site|website|tab|article|document|listing|form)\b|\bon (?:the )?screen\b/i;
 const URL = /\bhttps?:\/\/\S+|\bwww\.\S+\.\S+|\b[a-z0-9-]+\.(?:com|org|gov|net|edu|io|co|us)\b/i;
 
@@ -43,6 +46,7 @@ export function requestIntent(request: string, options: { browserTask?: string }
   if (options.browserTask) return 'browse';
   if (!text) return 'chat';
   if (CHAT.test(text) || CAPABILITY.test(text) || (REACTION.test(text) && !NEW_REQUEST.test(text))) return 'chat';
+  if (TEXT_WORK.test(text) && SUPPLIED.test(text) && !PAGE.test(text) && !URL.test(text)) return 'question';
   if (BROWSE.test(text) || PAGE.test(text) || URL.test(text)) return 'browse';
   if (QUESTION.test(text)) return NEEDS_SOURCES.test(text) ? 'browse' : 'question';
   if (isResearchRequest(text)) return 'browse';

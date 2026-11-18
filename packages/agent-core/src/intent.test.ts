@@ -13,7 +13,8 @@ describe('requestIntent', () => {
   it('treats questions as questions', () => {
     for (const text of ['What is a 501(c)(3)?', 'How do I write a strong mission statement?', 'Why does a budget narrative matter?',
       'explain the difference between a nonprofit and a charity', 'Should I hire a consultant', 'Write me a short thank-you note to a donor',
-      'Explain binary search', 'What is photosynthesis?']) {
+      'Explain binary search', 'What is photosynthesis?', 'Summarize the attached file',
+      'Extract the names from the following pasted text']) {
       expect(requestIntent(text), text).toBe('question');
     }
   });
