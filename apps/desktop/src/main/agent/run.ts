@@ -298,6 +298,8 @@ export async function startAgentRun(
       const agentInput: Parameters<typeof runAgent>[0] = {
         // A plan helps browsing work; conversation and questions go straight to the answer.
         planning: intent === 'browse' && (!!apiKey || !!anthropicCredentials),
+        // The open page goes to the model only for work on it or in the browser.
+        pageContext: intent === 'browse',
         shouldReplan: () => control.takeReplan(),
         apiKey: apiKey ?? undefined,
         ...(anthropicCredentials ? { anthropicCredentials } : {}),

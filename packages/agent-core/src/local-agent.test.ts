@@ -452,6 +452,7 @@ describe('the keyless assistant', () => {
       ['what is 2 + 2?', /^Could you tell me a bit more/],
       ['Is this a good fit?', /^Could you tell me a bit more/],
       ['book a flight to Boston', /^BulleBrowser Agentic AI is ready\. I can summarize the current page/],
+      ['Who is Ada Lovelace?', /^I can browse the web for you/],
     ])('replies in the chat without browsing: %s', async (request, expected) => {
       const { reply, context, requestBrowseAccess } = await ask(request);
       expect(reply).toMatch(expected);

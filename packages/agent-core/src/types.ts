@@ -276,6 +276,12 @@ export interface ReferenceContextItem {
 export interface AgentInput {
   /** Use a separate goal planner and fast executor, with verified synthesis. */
   planning?: boolean;
+  /**
+   * Whether the open page is read into the request up front (default true).
+   * Hosts turn it off for conversation and standalone questions, so a
+   * "hello" never sends the page in front of the user to the model.
+   */
+  pageContext?: boolean;
   shouldReplan?: () => boolean;
   /** Host must not mark incomplete or unverified execution as completed. */
   onCompletion?: (outcome: TaskOutcome) => void;

@@ -339,8 +339,11 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     report = "Tell me what you'd like me to try again, and I'll do it.";
   } else if (WRITING_REQUEST.test(message)) {
     report = "I can't draft that here, but I can look up examples and guidance for it. Want me to search for some?";
-  } else if (intent === 'question' && (keywords(message).length < 2 || VAGUE_QUESTION.test(message))) {
+  } else if (intent === 'question' && (keywords(message).length < 1 || VAGUE_QUESTION.test(message))) {
     report = "Could you tell me a bit more about what you're asking? Name the program, funder, topic or website, and I'll look it up.";
+  } else if (intent === 'question' && !(input.extraTools ?? []).some((tool) => tool.name === 'web_search')) {
+    // A host with no search (the mobile app) cannot look anything up.
+    report = CAPABILITIES;
   } else if (intent === 'question') {
     // Looked up, then answered with the sources' own words: the passages that
     // best match the question, each with the page it came from.

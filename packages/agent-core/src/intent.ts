@@ -23,6 +23,17 @@ const BROWSE =
 const PAGE = /\b(?:this|the current|the open|that) (?:page|site|website|tab|article|document|listing|form)\b|\bon (?:the )?screen\b/i;
 const URL = /\bhttps?:\/\/\S+|\bwww\.\S+\.\S+|\b[a-z0-9-]+\.(?:com|org|gov|net|edu|io|co|us)\b/i;
 
+// A reaction that opens with thanks or praise ("Thanks, that was really
+// helpful"), with no question and no new request in it.
+const REACTION =
+  /^(?:thanks?|thank you|ty|great|perfect|awesome|amazing|excellent|nice|cool|wonderful|ok(?:ay)?|got it|that(?:'s| is| was) (?:great|perfect|helpful|it|exactly)|this (?:is|was) (?:great|perfect|helpful))\b[\s,!.]/i;
+const NEW_REQUEST = /\?|\b(?:but|now|also|next|can you|could you|please|find|search|open|look up|show me|check)\b/i;
+
+// Questions that need current or sourced facts are browsed even when asked
+// as questions; "Explain binary search" is not one of them.
+const NEEDS_SOURCES =
+  /\b(?:latest|current|currently|today|this (?:week|month|year)|right now|recent|grants?|funders?|funding|deadlines?|eligib\w*|news|prices?|cost|open now|available)\b/i;
+
 const QUESTION =
   /\?\s*$|^(?:what|what's|whats|who|whom|whose|when|where|why|how|which|is|are|am|was|were|can|could|should|would|will|do|does|did|has|have|explain|define|describe|tell me|help me understand)\b/i;
 
@@ -31,9 +42,10 @@ export function requestIntent(request: string, options: { browserTask?: string }
   const text = request.trim();
   if (options.browserTask) return 'browse';
   if (!text) return 'chat';
-  if (CHAT.test(text) || CAPABILITY.test(text)) return 'chat';
-  if (BROWSE.test(text) || PAGE.test(text) || URL.test(text) || isResearchRequest(text)) return 'browse';
-  if (QUESTION.test(text)) return 'question';
+  if (CHAT.test(text) || CAPABILITY.test(text) || (REACTION.test(text) && !NEW_REQUEST.test(text))) return 'chat';
+  if (BROWSE.test(text) || PAGE.test(text) || URL.test(text)) return 'browse';
+  if (QUESTION.test(text)) return NEEDS_SOURCES.test(text) ? 'browse' : 'question';
+  if (isResearchRequest(text)) return 'browse';
   // Anything else (write me…, draft…, a statement): answer it in the chat.
   return 'question';
 }
