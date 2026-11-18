@@ -70,6 +70,7 @@ export const IPC = {
   CONVERSATION_GET: 'conversation:get',
   CONVERSATION_NEW: 'conversation:new',
   CONVERSATION_DELETE: 'conversation:delete',
+  CONVERSATION_DELETE_ALL: 'conversation:delete-all',
   CONVERSATION_SCRATCHPAD: 'conversation:scratchpad',
   // App
   APP_GET_INFO: 'app:get-info',
@@ -321,6 +322,8 @@ export interface BrowserBridge {
     create(): Promise<ConversationDetail>;
     setScratchpad(id: string, text: string): Promise<void>;
     delete(id: string): Promise<void>;
+    /** Every chat in History; resolves to how many were deleted. */
+    deleteAll(): Promise<number>;
   };
   agent: {
     run(req: AgentRunRequest): Promise<{ runId: string }>;

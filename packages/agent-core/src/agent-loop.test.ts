@@ -706,7 +706,7 @@ describe('runAgent Claude tool-use loop', () => {
   it('offers truthful local capabilities for unsupported prompts', async () => {
     const context = makeContext();
     const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'write a novel', context, onStep: () => {} });
-    expect(result).toContain('BulleBrowser Agentic AI is ready');
+    expect(result).toContain("I can't draft that here");
     expect(context.runtime.readPage).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
   });
@@ -1068,6 +1068,17 @@ describe('sealed reference context', () => {
     const warnings = steps.filter(step => step.type === 'page_instructions');
     expect(warnings).toHaveLength(1);
     expect(JSON.stringify(warnings)).not.toContain('SECRETVALUE123');
+  });
+
+  it('never reads or sends the open page when the host leaves it out', async () => {
+    const context = makeContext();
+    const steps: AgentStep[] = [];
+    await run({ userMessage: 'Hello!', pageContext: false, context }, steps);
+    expect(context.runtime.readPage).not.toHaveBeenCalled();
+    const sent = sentToClaude();
+    expect(userTurn(sent)).not.toContain('untrusted_page_data source="active_tab"');
+    expect(JSON.stringify(sent.system)).toContain('The open page was not read for this message');
+    expect(steps.some((step) => step.detail === 'Reading the current page…')).toBe(false);
   });
 
   it('bounds untrusted document labels in warnings', async () => {

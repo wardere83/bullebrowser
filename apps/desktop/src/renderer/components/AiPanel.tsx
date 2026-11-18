@@ -527,6 +527,12 @@ export function AiPanel() {
     setShowHistory(false);
   };
 
+  // Every chat in History at once, then a fresh chat so the panel is never empty.
+  const deleteAllConversations = async () => {
+    await browserBridge().conversations.deleteAll();
+    await createConversation();
+  };
+
   const deleteConversation = async (id: string) => {
     const bridge = browserBridge();
     await bridge.conversations.delete(id);
@@ -587,6 +593,8 @@ export function AiPanel() {
           currentId={current?.id}
           onOpen={openConversation}
           onDelete={deleteConversation}
+          onDeleteAll={deleteAllConversations}
+          busy={!!runId}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -860,12 +868,17 @@ function HistoryList({
   currentId,
   onOpen,
   onDelete,
+  onDeleteAll,
+  busy,
   onClose,
 }: {
   conversations: ConversationSummary[];
   currentId?: string;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
+  onDeleteAll: () => void;
+  /** A task is running; its chat must not be deleted under it. */
+  busy: boolean;
   onClose: () => void;
 }) {
   const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -875,13 +888,29 @@ function HistoryList({
         <span className="text-[10px] font-medium uppercase tracking-wide text-ink-secondary">
           Chat history
         </span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-xs text-ink-secondary hover:text-ink-primary"
-        >
-          Close
-        </button>
+        <div className="flex items-center gap-3">
+          {sorted.length > 0 && (
+            <button
+              type="button"
+              disabled={busy}
+              title={busy ? 'Wait for the current task to finish' : undefined}
+              onClick={() => {
+                const count = sorted.length;
+                if (confirm(`Delete all ${count} ${count === 1 ? 'chat' : 'chats'}? This cannot be undone.`)) onDeleteAll();
+              }}
+              className="text-xs text-ink-secondary hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Delete all
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-xs text-ink-secondary hover:text-ink-primary"
+          >
+            Close
+          </button>
+        </div>
       </div>
       <div className="max-h-64 overflow-y-auto px-2 pb-2">
         {sorted.length === 0 ? (

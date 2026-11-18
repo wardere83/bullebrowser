@@ -152,6 +152,14 @@ class ConversationStore {
     );
   }
 
+  /** Removes every chat the person can see in History; returns how many. */
+  deleteAll(organizationId?: string | null): number {
+    const all = this.store.get('conversations');
+    const kept = all.filter((c) => !this.visibleTo(c, organizationId));
+    this.store.set('conversations', kept);
+    return all.length - kept.length;
+  }
+
   /** Removes every chat bound to an organization, e.g. when it is deleted. */
   deleteForOrganization(organizationId: string): number {
     const all = this.store.get('conversations');

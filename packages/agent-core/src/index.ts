@@ -16,6 +16,7 @@ export * from './untrusted.js';
 export * from './budget.js';
 export * from './permissions.js';
 export * from './product-identity.js';
+export * from './intent.js';
 export * from './terminology.js';
 export * from './structured.js';
 

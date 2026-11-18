@@ -444,20 +444,52 @@ describe('the keyless assistant', () => {
   });
 
   describe('everything else', () => {
-    it.each(['write a novel', 'what is 2 + 2?', 'hello', 'Is this a good fit?', 'book a flight to Boston'])(
-      'says what works without an assistant: %s',
-      async (request) => {
-        const { reply, context, requestBrowseAccess } = await ask(request);
-        expect(reply).toBe(
-          'BulleBrowser Agentic AI is ready. I can summarize the current page, list tabs, show page details, open a URL, ' +
-            'list links, extract page data, click "a target", or type "text" into "a field". Funding questions need a ' +
-            'connected assistant for a written answer; without one, the Organization Knowledge Hub, Opportunities, ' +
-            'RFP Analysis and Proposal Guide screens still work.',
-        );
-        expect(context.runtime.readPage).not.toHaveBeenCalled();
-        expect(requestBrowseAccess).not.toHaveBeenCalled();
-      },
-    );
+    it.each([
+      ['hello', /^Hi! I'm BulleBrowser Agentic AI\. I can browse the web for you and answer your questions/],
+      ['Thank you so much!!!', /^You're welcome!/],
+      ['What can you do?', /^I can browse the web for you/],
+      ['write a novel', /^I can't draft that here, but I can look up examples/],
+      ['what is 2 + 2?', /^Could you tell me a bit more/],
+      ['Is this a good fit?', /^Could you tell me a bit more/],
+      ['book a flight to Boston', /^BulleBrowser Agentic AI is ready\. I can summarize the current page/],
+      ['Who is Ada Lovelace?', /^I can browse the web for you/],
+      ['Thanks for the grant information!', /^You're welcome!/],
+    ])('replies in the chat without browsing: %s', async (request, expected) => {
+      const { reply, context, requestBrowseAccess } = await ask(request);
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/credit|balance|billing/i);
+      expect(context.runtime.readPage).not.toHaveBeenCalled();
+      expect(requestBrowseAccess).not.toHaveBeenCalled();
+    });
+
+    it('answers a question with quoted passages from the sources it read', async () => {
+      const text = 'Grant writing is a skill. A 501(c)(3) organization is a nonprofit that the IRS exempts from federal income tax. ' +
+        'Donations to a 501(c)(3) organization are usually tax deductible for the donor. The weather was nice.';
+      const search = { name: 'web_search', description: 'search', inputSchema: { type: 'object' as const, properties: {} },
+        execute: vi.fn(async () => ({ results: [{ title: 'IRS', url: 'https://www.irs.gov/charities' }] })) };
+      const context = makeContext({
+        readPage: vi.fn(async () => ({ url: 'https://www.irs.gov/charities', title: 'Exempt organizations', text })),
+      });
+      const { reply } = await ask('What is a 501(c)(3) organization?', { context, extraTools: [search] });
+      expect(search.execute).toHaveBeenCalledWith(expect.objectContaining({ query: 'What is a 501(c)(3) organization?' }));
+      expect(reply).toContain("Here's what I found:");
+      expect(reply).toContain('> A 501\\(c\\)\\(3\\) organization is a nonprofit that the IRS exempts from federal income tax.');
+      expect(reply).not.toContain('The weather was nice');
+      expect(reply).toContain('Source: [Exempt organizations](https://www.irs.gov/charities)');
+    });
+
+    it('quotes passages as plain text and matches whole words only', async () => {
+      const text = 'Ada Lovelace wrote the first program ![x](https://tracker.example/pixel) for the engine. ' +
+        'Canada is a large country with many provinces and territories.';
+      const search = { name: 'web_search', description: 'search', inputSchema: { type: 'object' as const, properties: {} },
+        execute: vi.fn(async () => ({ results: [{ title: 'Ada (bio)', url: 'https://example.org/ada_(person)' }] })) };
+      const context = makeContext({ readPage: vi.fn(async () => ({ url: 'https://example.org/ada_(person)', title: 'Ada [bio]', text })) });
+      const { reply } = await ask('Who is Ada?', { context, extraTools: [search] });
+      expect(reply).not.toContain('![x](');
+      expect(reply).toContain('\\!\\[x\\]\\(https://tracker.example/pixel\\)');
+      expect(reply).not.toContain('Canada');
+      expect(reply).toContain('Source: [Ada \\[bio\\]](https://example.org/ada_%28person%29)');
+    });
   });
 
   describe('what the host attaches', () => {
@@ -470,7 +502,7 @@ describe('the keyless assistant', () => {
       expect(reply).toContain('Grants.gov');
 
       const help = await ask(`hello${attached}`, { userRequest: 'hello' });
-      expect(help.reply).toContain('BulleBrowser Agentic AI is ready');
+      expect(help.reply).toContain("Hi! I'm BulleBrowser Agentic AI");
     });
 
     it('ignores reference context', async () => {

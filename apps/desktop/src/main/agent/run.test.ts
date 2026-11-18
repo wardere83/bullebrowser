@@ -166,6 +166,43 @@ describe('agent task results for live voice', () => {
     expect(result.text).not.toMatch(/credit|balance/i);
   });
 
+  it('answers conversation without asking for browser access or planning', async () => {
+    mocks.runAgent.mockResolvedValue("You're welcome!");
+    const { send, result } = await runTask({ userMessage: 'Thank you so much!' });
+    expect(result.status).toBe('completed');
+    expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)).toBe(false);
+    expect(mocks.runAgent.mock.calls[0]![0].planning).toBe(false);
+  });
+
+  it('asks for browser access up front for a browsing request', async () => {
+    mocks.runAgent.mockResolvedValue('Opened the sources.');
+    const { send } = await runTask({ userMessage: 'Find youth grants in New Jersey' });
+    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
+    expect(consent).toMatchObject({ kind: 'browse_access' });
+    expect(mocks.runAgent.mock.calls[0]![0].planning).toBe(true);
+  });
+
+  it('asks a question first, and for access only when the answer needs a search', async () => {
+    const send = vi.fn();
+    const asked = () => send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST);
+    let askedBeforeSearch: boolean | undefined;
+    mocks.runAgent.mockImplementation(async (input) => {
+      askedBeforeSearch = asked();
+      const search = input.extraTools!.find((tool) => tool.name === 'web_search')!;
+      await search.execute({ query: 'What is a 501(c)(3)?' }).catch(() => {});
+      return 'A 501(c)(3) is a tax-exempt nonprofit.';
+    });
+    const win = { webContents: { send } } as unknown as BrowserWindow;
+    const handle = await startAgentRun(win, { ...request, userMessage: 'What is a 501(c)(3)?' });
+    await vi.waitFor(() => expect(asked()).toBe(true));
+    expect(askedBeforeSearch).toBe(false);
+    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)![1];
+    expect(consent).toMatchObject({ kind: 'browse_access' });
+    replyAgentConfirm(handle.runId, consent.id, false);
+    await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
+    expect(mocks.runAgent.mock.calls[0]![0].planning).toBe(false);
+  });
+
   it('saves cancellation before any prose without claiming the task completed', async () => {
     mocks.runAgent.mockRejectedValue(new Error('cancelled'));
     const { result } = await runTask();

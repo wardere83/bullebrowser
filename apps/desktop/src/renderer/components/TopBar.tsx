@@ -97,7 +97,7 @@ export function TopBar() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!active || !draftUrl.trim()) return;
+    if (!draftUrl.trim()) return;
     const action = parseAddressBarInput(draftUrl, searchProvider);
     if (action.type === 'agent') {
       // BulleBrowser address bar → AI agent. Open the panel and hand
@@ -106,7 +106,15 @@ export function TopBar() {
       window.dispatchEvent(
         new CustomEvent<string>(AGENT_PROMPT_EVENT, { detail: action.prompt }),
       );
-      setDraftUrl(active.url === 'about:blank' ? '' : active.url);
+      setDraftUrl(!active || active.url === 'about:blank' ? '' : active.url);
+      return;
+    }
+    // With every tab closed, the address opens in a new tab. The tab comes
+    // first, so an address that policy refuses shows why, as it does in any tab.
+    if (!active) {
+      void window.bullebrowser.tabs.create('about:blank')
+        .then((tab) => window.bullebrowser.tabs.navigate(tab.id, action.url))
+        .catch(() => {});
       return;
     }
     // Main publishes the page's visible policy/load error before rejecting.

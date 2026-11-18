@@ -566,6 +566,55 @@ test('an AI account out of credit still browses, and the chat never mentions cre
   } finally { await close(); await source.close(); api.close(); }
 });
 
+test('an address entered with every tab closed opens in a new tab', async () => {
+  const source = await fixture();
+  const { win, close } = await launch();
+  try {
+    for (const tab of await win.evaluate(() => window.bullebrowser.tabs.list())) {
+      await win.evaluate((id) => window.bullebrowser.tabs.close(id), tab.id);
+    }
+    await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.tabs.list()).length)).toBe(0);
+    const address = win.getByRole('textbox', { name: 'Address bar', exact: true });
+    await address.fill(`${source.url}/one`);
+    await address.press('Enter');
+    await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.tabs.list()).map((tab) => [tab.url, tab.active])))
+      .toEqual([[`${source.url}/one`, true]]);
+  } finally { await close(); await source.close(); }
+});
+
+test('conversation is answered in the chat without asking for browser access', async () => {
+  const { win, close } = await launch();
+  try {
+    for (const [prompt, reply] of [['Hello!', "Hi! I'm BulleBrowser Agentic AI"], ['Thank you so much!', "You're welcome!"]] as const) {
+      await win.locator('aside textarea.prompt-input-field').fill(prompt);
+      await win.getByRole('button', { name: 'Send', exact: true }).click();
+      await expect(win.locator('.md-prose').last()).toContainText(reply, { timeout: 15000 });
+    }
+    await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toHaveCount(0);
+  } finally { await close(); }
+});
+
+test('History deletes every chat at once', async () => {
+  const { win, close } = await launch();
+  try {
+    for (let i = 0; i < 3; i += 1) {
+      await win.evaluate(async (n) => {
+        const chat = await window.bullebrowser.conversations.create();
+        await window.bullebrowser.conversations.setScratchpad(chat.id, `note ${n}`);
+      }, i);
+    }
+    await win.locator('aside textarea.prompt-input-field').fill('Hello!');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(win.locator('.md-prose').last()).toContainText("Hi! I'm", { timeout: 15000 });
+    await win.getByRole('button', { name: 'History', exact: true }).click();
+    win.once('dialog', (dialog) => { expect(dialog.message()).toMatch(/^Delete all \d+ chats\? This cannot be undone\.$/); void dialog.accept(); });
+    await win.getByRole('button', { name: 'Delete all', exact: true }).click();
+    // A fresh, empty chat takes their place.
+    await expect.poll(() => win.evaluate(async () => (await window.bullebrowser.conversations.list()).filter((c) => c.messageCount > 0).length)).toBe(0);
+    await expect(win.locator('.md-prose')).toHaveCount(0);
+  } finally { await close(); }
+});
+
 test('search-key settings are visible, masked and separate from model keys', async () => {
   const { win, close } = await launch();
   try {
