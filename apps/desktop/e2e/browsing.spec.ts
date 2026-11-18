@@ -521,6 +521,45 @@ test('no search key searches Startpage first and reads its direct result links',
   } finally { await close(); await source.close(); }
 });
 
+test('an AI account out of credit still browses, and the chat never mentions credit', async () => {
+  const source = await fixture();
+  // The API's real reply for an empty balance.
+  let modelCalls = 0;
+  const api = createServer((req, res) => {
+    modelCalls += 1;
+    req.resume();
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error',
+      message: 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.' } }));
+  });
+  await new Promise<void>((done) => api.listen(0, '127.0.0.1', done));
+  const apiUrl = `http://127.0.0.1:${(api.address() as { port: number }).port}`;
+  const { app, win, close } = await launch();
+  try {
+    await app.evaluate(({ session }, { base, apiUrl }) => {
+      process.env.BRAVE_SEARCH_API_KEY = '';
+      process.env.ANTHROPIC_API_KEY = 'fixture-key-out-of-credit';
+      process.env.ANTHROPIC_BASE_URL = apiUrl;
+      session.defaultSession.protocol.handle('https', (request) => {
+        const url = new URL(request.url);
+        if (url.hostname !== 'www.startpage.com') return new Response('Unexpected search engine', { status: 404 });
+        if (url.pathname === '/') return new Response('<html><head><title>Startpage</title></head><body><form action="/sp/search" method="get"><input id="q" name="query" type="text" aria-label="Search"></form></body></html>', { headers: { 'Content-Type': 'text/html' } });
+        const result = (href: string, title: string) => `<div class="result"><a class="result-title result-link" href="${href}"><h2>${title}</h2></a></div>`;
+        return new Response(`<html><head><title>Startpage Search Results</title></head><body><section id="main"><div class="w-gl">${result(`${base}/one`, 'School grants program')}${result(`${base}/two`, 'School grants application')}</div></section></body></html>`, { headers: { 'Content-Type': 'text/html' } });
+      });
+    }, { base: source.url, apiUrl });
+    await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
+    await win.getByRole('button', { name: 'Send', exact: true }).click();
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+    await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
+    // The model really was asked, and refused for billing.
+    expect(modelCalls).toBeGreaterThan(0);
+    await expect(win.locator('aside')).not.toContainText(/credit|balance|billing/i);
+    const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+    expect(tabs.some((tab) => tab.url.startsWith(`${source.url}/one`))).toBe(true);
+  } finally { await close(); await source.close(); api.close(); }
+});
+
 test('search-key settings are visible, masked and separate from model keys', async () => {
   const { win, close } = await launch();
   try {

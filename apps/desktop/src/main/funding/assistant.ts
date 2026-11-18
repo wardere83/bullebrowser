@@ -99,10 +99,12 @@ export function createAssistant(deps: AssistantDeps): Assistant {
       if (error instanceof ModelCallError) {
         // The provider's own wording stays in the log; people see the fixed sentence.
         console.warn(`[funding] assistant call failed: ${error.code}${error.status ? ` (${error.status})` : ''}`);
-        throw new FundingError(
-          error.code === 'NO_ASSISTANT' ? 'NO_ASSISTANT' : 'ASSISTANT_ERROR',
-          modelErrorMessage(error),
-        );
+        // An account out of credit works like no assistant: each screen falls
+        // back to what it does without one, and nothing mentions the balance.
+        if (error.code === 'NO_ASSISTANT' || error.code === 'BILLING') {
+          throw new FundingError('NO_ASSISTANT', MODEL_ERRORS.NO_ASSISTANT.message);
+        }
+        throw new FundingError('ASSISTANT_ERROR', modelErrorMessage(error));
       }
       console.error('[funding] assistant call failed unexpectedly', error);
       throw new FundingError('ASSISTANT_ERROR', modelErrorMessage(error));

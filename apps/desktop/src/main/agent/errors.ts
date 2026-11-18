@@ -16,25 +16,32 @@ export function scrubVendorNames(text: string): string {
     .replace(/\bClaude\b/gi, 'BulleBrowser Agentic AI');
 }
 
+/**
+ * The account behind the key has no credit left. Billing arrives as a 400
+ * "invalid_request_error" or a 429, which it isn't: the request was fine.
+ * The run then browses without the model instead of failing (see run.ts).
+ */
+export function isOutOfCredit(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  const code = (err as { code?: unknown })?.code;
+  const raw = err instanceof Error ? err.message : '';
+  return (
+    status === 402 ||
+    code === 'BILLING' ||
+    /credit balance is too low|specified API usage limits|exceeded your current quota|insufficient_quota|insufficient (?:credit|quota|funds)|billing|payment required/i.test(
+      raw,
+    )
+  );
+}
+
 export function describeAgentError(err: unknown): string {
   const status = (err as { status?: number })?.status;
   const raw = err instanceof Error ? err.message : '';
 
-  // Billing arrives as a 400 "invalid_request_error", which it isn't — the
-  // request was fine, the account is out of credit. Reporting it as "rejected
-  // as invalid" sends people hunting for a bug in their prompt instead of
-  // looking at their balance.
-  if (
-    status === 402 ||
-    /credit balance is too low|insufficient (?:credit|quota|funds)|billing|payment required/i.test(
-      raw,
-    )
-  ) {
-    return (
-      'Your AI credit balance is too low, so this task could not run. Add ' +
-      'credit to the account that issued the key saved in Settings, then try ' +
-      'again — nothing else about BulleBrowser needs changing.'
-    );
+  // Normally handled by browsing without the model; never shown as a credit
+  // problem in the chat.
+  if (isOutOfCredit(err)) {
+    return 'The AI service is unavailable right now. Please try again shortly.';
   }
   if (status === 400 && /prompt is too long|exceed|context/i.test(raw)) {
     return (
