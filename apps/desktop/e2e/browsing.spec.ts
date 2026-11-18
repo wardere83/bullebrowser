@@ -497,7 +497,7 @@ test('no search key searches Startpage first and reads its direct result links',
         // submits to /sp/search, which only typing reaches.
         if (url.pathname === '/') return new Response('<html><head><title>Startpage</title></head><body><a href="/en/about">About</a><form action="/sp/search" method="get"><input id="q" name="query" type="text" aria-label="Search"></form></body></html>', { headers: { 'Content-Type': 'text/html' } });
         const result = (href: string, title: string) => `<div class="result"><a class="result-title result-link" href="${href}"><h2>${title}</h2></a></div>`;
-        return new Response(`<html><head><title>Startpage Search Results</title></head><body><a href="https://www.startpage.com/en/privacy-policy/">Privacy</a><section id="main"><div class="w-gl">${result('https://www.startpage.com/av/proxy?u=x', 'Anonymous view')}${result('https://grantable.co/', 'Grant writing service')}${result(`${base}/one`, 'School grants program')}${result(`${base}/two`, 'School grants application')}</div></section></body></html>`, { headers: { 'Content-Type': 'text/html' } });
+        return new Response(`<html><head><title>Startpage Search Results</title></head><body><a href="https://www.startpage.com/en/privacy-policy/">Privacy</a><div class="ad-free-promo-card">Go Ad-Free</div><section id="main"><div id="gcsa-top" class="gcsa-container">Sponsored</div><div class="w-gl">${result('https://www.startpage.com/av/proxy?u=x', 'Anonymous view')}${result('https://grantable.co/', 'Grant writing service')}${result(`${base}/one`, 'School grants program')}${result(`${base}/two`, 'School grants application')}</div></section></body></html>`, { headers: { 'Content-Type': 'text/html' } });
       });
     }, { base: source.url });
     await win.evaluate(() => {
@@ -518,6 +518,12 @@ test('no search key searches Startpage first and reads its direct result links',
     // Sources opened in new tabs are typed too.
     expect(typed).toContain(`${source.url.replace(/^https?:\/\//, '')}/one`);
     expect(tabs.some((tab) => /(^|\.)grantable\.co$/.test(new URL(tab.url).hostname))).toBe(false);
+    // Startpage's ads and ad-free upsell are hidden; its results are not.
+    const shown = await app.evaluate(async ({ webContents }) => {
+      const page = webContents.getAllWebContents().find((wc) => wc.getURL().startsWith('https://www.startpage.com/sp/search'));
+      return page?.executeJavaScript(`['#gcsa-top', '.ad-free-promo-card', '.w-gl .result'].map((s) => getComputedStyle(document.querySelector(s)).display)`);
+    });
+    expect(shown).toEqual(['none', 'none', expect.not.stringMatching(/^none$/)]);
   } finally { await close(); await source.close(); }
 });
 
