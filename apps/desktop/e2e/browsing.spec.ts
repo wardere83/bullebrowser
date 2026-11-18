@@ -615,6 +615,57 @@ test('History deletes every chat at once', async () => {
   } finally { await close(); }
 });
 
+test('offers to save a sign-in, then fills it from the key button on the same site only', async () => {
+  const site = createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    if (req.method === 'POST') { req.resume(); res.end('<html><head><title>Welcome</title></head><body><h1>Signed in</h1></body></html>'); return; }
+    res.end('<html><head><title>Sign in</title></head><body><form method="post" action="/welcome">' +
+      '<input id="user" name="user" type="email"><input id="pass" name="pass" type="password">' +
+      '<button type="submit">Sign in</button></form></body></html>');
+  });
+  await new Promise<void>((done) => site.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(site.address() as { port: number }).port}`;
+  const { app, win, close } = await launch();
+  const inPage = (script: string) => app.evaluate(({ webContents }, { base, script }) => {
+    const page = webContents.getAllWebContents().find((wc) => wc.getURL().startsWith(base));
+    return page?.executeJavaScript(script);
+  }, { base, script });
+  const openLogin = async () => {
+    await win.evaluate(async (url) => {
+      const tab = (await window.bullebrowser.tabs.list()).find((t) => t.active)!;
+      await window.bullebrowser.tabs.navigate(tab.id, url);
+    }, `${base}/login`);
+    await expect.poll(() => inPage('document.title')).toBe('Sign in');
+  };
+  try {
+    await openLogin();
+    // No key before anything is saved.
+    await expect(win.getByRole('button', { name: 'Fill saved password', exact: true })).toHaveCount(0);
+    await inPage(`document.querySelector('#user').value = 'ana@org.org';
+      document.querySelector('#pass').value = 'Sup3r-secret';
+      document.querySelector('button').click();`);
+    const offer = win.getByRole('group', { name: 'Save password', exact: true });
+    await expect(offer).toContainText(`Save password for 127.0.0.1:${new URL(base).port} (ana@org.org)?`);
+    await offer.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(offer).toHaveCount(0);
+
+    await openLogin();
+    const key = win.getByRole('button', { name: 'Fill saved password', exact: true });
+    await expect(key).toBeVisible();
+    await key.click();
+    await expect.poll(() => inPage(`[document.querySelector('#user').value, document.querySelector('#pass').value]`))
+      .toEqual(['ana@org.org', 'Sup3r-secret']);
+
+    // The same sign-in is not offered again, and Settings lists it without the password.
+    await inPage(`document.querySelector('button').click();`);
+    await expect.poll(() => inPage('document.title')).toBe('Welcome');
+    await expect(offer).toHaveCount(0);
+    const saved = await win.evaluate(() => window.bullebrowser.passwords.list());
+    expect(saved).toEqual([expect.objectContaining({ origin: base, username: 'ana@org.org' })]);
+    expect(JSON.stringify(saved)).not.toContain('Sup3r-secret');
+  } finally { await close(); site.close(); }
+});
+
 test('search-key settings are visible, masked and separate from model keys', async () => {
   const { win, close } = await launch();
   try {

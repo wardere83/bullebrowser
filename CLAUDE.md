@@ -27,3 +27,12 @@ app releases, searches or talks to people.
   destination policy stay blocked. Never try to get around a CAPTCHA.
 - Never suggest options that charge for API usage (search APIs, paid
   services). Free options only.
+
+## Saved passwords
+- BulleBrowser saves and fills sign-ins itself (src/main/passwords). Passwords
+  are encrypted with safeStorage (the macOS Keychain), filled only into the
+  exact site they were saved for, and never given to the agent.
+- Touch ID passkeys (Electron's app.configureWebAuthn) need a Developer ID
+  provisioning profile with Keychain Sharing first; without it the Mac app can
+  fail to launch. Passwords and passkeys from Apple Passwords need Apple's web
+  browser entitlement, which Apple grants on request.
