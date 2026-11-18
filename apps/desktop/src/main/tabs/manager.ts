@@ -10,6 +10,7 @@ import { historyStore } from '../storage/history.js';
 import { getSettings } from '../storage/settings.js';
 import { browsingCloudScript } from '../agent/browser/browsing-cloud.js';
 import { trackNetwork } from '../agent/browser/net-activity.js';
+import { adHidingCss } from './search-ads.js';
 
 function getDefaultHome(): string {
   return getSettings().homepageUrl;
@@ -332,7 +333,12 @@ class TabManager {
       event.preventDefault();
       if (isMainFrame) this.blockNavigation(tab, url);
     });
-    wc.on('dom-ready', () => this.refreshBrowsingCloud(tab));
+    wc.on('dom-ready', () => {
+      this.refreshBrowsingCloud(tab);
+      // Each document needs it again; Startpage's results render after this.
+      const css = adHidingCss(wc.getURL());
+      if (css) void wc.insertCSS(css).catch(() => {});
+    });
     wc.on('did-start-navigation', (event) => {
       if (event.isMainFrame && !event.isSameDocument) {
         if (isBlockedDestination(event.url)) {
