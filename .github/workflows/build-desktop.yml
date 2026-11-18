@@ -234,11 +234,14 @@ jobs:
             fi
             rm -f "$RUNNER_TEMP/AuthKey.p8"
           elif [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
-            if xcrun notarytool history --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" >/dev/null 2>&1; then
+            if notary_out=$(xcrun notarytool history --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" 2>&1); then
               echo "OK: notarytool authenticated (Apple ID)."
               notary_ok=1
             else
               echo "::error::notarytool rejected the Apple ID credentials (APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID)."
+              # Apple's reason (an expired agreement, a revoked app-specific
+              # password…) decides the fix; secrets stay masked in the log.
+              printf '%s\n' "$notary_out" | grep -iE 'error|status|agreement|credential|auth|password' | head -5 || true
             fi
           else
             echo "::warning::No complete notarization credential set is configured."
