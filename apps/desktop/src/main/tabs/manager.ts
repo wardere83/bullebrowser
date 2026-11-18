@@ -48,6 +48,24 @@ class TabManager {
   private browsingTargets = new Map<string, string>();
   private cloudCaptures = new Map<string, number>();
   private cloudRevision = 0;
+  /** Each web page's preload (saved passwords); set at startup. */
+  private tabPreload: string | undefined;
+  private navigateListeners = new Set<(tabId: string) => void>();
+
+  setTabPreload(path: string): void {
+    this.tabPreload = path;
+  }
+
+  /** The tab showing a web contents, if any. */
+  idForWebContents(id: number): string | null {
+    return this.tabs.find((tab) => tab.view.webContents.id === id)?.id ?? null;
+  }
+
+  /** Called when a tab's main frame lands on a new page. */
+  onMainFrameNavigate(listener: (tabId: string) => void): () => void {
+    this.navigateListeners.add(listener);
+    return () => this.navigateListeners.delete(listener);
+  }
 
   attachWindow(win: BrowserWindow) {
     this.win = win;
@@ -79,6 +97,7 @@ class TabManager {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        ...(this.tabPreload ? { preload: this.tabPreload } : {}),
         // Matches the app window: no DevTools on a shipped build. See the note
         // in window.ts — this is tidiness, not secrecy.
         devTools: !app.isPackaged,
@@ -395,6 +414,7 @@ class TabManager {
       if (isStartPage(url) && tab.navigationUrl && !isStartPage(tab.navigationUrl)) return;
       tab.url = url;
       tab.navigationUrl = url;
+      for (const listener of this.navigateListeners) listener(tab.id);
       // Leaving (or landing on) the start page flips whether this view should
       // be visible at all — see isStartPage.
       this.relayout();

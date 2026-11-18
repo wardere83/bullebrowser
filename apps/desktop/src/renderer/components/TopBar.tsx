@@ -6,6 +6,7 @@ import { useInputActivity } from '../hooks/useInputActivity.js';
 import { FOCUS_AI_PANEL_EVENT } from './AiPanel.js';
 import brandIcon from '../assets/bullebrowser-icon.png';
 import { UpdateBanner } from './UpdateBanner.js';
+import { PasswordControls } from './PasswordControls.js';
 
 const IS_MAC = navigator.userAgent.includes('Macintosh');
 // Three 12px buttons from x=16 (window.ts trafficLightPosition) plus a gap.
@@ -194,6 +195,8 @@ export function TopBar() {
           />
         </div>
       </form>
+
+      <PasswordControls tabId={active?.id} />
 
       {status === 'running' && (
         <div className="no-drag flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-ink-primary">

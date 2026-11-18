@@ -85,6 +85,16 @@ const bridge: BrowserBridge = {
     delete: (id) => ipcRenderer.invoke(IPC.CONVERSATION_DELETE, id),
     deleteAll: () => ipcRenderer.invoke(IPC.CONVERSATION_DELETE_ALL),
   },
+  passwords: {
+    list: () => ipcRenderer.invoke(IPC.PASSWORD_LIST),
+    remove: (id) => ipcRenderer.invoke(IPC.PASSWORD_DELETE, id),
+    importFile: () => ipcRenderer.invoke(IPC.PASSWORD_IMPORT),
+    fill: (tabId, loginId) => ipcRenderer.invoke(IPC.PASSWORD_FILL, tabId, loginId),
+    replyOffer: (id, choice) => ipcRenderer.invoke(IPC.PASSWORD_OFFER_REPLY, id, choice),
+    state: (tabId) => ipcRenderer.invoke(IPC.PASSWORD_STATE_GET, tabId),
+    onState: (cb) => subscribe(IPC.PASSWORD_STATE, cb),
+    onOffer: (cb) => subscribe(IPC.PASSWORD_OFFER, cb),
+  },
   agent: {
     run: (req: AgentRunRequest) => ipcRenderer.invoke(IPC.AGENT_RUN, req),
     cancel: (runId) => ipcRenderer.invoke(IPC.AGENT_CANCEL, runId),

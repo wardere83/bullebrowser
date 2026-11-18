@@ -71,6 +71,15 @@ export const IPC = {
   CONVERSATION_NEW: 'conversation:new',
   CONVERSATION_DELETE: 'conversation:delete',
   CONVERSATION_DELETE_ALL: 'conversation:delete-all',
+  // Saved passwords
+  PASSWORD_STATE: 'password:state', // main → renderer: a tab's sign-in form and saved logins
+  PASSWORD_STATE_GET: 'password:state-get',
+  PASSWORD_OFFER: 'password:offer', // main → renderer: offer to save a sign-in
+  PASSWORD_OFFER_REPLY: 'password:offer-reply',
+  PASSWORD_FILL: 'password:fill-request',
+  PASSWORD_LIST: 'password:list',
+  PASSWORD_DELETE: 'password:delete',
+  PASSWORD_IMPORT: 'password:import',
   CONVERSATION_SCRATCHPAD: 'conversation:scratchpad',
   // App
   APP_GET_INFO: 'app:get-info',
@@ -175,6 +184,33 @@ export interface Bookmark {
   url: string;
   title: string;
   addedAt: number;
+}
+
+/** A saved login as BulleBrowser's own controls see it: never the password. */
+export interface SavedLoginSummary {
+  id: string;
+  origin: string;
+  username: string;
+  createdAt: number;
+  updatedAt: number;
+  lastUsedAt?: number;
+}
+
+/** Whether a tab's page has a sign-in form, and the logins saved for its site. */
+export interface PasswordState {
+  tabId: string;
+  origin: string | null;
+  hasForm: boolean;
+  logins: Array<{ id: string; username: string }>;
+}
+
+/** An offer to save (or update) the sign-in someone just used. */
+export interface PasswordOffer {
+  id: string;
+  tabId: string;
+  origin: string;
+  username: string;
+  update: boolean;
 }
 
 export interface ConversationSummary {
@@ -315,6 +351,18 @@ export interface BrowserBridge {
     hasApiKey(provider?: ProviderId | 'brave'): Promise<boolean>;
     setApiKey(key: string, provider?: ProviderId | 'brave'): Promise<void>;
     clearApiKey(provider?: ProviderId | 'brave'): Promise<void>;
+  };
+  passwords: {
+    list(): Promise<SavedLoginSummary[]>;
+    remove(id: string): Promise<void>;
+    /** Pick an exported .csv and import it; null if the person cancelled. */
+    importFile(): Promise<{ imported: number; skipped: number } | null>;
+    /** Fill a saved login; with several and none named, BulleBrowser asks which. */
+    fill(tabId: string, loginId?: string): Promise<void>;
+    replyOffer(id: string, choice: 'save' | 'never' | 'dismiss'): Promise<'done' | 'expired'>;
+    state(tabId: string): Promise<PasswordState>;
+    onState(cb: (state: PasswordState) => void): () => void;
+    onOffer(cb: (offer: PasswordOffer) => void): () => void;
   };
   conversations: {
     list(): Promise<ConversationSummary[]>;

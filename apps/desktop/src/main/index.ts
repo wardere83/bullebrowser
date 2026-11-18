@@ -71,6 +71,8 @@ let mainWindow: BrowserWindow | null = null;
 
 async function createWindow() {
   const preloadPath = join(__dirname, '../preload/index.cjs');
+  // Web pages get their own small preload, for saved passwords only.
+  tabManager.setTabPreload(join(__dirname, '../preload/tab.cjs'));
   const win = createBrowserWindow({ preloadPath });
   mainWindow = win;
   win.once('closed', () => {

@@ -1,3 +1,4 @@
+import { registerPasswordIpc } from './passwords/service.js';
 import { addConnector, removeConnector, connectorCatalog, enabledConnectors, listConnectors, setConnector } from './connectors/service.js';
 import { accessibilityManager } from './accessibility.js';
 import { normalizeAccessibility } from '../shared/accessibility.js';
@@ -151,6 +152,10 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     conversationStore.delete(id, await activeOrganizationId()),
   );
   handle(IPC.CONVERSATION_DELETE_ALL, async () => conversationStore.deleteAll(await activeOrganizationId()));
+
+  // saved passwords
+  const releasePasswords = registerPasswordIpc(win, handle);
+  win.once('closed', releasePasswords);
 
   handle(IPC.CONVERSATION_SCRATCHPAD, async (_e, id: string, text: string) => {
     conversationStore.setScratchpad(id, text, await activeOrganizationId());

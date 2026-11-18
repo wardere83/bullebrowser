@@ -28,9 +28,10 @@ export default defineConfig({
     build: {
       outDir: 'out/preload',
       lib: {
-        entry: resolve(__dirname, 'src/preload/index.ts'),
+        // index: the app window's bridge. tab: each web page's saved-password helper.
+        entry: { index: resolve(__dirname, 'src/preload/index.ts'), tab: resolve(__dirname, 'src/preload/tab.ts') },
         formats: ['cjs'],
-        fileName: () => 'index.cjs',
+        fileName: (_format, name) => `${name}.cjs`,
       },
     },
     resolve: {

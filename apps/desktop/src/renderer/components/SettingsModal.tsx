@@ -1,5 +1,6 @@
 import { ConnectorsSettings } from './ConnectorsSettings.js';
 import { SearchKeySettings } from './SearchKeySettings.js';
+import { PasswordSettings } from './PasswordSettings.js';
 import { useEffect, useRef, useState } from 'react';
 import { ASSISTANTS, providerFor, type ModelId } from '@bullebrowser/agent-core';
 import { useBrowserStore } from '../state/browser-store.js';
@@ -100,6 +101,7 @@ export function SettingsModal() {
       <section className="space-y-4">
         <ConnectorsSettings />
         <SearchKeySettings />
+        <PasswordSettings />
         <p className="text-xs leading-relaxed text-ink-secondary">
           BulleBrowser helps your organization find funding opportunities, understand funder
           priorities, assess its alignment and develop proposals ethically. Everything on this
