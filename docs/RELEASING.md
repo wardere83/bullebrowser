@@ -118,6 +118,23 @@ The workflow stamps package versions for the build, produces signed
 installers per platform, and publishes a GitHub Release at
 `v<version>` from the selected commit.
 
+### Publishing without the benchmark gate (owner override)
+
+Every release needs the agent benchmark to pass (`AGENT_EVAL_CONFIG`), and
+that needs AI credit. The owner has approved publishing every build without
+it (2026-11-18). To do that, merge with `[skip release]` in the commit
+subject (so no tag release starts), then run `build-desktop` manually from
+`main` with `version` set to the next patch, `publish_release` true and
+`skip_benchmark` true. Tag releases and the default manual run still require
+the benchmark.
+
+### If the macOS build fails with "A required agreement is missing"
+
+`notarytool` answers HTTP 403 when Apple has a new or renewed Developer
+Program License Agreement waiting. The Account Holder of Bulle Consulting,
+LLC accepts it at developer.apple.com/account; notarization then works
+within minutes. The preflight step prints Apple's reason.
+
 ### If macOS shows "could not verify free of malware"
 
 That means the downloaded app is not notarized by Apple (usually from an

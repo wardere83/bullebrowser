@@ -1,5 +1,5 @@
 import { TaskControl, type TaskCommand } from './task-control.js';
-import { browserSearch, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError } from '@bullebrowser/agent-core';
+import { browserSearch, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError, type ApiTool } from '@bullebrowser/agent-core';
 import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
 // (skill-aware), wires the ToolContext to the active tab, runs the loop,
@@ -15,6 +15,7 @@ import {
   findSkill,
   providerFor,
   productQuestionReply,
+  requestIntent,
   runAgent,
   type AgentStep,
   type ActionPreview,
@@ -73,6 +74,18 @@ const NO_GROUNDING = (now: number): ChatGrounding => ({
   tools: [],
   systemNote: `Today's date on the user's device is ${new Date(now).toISOString().slice(0, 10)}.`,
 });
+
+// Web search drives the visible browser (or reaches the web), so it asks for
+// browser access first, like the browsing tools do.
+function askingFirst(access: () => Promise<boolean>, tool: ApiTool): ApiTool {
+  return {
+    ...tool,
+    execute: async (input) => {
+      if (!(await access())) throw new ToolError('PERMISSION_DENIED', 'Browser access was declined, so nothing was searched.');
+      return tool.execute(input);
+    },
+  };
+}
 
 // Tools that only read, so the keyless rerun may repeat them.
 const REPEATABLE_TOOLS = new Set([
@@ -143,7 +156,18 @@ export async function startAgentRun(
   // history must contain prior turns exactly once, not the new message too.
   const history = conversation.messages.map((message) => ({ role: message.role, content: message.content }));
   const productOnly = !!productQuestionReply(req.userMessage, history);
-  const sessionConsent = productOnly ? Promise.resolve(true) : ask(req.userMessage, 'browse_access');
+  // Conversation and questions are answered in the chat; browser access is
+  // asked for only if the answer turns out to need the browser. A request to
+  // browse asks for it up front, as soon as the task starts.
+  const intent = productOnly ? 'chat' : requestIntent(req.userMessage, req.browserTask ? { browserTask: req.browserTask } : {});
+  let sessionConsent: Promise<boolean> | undefined;
+  const browseAccess = (): Promise<boolean> => sessionConsent ??= (productOnly ? Promise.resolve(true) : ask(req.userMessage, 'browse_access'))
+    .then((approved) => {
+      if (!productOnly) publishEvent({ kind: 'scope', granted: approved, label: approved ? 'Session • Agent tabs' : 'Browser access denied', ts: Date.now() });
+      // Per-site prompts are not repeated once the session is allowed.
+      if (approved) runtime.authorizeSession();
+      return approved;
+    });
 
   // Store the user's message CLEAN (what they typed), but hand the model an
   // enriched version that folds in any attached file/project/screenshot
@@ -208,6 +232,8 @@ export async function startAgentRun(
       controller.signal.addEventListener('abort', done, { once: true });
     });
   });
+  // A request to browse asks for access right away, as the task starts.
+  if (intent === 'browse') void browseAccess();
 
   const skill = req.skillId ? findSkill(req.skillId) : undefined;
   const isFundingWorkflow = !!skill && (FUNDING_WORKFLOW_IDS as readonly string[]).includes(skill.id);
@@ -264,13 +290,14 @@ export async function startAgentRun(
     let status: AgentResultEvent['status'] = 'completed';
     let error: string | undefined;
     try {
-      const approved = await sessionConsent;
-      if (!productOnly) publishEvent({ kind: 'scope', granted: approved, label: approved ? 'Session • Agent tabs' : 'Browser access denied', ts: Date.now() });
-      if (controller.signal.aborted) throw new Error('cancelled');
-      if (!approved) throw new ToolError('PERMISSION_DENIED', 'Browser access was declined. Use Retry to review session permissions.');
-      runtime.authorizeSession();
+      if (intent === 'browse') {
+        const approved = await browseAccess();
+        if (controller.signal.aborted) throw new Error('cancelled');
+        if (!approved) throw new ToolError('PERMISSION_DENIED', 'Browser access was declined. Use Retry to review session permissions.');
+      }
       const agentInput: Parameters<typeof runAgent>[0] = {
-        planning: !!apiKey || !!anthropicCredentials,
+        // A plan helps browsing work; conversation and questions go straight to the answer.
+        planning: intent === 'browse' && (!!apiKey || !!anthropicCredentials),
         shouldReplan: () => control.takeReplan(),
         apiKey: apiKey ?? undefined,
         ...(anthropicCredentials ? { anthropicCredentials } : {}),
@@ -283,11 +310,11 @@ export async function startAgentRun(
         userRequest: req.userMessage,
         // Sealed by the loop as reference material; never part of the instructions.
         ...(grounding.referenceContext.length > 0 ? { referenceContext: grounding.referenceContext } : {}),
-        extraTools: [webSearchTool({ apiKey: getApiKey('brave') ?? undefined, signal: controller.signal, fundingOnly,
+        extraTools: [askingFirst(browseAccess, webSearchTool({ apiKey: getApiKey('brave') ?? undefined, signal: controller.signal, fundingOnly,
           browserSearch: browserSearch({ runtime, activeTabId: () => ctx.activeTabId, signal: controller.signal, fundingOnly,
             presentAction: (tabId, action, signal) => runtime.presentAction(tabId, action, signal),
           }),
-        }), ...grounding.tools, ...connectorTools({
+        })), ...grounding.tools, ...connectorTools({
           enabled: async () => enabledConnectors(),
           catalog: async () => connectorCatalog(),
           authorize: () => ask('Allow this task to open an enabled connector in your browser?', 'browse_access'),
@@ -295,7 +322,7 @@ export async function startAgentRun(
         })],
         context: ctx,
         // Choosing a browser task and submitting its answer explicitly starts browsing.
-        requestBrowseAccess: () => sessionConsent,
+        requestBrowseAccess: browseAccess,
         budget: req.budget ?? getSettings().stepBudget,
         onToolRecord: (record) => { taskLog.calls!.push(record); },
         onCompletion: (outcome) => {

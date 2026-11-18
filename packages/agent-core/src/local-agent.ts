@@ -6,6 +6,7 @@ import { AGENT_IDENTITY, protectAssistantIdentity } from './product-identity.js'
 import { FUNDING_SCREENS, applyTerminology } from './terminology.js';
 import { isBlockedDestination } from './destinations.js';
 import { isFundingDiscoveryRequest, isGrantSearchService } from './funding-sources.js';
+import { requestIntent } from './intent.js';
 
 type Call = (name: string, input: Record<string, unknown>) => Promise<ToolCallOutcome>;
 
@@ -59,6 +60,64 @@ const HELP =
   'click "a target", or type "text" into "a field". Funding questions need a connected assistant for a written ' +
   `answer; without one, the ${FUNDING_SCREENS.knowledgeHub}, ${FUNDING_SCREENS.opportunities}, ` +
   `${FUNDING_SCREENS.rfpAnalysis} and ${FUNDING_SCREENS.proposalGuide} screens still work.`;
+
+const CAPABILITIES =
+  'I can browse the web for you and answer your questions. For example:\n\n' +
+  '- **Browse:** "Find youth workforce grants in New Jersey". I search, open the best sources in tabs and read them.\n' +
+  '- **Ask:** "What is a 501(c)(3)?" I look it up and show you what the sources say.\n' +
+  '- **This page:** "Summarize this page" or "List the links on this page".\n' +
+  '- **Act:** "Open grants.gov", click "a button", or type "text" into "a field".\n\n' +
+  'What would you like to do?';
+
+/** A reply to conversation: greetings, thanks, "what can you do?". */
+function chatReply(message: string): string {
+  const text = message.trim().toLowerCase();
+  if (/^(?:bye|goodbye|see you|good night)\b/.test(text)) {
+    return 'Goodbye! This conversation stays in History whenever you want to pick it up again.';
+  }
+  if (/\b(?:thank|thanks|ty|cheers|you rock|the best|great|awesome|perfect|nice|cool)\b/.test(text)) {
+    return "You're welcome! What would you like to look into next?";
+  }
+  if (/^(?:ok(?:ay)?|got it|sounds good)\b/.test(text)) return 'Great. What would you like to do next?';
+  if (/how are you|how's it going|what's up/.test(text)) return "I'm doing well and ready to help! What would you like me to look up or browse?";
+  if (/^(?:hi|hello|hey|hiya|yo|good (?:morning|afternoon|evening|day))\b/.test(text) || !text) {
+    return `Hi! I'm ${AGENT_IDENTITY}. ${CAPABILITIES}`;
+  }
+  return CAPABILITIES;
+}
+
+// Writing and editing are not lookups; searching for "write a novel" would not help.
+const WRITING_REQUEST = /^(?:please\s+)?(?:(?:can|could|would) you\s+)?(?:write|draft|compose|create|generate|rewrite|edit|proofread|translate)\b/i;
+// "Is this a good fit?" points at something not named in the message.
+const VAGUE_QUESTION = /^(?:is|are|was|were|does|do|did|can|could|should|would|will)\s+(?:this|that|it|these|those|they)\b/i;
+
+const QUESTION_STOPWORDS = new Set(('a an and are as at be between by can could define describe difference do does for from get ' +
+  'has have how i in is it its me my of on or our please should tell that the their there they this to us was we what ' +
+  "what's when where which who why will with would you your about explain").split(' '));
+
+function keywords(text: string): string[] {
+  const words = text.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !QUESTION_STOPWORDS.has(word));
+  return [...new Set(words.map((word) => word.replace(/(?:ies)$/, 'y').replace(/(?<=[a-z]{3})s$/, '')))];
+}
+
+/** The page's sentences that best match the question, in page order. */
+export function relevantPassages(text: string, words: string[], max = 3): string[] {
+  if (!words.length) return [];
+  const sentences = text.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+(?=[A-Z0-9"“(])/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 40 && sentence.length <= 360 && !/cookie|javascript|sign in|log in|subscribe/i.test(sentence));
+  const needed = Math.min(2, words.length);
+  const scored = sentences.map((sentence, index) => {
+    const lower = sentence.toLowerCase();
+    return { sentence, index, score: words.filter((word) => lower.includes(word)).length };
+  }).filter((entry) => entry.score >= needed);
+  const seen = new Set<string>();
+  return scored.sort((a, b) => b.score - a.score || a.index - b.index)
+    .filter((entry) => !seen.has(entry.sentence) && seen.add(entry.sentence))
+    .slice(0, max)
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.sentence);
+}
 
 const SUMMARY_COMMAND = /^(?:please\s+)?(?:summari[sz]e|summary|read|what (?:does this page say|is this page about))\b/i;
 
@@ -158,6 +217,7 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
   // The user's own words. Text the host attached must not turn "list tabs"
   // into an unknown request, or a browser command into funding work.
   const message = localRequest(input);
+  const intent = requestIntent(message, input.browserTask ? { browserTask: input.browserTask } : {});
   let report: string;
   const budget = new StepBudget(input.budget);
   const run = async (name: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> => {
@@ -272,6 +332,55 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     }
   } else if (funding) {
     report = FUNDING_REPLIES[funding] + (summaryRequested ? PAGE_SUMMARY_HINT : '');
+  } else if (intent === 'chat') {
+    report = chatReply(message);
+  } else if (RETRY.test(message)) {
+    // A retry with nothing safe to repeat: ask rather than guess.
+    report = "Tell me what you'd like me to try again, and I'll do it.";
+  } else if (WRITING_REQUEST.test(message)) {
+    report = "I can't draft that here, but I can look up examples and guidance for it. Want me to search for some?";
+  } else if (intent === 'question' && (keywords(message).length < 2 || VAGUE_QUESTION.test(message))) {
+    report = "Could you tell me a bit more about what you're asking? Name the program, funder, topic or website, and I'll look it up.";
+  } else if (intent === 'question') {
+    // Looked up, then answered with the sources' own words: the passages that
+    // best match the question, each with the page it came from.
+    input.onStep({ type: 'thinking', detail: 'Looking that up…' });
+    const words = keywords(message);
+    const found: Array<{ id: string; url: string; title: string; passages: string[] }> = [];
+    let declined = false;
+    try {
+      const search = await run('web_search', { query: message, count: 8 });
+      const results = (Array.isArray(search.results) ? search.results : []) as Array<{ url?: string; title?: string }>;
+      for (const result of results) {
+        if (found.length >= 2 || budget.used + 3.5 > budget.total) break;
+        let url: URL;
+        try { url = new URL(result.url ?? ''); } catch { continue; }
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || isBlockedDestination(url)
+          || /(^|\.)(?:google\.[a-z.]+|bing\.com|startpage\.com)$/.test(url.hostname)) continue;
+        try {
+          const tab = await run('new_tab', { url: url.href });
+          const page = await run('read_page', { tabId: String(tab.id) });
+          const passages = relevantPassages(String(page.text ?? ''), words);
+          if (passages.length) {
+            found.push({ id: String(tab.id), url: String(page.url ?? url.href).replace(/#.*$/, ''),
+              title: String(page.title || result.title || url.hostname).slice(0, 120), passages });
+          }
+        } catch (error) {
+          if (input.context.signal.aborted || /USER_DECLINED|declined|cancelled|budget/i.test(String(error))) throw error;
+          // An unreadable source must not stop the others.
+        }
+      }
+    } catch (error) {
+      if (input.context.signal.aborted || !/declined|PERMISSION_DENIED/i.test(String(error))) throw error;
+      declined = true;
+    }
+    if (found[0]) await run('switch_tab', { tabId: found[0].id });
+    report = declined
+      ? 'To answer that I need to look it up in the browser. Ask again and choose Allow Access when I ask, and I will show you what the sources say.'
+      : found.length
+        ? `Here's what I found:\n\n${found.map((source) => `${source.passages.map((passage) => `> ${passage}`).join('\n>\n')}\n\nSource: [${source.title.replace(/[[\]]/g, '')}](${source.url})`).join('\n\n')}\n\n` +
+          'These passages are quoted from the sources, which are open in tabs on the left. Want me to look further or check another source?'
+        : 'I looked that up but could not find a readable source that answers it. Try rephrasing it, or ask me to open a specific website.';
   } else {
     report = `${AGENT_IDENTITY} is ready. ${HELP}`;
   }

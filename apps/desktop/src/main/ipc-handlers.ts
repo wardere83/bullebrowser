@@ -150,6 +150,7 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
   handle(IPC.CONVERSATION_DELETE, async (_e, id: string) =>
     conversationStore.delete(id, await activeOrganizationId()),
   );
+  handle(IPC.CONVERSATION_DELETE_ALL, async () => conversationStore.deleteAll(await activeOrganizationId()));
 
   handle(IPC.CONVERSATION_SCRATCHPAD, async (_e, id: string, text: string) => {
     conversationStore.setScratchpad(id, text, await activeOrganizationId());

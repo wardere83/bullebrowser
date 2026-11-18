@@ -706,7 +706,7 @@ describe('runAgent Claude tool-use loop', () => {
   it('offers truthful local capabilities for unsupported prompts', async () => {
     const context = makeContext();
     const result = await runAgent({ model: DEFAULT_MODEL, systemPrompt: '', history: [], userMessage: 'write a novel', context, onStep: () => {} });
-    expect(result).toContain('BulleBrowser Agentic AI is ready');
+    expect(result).toContain("I can't draft that here");
     expect(context.runtime.readPage).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
   });
