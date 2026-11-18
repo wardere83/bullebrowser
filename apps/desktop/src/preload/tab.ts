@@ -38,7 +38,9 @@ function reportForm(): void {
 let lastSent = '';
 function captureSignIn(from?: EventTarget | null): void {
   const scope = from instanceof HTMLElement ? (from.closest('form') ?? document) : document;
-  const filled = Array.from(scope.querySelectorAll<HTMLInputElement>('input[type="password"]')).filter((el) => el.value);
+  // Only the fields the person can see: hidden or disabled ones hold stale values.
+  const filled = Array.from(scope.querySelectorAll<HTMLInputElement>('input[type="password"]'))
+    .filter((el) => el.value && !el.disabled && visible(el));
   // On a sign-up or change-password form the last field holds the new password.
   const password = filled.at(-1);
   if (!password) return;
@@ -62,6 +64,9 @@ ipcRenderer.on('password:fill', (_event, login: { username: string; password: st
   const username = usernameFieldFor(password);
   if (username && login.username) setValue(username, login.username);
   setValue(password, login.password);
+  // Marks the field so BulleBrowser's page reader never reports its value,
+  // even after a "Show password" control makes it a text field.
+  password.setAttribute('data-bb-secret', '');
   password.focus();
 });
 
@@ -72,13 +77,18 @@ const SIGN_IN = /\b(?:sign|log)\s*-?\s*(?:in|on)\b|\bcontinue\b|\bnext\b|\bsubmi
 document.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button, input[type="submit"], [role="button"]') : null;
   if (!target) return;
+  // A real submit button is captured by the submit event, which only fires
+  // once the form has passed its own validation.
   const submits = (target instanceof HTMLButtonElement && target.type === 'submit' && !!target.form)
-    || (target instanceof HTMLInputElement && target.type === 'submit');
+    || (target instanceof HTMLInputElement && target.type === 'submit' && !!target.form);
+  if (submits) return;
   const label = target instanceof HTMLInputElement ? target.value : target.textContent ?? '';
-  if (submits || SIGN_IN.test(label) || SIGN_IN.test(target.getAttribute('aria-label') ?? '')) captureSignIn(target);
+  if (SIGN_IN.test(label) || SIGN_IN.test(target.getAttribute('aria-label') ?? '')) captureSignIn(target);
 }, true);
+// Enter in a form submits it (and is captured above); Enter outside a form
+// is how script-driven sign-ins submit.
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && event.target instanceof HTMLInputElement) captureSignIn(event.target);
+  if (event.key === 'Enter' && event.target instanceof HTMLInputElement && !event.target.form) captureSignIn(event.target);
 }, true);
 
 let pending = 0;

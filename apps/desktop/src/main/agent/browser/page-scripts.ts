@@ -393,7 +393,10 @@ var __bb = (function () {
       s += ' = "' + clean(sel ? sel.text : '') + '" options: ' +
         Array.prototype.slice.call(el.options, 0, 20).map(function (o) { return clean(o.text); }).join(' | ');
     } else if ((tag === 'INPUT' && !/^(checkbox|radio|submit|button|reset|image|password)$/.test(type)) || tag === 'TEXTAREA') {
-      if (el.value) s += ' value="' + clean(el.value).slice(0, 60) + '"';
+      // A password stays secret after "Show password" makes its field text.
+      var secret = el.hasAttribute('data-bb-secret') || /(?:current|new)-password|one-time-code/.test(el.getAttribute('autocomplete') || '') ||
+        /pass(?:word|code|wd)?|pwd|secret|pin\b/i.test((el.name || '') + ' ' + (el.id || ''));
+      if (el.value) s += secret ? ' value="(hidden)"' : ' value="' + clean(el.value).slice(0, 60) + '"';
     }
     if (type === 'checkbox' || type === 'radio' || role === 'checkbox' || role === 'switch' || role === 'radio') {
       s += el.checked || el.getAttribute('aria-checked') === 'true' ? ' [checked]' : ' [unchecked]';

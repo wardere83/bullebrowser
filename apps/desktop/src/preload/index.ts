@@ -91,6 +91,7 @@ const bridge: BrowserBridge = {
     importFile: () => ipcRenderer.invoke(IPC.PASSWORD_IMPORT),
     fill: (tabId, loginId) => ipcRenderer.invoke(IPC.PASSWORD_FILL, tabId, loginId),
     replyOffer: (id, choice) => ipcRenderer.invoke(IPC.PASSWORD_OFFER_REPLY, id, choice),
+    state: (tabId) => ipcRenderer.invoke(IPC.PASSWORD_STATE_GET, tabId),
     onState: (cb) => subscribe(IPC.PASSWORD_STATE, cb),
     onOffer: (cb) => subscribe(IPC.PASSWORD_OFFER, cb),
   },

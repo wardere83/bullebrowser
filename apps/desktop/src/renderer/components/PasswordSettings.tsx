@@ -42,7 +42,7 @@ export function PasswordSettings() {
     <h3 className="text-sm font-semibold">Passwords</h3>
     <p className="text-xs text-ink-secondary">
       BulleBrowser offers to save a password when you sign in, and fills it with the key button in the address bar next
-      time. Passwords are encrypted with the macOS Keychain, filled only into the site they were saved for, and never
+      time. Passwords are encrypted with the secure credential storage of your computer (the Keychain on a Mac), filled only into the site they were saved for, and never
       shared with the assistant. To bring in passwords you already have, export them from the Passwords app (File → Export
       All Passwords), Chrome or Firefox, then import the file here.
     </p>

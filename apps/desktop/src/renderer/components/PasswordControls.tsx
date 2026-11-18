@@ -14,15 +14,26 @@ export function PasswordControls({ tabId }: { tabId?: string }) {
   const [problem, setProblem] = useState('');
 
   useEffect(() => window.bullebrowser.passwords.onState((state) => setStates((all) => ({ ...all, [state.tabId]: state }))), []);
-  useEffect(() => window.bullebrowser.passwords.onOffer(setOffer), []);
+  useEffect(() => window.bullebrowser.passwords.onOffer((next) => { setProblem(''); setOffer(next); }), []);
+  // A page may have reported its form before this control existed.
+  useEffect(() => {
+    if (!tabId) return;
+    let live = true;
+    void window.bullebrowser.passwords.state(tabId).then((state) => {
+      if (live) setStates((all) => ({ ...all, [state.tabId]: state }));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [tabId]);
 
   const state = tabId ? states[tabId] : undefined;
   const canFill = !!tabId && !!state?.hasForm && state.logins.length > 0;
 
   const reply = (choice: 'save' | 'never' | 'dismiss') => {
     if (!offer) return;
-    void window.bullebrowser.passwords.replyOffer(offer.id, choice).catch(() => {});
-    setOffer(null);
+    const current = offer;
+    void window.bullebrowser.passwords.replyOffer(current.id, choice)
+      .then(() => setOffer((shown) => (shown?.id === current.id ? null : shown)))
+      .catch(() => setProblem('Could not save the password: secure storage is unavailable on this computer.'));
   };
 
   const fill = () => {
@@ -50,7 +61,7 @@ export function PasswordControls({ tabId }: { tabId?: string }) {
       {offer && (
         <div role="group" aria-label="Save password" className="no-drag flex shrink-0 items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs text-ink-primary">
           <span className="max-w-[260px] truncate">
-            {offer.update ? 'Update' : 'Save'} password for {siteOf(offer.origin)}{offer.username ? ` (${offer.username})` : ''}?
+            {problem || `${offer.update ? 'Update' : 'Save'} password for ${siteOf(offer.origin)}${offer.username ? ` (${offer.username})` : ''}?`}
           </span>
           <button type="button" onClick={() => reply('save')} className="rounded bg-primary px-2 py-0.5 text-[11px] text-white">
             {offer.update ? 'Update' : 'Save'}

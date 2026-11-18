@@ -73,6 +73,7 @@ export const IPC = {
   CONVERSATION_DELETE_ALL: 'conversation:delete-all',
   // Saved passwords
   PASSWORD_STATE: 'password:state', // main → renderer: a tab's sign-in form and saved logins
+  PASSWORD_STATE_GET: 'password:state-get',
   PASSWORD_OFFER: 'password:offer', // main → renderer: offer to save a sign-in
   PASSWORD_OFFER_REPLY: 'password:offer-reply',
   PASSWORD_FILL: 'password:fill-request',
@@ -359,6 +360,7 @@ export interface BrowserBridge {
     /** Fill a saved login; with several and none named, BulleBrowser asks which. */
     fill(tabId: string, loginId?: string): Promise<void>;
     replyOffer(id: string, choice: 'save' | 'never' | 'dismiss'): Promise<'done' | 'expired'>;
+    state(tabId: string): Promise<PasswordState>;
     onState(cb: (state: PasswordState) => void): () => void;
     onOffer(cb: (offer: PasswordOffer) => void): () => void;
   };

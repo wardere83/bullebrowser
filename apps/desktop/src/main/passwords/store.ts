@@ -133,14 +133,25 @@ export const passwordStore = {
     if (url < 0 || pass < 0) throw new Error('This file is not a password export: it needs URL and Password columns.');
     let imported = 0;
     let skipped = 0;
+    // Written once at the end: an export can hold thousands of logins.
+    const logins = new Map(store.get('logins').map((login) => [`${login.origin}\u0000${login.username}`, login]));
+    const now = Date.now();
     for (const row of rows) {
       if (row.every((cell) => !cell.trim())) continue;
       const origin = loginOrigin((row[url] ?? '').trim());
       const password = row[pass] ?? '';
       if (!origin || !password) { skipped += 1; continue; }
-      this.save(origin, (user >= 0 ? row[user] ?? '' : '').trim(), password);
+      const username = (user >= 0 ? row[user] ?? '' : '').trim();
+      const key = `${origin}\u0000${username}`;
+      const existing = logins.get(key);
+      if (!existing || decrypt(existing.secret) !== password) {
+        logins.set(key, existing
+          ? { ...existing, secret: encrypt(password), updatedAt: now }
+          : { id: randomUUID(), origin, username, secret: encrypt(password), createdAt: now, updatedAt: now });
+      }
       imported += 1;
     }
+    store.set('logins', [...logins.values()]);
     return { imported, skipped };
   },
 };

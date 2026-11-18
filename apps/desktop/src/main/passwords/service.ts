@@ -29,17 +29,11 @@ export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.h
     return { tabId, origin: loginOrigin(event.senderFrame.url) };
   };
 
-  const publishState = (tabId: string) => {
-    const url = tabManager.getView(tabId)?.webContents.getURL() ?? '';
-    const origin = loginOrigin(url);
-    const state: PasswordState = {
-      tabId,
-      origin,
-      hasForm: forms.get(tabId) ?? false,
-      logins: origin ? passwordStore.forOrigin(origin) : [],
-    };
-    send(IPC.PASSWORD_STATE, state);
+  const stateOf = (tabId: string): PasswordState => {
+    const origin = loginOrigin(tabManager.getView(tabId)?.webContents.getURL() ?? '');
+    return { tabId, origin, hasForm: forms.get(tabId) ?? false, logins: origin ? passwordStore.forOrigin(origin) : [] };
   };
+  const publishState = (tabId: string) => send(IPC.PASSWORD_STATE, stateOf(tabId));
 
   const onForm = (event: IpcMainEvent, present: unknown) => {
     const source = sourceOf(event);
@@ -55,7 +49,9 @@ export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.h
     if (password.length > 1024 || username.length > 256) return;
     if (passwordStore.isNeverSaved(source.origin) || passwordStore.has(source.origin, username, password)) return;
     const now = Date.now();
-    for (const [id, offer] of offers) if (offer.expires < now) offers.delete(id);
+    // One pending offer per tab: a page that keeps submitting replaces its
+    // own offer instead of piling up passwords in memory.
+    for (const [id, offer] of offers) if (offer.expires < now || offer.tabId === source.tabId) offers.delete(id);
     const id = randomUUID();
     offers.set(id, { origin: source.origin, username, password, tabId: source.tabId, expires: now + OFFER_LIFETIME_MS });
     const offer: PasswordOffer = {
@@ -73,13 +69,17 @@ export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.h
 
   handle(IPC.PASSWORD_OFFER_REPLY, (_e, id: string, choice: 'save' | 'never' | 'dismiss') => {
     const offer = offers.get(id);
-    offers.delete(id);
-    if (!offer || offer.expires < Date.now()) return 'expired';
+    if (!offer || offer.expires < Date.now()) { offers.delete(id); return 'expired'; }
+    // A failed save (no secure storage) keeps the offer, so the person can see it did not save.
     if (choice === 'save') passwordStore.save(offer.origin, offer.username, offer.password);
     else if (choice === 'never') passwordStore.neverSaveFor(offer.origin);
+    offers.delete(id);
     publishState(offer.tabId);
     return 'done';
   });
+
+  // The current state, for chrome that opens after a page already reported.
+  handle(IPC.PASSWORD_STATE_GET, (_e, tabId: string) => stateOf(tabId));
 
   const fill = (tabId: string, loginId: string): boolean => {
     const view = tabManager.getView(tabId);

@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PAGE_HELPERS } from '../src/main/agent/browser/page-scripts';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -626,6 +627,10 @@ test('offers to save a sign-in, then fills it from the key button on the same si
   await new Promise<void>((done) => site.listen(0, '127.0.0.1', done));
   const base = `http://127.0.0.1:${(site.address() as { port: number }).port}`;
   const { app, win, close } = await launch();
+  // Saving needs the computer's secure credential storage; CI's Linux has none.
+  const secure = await app.evaluate(({ safeStorage }) => safeStorage.isEncryptionAvailable()
+    && (process.platform !== 'linux' || safeStorage.getSelectedStorageBackend() !== 'basic_text'));
+  test.skip(!secure, 'No secure credential storage on this machine');
   const inPage = (script: string) => app.evaluate(({ webContents }, { base, script }) => {
     const page = webContents.getAllWebContents().find((wc) => wc.getURL().startsWith(base));
     return page?.executeJavaScript(script);
@@ -655,6 +660,11 @@ test('offers to save a sign-in, then fills it from the key button on the same si
     await key.click();
     await expect.poll(() => inPage(`[document.querySelector('#user').value, document.querySelector('#pass').value]`))
       .toEqual(['ana@org.org', 'Sup3r-secret']);
+    // "Show password" makes the field text; the agent's element list still hides it.
+    const listed = await inPage(`document.querySelector('#pass').type = 'text'; ${PAGE_HELPERS}; __bb.FindElements('')`) as { lines: string[] };
+    expect(listed.lines).toContain('@2 input[text] "pass" value="(hidden)"');
+    expect(JSON.stringify(listed)).not.toContain('Sup3r-secret');
+    await inPage(`document.querySelector('#pass').type = 'password'`);
 
     // The same sign-in is not offered again, and Settings lists it without the password.
     await inPage(`document.querySelector('button').click();`);
