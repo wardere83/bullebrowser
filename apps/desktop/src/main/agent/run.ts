@@ -74,6 +74,13 @@ const NO_GROUNDING = (now: number): ChatGrounding => ({
   systemNote: `Today's date on the user's device is ${new Date(now).toISOString().slice(0, 10)}.`,
 });
 
+// Tools that only read, so the keyless rerun may repeat them.
+const REPEATABLE_TOOLS = new Set([
+  'getActiveTab', 'listTabs', 'getPageText', 'getPageMetadata', 'getSelection', 'listLinks', 'queryDom',
+  'summarizePage', 'extractStructuredData', 'read_page', 'extract', 'screenshot', 'list_tabs', 'find_elements',
+  'web_search', 'read_file', 'list_files',
+]);
+
 export async function startAgentRun(
   win: BrowserWindow,
   req: AgentRunRequest,
@@ -311,9 +318,10 @@ export async function startAgentRun(
       try {
         assistantText = await runAgent(agentInput);
       } catch (err) {
-        // Only from the start: after a browser action has run, redoing the
-        // request could click or submit twice.
-        if (!isOutOfCredit(err) || controller.signal.aborted || taskLog.calls!.length > callsBefore) throw err;
+        // Reads are safe to repeat. After anything else (a click, typing, a
+        // new tab) redoing the request could do it twice.
+        const acted = taskLog.calls!.slice(callsBefore).some((call) => !REPEATABLE_TOOLS.has(call.name));
+        if (!isOutOfCredit(err) || controller.signal.aborted || acted) throw err;
         // The key's account has no credit. Browse the way BulleBrowser does
         // without a key — search, open the best sources, read them — rather
         // than answer with a billing message.

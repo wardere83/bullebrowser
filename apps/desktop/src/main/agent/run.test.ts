@@ -144,6 +144,17 @@ describe('agent task results for live voice', () => {
     expect(keyless!.userRequest).toBe('Find youth grants in New Jersey');
   });
 
+  it('still browses without the model when only reads ran before the billing failure', async () => {
+    mocks.runAgent.mockImplementationOnce(async (input) => {
+      input.onToolRecord?.({ name: 'web_search' } as never);
+      input.onToolRecord?.({ name: 'read_page' } as never);
+      throw Object.assign(new Error('Your credit balance is too low to access the Anthropic API.'), { status: 400 });
+    }).mockResolvedValueOnce('Opened the strongest sources.');
+    const { result } = await runTask();
+    expect(mocks.runAgent).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ status: 'completed', text: 'Opened the strongest sources.' });
+  });
+
   it('does not redo a task on billing failure once a browser action has run', async () => {
     mocks.runAgent.mockImplementationOnce(async (input) => {
       input.onToolRecord?.({ name: 'click' } as never);

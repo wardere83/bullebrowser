@@ -559,8 +559,9 @@ const USUAL_STATUS: Record<string, number> = {
 
 // An empty balance arrives as a 400 or a 429 that reads like a bad request or a
 // rate limit. Neither clears by trying again.
+// Kept in step with isOutOfCredit in the desktop's agent/errors.ts.
 const NO_CREDIT_RE =
-  /credit balance is too low|specified API usage limits|exceeded your current quota|insufficient_quota/i;
+  /credit balance is too low|specified API usage limits|exceeded your current quota|insufficient_quota|insufficient (?:credit|quota|funds)|payment required/i;
 // The last form is OpenAI's 429 for a single request above the per-minute
 // allowance: waiting does not help, a smaller request does.
 const TOO_MUCH_TEXT_RE =
