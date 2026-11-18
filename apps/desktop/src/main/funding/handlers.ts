@@ -186,6 +186,24 @@ export function createFundingHandlers(parts: HandlerParts): FundingHandlers {
     return assistant.complete;
   };
 
+  /**
+   * Runs work with the assistant, and again the way it runs without one when
+   * the assistant turns out to be unusable (an account out of credit reports
+   * NO_ASSISTANT). Cancellation and every other failure pass through.
+   */
+  const orLocal = async <T>(
+    complete: Complete | null,
+    signal: AbortSignal,
+    run: (using: Complete | null) => Promise<T>,
+  ): Promise<T> => {
+    try {
+      return await run(complete);
+    } catch (error) {
+      if (!complete || signal.aborted || !(error instanceof FundingError) || error.code !== 'NO_ASSISTANT') throw error;
+      return run(null);
+    }
+  };
+
   const requireSourceConsent = (organization: Organization): void => {
     if (!organization.consents.liveFundingSearchAt) throw consentRequired('liveFundingSearchAt');
   };
@@ -566,14 +584,14 @@ export function createFundingHandlers(parts: HandlerParts): FundingHandlers {
           const previous = await rfps.analysis(organization.id, id);
           await rfps.setAnalysisStatus(organization.id, id, { state: 'running', updatedAt: parts.now(), error: '' });
           try {
-            const analysis = await pipelines.analyzeRfp({
+            const analysis = await orLocal(complete, job.signal, (using) => pipelines.analyzeRfp({
               organizationId: organization.id,
               document,
-              complete,
+              complete: using,
               signal: job.signal,
               progress: job.progress,
               now: parts.now(),
-            });
+            }));
             if (job.signal.aborted) throw new FundingError('CANCELLED', 'Cancelled.');
             await rfps.saveAnalysis(organization.id, analysis);
             await note(context, organization, 'rfp_analyzed', document.name);
@@ -618,19 +636,18 @@ export function createFundingHandlers(parts: HandlerParts): FundingHandlers {
           const previous = await rfps.alignment(organization.id, id);
           await rfps.setAlignmentStatus(organization.id, id, { state: 'running', updatedAt: parts.now(), error: '' });
           try {
-            const analysis = await analysisFor(organization, id, complete, job);
-            const report = await pipelines.assessAlignment({
+            const report = await orLocal(complete, job.signal, async (using) => pipelines.assessAlignment({
               organizationId: organization.id,
               rfp: document,
-              analysis,
+              analysis: await analysisFor(organization, id, using, job),
               baseline,
               knowledge: await knowledge.sourceDocuments(organization.id),
               search: searchIn(organization.id),
-              complete,
+              complete: using,
               signal: job.signal,
               progress: job.progress,
               now: parts.now(),
-            });
+            }));
             if (job.signal.aborted) throw new FundingError('CANCELLED', 'Cancelled.');
             await rfps.saveAlignment(organization.id, report);
             await note(context, organization, 'alignment_assessed', document.name);
@@ -672,20 +689,19 @@ export function createFundingHandlers(parts: HandlerParts): FundingHandlers {
         // knows before the guide exists; a general guide has no subject.
         return startJob(organization, 'guide', forRfp, 'Preparing your guide', async (job) => {
           const rfp = forRfp ? await rfps.source(organization.id, forRfp) : null;
-          const analysis = forRfp ? await analysisFor(organization, forRfp, complete, job) : null;
-          const guide = await pipelines.buildGuide({
+          const guide = await orLocal(complete, job.signal, async (using) => pipelines.buildGuide({
             id: guideId,
             organizationId: organization.id,
             rfp,
-            analysis,
+            analysis: forRfp ? await analysisFor(organization, forRfp, using, job) : null,
             baseline: await knowledge.baseline(organization),
             knowledge: await knowledge.sourceDocuments(organization.id),
             search: searchIn(organization.id),
-            complete,
+            complete: using,
             signal: job.signal,
             progress: job.progress,
             now: parts.now(),
-          });
+          }));
           if (job.signal.aborted) throw new FundingError('CANCELLED', 'Cancelled.');
           await guides.save(organization.id, guide);
           await note(context, organization, 'guide_started', guide.title.slice(0, 120));

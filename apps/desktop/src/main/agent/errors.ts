@@ -25,9 +25,12 @@ export function isOutOfCredit(err: unknown): boolean {
   const status = (err as { status?: number })?.status;
   const code = (err as { code?: unknown })?.code;
   const raw = err instanceof Error ? err.message : '';
+  // A spending limit arrives as a 429 "Rate limited." named only in the body.
+  const detail = (err as { error?: { error?: { details?: { error_code?: unknown } } } })?.error?.error?.details?.error_code;
   return (
     status === 402 ||
     code === 'BILLING' ||
+    detail === 'enforced_spend_limit_reached' ||
     /credit balance is too low|specified API usage limits|exceeded your current quota|insufficient_quota|insufficient (?:credit|quota|funds)|billing|payment required/i.test(
       raw,
     )

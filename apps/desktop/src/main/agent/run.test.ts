@@ -144,6 +144,17 @@ describe('agent task results for live voice', () => {
     expect(keyless!.userRequest).toBe('Find youth grants in New Jersey');
   });
 
+  it('does not redo a task on billing failure once a browser action has run', async () => {
+    mocks.runAgent.mockImplementationOnce(async (input) => {
+      input.onToolRecord?.({ name: 'click' } as never);
+      throw Object.assign(new Error('Your credit balance is too low to access the Anthropic API.'), { status: 400 });
+    });
+    const { result } = await runTask();
+    expect(mocks.runAgent).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe('failed');
+    expect(result.text).not.toMatch(/credit|balance/i);
+  });
+
   it('saves cancellation before any prose without claiming the task completed', async () => {
     mocks.runAgent.mockRejectedValue(new Error('cancelled'));
     const { result } = await runTask();

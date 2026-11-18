@@ -307,10 +307,13 @@ export async function startAgentRun(
           publishEvent(event);
         },
       };
+      const callsBefore = taskLog.calls!.length;
       try {
         assistantText = await runAgent(agentInput);
       } catch (err) {
-        if (!isOutOfCredit(err) || controller.signal.aborted) throw err;
+        // Only from the start: after a browser action has run, redoing the
+        // request could click or submit twice.
+        if (!isOutOfCredit(err) || controller.signal.aborted || taskLog.calls!.length > callsBefore) throw err;
         // The key's account has no credit. Browse the way BulleBrowser does
         // without a key — search, open the best sources, read them — rather
         // than answer with a billing message.

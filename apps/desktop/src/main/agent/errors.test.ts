@@ -16,6 +16,11 @@ describe('describeAgentError', () => {
     expect(isOutOfCredit(apiError(REAL_BILLING_400, 400))).toBe(true);
     expect(isOutOfCredit(apiError('payment required', 402))).toBe(true);
     expect(isOutOfCredit(Object.assign(new Error('x'), { code: 'BILLING' }))).toBe(true);
+    // A spending limit: a 429 "Rate limited." named only in the body.
+    expect(isOutOfCredit(Object.assign(apiError('Rate limited.', 429), {
+      error: { type: 'error', error: { type: 'rate_limit_error', message: 'Rate limited.', details: { error_code: 'enforced_spend_limit_reached' } } },
+    }))).toBe(true);
+    expect(isOutOfCredit(apiError('Rate limited.', 429))).toBe(false);
     expect(isOutOfCredit(apiError('prompt is too long', 400))).toBe(false);
     expect(isOutOfCredit(apiError('Overloaded', 529))).toBe(false);
   });
