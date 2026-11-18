@@ -15,6 +15,11 @@ on:
         required: false
         default: true
         type: boolean
+      skip_benchmark:
+        description: 'Owner override: publish this manual run without the benchmark gate. Tag releases always require it.'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -25,6 +30,8 @@ concurrency:
 
 jobs:
   agent-benchmark:
+    # Skipped only by the manual owner override; every tag release runs it.
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_benchmark) }}
     uses: ./.github/workflows/agent-benchmark.yml
   build:
     name: Build ${{ matrix.os }}
@@ -386,7 +393,13 @@ jobs:
     # No always(): if the build job fails (e.g. macOS signing/notarization did
     # not pass on a release run), this job is skipped and nothing is published —
     # so a partial or un-notarized release can never go out.
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_release == 'true' && github.event.inputs.version != '')
+    # The benchmark must pass, except on a manual run with the owner override,
+    # where it is skipped. A failed or cancelled build never publishes.
+    if: >-
+      ${{ !cancelled() && needs.build.result == 'success' &&
+      (needs.agent-benchmark.result == 'success' ||
+      (needs.agent-benchmark.result == 'skipped' && github.event_name == 'workflow_dispatch' && inputs.skip_benchmark)) &&
+      (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_release == 'true' && github.event.inputs.version != '')) }}
     steps:
       - uses: actions/checkout@v4
         with:
