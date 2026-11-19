@@ -15,10 +15,9 @@ app releases, searches or talks to people.
   replies, app copy, prompts, docs and commits. Never name the white-label
   platform it is built on; researching that platform is fine, but leave its
   name and links out of anything written.
-- Goal: an agentic AI assistant inside the EEO Dashboard that the team and
-  every client can use, running on the EEO Dashboard's own paid AI allowance.
-  No Google-hosted option. Open question: whether EEO Dashboard custom code
-  can send requests to that AI.
+- Work inside the EEO Dashboard (its own assistant, custom code, AI
+  settings) is a separate task from BulleBrowser. Keep it out of this
+  repository.
 
 ## Releases
 - The owner approves publishing every build without the benchmark gate. See
