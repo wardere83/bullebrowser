@@ -10,6 +10,16 @@ app releases, searches or talks to people.
 - Save notes and decisions in this repository first, then in the BulleBrowser
   folders used outside it (Claude's project memory). Delete temporary files.
 
+## The EEO Dashboard
+- The client platform is the **EEO Dashboard**. Use that name for it in
+  replies, app copy, prompts, docs and commits. Never name the white-label
+  platform it is built on; researching that platform is fine, but leave its
+  name and links out of anything written.
+- Goal: an agentic AI assistant inside the EEO Dashboard that the team and
+  every client can use, running on the EEO Dashboard's own paid AI allowance.
+  No Google-hosted option. Open question: whether EEO Dashboard custom code
+  can send requests to that AI.
+
 ## Releases
 - The owner approves publishing every build without the benchmark gate. See
   "Publishing without the benchmark gate" in docs/RELEASING.md.
