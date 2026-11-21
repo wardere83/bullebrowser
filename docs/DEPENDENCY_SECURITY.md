@@ -28,3 +28,15 @@ Validation: workspace typecheck, lint, full unit tests and builds, plus runtime
 minimum-version, packaging-export and Xcode UUID compatibility checks. GitHub's
 native and desktop UI matrix must also pass before merging. Signed packaging and
 publication remain subject to the release benchmark gate.
+
+## November 21 follow-up
+
+The November 21 audit identified three Next.js advisories in 15.5.28
+(GHSA-7qx7-33qx-rqx2, GHSA-f3mh-rxg3-f5g2 and GHSA-pc58-hwjq-p385).
+The web dependency moves to the patched 15.5.29 release.
+
+GHSA-g3hv-75wg-m249 remains in minimatch 9.0.9 and 10.2.6 through
+TypeScript ESLint and electron-builder's macOS packaging dependency.
+The advisory covers versions from 7.0.0 through 11.0.0. These consumers
+require earlier major versions. Track compatible upstream dependency
+updates and re-run lint and native packaging when upgrading.

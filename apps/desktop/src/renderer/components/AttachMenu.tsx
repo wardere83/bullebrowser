@@ -18,10 +18,6 @@ export type UiAttachment =
   | { kind: 'project'; projectId: string; name: string }
   | { kind: 'screenshot'; url: string; thumb: string };
 
-function bridge(): any {
-  return (window as unknown as { bullebrowser: any }).bullebrowser;
-}
-
 const ITEM =
   'flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-surface-muted';
 
@@ -54,7 +50,7 @@ export function AttachMenu({
   const upload = async () => {
     setBusy('upload');
     try {
-      const files: SessionFile[] = await bridge().files.pick();
+      const files: SessionFile[] = await window.bullebrowser.files.pick();
       for (const f of files) onAttach({ kind: 'file', fileId: f.id, name: f.name });
     } finally {
       setBusy(null);
@@ -65,7 +61,7 @@ export function AttachMenu({
   const screenshot = async () => {
     setBusy('screenshot');
     try {
-      const shot = await bridge().agent.captureScreenshot();
+      const shot = await window.bullebrowser.agent.captureScreenshot();
       if (shot) {
         onAttach({
           kind: 'screenshot',
@@ -184,7 +180,7 @@ function ProjectPicker({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void bridge()
+    void window.bullebrowser
       .projects.list()
       .then((list: ProjectSummary[]) => setProjects(list))
       .finally(() => setLoading(false));
@@ -193,7 +189,7 @@ function ProjectPicker({
   const create = async () => {
     const n = name.trim();
     if (!n) return;
-    const created = await bridge().projects.create(n);
+    const created = await window.bullebrowser.projects.create(n);
     setName('');
     onPick(created);
   };

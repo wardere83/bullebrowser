@@ -1,6 +1,6 @@
 # Agent browser benchmark execution
 
-The repository owns the runner (`scripts/run-agent-benchmarks.mjs`), release validator, and an executable [funding portal evaluator](evaluator/README.md) with eight synthetic tasks, actual desktop/model execution, citation scoring, saved evidence and a nightly workflow. It does not ship the external public benchmark environments, model credentials, evaluation accounts, an approved baseline, or human citation audit results. Unit-test fixtures must never be used as release evidence.
+The repository owns the runner (`scripts/run-agent-benchmarks.mjs`), release validator, and an executable [funding portal evaluator](evaluator/README.md) with eight synthetic tasks, actual desktop/model execution, citation scoring, saved evidence and a separate nightly funding workflow. It does not ship the external public benchmark environments, model credentials, evaluation accounts, an approved baseline, or human citation audit results. Unit-test fixtures must never be used as release evidence.
 
 ## Configuration
 
@@ -25,8 +25,8 @@ node scripts/run-agent-benchmarks.mjs --config /path/to/config.json --repository
 node scripts/run-agent-benchmarks.mjs --config /path/to/config.json --repository . --revision EXACT_40_CHARACTER_COMMIT_SHA --output /tmp/candidate.json
 ```
 
-Preflight checks configuration and baseline presence only. It does not certify the adapters, authenticate accounts, or claim benchmarks passed. The workflow runs nightly, manually, and during release. Installer builds run concurrently. Publication waits for both the installers and measured benchmark validation. Missing configuration, failing evaluation, or missing evidence blocks publication.
+Preflight checks configuration and baseline presence only. It does not certify the adapters, authenticate accounts, or claim benchmarks passed. The full benchmark workflow runs on manual dispatch and when called by the release workflow. Its nightly schedule is disabled until an isolated runner, pinned datasets, model access and an approved baseline are available. The separate funding portal evaluator retains its nightly schedule. On gated releases, installer builds run concurrently. Publication waits for both the installers and measured benchmark validation. Missing configuration, failing evaluation, or missing evidence blocks publication.
 
 ## Publication requirement
 
-Missing, blank or malformed AGENT_EVAL_CONFIG is a failing readiness check. Evaluation cannot be skipped to publish a release. Both real benchmark validation and all installer jobs must succeed. The latest already-published installer is unaffected by this requirement.
+Missing, blank or malformed AGENT_EVAL_CONFIG is a failing readiness check. For tag and default manual releases, both real benchmark validation and all installer jobs must succeed. See the [release instructions](../docs/RELEASING.md) for the existing manual publication override. The latest already-published installer is unaffected by this requirement.

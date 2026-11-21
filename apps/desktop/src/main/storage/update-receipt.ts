@@ -18,8 +18,9 @@ export function reconcilePreparedUpdate(installedVersion: string, appPath: strin
   activatedVersion = null;
   const pending = receipt().get('pending');
   if (!pending || !valid(pending.version) || !valid(installedVersion)) return null;
-  if (compare(installedVersion, pending.version) >= 0) {
-    if (compare(installedVersion, pending.version) === 0) activatedVersion = installedVersion;
+  const matchesTarget = installedVersion === pending.version;
+  if (matchesTarget || compare(installedVersion, pending.version) > 0) {
+    if (matchesTarget) activatedVersion = installedVersion;
     receipt().set('pending', null);
     return null;
   }
