@@ -21,6 +21,13 @@ describe('verified activation receipts', () => {
     expect(reconcilePreparedUpdate('0.2.65', '/Applications/BulleBrowser.app')).toBeNull();
     expect(getActivatedUpdateVersion()).toBe('0.2.65');
   });
+  it('requires the prepared build metadata for a completion notice', () => {
+    recordPreparedUpdate('0.2.65+signed.2', '0.2.64', '/Applications/BulleBrowser.app');
+    expect(reconcilePreparedUpdate('0.2.65+signed.1', '/Applications/BulleBrowser.app')).toContain('did not activate');
+    expect(getActivatedUpdateVersion()).toBeNull();
+    expect(reconcilePreparedUpdate('0.2.65+signed.2', '/Applications/BulleBrowser.app')).toBeNull();
+    expect(getActivatedUpdateVersion()).toBe('0.2.65+signed.2');
+  });
   it('accepts a newer installed version without reporting a failed older update', () => {
     expect(reconcilePreparedUpdate('0.2.66', '/Applications/BulleBrowser.app')).toBeNull();
     expect(getActivatedUpdateVersion()).toBeNull();

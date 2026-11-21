@@ -1,7 +1,5 @@
 name: Agent browser benchmarks
 on:
-  schedule:
-    - cron: '23 10 * * *'
   workflow_dispatch:
   workflow_call:
 permissions:
