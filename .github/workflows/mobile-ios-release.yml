@@ -69,16 +69,20 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID"
       - name: Export IPA
         run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>${TEAM_ID}</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>provisioningProfiles</key><dict><key>${BUNDLE_ID}</key><string>${PROFILE_NAME}</string></dict>
-          </dict></plist>
-          PLIST
+          python3 - <<'PY'
+          import os
+          import plistlib
+          from pathlib import Path
+
+          options = {
+              "method": "app-store-connect",
+              "teamID": os.environ["TEAM_ID"],
+              "signingStyle": "manual",
+              "provisioningProfiles": {os.environ["BUNDLE_ID"]: os.environ["PROFILE_NAME"]},
+          }
+          with (Path(os.environ["RUNNER_TEMP"]) / "ExportOptions.plist").open("wb") as output:
+              plistlib.dump(options, output)
+          PY
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/BulleBrowser.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export"
       - name: Protect archive-only export
