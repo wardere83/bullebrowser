@@ -406,7 +406,7 @@ const text: Messages = {
   'download.unavailable': 'Non disponible',
   'download.guide': 'Guide d’installation et de premier lancement',
   'download.checksums': 'Sommes de contrôle SHA-256',
-  'download.releases': 'Toutes les versions sur GitHub',
+  'download.releases': 'Toutes les versions',
 
   'install.h1': 'Du téléchargement à la navigation visible',
   'install.sub':

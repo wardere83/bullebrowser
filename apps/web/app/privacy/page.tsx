@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <div className="bg-surface-light">
       <div className="prose-lite mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight">Privacy</h1>
-        <p className="mt-4 text-sm text-ink-secondary">Updated October 15, 2026</p>
+        <p className="mt-4 text-sm text-ink-secondary">Updated November 21, 2026</p>
         <p>
           BulleBrowser is a desktop browser by {product.vendor}. Your browsing and assistant
           requests are made from your device. We do not operate a proxy that receives your browsing
@@ -75,17 +75,18 @@ export default function PrivacyPage() {
         </p>
         <h2>Updates, downloads and voice</h2>
         <p>
-          The app checks GitHub for published releases and downloads updates from GitHub. A ready
+          The app contacts our distribution provider to check for and download updates. A ready
           update is installed when you choose Update; the app automatically restarts and restores
           your tabs and current conversation. Voice input may download a speech-recognition model
           from a public hosting service; transcription then runs on your device.
         </p>
         <h2>This website</h2>
         <p>
-          This static website is hosted on GitHub Pages. GitHub may keep standard server logs,
-          including IP address, user agent and requested path. The download page uses a release list
-          prepared during publication, with the public GitHub Releases API as a fallback. Installers
-          are downloaded from GitHub. Your language choice is kept in your browser’s local storage.
+          Our hosting provider may keep standard server logs, including your IP address, user agent
+          and requested path. Our distribution provider receives requests when you download an
+          installer. The download page first loads the release list from this website. If that list
+          is unavailable, the page requests it from our distribution provider. Your browser stores
+          your language choice locally.
         </p>
         <p>
           There are no analytics scripts or telemetry in the app or on this site, and this site sets

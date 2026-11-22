@@ -403,7 +403,7 @@ export const ptPT: Messages = {
   'download.unavailable': 'Indisponível',
   'download.guide': 'Guia de instalação e primeira utilização',
   'download.checksums': 'Somas de verificação SHA-256',
-  'download.releases': 'Todas as versões no GitHub',
+  'download.releases': 'Todas as versões',
 
   'install.h1': 'Da transferência à navegação visível',
   'install.sub':

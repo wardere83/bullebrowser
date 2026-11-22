@@ -422,7 +422,7 @@ export const en = {
   'download.unavailable': 'Not available',
   'download.guide': 'Installation and first-run guide',
   'download.checksums': 'SHA-256 checksums',
-  'download.releases': 'All releases on GitHub',
+  'download.releases': 'All releases',
 
   // Guides page. Names in quotation marks are the app's own labels.
   'install.h1': 'From download to visible browsing',

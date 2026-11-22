@@ -134,7 +134,6 @@ const KEPT = [
   'TXT',
   'Markdown',
   'RFP',
-  'GitHub',
   'macOS',
   'Windows',
   'Linux',
@@ -174,6 +173,8 @@ const ending = (text) => {
   return 'no punctuation';
 };
 
+const providerName = /\b(?:github|cloudflare)\b/i;
+
 for (const [locale, dictionary] of Object.entries(dictionaries)) {
   const own = Object.keys(dictionary);
   for (const key of keys) if (!(key in dictionary)) fail(`[${locale}] ${key}`, 'missing');
@@ -187,6 +188,7 @@ for (const [locale, dictionary] of Object.entries(dictionaries)) {
       fail(where, 'empty');
       continue;
     }
+    if (providerName.test(value)) fail(where, 'hosting or distribution provider in public copy');
     // The fixed sentences are the owner's own wording, kept character for
     // character, so the typography rule does not apply to them.
     const fixed = locale === 'en' && Object.hasOwn(FIXED, key);
@@ -254,6 +256,7 @@ const pages = exported.filter((file) => file.endsWith('.html'));
 for (const file of pages) {
   const html = readFileSync(file, 'utf8');
   const where = '/' + path.relative(OUT, file).replace(/index\.html$/, '');
+  if (providerName.test(strip(html))) fail(where, 'hosting or distribution provider in public copy');
   const levels = [...html.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]));
   const h1 = levels.filter((level) => level === 1).length;
   if (h1 !== 1) fail(where, `${h1} h1 elements`);
