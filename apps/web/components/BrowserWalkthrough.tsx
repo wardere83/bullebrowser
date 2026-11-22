@@ -5,7 +5,6 @@ import { useT } from '@/lib/i18n';
 import { WORKFLOWS } from '@/lib/terms';
 import { Icon, type IconName } from './Icon';
 import { keepCase } from './KeepCase';
-import { BrandMark } from './BrandMark';
 import { PAGES, SITES, SitePage, type PageId, type PageState, type SiteId } from './walkthrough/SitePages';
 
 // An interactive illustration of a BulleBrowser task, scripted step by step
@@ -518,8 +517,7 @@ export function BrowserWalkthrough() {
       <div className="overflow-hidden rounded-2xl border border-brand-navy/10 bg-brand-ice shadow-[0_40px_100px_-55px_rgba(7,20,34,0.55)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-navy/10 bg-white px-5 py-3 text-xs text-ink-secondary">
           <span className="flex items-center gap-2 font-semibold text-brand-navy">
-            <BrandMark className="h-[18px] w-[18px]" />
-            BulleBrowser
+            Google Chrome
           </span>
           <span>{t('common.illustration')}</span>
         </div>
@@ -619,7 +617,7 @@ export function BrowserWalkthrough() {
                   <svg width="22" height="22" viewBox="0 0 24 24" className="-ml-0.5 -mt-0.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
                     <path d="M5 3l14 8.5-6.2 1.4L9.8 19 5 3z" fill="#fff" stroke="#111" strokeWidth="1.3" strokeLinejoin="round" />
                   </svg>
-                  <span className={`mt-0.5 block w-max rounded bg-brand-navy px-1.5 py-0.5 text-[9px] font-semibold text-white ${pointer.flip ? '-ml-20' : 'ml-4'}`}>BulleBrowser</span>
+                  <span className={`mt-0.5 block w-max rounded bg-brand-navy px-1.5 py-0.5 text-[9px] font-semibold text-white ${pointer.flip ? '-ml-20' : 'ml-4'}`}>Your Assistant</span>
                 </div>
               )}
               {scene.toast && running && (
@@ -631,7 +629,10 @@ export function BrowserWalkthrough() {
           {/* The assistant, as the app's side panel shows it. */}
           <div className="flex h-[560px] min-h-0 min-w-0 flex-col bg-white md:h-full">
             <div className="flex items-center justify-between border-b border-brand-navy/10 px-5 py-3 text-xs font-semibold text-brand-navy">
-              <span>Your Assistant</span>
+              <div>
+                <span className="block text-[10px] font-medium text-ink-secondary">BulleBrowser</span>
+                <h3>Your Assistant</h3>
+              </div>
               <span className="flex items-center gap-1.5 text-[10px] font-medium text-ink-secondary">
                 {status === 'running' && <><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-teal" />BulleBrowser Agentic AI is working…</>}
                 {status === 'done' && <><Icon name="check-circle" className="h-3.5 w-3.5 text-brand-teal" />Task complete</>}

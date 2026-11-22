@@ -4,7 +4,7 @@
 // land on the actual element, as they do on real pages in the desktop app.
 
 import type { ReactNode } from 'react';
-import { BrandMark } from '../BrandMark';
+import { Icon } from '../Icon';
 
 export type SiteId = 'grants' | 'international' | 'funder';
 export type PageId =
@@ -18,14 +18,18 @@ export type PageId =
   | 'funder-priorities'
   | 'funder-grants';
 
-export const SITES: Record<SiteId, { tab: string; mark: string; markClass: string }> = {
+export const SITES: Record<SiteId, { tab: string; mark: ReactNode; markClass: string }> = {
   grants: { tab: 'Grants.gov', mark: 'G', markClass: 'bg-[#112e51] text-white' },
-  international: { tab: 'International Grants', mark: 'I', markClass: 'bg-[#1f4fa8] text-[#ffd617]' },
+  international: {
+    tab: 'International Grants',
+    mark: <Icon name="globe" className="h-full w-full text-brand-teal" />,
+    markClass: 'rounded-full bg-brand-navy',
+  },
   funder: { tab: 'Funder website', mark: 'H', markClass: 'bg-brand-teal text-white' },
 };
 
 export const PAGES: Record<PageId, { site: SiteId | null; host: string; path: string }> = {
-  start: { site: null, host: 'BulleBrowser', path: ' · New tab' },
+  start: { site: null, host: 'google.com', path: '/' },
   'grants-search': { site: 'grants', host: 'grants.gov', path: '/search-grants' },
   'grants-detail': { site: 'grants', host: 'grants.gov', path: '/search-results-detail/OCP-27-014' },
   'grants-docs': { site: 'grants', host: 'grants.gov', path: '/search-results-detail/OCP-27-014/documents' },
@@ -255,9 +259,9 @@ const CALLS = [
 function IntlShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full bg-[#f5f7fb] font-[system-ui] text-[#262b38]">
-      <div className="flex items-center justify-between bg-[#1f4fa8] px-4 py-2.5 text-white">
+      <div className="flex items-center justify-between bg-brand-navy px-4 py-2.5 text-white">
         <span className="flex items-center gap-2 text-[12px] font-semibold">
-          <span className="grid h-5 w-5 place-items-center rounded-full border border-[#ffd617] text-[9px] text-[#ffd617]">★</span>
+          <span aria-hidden="true" className="h-5 w-5">{SITES.international.mark}</span>
           Funding &amp; tender opportunities
         </span>
         <span className="hidden text-[10px] text-white/80 sm:block">Search funding · How to participate</span>
@@ -274,14 +278,14 @@ function IntlSearch({ state }: { state: PageState }) {
         <p className="text-[15px] font-bold">Calls for proposals</p>
         <div className="mt-2 flex gap-2">
           <Field target="intl-search" value={state.typed} active={!!state.typed && !state.results} placeholder="Search calls by keyword" />
-          <span data-target="intl-submit" className="grid h-9 place-items-center rounded bg-[#1f4fa8] px-4 text-[11px] font-semibold text-white">
+          <span data-target="intl-submit" className="grid h-9 place-items-center rounded bg-brand-navy px-4 text-[11px] font-semibold text-white">
             Search
           </span>
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <span
             data-target="intl-open"
-            className={`rounded-full border px-2.5 py-1 font-semibold ${state.filtered ? 'border-[#1f4fa8] bg-[#1f4fa8] text-white' : 'border-[#c3cad9] bg-white'}`}
+            className={`rounded-full border px-2.5 py-1 font-semibold ${state.filtered ? 'border-brand-navy bg-brand-navy text-white' : 'border-[#c3cad9] bg-white'}`}
           >
             {state.filtered ? '✓ ' : ''}Open for submission
           </span>
@@ -292,7 +296,7 @@ function IntlSearch({ state }: { state: PageState }) {
           {state.results ? (
             CALLS.map((call, i) => (
               <div key={call.id} className="rounded-lg border border-[#d6dcea] bg-white p-3">
-                <span data-target={call.id} className="font-semibold text-[#1f4fa8]">{call.title}</span>
+                <span data-target={call.id} className="font-semibold text-brand-navy">{call.title}</span>
                 <p className="mt-1 text-[#5b6476]">{call.code} · Deadline {call.deadline}</p>
                 <p className="mt-1"><Mark name={`intl-who-${i + 1}`} state={state}>{call.who}</Mark></p>
                 <span className="mt-1.5 inline-block rounded bg-[#e3f4e8] px-1.5 py-0.5 text-[9px] font-semibold text-[#1f7a3d]">Open for submission</span>
@@ -435,19 +439,18 @@ function FunderGrants({ state }: { state: PageState }) {
   );
 }
 
-// The app's own new-tab page, where a task starts.
+// Illustrated browser start page before the first source opens.
 function StartPage() {
   return (
     <div className="grid h-full min-h-[340px] place-items-center bg-gradient-to-b from-brand-ice to-white px-6">
       <div className="w-full max-w-sm text-center">
-        <BrandMark className="mx-auto h-11 w-11 drop-shadow-[0_12px_18px_rgba(32,186,209,0.45)]" />
-        <p className="mt-3 text-lg font-semibold tracking-tight text-brand-navy">BulleBrowser</p>
+        <p className="text-4xl font-semibold tracking-tight text-[#1a73e8]">Google</p>
         <div className="mt-4 flex items-center gap-2 rounded-full border border-brand-navy/10 bg-white px-4 py-2.5 text-left text-[11px] text-ink-secondary shadow-sm">
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-brand-teal" fill="none" stroke="currentColor" strokeWidth={2}>
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.8-3.8" />
           </svg>
-          Search the web or ask BulleBrowser
+          Search Google or type a URL
         </div>
         <div className="mt-4 flex justify-center gap-2 text-[10px] text-brand-navy">
           {(Object.keys(SITES) as SiteId[]).map((site) => (
