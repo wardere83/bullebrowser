@@ -423,3 +423,30 @@ footer {
     padding-inline: 10px;
   }
 }
+
+/* Match the Mac browser's light assistant, teal actions and product film on iOS. */
+.ios-shell {
+  color-scheme: light;
+  color: #142127;
+  background: white;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+}
+.ios-shell :is(button, input, select, textarea, .approval, .composer:focus-within::after) {
+  color: inherit;
+  background-color: white;
+  border-color: #d4dce4;
+}
+.ios-shell :is(header, .browser-toolbar, .composer, .settings-section, .messages article, .connector) {
+  border-color: #d4dce4;
+}
+.ios-shell :is(.activity, footer, small, .settings p, .settings small) {
+  color: #53616d;
+}
+.ios-shell :is(input, textarea)::placeholder { color: #64717d; }
+.ios-shell .ios-wordmark { width: 140px; max-width: 40%; height: auto; }
+.ios-shell .browser-slot:not(.has-tabs) { background: #071422; padding: 0; }
+.ios-shell .browser-slot video { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.ios-shell .shortcuts { grid-template-columns: 1fr; }
+.ios-shell .composer button[type='submit'] { background: #20bad1; color: #071422; }
+.ios-shell .tab-strip [aria-current='page'] { border-bottom-color: #087f83; }
+.ios-shell .error button { color: #142127; }

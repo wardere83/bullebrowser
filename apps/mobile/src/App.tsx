@@ -1,3 +1,7 @@
+import { Capacitor } from '@capacitor/core';
+import wordmark from '@bullebrowser/brand-tokens/wordmark.png';
+import introFilm from '../../desktop/src/renderer/assets/bullebrowser-film.mp4';
+import introPoster from '../../desktop/src/renderer/assets/bullebrowser-film-poster.jpg';
 import { BrowserToolbar } from './BrowserToolbar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -30,6 +34,8 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+const isIOS = Capacitor.getPlatform() === 'ios';
+
 export function App() {
   const [state, setState] = useState<MobileState | null>(null);
   const [page, setPage] = useState<'assistant' | 'settings'>('assistant');
@@ -276,9 +282,9 @@ export function App() {
       </main>
     );
   return (
-    <main className="mobile-shell">
+    <main className={isIOS ? 'mobile-shell ios-shell' : 'mobile-shell'}>
       <header>
-        <span className="brand">BulleBrowser</span>
+        {isIOS ? <img className="ios-wordmark" src={wordmark} alt="BulleBrowser" /> : <span className="brand">BulleBrowser</span>}
         {running && (
           <button aria-label="Stop current task" onClick={stop}>
             Stop
@@ -457,14 +463,15 @@ export function App() {
             className={`browser-slot ${tabs.length ? 'has-tabs' : ''}`}
             aria-label="Live browser"
           >
-            <p>
-              {tabs.length
-                ? 'Your live browser appears here.'
-                : 'The browser opens here when you start a task.'}
-            </p>
+            {isIOS && !tabs.length ? (
+              <video controls playsInline muted preload="none" poster={introPoster}
+                src={introFilm} aria-label="BulleBrowser visible browsing video" />
+            ) : (
+              <p>{tabs.length ? 'Your live browser appears here.' : 'The browser opens here when you start a task.'}</p>
+            )}
           </div>
           <section className="chat">
-            <h1>Your Assistant</h1>
+            <h1>{isIOS && !messages.length ? 'Where should we browse?' : 'Your Assistant'}</h1>
             <p className="activity" role="status" aria-live="polite">
               {status}
             </p>
