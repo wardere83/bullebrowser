@@ -402,7 +402,7 @@ export const es419: Messages = {
   'download.unavailable': 'No disponible',
   'download.guide': 'Guía de instalación y primer inicio',
   'download.checksums': 'Sumas de verificación SHA-256',
-  'download.releases': 'Todas las versiones en GitHub',
+  'download.releases': 'Todas las versiones',
 
   'install.h1': 'De la descarga a la navegación visible',
   'install.sub':

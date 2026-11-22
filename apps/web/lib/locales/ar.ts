@@ -402,7 +402,7 @@ export const ar: Messages = {
   'download.unavailable': 'غير متوفر',
   'download.guide': 'دليل التثبيت والتشغيل الأول',
   'download.checksums': 'المجاميع الاختبارية SHA-256',
-  'download.releases': 'جميع الإصدارات على GitHub',
+  'download.releases': 'جميع الإصدارات',
 
   'install.h1': 'من التنزيل إلى التصفح المرئي',
   'install.sub': 'من التنزيل إلى أول بحث عن التمويل في دقائق معدودة. لا حاجة إلى خلفية تقنية.',
