@@ -106,6 +106,19 @@ describe('runAgent with ChatGPT', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each([
+    ['an empty response', () => new Response('')],
+    ['a damaged stream event', () => new Response('data: {"choices":\n\n', { headers: { 'content-type': 'text/event-stream' } })],
+    ['a cut-off stream', () => new Response('data: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } })],
+  ] as const)('recovers %s before an action runs', async (_label, firstResponse) => {
+    fetchMock.mockResolvedValueOnce(firstResponse()).mockResolvedValueOnce(reply(assistantText('The deadline is in December.')));
+    const context = makeContext();
+    const result = await runAgent({ apiKey: 'test', model: 'gpt-4o', systemPrompt: '', history: [],
+      userMessage: 'Tell me something', context, onStep: () => {} });
+    expect(result).toBe('The deadline is in December.');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('plans with the large model, executes cheaply, verifies and synthesizes with the large model', async () => {
     fetchMock.mockResolvedValueOnce(reply(assistantText('["Read source","Verify result"]')))
       .mockResolvedValueOnce(reply(assistantText('The page has grant information.')))

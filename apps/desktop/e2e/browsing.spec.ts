@@ -18,14 +18,14 @@ type Hooks = {
 
 type ReadProbe = { entered: number; release: (() => void) | null };
 
-async function launch(extraArgs: string[] = []) {
+async function launch(extraArgs: string[] = [], openAiFixture = false) {
   const userData = mkdtempSync(join(tmpdir(), 'bullebrowser-browsing-'));
   const env = {
     ...process.env,
     NODE_ENV: 'test',
     BULLEBROWSER_TEST_HOOKS: '1',
     ANTHROPIC_API_KEY: '',
-    OPENAI_API_KEY: '',
+    OPENAI_API_KEY: openAiFixture ? 'sk-e2e-test-only-key' : '',
     BRAVE_SEARCH_API_KEY: 'fixture-search-key-not-real',
   };
   delete (env as NodeJS.ProcessEnv).ELECTRON_RUN_AS_NODE;
@@ -968,6 +968,48 @@ for (const option of [
     }
   });
 }
+
+test('Find grants for me finishes in the browser after unreadable assistant replies', async () => {
+  const pages = await fixture();
+  const { app, win, close } = await launch([], true);
+  try {
+    await app.evaluate((_electron, base) => {
+      const original = globalThis.fetch;
+      const state = globalThis as unknown as { brokenReplies: number };
+      state.brokenReplies = 0;
+      globalThis.fetch = async (input, init) => {
+        if (String(input).startsWith('https://api.openai.com/v1/chat/completions')) {
+          const body = JSON.parse(String(init?.body));
+          if (!body.stream) {
+            return Response.json({ choices: [{ finish_reason: 'stop', message: { content: '["Find sources","Check eligibility"]' } }] });
+          }
+          state.brokenReplies++;
+          return new Response('data: {"choices":\n\n', { headers: { 'content-type': 'text/event-stream' } });
+        }
+        if (String(input).startsWith('https://api.search.brave.com/')) {
+          return Response.json({ web: { results: [1, 2, 3].map((id) => ({ title: `School grant ${id}`, url: `${base}/program-${id}` })) } });
+        }
+        return original(input, init);
+      };
+    }, pages.url);
+    await win.evaluate(() => window.bullebrowser.settings.set({ defaultModel: 'gpt-4o' }));
+    await win.reload();
+    const panel = win.getByRole('complementary', { name: 'Assistant chat' });
+    await panel.getByRole('button', { name: 'Find grants for me', exact: true }).click();
+    await panel.locator('textarea.prompt-input-field').fill('Seattle schools need accessibility funding');
+    await panel.getByRole('button', { name: 'Send', exact: true }).click();
+    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
+    await expect(panel.locator('.md-prose')).toContainText('3 source pages', { timeout: 45_000 });
+    await expect(panel).not.toContainText(/unexpected end|not valid JSON|task could not finish/i);
+    const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
+    expect(tabs.filter((tab) => tab.url.startsWith(pages.url + '/program-'))).toHaveLength(3);
+    expect(tabs.find((tab) => tab.active)?.url).toBe(pages.url + '/program-1');
+    expect(await app.evaluate(() => (globalThis as unknown as { brokenReplies: number }).brokenReplies)).toBe(3);
+  } finally {
+    await close();
+    await pages.close();
+  }
+});
 
 // Opt-in provider smoke test; deterministic layout coverage above runs in CI.
 test('live Bing search discovers and reads Seattle funding sources', async () => {

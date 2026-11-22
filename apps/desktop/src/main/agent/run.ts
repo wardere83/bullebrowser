@@ -17,6 +17,8 @@ import {
   productQuestionReply,
   requestIntent,
   runAgent,
+  StreamInterruptedError,
+  UnreadableReplyError,
   type AgentStep,
   type ActionPreview,
   type ToolContext,
@@ -350,10 +352,10 @@ export async function startAgentRun(
         // Reads are safe to repeat. After anything else (a click, typing, a
         // new tab) redoing the request could do it twice.
         const acted = taskLog.calls!.slice(callsBefore).some((call) => !REPEATABLE_TOOLS.has(call.name));
-        if (!isOutOfCredit(err) || controller.signal.aborted || acted) throw err;
-        // The key's account has no credit. Browse the way BulleBrowser does
-        // without a key — search, open the best sources, read them — rather
-        // than answer with a billing message.
+        const unreadableBrowseReply = intent === 'browse' && (err instanceof UnreadableReplyError || err instanceof StreamInterruptedError);
+        if (controller.signal.aborted || acted || !(unreadableBrowseReply || isOutOfCredit(err))) throw err;
+        // Use the same consent and source checks as any local browsing run.
+        if (unreadableBrowseReply) agentInput.onStep({ type: 'thinking', detail: 'Continuing with the browser to check sources…' });
         lastText = '';
         const { apiKey: _key, anthropicCredentials: _credentials, ...keyless } = agentInput;
         assistantText = await runAgent({ ...keyless, planning: false });

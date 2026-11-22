@@ -214,6 +214,21 @@ describe('runAgent Claude tool-use loop', () => {
       expect(steps.filter((s) => s.detail?.includes('Retrying'))).toHaveLength(2);
     });
 
+    it('recovers an unreadable tool request before touching the browser', async () => {
+      createMock.mockResolvedValueOnce(broken([
+        { type: 'content_block_start', index: 0, content_block: toolUseBlock('cut', 'click', {}) },
+        { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"target":' } },
+        { type: 'content_block_stop', index: 0 },
+        { type: 'message_delta', delta: { stop_reason: 'tool_use' } },
+      ])).mockResolvedValueOnce({ stop_reason: 'tool_use', content: [toolUseBlock('read', 'read_page', {})] })
+        .mockResolvedValueOnce({ stop_reason: 'end_turn', content: [textBlock('This page explains grants and deadlines.')] });
+      const context = makeContext();
+      const settled = expect(run([], context)).resolves.toContain('grants and deadlines');
+      await vi.advanceTimersByTimeAsync(4000);
+      await settled;
+      expect(context.runtime.click).not.toHaveBeenCalled();
+    });
+
     it('gives up after two retries', async () => {
       createMock.mockResolvedValue(broken(partialText));
       const result = run([]);
