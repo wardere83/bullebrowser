@@ -144,6 +144,26 @@ describe('agent task results for live voice', () => {
     expect(keyless!.userRequest).toBe('Find youth grants in New Jersey');
   });
 
+  it('preserves the original funding request and consent when an unreadable reply sends it to local browsing', async () => {
+    const { UnreadableReplyError } = await import('@bullebrowser/agent-core');
+    mocks.runAgent.mockRejectedValueOnce(new UnreadableReplyError()).mockResolvedValueOnce('Read the sources.');
+    const { result, send } = await runTask({ userMessage: 'Seattle youth', browserTask: 'find_grants' });
+    expect(result).toMatchObject({ status: 'completed', text: 'Read the sources.' });
+    expect(mocks.runAgent.mock.calls[1]?.[0]).toMatchObject({ browserTask: 'find_grants', userRequest: 'Seattle youth', planning: false });
+    expect(send.mock.calls.filter(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)).toHaveLength(1);
+  });
+
+  it('does not repeat a browser action when a later reply is unreadable', async () => {
+    const { UnreadableReplyError } = await import('@bullebrowser/agent-core');
+    mocks.runAgent.mockImplementationOnce(async (input) => {
+      input.onToolRecord?.({ name: 'click' } as never);
+      throw new UnreadableReplyError();
+    });
+    const { result } = await runTask({ userMessage: 'Seattle youth', browserTask: 'find_grants' });
+    expect(result.status).toBe('failed');
+    expect(mocks.runAgent).toHaveBeenCalledOnce();
+  });
+
   it('still browses without the model when only reads ran before the billing failure', async () => {
     mocks.runAgent.mockImplementationOnce(async (input) => {
       input.onToolRecord?.({ name: 'web_search' } as never);

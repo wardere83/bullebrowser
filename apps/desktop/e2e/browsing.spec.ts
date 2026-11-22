@@ -994,6 +994,14 @@ test('Find grants for me finishes in the browser after unreadable assistant repl
     }, pages.url);
     await win.evaluate(() => window.bullebrowser.settings.set({ defaultModel: 'gpt-4o' }));
     await win.reload();
+    await win.evaluate(() => {
+      const state = window as unknown as { fundingResult?: string; runErrors: string[] };
+      state.runErrors = [];
+      window.bullebrowser.agent.onResult(result => { state.fundingResult = result.status; });
+      window.bullebrowser.agent.onStep(({ step }) => {
+        if (step.kind === 'error') state.runErrors.push(step.message);
+      });
+    });
     const panel = win.getByRole('complementary', { name: 'Assistant chat' });
     await panel.getByRole('button', { name: 'Find grants for me', exact: true }).click();
     await panel.locator('textarea.prompt-input-field').fill('Seattle schools need accessibility funding');
@@ -1001,6 +1009,11 @@ test('Find grants for me finishes in the browser after unreadable assistant repl
     await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(panel.locator('.md-prose')).toContainText('3 source pages', { timeout: 45_000 });
     await expect(panel).not.toContainText(/unexpected end|not valid JSON|task could not finish/i);
+    const receipt = await win.evaluate(() => {
+      const state = window as unknown as { fundingResult?: string; runErrors: string[] };
+      return { status: state.fundingResult, errors: state.runErrors };
+    });
+    expect(receipt).toEqual({ status: 'completed', errors: [] });
     const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
     expect(tabs.filter((tab) => tab.url.startsWith(pages.url + '/program-'))).toHaveLength(3);
     expect(tabs.find((tab) => tab.active)?.url).toBe(pages.url + '/program-1');

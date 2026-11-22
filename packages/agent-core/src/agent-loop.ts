@@ -1159,6 +1159,7 @@ async function runOpenAiTurns(args: {
 
   let finalText = '';
   let terminalAnswer = false;
+  let unreadableTurns = 0;
 
   for (let turn = 0; turn < budget.total * 2 + 5; turn++) {
     if (context.signal.aborted) throw new Error('cancelled');
@@ -1201,12 +1202,16 @@ async function runOpenAiTurns(args: {
       return replacement;
     }
     let calls = choice.message.tool_calls ?? [];
-    if (choice.finish_reason === 'length') {
-      // Only a complete prefix can have executed. Preserve those calls and their
-      // results in history before asking for the remaining work.
-      const cut = calls.findIndex((call) => !call?.id || !call.function?.name ||
-        typeof call.function.arguments !== 'string' || !call.function.arguments.trim() || !!parseToolArguments(call).error);
-      if (cut >= 0) calls = calls.slice(0, cut);
+    const clipped = choice.finish_reason === 'length';
+    const invalid = calls.findIndex((call) => !call?.id || !call.function?.name ||
+      (clipped && !call.function.arguments) || !!parseToolArguments(call).error);
+    // A malformed action never spends browser budget. Limit the attempts to
+    // repair consecutive replies that made no progress.
+    unreadableTurns = invalid === 0 || (clipped && !calls.length && !turnText) ? unreadableTurns + 1 : 0;
+    if (unreadableTurns > TURN_RETRY_DELAYS_MS.length) throw new UnreadableReplyError();
+    if (clipped) {
+      // Preserve the completed prefix so the next turn never replays it.
+      if (invalid >= 0) calls = calls.slice(0, invalid);
       if (!calls.length) {
         if (turnText) {
           onStep({ type: 'text', detail: turnText });
@@ -1252,11 +1257,10 @@ async function runOpenAiTurns(args: {
     // Every tool_call must get a matching 'tool' message or the next request is
     // rejected — so this loop must not skip any call, even past the limit.
     const images: string[] = [];
-    const blockedAt = calls.findIndex((call) => !!parseToolArguments(call).error);
-    if (blockedAt >= 0) onStep({ type: 'thinking', detail: 'Requesting the next action again…' });
+    if (!clipped && invalid >= 0) onStep({ type: 'thinking', detail: 'Requesting the next action again…' });
     const outcomes = await Promise.all(calls.map(async (call, index) => {
       const { name, input: parsedInput, error } = parseToolArguments(call);
-      if (blockedAt >= 0 && index >= blockedAt) {
+      if (invalid >= 0 && index >= invalid) {
         return { text: error ?? 'This action was skipped because an earlier call was unreadable. Request it again if needed.', isError: true } as ToolCallOutcome;
       }
       return dispatch.enqueue({ type: 'tool_use', id: call.id, name, input: parsedInput });

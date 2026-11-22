@@ -33,6 +33,18 @@ describe('OpenAI streamed tool dispatch', () => {
     await expect(consumeOpenAiStream(new Response(body), onTool)).rejects.toThrow('complete turn');
     expect(onTool).not.toHaveBeenCalled();
   });
+  it('assembles multiline event data across CRLF chunk boundaries', async () => {
+    const chunks = ['data: {"choices":[\r', '\ndata: {"index":0,"delta":{"content":"Ready"},"finish_reason":"stop"}]}\r', '\n\r', '\n'];
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(encode.encode(chunk));
+        controller.close();
+      },
+    });
+    const result = await consumeOpenAiStream(new Response(body), vi.fn());
+    expect(result.choices[0]?.message.content).toBe('Ready');
+  });
+
   it('reports a stream cut off inside its last event as interrupted, not as a JSON error', async () => {
     const body = event({ content: 'Partial' }) + 'data: {"choices":[{"index":0,"delta":{"content":"cut';
     await expect(consumeOpenAiStream(new Response(body), vi.fn())).rejects.toThrow('ended before a complete turn');

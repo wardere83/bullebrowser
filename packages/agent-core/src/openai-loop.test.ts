@@ -119,6 +119,53 @@ describe('runAgent with ChatGPT', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps completed actions in history and never executes a cut-off action', async () => {
+    const calls = [
+      { index: 0, id: 'sent', function: { name: 'press_key', arguments: '{"key":"Tab"}' } },
+      { index: 1, id: 'cut', function: { name: 'click', arguments: '{"target":' } },
+    ];
+    const sse = (delta: unknown, finish_reason: string | null) =>
+      'data: ' + JSON.stringify({ choices: [{ index: 0, delta, finish_reason }] }) + '\n\n';
+    fetchMock.mockResolvedValueOnce(new Response(sse({ tool_calls: calls }, null) + sse({}, 'length'),
+      { headers: { 'content-type': 'text/event-stream' } }))
+      .mockResolvedValueOnce(reply(assistantText('The next control is focused.')));
+    const context = makeContext();
+    await runAgent({ apiKey: 'test', model: 'gpt-4o', systemPrompt: '', history: [],
+      userMessage: 'Press Tab', context, onStep: () => {} });
+    const messages = JSON.parse(fetchMock.mock.calls[1]![1].body).messages;
+    expect(messages).toContainEqual(expect.objectContaining({ role: 'assistant', tool_calls: [expect.objectContaining({ id: 'sent' })] }));
+    expect(messages).toContainEqual(expect.objectContaining({ role: 'tool', tool_call_id: 'sent' }));
+    expect(context.runtime.pressKey).toHaveBeenCalledTimes(1);
+    expect(context.runtime.click).not.toHaveBeenCalled();
+  });
+
+  it('does not retry a broken frame after dispatch or expose its raw contents', async () => {
+    const call = { index: 0, id: 'sent', function: { name: 'press_key', arguments: '{"key":"Tab"}' } };
+    const first = 'data: ' + JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [call] } }] }) + '\n\n';
+    fetchMock.mockResolvedValueOnce(new Response(first + 'data: private-fragment\n\n', { headers: { 'content-type': 'text/event-stream' } }));
+    const context = makeContext();
+    await expect(runAgent({ apiKey: 'test', model: 'gpt-4o', systemPrompt: '', history: [],
+      userMessage: 'Press Tab', context, onStep: () => {} })).rejects.toThrow('unreadable reply');
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(context.runtime.pressKey).toHaveBeenCalledOnce();
+  });
+
+  it('bounds malformed actions and withholds dependent browser calls', async () => {
+    const calls = [
+      { id: 'bad', type: 'function', function: { name: 'switch_tab', arguments: '{"private":' } },
+      { id: 'depends', type: 'function', function: { name: 'press_key', arguments: '{"key":"Tab"}' } },
+    ];
+    fetchMock.mockResolvedValue(reply({ choices: [{ finish_reason: 'tool_calls', message: { content: null, tool_calls: calls } }] }));
+    const steps: AgentStep[] = [];
+    const context = makeContext();
+    await expect(runAgent({ apiKey: 'test', model: 'gpt-4o', systemPrompt: '', history: [],
+      userMessage: 'Press Tab', context, onStep: step => steps.push(step) })).rejects.toThrow('unreadable reply');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(context.runtime.pressKey).not.toHaveBeenCalled();
+    expect(JSON.stringify(steps)).not.toContain('private');
+    expect(steps.some(step => step.type === 'error')).toBe(false);
+  });
+
   it('plans with the large model, executes cheaply, verifies and synthesizes with the large model', async () => {
     fetchMock.mockResolvedValueOnce(reply(assistantText('["Read source","Verify result"]')))
       .mockResolvedValueOnce(reply(assistantText('The page has grant information.')))
