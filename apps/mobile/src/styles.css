@@ -431,7 +431,8 @@ footer {
   background: white;
   font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
 }
-.ios-shell :is(button, input, select, textarea, .approval, .composer:focus-within::after) {
+.ios-shell :is(button, input, select, textarea, .approval),
+.ios-shell .composer:focus-within::after {
   color: inherit;
   background-color: white;
   border-color: #d4dce4;
