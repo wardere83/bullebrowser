@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <div className="bg-surface-light">
       <div className="prose-lite mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight">Privacy</h1>
-        <p className="mt-4 text-sm text-ink-secondary">Updated October 15, 2026</p>
+        <p className="mt-4 text-sm text-ink-secondary">Updated November 21, 2026</p>
         <p>
           BulleBrowser is a desktop browser by {product.vendor}. Your browsing and assistant
           requests are made from your device. We do not operate a proxy that receives your browsing
@@ -84,8 +84,9 @@ export default function PrivacyPage() {
         <p>
           Our hosting provider may keep standard server logs, including your IP address, user agent
           and requested path. Our distribution provider receives requests when you download an
-          installer or when the download page retrieves an updated release list. Your browser
-          stores your language choice locally.
+          installer. The download page first loads the release list from this website. If that list
+          is unavailable, the page requests it from our distribution provider. Your browser stores
+          your language choice locally.
         </p>
         <p>
           There are no analytics scripts or telemetry in the app or on this site, and this site sets
