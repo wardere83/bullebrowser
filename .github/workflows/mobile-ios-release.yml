@@ -81,6 +81,22 @@ jobs:
           PLIST
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/BulleBrowser.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export"
+      - name: Protect archive-only export
+        if: ${{ !inputs.upload }}
+        env:
+          ARCHIVE_PASSWORD: ${{ secrets.IOS_ARCHIVE_PASSWORD }}
+        run: |
+          : "${ARCHIVE_PASSWORD:?Set IOS_ARCHIVE_PASSWORD for archive-only runs}"
+          printf '%s' "$ARCHIVE_PASSWORD" | openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 \
+            -pass stdin -in "$RUNNER_TEMP"/export/*.ipa -out "$RUNNER_TEMP/BulleBrowser.ipa.enc"
+      - name: Retain protected IPA
+        if: ${{ !inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: BulleBrowser-iOS-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/BulleBrowser.ipa.enc
+          if-no-files-found: error
+          retention-days: 3
       - name: Upload to TestFlight
         if: ${{ inputs.upload }}
         env:
