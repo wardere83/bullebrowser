@@ -9,6 +9,7 @@ Status of each gate lives in issue #68. Nothing here is marked complete by this 
    `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_PROVISIONING_PROFILE_NAME` (App Store profile for
    `com.bullebrowser.mobile`), and for upload `APP_STORE_CONNECT_KEY_ID`,
    `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_P8`.
+   For archive-only runs, set `IOS_ARCHIVE_PASSWORD` to a strong password and retain it in the release password manager. Download the encrypted artifact within three days. After extracting the artifact ZIP, run `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in BulleBrowser.ipa.enc -out BulleBrowser.ipa` and enter the password when prompted.
 2. Run **mobile-ios-release** (Actions, manual). First run with `upload` off to confirm the signed archive/IPA builds; then rerun with `upload` on to send to TestFlight. The workflow has not yet been run; expect to fix signing details on the first attempt.
 3. In App Store Connect: complete the listing, icons, screenshots, App Privacy answers (review against `PrivacyInfo.xcprivacy` and the provider data flow) and export-compliance answers.
 4. Physical iPhone/iPad QA via TestFlight using the acceptance list in `README.md`, including VoiceOver.
