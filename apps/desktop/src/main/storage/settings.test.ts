@@ -16,3 +16,12 @@ describe('homepage destination migration', () => {
     expect(getSettings().homepageUrl).toBe('https://agency.gov/');
   });
 });
+
+describe('malformed stored settings', () => {
+  it('falls back to the default homepage instead of throwing on a non-string value', () => {
+    for (const homepageUrl of [42, null, { url: 'https://agency.gov/' }]) {
+      setSettings({ homepageUrl } as never);
+      expect(getSettings().homepageUrl).toBe(DEFAULT_SETTINGS.homepageUrl);
+    }
+  });
+});
