@@ -14,7 +14,7 @@ import {
   useWorkspaceStore,
 } from '../state/workspace-store.js';
 import { Icon } from '../workspace/ui/icons.js';
-import { AGENT_PROMPT_EVENT } from '../lib/url.js';
+import { AGENT_PROMPT_EVENT, takePendingAgentPrompts } from '../lib/url.js';
 import { expandSlashCommand, SLASH_COMMANDS } from '../lib/slash-commands.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { VoiceOverlay } from './VoiceOverlay.js';
@@ -51,6 +51,15 @@ function toRunAttachments(list: UiAttachment[]): RunAttachment[] {
         ? { kind: 'project', projectId: a.projectId, name: a.name }
         : { kind: 'screenshot', url: a.url },
   );
+}
+
+/**
+ * Whether a queued task may start. A task that failed ends the run just as
+ * one that finished does; the tasks queued behind it still run, rather than
+ * waiting behind an error forever (and catching every later prompt too).
+ */
+export function queueCanDrain(status: 'idle' | 'running' | 'error', queuedCount: number): boolean {
+  return status !== 'running' && queuedCount > 0;
 }
 
 export const FOCUS_AI_PANEL_EVENT = 'bullebrowser:focus-ai-panel';
@@ -108,6 +117,9 @@ export function AiPanel() {
   const [skillId, setSkillId] = useState<string>('');
   const [model, setModel] = useState<ModelId>('claude-opus-4-7');
   const [showHistory, setShowHistory] = useState(false);
+  // False until this mount has chosen the chat to show. A prompt that arrives
+  // earlier waits, so it is not sent into the chat about to be replaced.
+  const [hydrated, setHydrated] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const runInProgress = status === 'running';
   const promptActivity = useInputActivity();
@@ -186,7 +198,7 @@ export function AiPanel() {
         setCurrent(fresh);
         setConversations(await bridge.conversations.list());
       }
-    })();
+    })().finally(() => setHydrated(true));
   }, [setConversations, setCurrent, resumeChat]);
 
   const sendMessage = async (text: string, atts: UiAttachment[] = [], budget?: number, browserTask?: BrowserTaskId) => {
@@ -287,13 +299,13 @@ export function AiPanel() {
     await submit(t, atts, task);
   };
 
-  // Drain the queue: whenever the agent goes idle and something is waiting,
-  // start the next task. sendMessage flips status back to running, so this
+  // Drain the queue: whenever the agent stops running and something is
+  // waiting, start the next task. sendMessage flips status back to running, so this
   // won't double-fire until the next task finishes.
   useEffect(() => {
     // Keep a synchronous dispatch guard as well as the running state, so an
     // immediate terminal event cannot dispatch the queue before IPC returns.
-    if (status !== 'idle' || queued.length === 0 || !current || drainingRef.current || dispatchingRef.current) return;
+    if (!queueCanDrain(status, queued.length) || !current || drainingRef.current || dispatchingRef.current) return;
     const [next, ...rest] = queuedRef.current;
     if (!next) return;
     drainingRef.current = true;
@@ -401,20 +413,25 @@ export function AiPanel() {
   // Listen for address-bar agent prompts. The user typed a task into the
   // top-bar address field with the BulleBrowser search engine selected;
   // TopBar dispatched the event and we send it as the next agent message.
-  // If we aren't hydrated yet (no current conversation), queue the prompt
-  // and flush it once `current` is ready.
-  const queuedPrompt = useRef<string | null>(null);
+  // If we aren't hydrated yet (no chat chosen for this mount), hold the
+  // prompt and flush it once we are. Prompts sent while the panel was closed
+  // were kept for us by sendAgentPrompt().
+  const queuedPrompt = useRef<string[]>([]);
+  useEffect(() => {
+    queuedPrompt.current.push(...takePendingAgentPrompts());
+  }, []);
   useEffect(() => {
     const handler = (e: Event) => {
       const text = (e as CustomEvent<string>).detail;
       if (!text) return;
-      if (current) void submit(text);
-      else queuedPrompt.current = text;
+      e.preventDefault();
+      if (hydrated && current) void submit(text);
+      else queuedPrompt.current.push(text);
     };
     window.addEventListener(AGENT_PROMPT_EVENT, handler);
     return () => window.removeEventListener(AGENT_PROMPT_EVENT, handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current]);
+  }, [current, hydrated]);
 
   // Cmd+/ focuses the AI panel input — Comet-style "summon the agent".
   useEffect(() => {
@@ -425,13 +442,12 @@ export function AiPanel() {
 
   // Flush any queued address-bar prompt once we're ready.
   useEffect(() => {
-    if (current && queuedPrompt.current) {
-      const text = queuedPrompt.current;
-      queuedPrompt.current = null;
-      void submit(text);
-    }
+    if (!hydrated || !current || queuedPrompt.current.length === 0) return;
+    const prompts = queuedPrompt.current;
+    queuedPrompt.current = [];
+    for (const text of prompts) void submit(text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current]);
+  }, [current, hydrated]);
 
   // Re-sync the optional cloud engine when Settings closes. Without its key,
   // the same composer uses the local assistant automatically.
@@ -695,6 +711,7 @@ export function AiPanel() {
                     setQueued(next);
                   }}
                   className="shrink-0 text-ink-secondary hover:text-danger"
+                  aria-label="Remove from queue"
                   title="Remove from queue"
                 >
                   ✕
@@ -722,6 +739,7 @@ export function AiPanel() {
                   type="button"
                   onClick={() => setAttachments((list) => list.filter((_, j) => j !== i))}
                   className="ml-0.5 rounded px-1 text-ink-secondary hover:text-danger"
+                  aria-label="Remove attachment"
                   title="Remove attachment"
                 >
                   ✕
@@ -863,7 +881,7 @@ export function AiPanel() {
 // Past conversations, newest first, with open-on-click and per-row delete.
 // Drops in below the header as a scrollable list rather than a modal, so it
 // feels like part of the panel.
-function HistoryList({
+export function HistoryList({
   conversations,
   currentId,
   onOpen,
@@ -939,7 +957,10 @@ function HistoryList({
                 onClick={() => {
                   if (confirm('Delete this chat? This cannot be undone.')) onDelete(c.id);
                 }}
-                className="shrink-0 text-ink-secondary opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                // Shown on hover, and whenever it has keyboard focus: an
+                // invisible focused control leaves keyboard users guessing.
+                className="shrink-0 text-ink-secondary opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+                aria-label="Delete chat"
                 title="Delete chat"
               >
                 ✕

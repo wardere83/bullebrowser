@@ -12,6 +12,11 @@ export function Modal({
   width?: number;
 }) {
   const dialog = useRef<HTMLDivElement>(null);
+  // Read the latest onClose without re-running the focus effect: callers pass
+  // inline closures, and re-running it on every parent render pulled focus
+  // back to the first control (e.g. off Approve in the confirmation dialog).
+  const latestOnClose = useRef(onClose);
+  latestOnClose.current = onClose;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const focusable = () =>
@@ -24,7 +29,7 @@ export function Modal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        latestOnClose.current();
       }
       if (e.key === 'Tab') {
         const controls = focusable();
@@ -49,7 +54,7 @@ export function Modal({
       document.removeEventListener('focusin', keepFocusInside);
       if (previous?.isConnected) previous.focus();
     };
-  }, [onClose]);
+  }, []);
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div

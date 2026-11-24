@@ -13,6 +13,9 @@ interface BrowserStoreState {
   showAbout: boolean;
   showUpdates: boolean;
   showAccessibility: boolean;
+  /** The top bar's menu (Settings, About, Quit); it hangs over the page. */
+  profileMenuOpen: boolean;
+  setProfileMenuOpen: (open: boolean) => void;
   openAccessibility: () => void;
   closeAccessibility: () => void;
   workspaceTabId: string | null;
@@ -39,6 +42,8 @@ export const useBrowserStore = create<BrowserStoreState>((set) => ({
   openUpdates: () => set({ showUpdates: true }),
   closeUpdates: () => set({ showUpdates: false }),
   showAccessibility: false,
+  profileMenuOpen: false,
+  setProfileMenuOpen: (profileMenuOpen) => set({ profileMenuOpen }),
   openAccessibility: () => set({ showAccessibility: true }),
   closeAccessibility: () => set({ showAccessibility: false }),
   workspaceTabId: null,
@@ -63,3 +68,12 @@ export const useBrowserStore = create<BrowserStoreState>((set) => ({
 
 export const activeTabSelector = (s: BrowserStoreState): TabState | undefined =>
   s.tabs.find((t) => t.active);
+
+/**
+ * Whether renderer chrome is drawn over the page area. The page is a native
+ * view stacked above the renderer, so main hides it while this is true;
+ * otherwise the page covers the chrome (the top bar menu's About and Quit sat
+ * under it).
+ */
+export const chromeCoversPageSelector = (s: BrowserStoreState): boolean =>
+  s.showUpdates || s.showSettings || s.showAbout || s.showAccessibility || s.profileMenuOpen;

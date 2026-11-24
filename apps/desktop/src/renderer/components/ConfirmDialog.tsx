@@ -34,7 +34,7 @@ export function ConfirmDialog() {
           <button
             type="button"
             onClick={() => reply(true)}
-            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover"
+            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-ink-primary hover:bg-accent-hover"
           >
             Approve
           </button>
