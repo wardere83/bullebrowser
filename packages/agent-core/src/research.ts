@@ -62,7 +62,14 @@ export function researchSourceMinimum(task: BrowserTaskId | undefined, request: 
   if (task === 'explore_page') return 1;
   const comparing = task === 'compare_grants' || asksToCompare(request);
   if (comparing) {
-    const provided = new Set(request.match(/https?:\/\/[^\s<>]+/g) ?? []);
+    // The same page written twice ("…/x, and …/x.") is one source to read.
+    const provided = new Set((request.match(/https?:\/\/[^\s<>]+/g) ?? []).flatMap((raw) => {
+      try {
+        const url = new URL(raw.replace(/[),.;!?]+$/, ''));
+        url.hash = '';
+        return [url.href];
+      } catch { return []; }
+    }));
     if (provided.size >= 2) return Math.min(3, provided.size);
     // A comparison reads at least two programs, even within one site.
     if (isSingleScopeRequest(request)) return 2;

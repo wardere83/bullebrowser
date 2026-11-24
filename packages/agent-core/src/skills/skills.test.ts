@@ -17,6 +17,17 @@ describe('skill registry', () => {
     expect(skill!.systemPrompt).toMatch(/Status legend/);
   });
 
+  // The page assistant told the model to call getPageText, clickElement,
+  // typeIntoField and listTabs: registry aliases the agent loop never offers
+  // the model, which only has read_page, click, type and list_tabs.
+  it('names only tools the agent offers the model', () => {
+    const NOT_OFFERED = ['getPageText', 'clickElement', 'typeIntoField', 'listTabs', 'getActiveTab',
+      'extractStructuredData', 'summarizePage', 'queryDom'];
+    for (const skill of skills) {
+      for (const alias of NOT_OFFERED) expect(skill.systemPrompt, `${skill.id} names ${alias}`).not.toMatch(new RegExp(`\\b${alias}\\b`));
+    }
+  });
+
   it('gives every skill the fields the UI renders', () => {
     for (const s of skills) {
       expect(s.label).toBeTruthy();

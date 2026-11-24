@@ -227,6 +227,13 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
       assertAllowedDestination(location.href);
       const el = resolveField(target);
       if (!el) throw new Error(`No input matched: ${target}`);
+      // A hard stop, as in the desktop runtime: a selector such as "#field-2"
+      // carries none of the words the policy's name check looks for.
+      const fieldType = (el.getAttribute?.('type') ?? '').toLowerCase();
+      const autocomplete = (el.getAttribute?.('autocomplete') ?? '').toLowerCase();
+      if (fieldType === 'password' || /cc-(number|csc|exp)|current-password|new-password|one-time-code/.test(autocomplete)) {
+        throw new ToolError('BLOCKED_BY_POLICY', 'Typing into password, one-time-code or payment-card fields is blocked. Ask the user to fill that field in themselves.');
+      }
       el.scrollIntoView({ block: 'center' });
       cursor(el);
       (el as HTMLElement).focus();
@@ -331,11 +338,19 @@ export function createDomToolRuntime(options: DomRuntimeOptions = {}): ToolRunti
     async waitFor(_id, condition) {
       assertAllowedDestination(location.href);
       const timeout = Math.min(condition.timeoutMs ?? 10_000, 10_000);
-      if (condition.selector) {
+      if (condition.selector || condition.text) {
+        // Text used to fall through to a fixed pause that always reported a
+        // match, telling the model text had appeared when it had not.
+        // Same reading as the desktop runtime: a selector wins, text is
+        // matched without regard to case.
+        const { selector, text } = condition;
+        const found = () => selector
+          ? Boolean(deepQuery(selector))
+          : (document.body?.innerText ?? '').toLowerCase().includes(String(text).toLowerCase());
         const start = Date.now();
         while (Date.now() - start < timeout) {
           assertAllowedDestination(location.href);
-          if (deepQuery(condition.selector)) return { matched: true };
+          if (found()) return { matched: true };
           await new Promise((r) => setTimeout(r, 100));
         }
         return { matched: false };

@@ -113,7 +113,9 @@ export function relevantPassages(text: string, words: string[], max = 3): string
     .filter((sentence) => sentence.length >= 40 && sentence.length <= 360 && !/cookie|javascript|sign in|log in|subscribe/i.test(sentence));
   const needed = Math.min(2, words.length);
   // Whole words, with plurals: "ada" must not match "Canada".
-  const patterns = words.map((word) => new RegExp(`\\b${word}(?:s|es)?\\b`, 'i'));
+  // keywords() turns "agencies" into "agency": match "agencies" again too.
+  const patterns = words.map((word) => new RegExp(
+    /[^aeiou]y$/.test(word) ? `\\b${word.slice(0, -1)}(?:y|ies)\\b` : `\\b${word}(?:s|es)?\\b`, 'i'));
   const scored = sentences.map((sentence, index) => ({
     sentence, index, score: patterns.filter((pattern) => pattern.test(sentence)).length,
   })).filter((entry) => entry.score >= needed);
@@ -284,7 +286,8 @@ export async function runLocalAgent(input: AgentInput, call: Call): Promise<stri
     report = result.summary ? `${String(result.summary)}\n\nSource: ${String(page.url ?? '')}` : 'This page has no readable text to summarize.';
   } else if (input.browserTask || (input.researchMode && isResearchRequest(message))) {
     input.onStep({ type: 'thinking', detail: 'Opening relevant options in the browser…' });
-    const explicitUrls = message.match(/https?:\/\/[^\s<>]+/g) ?? [];
+    // A sentence's own punctuation after an address is not part of it.
+    const explicitUrls = (message.match(/https?:\/\/[^\s<>]+/g) ?? []).map((url) => url.replace(/[),.;!?]+$/, ''));
     const exploring = input.browserTask === 'explore_page' || (!input.browserTask && (CURRENT_PAGE.test(message) || explicitUrls.length > 0));
     const query = input.browserTask === 'find_grants' ? `open grants funding ${message}`
       : input.browserTask === 'research_funder' ? `${message} official grants programs eligibility`

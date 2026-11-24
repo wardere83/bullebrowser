@@ -492,6 +492,25 @@ describe('the keyless assistant', () => {
     });
   });
 
+  // keywords() reduces "agencies" to "agency", and the passage pattern then
+  // only allowed "agency", "agencys" or "agencyes": the plural never matched.
+  it('matches a plural ending in -ies against its singular keyword', async () => {
+    const { relevantPassages } = await import('./local-agent.js');
+    const text = 'Federal agencies publish their funding opportunities on one official portal. Unrelated filler sentence here.';
+    expect(relevantPassages(text, ['federal', 'agency'])).toEqual([
+      'Federal agencies publish their funding opportunities on one official portal.',
+    ]);
+    expect(relevantPassages('The county library offers small grants to local schools every spring.', ['county', 'library']))
+      .toHaveLength(1);
+  });
+
+  // The sentence's full stop was kept as part of the address, so the page
+  // opened was "…/arts-fund." rather than the one the user named.
+  it('opens an address the user wrote at the end of a sentence without its punctuation', async () => {
+    const { context } = await ask('Explore https://example.gov/arts-fund.', { browserTask: 'explore_page' });
+    expect(context.runtime.navigate).toHaveBeenCalledWith('t1', 'https://example.gov/arts-fund');
+  });
+
   describe('what the host attaches', () => {
     // Attached text and reference material belong to a run with an engine.
     // Here they must not change which command the user's own words name.

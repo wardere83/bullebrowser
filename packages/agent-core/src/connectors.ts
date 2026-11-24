@@ -1,4 +1,5 @@
 import type { ApiTool, TabSummary } from './types.js';
+import { assertAllowedDestination, isBlockedDestination } from './destinations.js';
 
 /** Browser-backed connectors use the user's real signed-in surface. No token scraping. */
 export const CONNECTORS = [
@@ -323,8 +324,14 @@ export function customConnector(id: string, name: unknown, address: unknown): Co
     typeof address !== 'string'
   )
     throw new Error('Enter a service name and HTTPS address.');
-  const url = new URL(address);
-  const host = url.hostname;
+  let url: URL;
+  try {
+    url = new URL(address);
+  } catch {
+    throw new Error('Use a public HTTPS service address without credentials.');
+  }
+  // "localhost." is localhost: judge the name without its trailing dots.
+  const host = url.hostname.replace(/\.+$/, '');
   if (
     url.protocol !== 'https:' ||
     url.username ||
@@ -336,6 +343,9 @@ export function customConnector(id: string, name: unknown, address: unknown): Co
     /(?:^|\.)(localhost|local|internal|test|invalid)$/.test(host)
   )
     throw new Error('Use a public HTTPS service address without credentials.');
+  // A connector is opened on the agent's request, so it must not become a way
+  // around the destination policy that navigate and new_tab enforce.
+  if (isBlockedDestination(url)) throw new Error('This service is blocked by BulleBrowser policy.');
   url.hash = '';
   return {
     id,
@@ -397,11 +407,16 @@ export function connectorTools(host: ConnectorHost): ApiTool[] {
         const connector = catalog.find((entry) => entry.id === input.id);
         if (!connector || !(await host.enabled()).includes(connector.id))
           throw new Error('Enable this connector in Settings first.');
+        // Before the consent prompt: a saved connector or a host catalog entry
+        // must not open a blocked destination either.
+        assertAllowedDestination(connector.url);
         if (!(await host.authorize())) throw new Error('Browser access was declined.');
         // A permission may have been revoked while the consent prompt was open.
         if (!(await host.enabled()).includes(connector.id))
           throw new Error('Connector access was revoked.');
-        return host.open(connector.id, connector.url);
+        const tab = await host.open(connector.id, connector.url);
+        if (tab && typeof tab.url === 'string') assertAllowedDestination(tab.url);
+        return tab;
       },
     },
   ];
