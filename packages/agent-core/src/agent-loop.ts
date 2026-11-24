@@ -1,5 +1,5 @@
 import { GoalPlanner } from './planning.js';
-import { consumeTurn, StreamInterruptedError, ToolDispatchQueue } from './stream-turn.js';
+import { consumeTurn, StreamInterruptedError, ToolDispatchQueue, UnreadableReplyError } from './stream-turn.js';
 import { TaskOutcomeTracker } from './task-outcome.js';
 import { sanitizeAssistantText, sanitizeAssistantValue } from './presentation.js';
 import { browserTask } from './browser-tasks.js';
@@ -327,6 +327,25 @@ function isInterruptedTurn(error: unknown): boolean {
   if (error instanceof APIError) return error.status === undefined && ['overloaded_error', 'api_error'].includes(String(error.type));
   // The socket closing under the response body.
   return error instanceof TypeError && /\b(?:terminated|network|socket|ECONNRESET)\b/i.test(error.message);
+}
+
+/** An incomplete reply is safe to ask for again only before it dispatches an action. */
+async function requestTurn<T>(
+  signal: AbortSignal, onStep: AgentStepHandler, canRepeat: () => boolean, read: () => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await read();
+    } catch (error) {
+      // Some transports throw native SyntaxErrors containing part of the response body.
+      const failure = error instanceof SyntaxError ? new UnreadableReplyError() : error;
+      const delay = TURN_RETRY_DELAYS_MS[attempt];
+      if (signal.aborted || !canRepeat() || delay === undefined ||
+          (!(failure instanceof UnreadableReplyError) && !isInterruptedTurn(failure))) throw failure;
+      onStep({ type: 'thinking', detail: 'The assistant reply was interrupted. Retrying…' });
+      await sleep(delay, signal);
+    }
+  }
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -877,38 +896,27 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
       if (charge.warn) budgetWarning(budget, outcome, onStep);
       return outcome;
     }, new Set(extraTools.keys()));
-    const response = await withTurnSignal(context.signal, async (signal) => {
-      for (let attempt = 0; ; attempt++) {
-        let dispatched = 0;
-        // Only a reply that broke after it began streaming is asked again. A
-        // request that failed outright has already had the SDK's retries.
-        let streaming = false;
-        try {
-          const source = await client.messages.create(
-            {
-              model: planner?.model ?? input.model,
-              stream: true,
-              max_tokens: maxTokens,
-              ...(!planner && thinking ? { thinking } : {}),
-              system: system + (planner?.instructions ?? ''),
-              tools: toolDefs,
-              messages,
-            },
-            { signal },
-          );
-          streaming = true;
-          return await consumeTurn(source, (tool) => { dispatched += 1; void dispatch.enqueue(tool); });
-        } catch (error) {
-          const delay = TURN_RETRY_DELAYS_MS[attempt];
-          if (!streaming || dispatched || delay === undefined || context.signal.aborted || !isInterruptedTurn(error)) throw error;
-          onStep({ type: 'thinking', detail: 'The connection to the AI service dropped. Retrying…' });
-          await sleep(delay, context.signal);
-        } finally {
-          // Never leave browser work detached if the model stream fails.
-          await dispatch.settled();
-        }
-      }
-    });
+    // A failed initial request already had the SDK's own transport retries.
+    let streaming = false;
+    const response = await withTurnSignal(context.signal, (signal) =>
+      requestTurn(signal, onStep, () => streaming && !dispatch.hasDispatched, async () => {
+        streaming = false;
+        const source = await client.messages.create(
+          {
+            model: planner?.model ?? input.model,
+            stream: true,
+            max_tokens: maxTokens,
+            ...(!planner && thinking ? { thinking } : {}),
+            system: system + (planner?.instructions ?? ''),
+            tools: toolDefs,
+            messages,
+          },
+          { signal },
+        );
+        streaming = true;
+        return consumeTurn(source, (tool) => { void dispatch.enqueue(tool); });
+      }),
+    ).finally(() => dispatch.settled());
 
     // The output limit cut a tool call off before its input was complete, so it
     // never ran. That used to end the task with "Unexpected end of JSON input".
@@ -1151,6 +1159,7 @@ async function runOpenAiTurns(args: {
 
   let finalText = '';
   let terminalAnswer = false;
+  let unreadableTurns = 0;
 
   for (let turn = 0; turn < budget.total * 2 + 5; turn++) {
     if (context.signal.aborted) throw new Error('cancelled');
@@ -1168,16 +1177,18 @@ async function runOpenAiTurns(args: {
       if (charge.warn) budgetWarning(budget, outcome, onStep);
       return outcome;
     }, new Set(extraTools.keys()));
-    const response = await createOpenAiCompletion(
-      input.apiKey as string,
-      { model: planner?.model ?? input.model, messages: [{ role: 'system', content: system + (planner?.instructions ?? '') }, ...messages.slice(1)], tools, tool_choice: 'auto', max_tokens: MAX_TOKENS_PER_TURN },
-      context.signal,
-      undefined,
-      input.modelFetch,
-      (call) => {
-        const { name, input: parsedInput, error } = parseToolArguments(call);
-        if (!error) void dispatch.enqueue({ type: 'tool_use', id: call.id, name, input: parsedInput });
-      },
+    const response = await requestTurn(context.signal, onStep, () => !dispatch.hasDispatched, () =>
+      createOpenAiCompletion(
+        input.apiKey as string,
+        { model: planner?.model ?? input.model, messages: [{ role: 'system', content: system + (planner?.instructions ?? '') }, ...messages.slice(1)], tools, tool_choice: 'auto', max_tokens: MAX_TOKENS_PER_TURN },
+        context.signal,
+        undefined,
+        input.modelFetch,
+        (call) => {
+          const { name, input: parsedInput, error } = parseToolArguments(call);
+          if (!error) void dispatch.enqueue({ type: 'tool_use', id: call.id, name, input: parsedInput });
+        },
+      ),
     ).finally(() => dispatch.settled());
 
     const choice = response.choices?.[0];
@@ -1190,14 +1201,27 @@ async function runOpenAiTurns(args: {
       onStep({ type: 'done' });
       return replacement;
     }
-    if (choice.finish_reason === 'length') {
-      if (turnText) onStep({ type: 'text', detail: turnText });
-      finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
-      messages.push({ role: 'assistant', content: turnText });
-      messages.push({ role: 'user', content: 'Your reply was cut off. Continue from where it stopped without repeating text. Finish the requested work before reporting completion.' });
-      continue;
+    let calls = choice.message.tool_calls ?? [];
+    const clipped = choice.finish_reason === 'length';
+    const invalid = calls.findIndex((call) => !call?.id || !call.function?.name ||
+      (clipped && !call.function.arguments) || !!parseToolArguments(call).error);
+    // A malformed action never spends browser budget. Limit the attempts to
+    // repair consecutive replies that made no progress.
+    unreadableTurns = invalid === 0 || (clipped && !calls.length && !turnText) ? unreadableTurns + 1 : 0;
+    if (unreadableTurns > TURN_RETRY_DELAYS_MS.length) throw new UnreadableReplyError();
+    if (clipped) {
+      // Preserve the completed prefix so the next turn never replays it.
+      if (invalid >= 0) calls = calls.slice(0, invalid);
+      if (!calls.length) {
+        if (turnText) {
+          onStep({ type: 'text', detail: turnText });
+          finalText = finalText ? `${finalText} ${turnText}`.trim() : turnText;
+          messages.push({ role: 'assistant', content: turnText });
+        }
+        messages.push({ role: 'user', content: 'Your reply was cut off. Continue from where it stopped without repeating text. Send each remaining tool call in full.' });
+        continue;
+      }
     }
-    const calls = choice.message.tool_calls ?? [];
     if (calls.length === 0) {
       if (planner && !planner.synthesis) {
         const charge = budget.charge('read_page');
@@ -1233,11 +1257,11 @@ async function runOpenAiTurns(args: {
     // Every tool_call must get a matching 'tool' message or the next request is
     // rejected — so this loop must not skip any call, even past the limit.
     const images: string[] = [];
-    const outcomes = await Promise.all(calls.map(async (call) => {
+    if (!clipped && invalid >= 0) onStep({ type: 'thinking', detail: 'Requesting the next action again…' });
+    const outcomes = await Promise.all(calls.map(async (call, index) => {
       const { name, input: parsedInput, error } = parseToolArguments(call);
-      if (error) {
-        onStep({ type: 'error', toolName: name, detail: error });
-        return { text: error, isError: true } as ToolCallOutcome;
+      if (invalid >= 0 && index >= invalid) {
+        return { text: error ?? 'This action was skipped because an earlier call was unreadable. Request it again if needed.', isError: true } as ToolCallOutcome;
       }
       return dispatch.enqueue({ type: 'tool_use', id: call.id, name, input: parsedInput });
     }));
@@ -1255,6 +1279,9 @@ async function runOpenAiTurns(args: {
           { type: 'image_url', image_url: { url: `data:image/png;base64,${png}` } },
         ],
       });
+    }
+    if (choice.finish_reason === 'length') {
+      messages.push({ role: 'user', content: 'The reply was cut off. The actions with results above already ran. Continue only the remaining work.' });
     }
   }
 

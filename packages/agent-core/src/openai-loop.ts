@@ -14,6 +14,7 @@
 //   • there is no tool_result image block, so a screenshot has to follow as a
 //     separate user message
 
+import { StreamInterruptedError, UnreadableReplyError } from './stream-turn.js';
 import type { ToolName } from './types.js';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
@@ -97,8 +98,24 @@ export async function createOpenAiCompletion(
     throw new OpenAiError(detail || `OpenAI request failed (${response.status}).`, response.status);
   }
 
-  if (onTool && response.headers?.get('content-type')?.includes('text/event-stream')) return consumeOpenAiStream(response, onTool);
-  return (await response.json()) as OpenAiResponse;
+  if (onTool && response.headers?.get('content-type')?.toLowerCase().includes('text/event-stream')) {
+    return consumeOpenAiStream(response, onTool);
+  }
+  const completion: OpenAiResponse = await response.json().catch((error: unknown) => {
+    if (error instanceof SyntaxError) throw new UnreadableReplyError();
+    throw error;
+  });
+  if (!Array.isArray(completion?.choices) || (onTool && !completion.choices.length)) throw new UnreadableReplyError();
+  for (const choice of completion.choices) {
+    if (typeof choice?.finish_reason !== 'string' || !choice.message ||
+        (choice.message.content != null && typeof choice.message.content !== 'string') ||
+        (choice.message.tool_calls != null && !Array.isArray(choice.message.tool_calls))) throw new UnreadableReplyError();
+    if (choice.finish_reason !== 'length' && choice.message.tool_calls?.some((call) =>
+      !call || typeof call.id !== 'string' || !call.id || typeof call.function?.name !== 'string' || !call.function.name)) {
+      throw new UnreadableReplyError();
+    }
+  }
+  return completion;
 }
 
 export function toOpenAiTools(
@@ -118,23 +135,26 @@ export function parseToolArguments(call: OpenAiToolCall): {
   error?: string;
 } {
   const name = call.function.name as ToolName;
-  const raw = call.function.arguments?.trim();
-  if (!raw) return { name, input: {} };
+  const args = call.function.arguments;
+  if (args === '') return { name, input: {} };
+  const invalid = { name, input: {}, error: 'Tool arguments were not valid JSON. Send a complete object to run this step.' };
+  if (typeof args !== 'string') return invalid;
+  const raw = args.trim();
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return { name, input: {}, error: `Tool arguments must be a JSON object, got: ${raw}` };
+      return invalid;
     }
     return { name, input: parsed as Record<string, unknown> };
   } catch {
-    return { name, input: {}, error: `Tool arguments were not valid JSON: ${raw}` };
+    return invalid;
   }
 }
 
 
 /** Assemble SSE deltas without waiting for the terminal model turn to dispatch complete calls. */
 export async function consumeOpenAiStream(response: Response, onTool: (call: OpenAiToolCall) => void): Promise<OpenAiResponse> {
-  if (!response.body) throw new Error('OpenAI returned an empty stream.');
+  if (!response.body) throw new StreamInterruptedError();
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   const calls = new Map<number, OpenAiToolCall>();
@@ -142,22 +162,30 @@ export async function consumeOpenAiStream(response: Response, onTool: (call: Ope
   let nextDispatch = 0;
   let pending = '', content = '', finish = '', model: string | undefined;
   let usage: OpenAiResponse['usage'];
-  const processLine = (line: string) => {
-    if (!line.startsWith('data:')) return;
-    const data = line.slice(5).trim();
+  const dataLines: string[] = [];
+  const processEvent = () => {
+    const data = dataLines.join('\n').trim();
+    dataLines.length = 0;
     if (!data || data === '[DONE]') return;
-    const event = JSON.parse(data);
+    let event;
+    try { event = JSON.parse(data); } catch { throw new UnreadableReplyError(); }
+    if (!event || typeof event !== 'object' ||
+        (event.choices != null && !Array.isArray(event.choices))) throw new UnreadableReplyError();
     if (event.error) throw new Error('The model stream reported an error.');
     if (event.model) model = event.model;
     if (event.usage) usage = event.usage;
-    const choice = event.choices?.find((item: { index: number }) => item.index === 0);
+    const choice = event.choices?.find((item: { index: number } | null) => item?.index === 0);
     if (!choice) return;
     if (choice.finish_reason) finish = choice.finish_reason;
     const delta = choice.delta ?? {};
     if (typeof delta.content === 'string') content += delta.content;
     if (typeof delta.refusal === 'string') content += delta.refusal;
+    if (delta.tool_calls != null && !Array.isArray(delta.tool_calls)) throw new UnreadableReplyError();
     for (const part of delta.tool_calls ?? []) {
-      if (!Number.isInteger(part.index) || part.index < 0 || part.index > 1024) throw new Error('Invalid streamed tool index.');
+      if (!part || !Number.isInteger(part.index) || part.index < 0 || part.index > 1024 ||
+          (part.id != null && typeof part.id !== 'string') ||
+          (part.function?.name != null && typeof part.function.name !== 'string') ||
+          (part.function?.arguments != null && typeof part.function.arguments !== 'string')) throw new UnreadableReplyError();
       const call = calls.get(part.index) ?? { id: '', type: 'function', function: { name: '', arguments: '' } };
       if (dispatched.has(part.index) && (part.id || part.function?.name || part.function?.arguments?.trim())) throw new Error('A dispatched tool call changed in the stream.');
       if (part.id) call.id += part.id;
@@ -173,23 +201,40 @@ export async function consumeOpenAiStream(response: Response, onTool: (call: Ope
       }
     }
   };
+  const processLine = (line: string) => {
+    if (line === '') processEvent();
+    else if (line === 'data' || line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+  };
   try {
     for (;;) {
       const { done, value } = await reader.read();
       pending += decoder.decode(value, { stream: !done });
       let end: number;
-      while ((end = pending.indexOf('\n')) >= 0) { processLine(pending.slice(0, end).replace(/\r$/, '')); pending = pending.slice(end + 1); }
+      while ((end = pending.search(/[\r\n]/)) >= 0) {
+        // Hold a final CR until the next chunk in case this is a split CRLF.
+        if (!done && pending[end] === '\r' && end + 1 === pending.length) break;
+        processLine(pending.slice(0, end));
+        pending = pending.slice(end + (pending.startsWith('\r\n', end) ? 2 : 1));
+      }
       if (done) break;
     }
-    // A stream cut off inside its last event leaves part of a JSON line: that
-    // is an interrupted turn, not a JSON error.
-    if (pending.trim()) {
-      try { processLine(pending); } catch (error) { if (!(error instanceof SyntaxError)) throw error; }
+    if (pending) processLine(pending);
+    // A dropped connection can leave an unfinished last event.
+    if (dataLines.length) {
+      try { processEvent(); } catch (error) {
+        if (!(error instanceof UnreadableReplyError)) throw error;
+        if (!finish) throw new StreamInterruptedError();
+      }
     }
-    if (!finish) throw new Error('The assistant stream ended before a complete turn.');
+    if (!finish) throw new StreamInterruptedError();
     const ordered = [...calls.entries()].sort(([a], [b]) => a - b);
     for (const [index, call] of ordered) {
-      if (!call.id || !call.function.name) throw new Error('Incomplete streamed tool call.');
+      if (!call.id || !call.function.name) {
+        if (finish === 'length') break;
+        throw new UnreadableReplyError();
+      }
+      // A clipped or malformed call blocks later calls that may depend on it.
+      if ((finish === 'length' && !call.function.arguments.trim()) || parseToolArguments(call).error) break;
       if (!dispatched.has(index)) onTool(call);
     }
     return { model, usage, choices: [{ finish_reason: finish, message: { content, ...(calls.size ? { tool_calls: ordered.map(([, call]) => call) } : {}) } }] };

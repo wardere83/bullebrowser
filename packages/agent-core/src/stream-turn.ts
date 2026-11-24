@@ -9,6 +9,14 @@ export class StreamInterruptedError extends Error {
     this.name = 'StreamInterruptedError';
   }
 }
+/** A provider reply that cannot be used. Never expose raw fragments in chat. */
+export class UnreadableReplyError extends SyntaxError {
+  constructor() {
+    super('The assistant sent an unreadable reply. Review the task activity before trying again.');
+    this.name = 'UnreadableReplyError';
+  }
+}
+
 type Turn = Pick<Anthropic.Message, 'content' | 'stop_reason'> & {
   /**
    * Tool calls the output limit cut off before their input was complete. They
@@ -26,15 +34,16 @@ export async function consumeTurn(
   const content: Anthropic.ContentBlock[] = [];
   const json = new Map<number, string>();
   const dispatched = new Set<number>();
-  // Calls whose input never became valid JSON, with the parse error.
-  const incomplete = new Map<number, unknown>();
+  const incomplete = new Set<number>();
+  let openTool: number | undefined;
   let stop_reason: Anthropic.Message['stop_reason'] = null;
   for await (const event of source) {
     if (event.type === 'content_block_start') {
       // Only the last block can be cut off. A block after an unparseable call
       // means the stream is malformed: stop before a call that may depend on
       // it (a click after a failed switch_tab) runs.
-      if (incomplete.size) throw incomplete.values().next().value;
+      if (incomplete.size || openTool !== undefined) throw new UnreadableReplyError();
+      if (event.content_block.type === 'tool_use') openTool = event.index;
       content[event.index] = structuredClone(event.content_block) as Anthropic.ContentBlock;
     } else if (event.type === 'content_block_delta') {
       const block = content[event.index];
@@ -61,21 +70,30 @@ export async function consumeTurn(
     } else if (event.type === 'content_block_stop') {
       const block = content[event.index];
       if (block?.type === 'tool_use') {
+        openTool = undefined;
         const raw = json.get(event.index);
         // A call with no arguments streams nothing, or one empty delta: its
         // input is the {} the block started with. Anything else must parse;
         // whitespace alone is malformed. Input that does not parse is never
         // dispatched: the output limit may have cut it off mid-call.
         if (raw) {
-          try { block.input = JSON.parse(raw); } catch (error) { incomplete.set(event.index, error); continue; }
+          try { block.input = JSON.parse(raw); } catch { incomplete.add(event.index); continue; }
+        }
+        if (!block.input || typeof block.input !== 'object' || Array.isArray(block.input)) {
+          incomplete.add(event.index);
+          continue;
         }
         if (!dispatched.has(event.index)) { dispatched.add(event.index); onTool(block); }
       }
     } else if (event.type === 'message_delta') stop_reason = event.delta.stop_reason;
   }
+  if (openTool !== undefined && stop_reason) {
+    if (dispatched.has(openTool)) throw new UnreadableReplyError();
+    incomplete.add(openTool);
+  }
   // Only the output limit explains a call that never finished. Anything else
   // is a malformed stream, and still fails closed.
-  if (incomplete.size && stop_reason !== 'max_tokens') throw incomplete.values().next().value;
+  if (incomplete.size && stop_reason !== 'max_tokens') throw new UnreadableReplyError();
   if (!stop_reason) throw new StreamInterruptedError();
   if (!incomplete.size) return { content, stop_reason };
   return { content: content.filter((_, index) => !incomplete.has(index)), stop_reason, truncatedToolCalls: incomplete.size };
@@ -87,6 +105,7 @@ export class ToolDispatchQueue<T> {
   private results = new Map<string, Promise<T>>();
   private readers: Promise<T>[] = [];
   constructor(private readonly execute: (tool: DispatchCall) => Promise<T>, private readonly serialTools = new Set<string>()) {}
+  get hasDispatched(): boolean { return this.results.size > 0; }
   enqueue(tool: DispatchCall): Promise<T> {
     const existing = this.results.get(tool.id);
     if (existing) return existing;

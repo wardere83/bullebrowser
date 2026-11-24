@@ -10,6 +10,7 @@ export * from './policy.js';
 export * from './memory.js';
 export * from './retrieval.js';
 export * from './openai-loop.js';
+export { StreamInterruptedError, UnreadableReplyError } from './stream-turn.js';
 export * from './dom-runtime.js';
 export * from './errors.js';
 export * from './untrusted.js';

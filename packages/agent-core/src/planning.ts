@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createOpenAiCompletion } from './openai-loop.js';
-import { consumeTurn } from './stream-turn.js';
+import { consumeTurn, StreamInterruptedError } from './stream-turn.js';
 import { anthropicAuth } from './anthropic-auth.js';
 import { wrapUntrusted, UNTRUSTED_RULES } from './untrusted.js';
 import { PLAN_STEP_TOOL, providerFor, type AgentInput, type ApiTool, type ModelId } from './types.js';
@@ -65,7 +65,7 @@ export class GoalPlanner {
   // (it did, with "Unexpected end of JSON input"): ask once more, then work
   // to a plain plan. A failed request (no access, no credit, Stop) still ends it.
   private async plan(): Promise<PublicGoal[]> {
-    const malformed = (error: unknown) => error instanceof SyntaxError || /did not return between one and eight/.test((error as Error)?.message ?? '');
+    const malformed = (error: unknown) => error instanceof SyntaxError || error instanceof StreamInterruptedError || /did not return between one and eight/.test((error as Error)?.message ?? '');
     try {
       return parseGoals(await this.request(this.input, this.diagnostics));
     } catch (error) {
