@@ -165,6 +165,10 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     : null;
   if (installLocationError) activationIssue = installLocationError;
   let checkError: Error | undefined;
+  // electron-updater emits `error` and then rejects checkForUpdates() with the
+  // same object. Handle that one failure once, or each failed retry would use
+  // two of the bounded automatic attempts.
+  let checkFailure: Error | undefined;
 
 
   const publish = () => {
@@ -227,6 +231,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
 
   const failed = (err: Error) => {
     if (disposed) return;
+    if (checkPromise) checkFailure = err;
     console.warn('[updater] error:', err?.message ?? err);
     if (restartPending) {
       restartPending = false;
@@ -393,10 +398,14 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     clearConnectionRetry();
     lastCheckTime = Date.now();
     checkError = undefined;
+    checkFailure = undefined;
     const task = Promise.resolve()
       .then(() => disposed ? null : autoUpdater.checkForUpdates())
       .then(() => undefined)
-      .catch((err: Error) => { checkError = err; failed(err); })
+      .catch((err: Error) => {
+        checkError = err;
+        if (err !== checkFailure) failed(err);
+      })
       .finally(() => {
         if (checkPromise === task) checkPromise = undefined;
       });

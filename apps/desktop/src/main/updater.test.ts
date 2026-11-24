@@ -393,6 +393,24 @@ describe('background app updates', () => {
     expect(app.quit).not.toHaveBeenCalled();
   });
 
+  it('spends one automatic retry per failed check when the updater both emits and rejects the error', async () => {
+    const api = await start();
+    updater.downloadUpdate.mockRejectedValueOnce(Object.assign(new Error('socket failed'), { code: 'ECONNRESET' }));
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    // electron-updater emits `error` and then rejects with the same object.
+    updater.checkForUpdates.mockImplementation(async () => {
+      const error = Object.assign(new Error('socket failed'), { code: 'ECONNRESET' });
+      events.emit('error', error);
+      throw error;
+    });
+    for (const delay of [10_000, 20_000, 40_000]) await vi.advanceTimersByTimeAsync(delay);
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(4);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(4);
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Could not check for the update. Please retry.' });
+  });
+
   it('does not automatically retry a native preparation error even when its cause is a connection reset', async () => {
     Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'darwin' });
     const api = await start();
