@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as StoreModule from './store.js';
 
 const { listeners, handlers, tab, store } = vi.hoisted(() => ({
   listeners: new Map<string, (...args: unknown[]) => void>(),
@@ -35,7 +36,7 @@ vi.mock('../tabs/manager.js', () => ({
 }));
 vi.mock('../storage/store.js', () => ({ createStore: () => ({ get: () => [], set: () => {} }) }));
 vi.mock('./store.js', async (importOriginal) => ({
-  loginOrigin: (await importOriginal<typeof import('./store.js')>()).loginOrigin,
+  loginOrigin: (await importOriginal<typeof StoreModule>()).loginOrigin,
   passwordStore: store,
 }));
 
