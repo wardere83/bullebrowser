@@ -71,7 +71,15 @@ class TabManager {
     this.win = win;
     win.on('resize', () => this.relayout());
     win.on('closed', () => {
+      // A closed window does not destroy its WebContentsViews' pages (see
+      // Electron's BaseWindow resource notes). Close them, or every tab keeps
+      // running — playing audio, holding memory — after macOS closes the window.
+      const closing = this.tabs;
       this.tabs = [];
+      this.activeId = null;
+      for (const tab of closing) {
+        if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
+      }
       this.browsingTargets.clear();
       this.cloudCaptures.clear();
       this.win = null;
@@ -172,7 +180,8 @@ class TabManager {
     const next: ManagedTab[] = [];
     for (const id of orderedIds) {
       const t = map.get(id);
-      if (t) next.push(t);
+      // Each tab once: a repeated id must not push another tab out of the strip.
+      if (t) { next.push(t); map.delete(id); }
     }
     if (next.length === this.tabs.length) {
       this.tabs = next;

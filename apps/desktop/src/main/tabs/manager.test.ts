@@ -411,3 +411,39 @@ describe('closing tabs in every position', () => {
     expect(manager.getActiveId()).toBe(next.id);
   });
 });
+
+describe('window lifetime and tab order', () => {
+  it('closes every tab page and forgets the active tab when the window closes', async () => {
+    const { manager, view, win } = await createManager();
+    const second = await manager.create('https://agency.gov/');
+    const secondView = mocks.views[1]!;
+    expect(manager.getActiveId()).toBe(second.id);
+    win.emit('closed');
+    // Electron leaves a closed window's WebContentsView pages running.
+    expect((view.webContents as unknown as { close: Mock }).close).toHaveBeenCalledOnce();
+    expect((secondView.webContents as unknown as { close: Mock }).close).toHaveBeenCalledOnce();
+    expect(manager.list()).toEqual([]);
+    expect(manager.getActiveId()).toBeNull();
+
+    // A recreated window (macOS dock click) starts clean: a background tab
+    // opened first still becomes the visible tab.
+    const next = Object.assign(new EventEmitter(), {
+      contentView: { addChildView: vi.fn(), removeChildView: vi.fn() },
+      getContentSize: () => [1280, 800],
+      webContents: { send: vi.fn() },
+    });
+    manager.attachWindow(next as unknown as BrowserWindow);
+    const tab = await manager.create('https://agency.gov/', undefined, true);
+    expect(manager.getActiveId()).toBe(tab.id);
+  });
+
+  it('never drops a tab when a reorder repeats an id', async () => {
+    const { manager, id } = await createManager();
+    const b = (await manager.create()).id;
+    const c = (await manager.create()).id;
+    manager.reorder([id, id, b]);
+    expect(manager.list().map((tab) => tab.id)).toEqual([id, b, c]);
+    manager.reorder([c, b, id]);
+    expect(manager.list().map((tab) => tab.id)).toEqual([c, b, id]);
+  });
+});

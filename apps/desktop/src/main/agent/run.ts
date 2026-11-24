@@ -113,6 +113,13 @@ export async function startAgentRun(
   const pendingConfirms = new Map<string, (approved: boolean) => void>();
   const control = new TaskControl();
   runs.set(runId, { controller, pendingConfirms, control });
+  // The window can close while a task runs (macOS keeps the app open). Its
+  // web contents are then destroyed, and touching them throws.
+  const send = (channel: string, payload: unknown): boolean => {
+    if (win.isDestroyed()) return false;
+    win.webContents.send(channel, payload);
+    return true;
+  };
 
   const taskLog: TaskRunLog = { id: runId, startedAt: Date.now(), finishedAt: 0, status: 'completed', steps: [], calls: [], consents: [] };
   const ask = (message: string, kind: AgentConfirmRequest['kind']) =>
@@ -122,18 +129,22 @@ export async function startAgentRun(
         taskLog.consents.push({ kind, approved, at: Date.now() });
         resolve(approved);
       });
-      win.webContents.send(IPC.AGENT_CONFIRM_REQUEST, {
+      // Nobody is left to answer a prompt in a closed window: decline it.
+      if (!send(IPC.AGENT_CONFIRM_REQUEST, {
         runId,
         id,
         message,
         kind,
-      } satisfies AgentConfirmRequest);
+      } satisfies AgentConfirmRequest)) {
+        pendingConfirms.get(id)?.(false);
+        pendingConfirms.delete(id);
+      }
     });
 
   runs.get(runId)!.notifyControl = () => publishEvent({ kind: 'control', paused: control.paused, follow: control.follow, ts: Date.now() });
   const publishEvent = (event: AgentStepEvent) => {
     taskLog.steps.push(event);
-    win.webContents.send(IPC.AGENT_STEP, { runId, step: event });
+    send(IPC.AGENT_STEP, { runId, step: event });
   };
 
   // What the run may know about the active organization. A failure here must
@@ -179,7 +190,13 @@ export async function startAgentRun(
     content: req.userMessage,
     timestamp: Date.now(),
   };
-  conversationStore.appendMessage(req.conversationId, userMsg);
+  try {
+    conversationStore.appendMessage(req.conversationId, userMsg);
+  } catch (err) {
+    // Not started: an abandoned entry would count as running forever.
+    cancelAgentRun(runId);
+    throw err;
+  }
   // Resolving attachments touches the filesystem (a file can vanish or be
   // unreadable between attaching and sending). A throw here would land after
   // the user's message was already persisted but before the run exists — the
@@ -197,7 +214,12 @@ export async function startAgentRun(
 
   let activeTabId = tabManager.getActiveId();
   if (!activeTabId) {
-    const created = await tabManager.create();
+    // A failure here (no window, a refused homepage) means the task never
+    // starts. Leaving it registered would block updates as an active task.
+    const created = await tabManager.create().catch((err: unknown) => {
+      cancelAgentRun(runId);
+      throw err;
+    });
     activeTabId = created.id;
   }
 
@@ -225,7 +247,7 @@ export async function startAgentRun(
     if (controller.signal.aborted || !control.follow || tabManager.getActiveId() !== tabId || win.isDestroyed()) return;
     const text = addressText(url);
     const durationMs = typingDuration(text);
-    win.webContents.send(IPC.AGENT_ADDRESS, { runId, tabId, text, durationMs });
+    send(IPC.AGENT_ADDRESS, { runId, tabId, text, durationMs });
     await new Promise<void>((resolve) => {
       const done = () => { clearTimeout(timer); controller.signal.removeEventListener('abort', done); resolve(); };
       const timer = setTimeout(done, durationMs);
@@ -396,13 +418,13 @@ export async function startAgentRun(
         error = 'The task finished, but its answer could not be saved.';
       }
       runs.delete(runId);
-      win.webContents.send(IPC.AGENT_STEP, {
+      send(IPC.AGENT_STEP, {
         runId,
         step: status === 'failed'
           ? { kind: 'error', message: error ?? 'The task could not finish.', ts: Date.now() }
           : { kind: 'done', ts: Date.now() },
       });
-      win.webContents.send(IPC.AGENT_RESULT, {
+      send(IPC.AGENT_RESULT, {
         runId,
         conversationId: req.conversationId,
         status,
