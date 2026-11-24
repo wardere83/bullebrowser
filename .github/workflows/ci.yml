@@ -72,7 +72,7 @@ jobs:
       - name: Web copy rules (terminology, translations, exported pages)
         run: pnpm --filter @bullebrowser/web test
       - name: Verify website walkthrough in desktop and mobile layouts
-        run: pnpm --filter @bullebrowser/desktop exec playwright test -c playwright.website.config.ts walkthrough.spec.ts widget.spec.ts
+        run: pnpm --filter @bullebrowser/desktop exec playwright test -c playwright.website.config.ts walkthrough.spec.ts widget.spec.ts hydration.spec.ts
       - name: Desktop build smoke
         run: pnpm --filter @bullebrowser/desktop build
       - name: Guard product language in shipped desktop bundles

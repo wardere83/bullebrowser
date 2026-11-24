@@ -14,7 +14,9 @@ const nextConfig = {
   images: { unoptimized: true },
   trailingSlash: true,
   ...(basePath ? { basePath, assetPrefix: basePath } : {}),
-  env: { NEXT_PUBLIC_BASE_PATH: basePath },
+  // The year the pages were exported in, inlined identically into the HTML and
+  // the client bundle, so the footer hydrates without a mismatch in a later year.
+  env: { NEXT_PUBLIC_BASE_PATH: basePath, NEXT_PUBLIC_BUILD_YEAR: String(new Date().getFullYear()) },
 };
 
 export default nextConfig;
