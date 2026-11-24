@@ -34,7 +34,7 @@ export function SearchKeySettings() {
         onChange={(e) => setDraft(e.target.value)} disabled={busy}
         className="min-w-0 flex-1 rounded border border-line px-3 py-2 text-sm" />
       <button type="button" disabled={busy || !draft.trim()} onClick={() => void update(false)}
-        className="rounded bg-primary px-3 py-2 text-sm text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save search key'}</button>
+        className="rounded bg-primary px-3 py-2 text-sm text-surface-dark disabled:opacity-50">{busy ? 'Saving…' : 'Save search key'}</button>
       {configured && <button type="button" disabled={busy} onClick={() => void update(true)} className="text-xs">Remove search key</button>}
     </div>
     {error && <p role="alert" className="text-xs text-red-700">{error}</p>}

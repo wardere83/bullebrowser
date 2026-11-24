@@ -150,9 +150,9 @@ export function UpdateBanner() {
         {error && <p role="alert" className="text-danger">{error}</p>}
         <div className="flex flex-wrap gap-2">
           {ready && <button type="button" disabled={staging || finishing} onClick={() => void finish()}
-            className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">{finishing ? 'Restarting…' : 'Finish update and reopen'}</button>}
+            className="rounded bg-primary px-3 py-2 font-medium text-surface-dark disabled:opacity-60">{finishing ? 'Restarting…' : 'Finish update and reopen'}</button>}
           {ready && !scheduled && <button type="button" disabled={staging} onClick={() => void prepare()}
-            className="rounded bg-primary px-3 py-2 font-medium text-white disabled:opacity-60">{staging ? 'Preparing…' : 'Prepare update — restart later'}</button>}
+            className="rounded bg-primary px-3 py-2 font-medium text-surface-dark disabled:opacity-60">{staging ? 'Preparing…' : 'Prepare update — restart later'}</button>}
           <button type="button" disabled={checking || downloading || staging || (status.state === 'error' && status.retryable === false)}
             onClick={() => void check()} className="rounded border border-line px-3 py-2 disabled:opacity-60">{checking ? 'Checking…' : 'Check for updates'}</button>
           <a href="https://bullebrowser.com/download" target="_blank" rel="noopener noreferrer" className="rounded border border-line px-3 py-2">Latest installer</a>

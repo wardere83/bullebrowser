@@ -13,7 +13,7 @@ export function BrowserPane({ tab }: { tab: TabState | undefined }) {
           <button
             type="button"
             onClick={() => void window.bullebrowser.tabs.navigate(tab.id, tab.url).catch(() => {})}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-surface-dark hover:bg-primary/90"
           >
             Retry
           </button>

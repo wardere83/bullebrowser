@@ -180,7 +180,7 @@ export function SettingsModal() {
                   type="button"
                   onClick={saveKey}
                   disabled={saving || !keyDraft.trim()}
-                  className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:bg-line"
+                  className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-surface-dark hover:bg-primary-hover disabled:bg-line"
                 >
                   {saving ? 'Saving…' : 'Save'}
                 </button>

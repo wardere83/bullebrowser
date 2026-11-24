@@ -63,7 +63,7 @@ export function PasswordControls({ tabId }: { tabId?: string }) {
           <span className="max-w-[260px] truncate">
             {problem || `${offer.update ? 'Update' : 'Save'} password for ${siteOf(offer.origin)}${offer.username ? ` (${offer.username})` : ''}?`}
           </span>
-          <button type="button" onClick={() => reply('save')} className="rounded bg-primary px-2 py-0.5 text-[11px] text-white">
+          <button type="button" onClick={() => reply('save')} className="rounded bg-primary px-2 py-0.5 text-[11px] text-surface-dark">
             {offer.update ? 'Update' : 'Save'}
           </button>
           <button type="button" onClick={() => reply('never')} className="rounded px-2 py-0.5 text-[11px] hover:bg-line">Never for this site</button>
