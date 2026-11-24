@@ -108,6 +108,18 @@ describe('navigate URL policy', () => {
     expect(props.url?.description).toMatch(/https?/);
     expect(schema.required).toContain('url');
   });
+
+  // Descriptions written on an optional field (`.optional().describe()`) sit
+  // on the wrapper and were dropped, so the model saw bare types for them.
+  it('keeps the descriptions of optional fields', () => {
+    const props = (name: 'navigate' | 'click' | 'find_elements' | 'wait_for') =>
+      zodToJsonSchema(tools[name].inputSchema).properties as Record<string, { description?: string }>;
+    expect(props('navigate').wait?.description).toMatch(/idle/);
+    expect(props('click').wait?.description).toMatch(/idle/);
+    expect(props('find_elements').query?.description).toMatch(/filter/);
+    expect(props('wait_for').selector?.description).toMatch(/CSS selector/);
+    expect(props('wait_for').text?.description).toMatch(/Text to wait for/);
+  });
 });
 
 describe('tool behavior', () => {

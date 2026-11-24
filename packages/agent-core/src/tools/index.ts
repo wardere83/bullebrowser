@@ -501,7 +501,9 @@ function zodFieldToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
   const wrap = (obj: Record<string, unknown>) =>
     description ? { ...obj, description } : obj;
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
-    return zodFieldToJsonSchema(schema.unwrap() as z.ZodTypeAny);
+    // `.optional().describe(...)` puts the description on the wrapper, not on
+    // the inner type: keep it, or the model never sees what the field is for.
+    return wrap(zodFieldToJsonSchema(schema.unwrap() as z.ZodTypeAny));
   }
   if (schema instanceof z.ZodPipe) {
     return zodFieldToJsonSchema(schema.in as z.ZodTypeAny);
