@@ -23,7 +23,7 @@ describe('the task queue', () => {
 });
 
 describe('chat history', () => {
-  it('shows the delete control when it has keyboard focus, and names the chat', () => {
+  it('shows the delete control when it has keyboard focus, and labels it', () => {
     const html = renderToStaticMarkup(
       <HistoryList
         conversations={[{ id: 'c1', title: 'Arts grants', updatedAt: 1 } as never]}
@@ -38,6 +38,6 @@ describe('chat history', () => {
     const button = /<button[^>]*title="Delete chat"[^>]*>/.exec(html)?.[0] ?? '';
     expect(button).toContain('opacity-0');
     expect(button).toContain('focus-visible:opacity-100');
-    expect(button).toContain('aria-label="Delete chat: Arts grants"');
+    expect(button).toContain('aria-label="Delete chat"');
   });
 });

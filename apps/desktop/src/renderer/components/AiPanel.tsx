@@ -711,7 +711,7 @@ export function AiPanel() {
                     setQueued(next);
                   }}
                   className="shrink-0 text-ink-secondary hover:text-danger"
-                  aria-label={`Remove from queue: ${q.text}`}
+                  aria-label="Remove from queue"
                   title="Remove from queue"
                 >
                   ✕
@@ -960,7 +960,7 @@ export function HistoryList({
                 // Shown on hover, and whenever it has keyboard focus: an
                 // invisible focused control leaves keyboard users guessing.
                 className="shrink-0 text-ink-secondary opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
-                aria-label={`Delete chat: ${c.title || 'Untitled chat'}`}
+                aria-label="Delete chat"
                 title="Delete chat"
               >
                 ✕
