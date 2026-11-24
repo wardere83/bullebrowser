@@ -5,18 +5,37 @@
 
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { dialog, ipcMain, Menu, type BrowserWindow, type IpcMainEvent } from 'electron';
+import { dialog, ipcMain, Menu, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { IPC, type PasswordOffer, type PasswordState } from '../../shared/ipc.js';
 import { tabManager } from '../tabs/manager.js';
 import { loginOrigin, passwordStore } from './store.js';
 
-interface PendingOffer { origin: string; username: string; password: string; tabId: string; expires: number }
+interface PendingOffer { origin: string; username: string; password: string; tabId: string; expires: number; timer: ReturnType<typeof setTimeout> }
 
 const OFFER_LIFETIME_MS = 5 * 60_000;
 
-export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.handle): () => void {
+export function registerPasswordIpc(win: BrowserWindow, register: typeof ipcMain.handle): () => void {
   const offers = new Map<string, PendingOffer>();
   const forms = new Map<string, boolean>();
+
+  // Web pages have their own preload with an ipcRenderer. Only the app's own
+  // window may list, fill, import, delete or answer an offer to save.
+  const handle = (channel: string, listener: Parameters<typeof ipcMain.handle>[1]) =>
+    register(channel, (event: IpcMainInvokeEvent, ...args: unknown[]) => {
+      if (win.isDestroyed() || event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+        throw new Error('Saved passwords are only available from the app window.');
+      }
+      return listener(event, ...args);
+    });
+
+  // A pending offer holds a password in plain text, so it is dropped when it
+  // expires rather than only when another sign-in arrives.
+  const dropOffer = (id: string) => {
+    const offer = offers.get(id);
+    if (!offer) return;
+    clearTimeout(offer.timer);
+    offers.delete(id);
+  };
 
   const send = (channel: string, payload: unknown) => {
     if (!win.isDestroyed()) win.webContents.send(channel, payload);
@@ -51,9 +70,11 @@ export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.h
     const now = Date.now();
     // One pending offer per tab: a page that keeps submitting replaces its
     // own offer instead of piling up passwords in memory.
-    for (const [id, offer] of offers) if (offer.expires < now || offer.tabId === source.tabId) offers.delete(id);
+    for (const [id, offer] of offers) if (offer.expires < now || offer.tabId === source.tabId) dropOffer(id);
     const id = randomUUID();
-    offers.set(id, { origin: source.origin, username, password, tabId: source.tabId, expires: now + OFFER_LIFETIME_MS });
+    const timer = setTimeout(() => dropOffer(id), OFFER_LIFETIME_MS);
+    timer.unref?.();
+    offers.set(id, { origin: source.origin, username, password, tabId: source.tabId, expires: now + OFFER_LIFETIME_MS, timer });
     const offer: PasswordOffer = {
       id,
       tabId: source.tabId,
@@ -69,11 +90,11 @@ export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.h
 
   handle(IPC.PASSWORD_OFFER_REPLY, (_e, id: string, choice: 'save' | 'never' | 'dismiss') => {
     const offer = offers.get(id);
-    if (!offer || offer.expires < Date.now()) { offers.delete(id); return 'expired'; }
+    if (!offer || offer.expires < Date.now()) { dropOffer(id); return 'expired'; }
     // A failed save (no secure storage) keeps the offer, so the person can see it did not save.
     if (choice === 'save') passwordStore.save(offer.origin, offer.username, offer.password);
     else if (choice === 'never') passwordStore.neverSaveFor(offer.origin);
-    offers.delete(id);
+    dropOffer(id);
     publishState(offer.tabId);
     return 'done';
   });
@@ -139,5 +160,6 @@ export function registerPasswordIpc(win: BrowserWindow, handle: typeof ipcMain.h
     ipcMain.off('password:form', onForm);
     ipcMain.off('password:submitted', onSubmitted);
     offNavigate();
+    for (const id of [...offers.keys()]) dropOffer(id);
   };
 }
