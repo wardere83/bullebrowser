@@ -94,6 +94,9 @@ describe('research source minimum', () => {
     expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x and https://b.org/y')).toBe(2);
     expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x, https://b.org/y and https://c.org/z')).toBe(3);
     expect(researchSourceMinimum('compare_grants', 'Compare youth workforce grants.')).toBe(3);
+    // The same page named twice, once before a full stop, is still two pages.
+    expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x, https://b.org/y, and again https://b.org/y.')).toBe(2);
+    expect(researchSourceMinimum('compare_grants', 'Compare https://a.gov/x and https://b.org/y#apply, then https://b.org/y.')).toBe(2);
     // "Do not compare" is not a comparison.
     expect(researchSourceMinimum(undefined, 'Find the deadline. Use this page only; do not compare it with other programs.')).toBe(1);
     expect(researchSourceMinimum(undefined, 'Use only this directory, without comparing programs.')).toBe(1);
