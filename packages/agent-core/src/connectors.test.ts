@@ -107,3 +107,38 @@ describe('custom service validation', () => {
     expect(open).toHaveBeenCalledWith('custom-1', 'https://service.example.com/');
   });
 });
+
+// Connectors are opened on the agent's request, so a custom service must not
+// reach a destination that navigate and new_tab refuse.
+describe('connectors and the destination policy', () => {
+  const BLOCKED = 'https://\u0064uckduckgo.com/';
+  it('refuses to add a blocked destination or a local name with a trailing dot', async () => {
+    const { customConnector } = await import('./connectors.js');
+    expect(() => customConnector('custom-1', 'Search', BLOCKED)).toThrow(/blocked/);
+    expect(() => customConnector('custom-1', 'Search', 'https://www.\u0064uckduckgo.com./')).toThrow(/blocked/);
+    expect(() => customConnector('custom-1', 'Local', 'https://localhost./')).toThrow(/public HTTPS/);
+    expect(() => customConnector('custom-1', 'Local', 'https://service.internal./')).toThrow(/public HTTPS/);
+    expect(() => customConnector('custom-1', 'Broken', 'not a url')).toThrow(/public HTTPS/);
+  });
+  it('never opens a catalog entry that points at a blocked destination', async () => {
+    const open = vi.fn(async (_id: string, url: string) => ({ id: 'tab', url, title: 'Search', active: true }));
+    const authorize = vi.fn(async () => true);
+    const tools = connectorTools({
+      enabled: async () => ['custom-1'],
+      catalog: async () => [{ id: 'custom-1', name: 'Search', url: BLOCKED, description: 'Custom' }],
+      authorize,
+      open,
+    });
+    await expect(tools[1]!.execute({ id: 'custom-1' })).rejects.toThrow(/blocked by BulleBrowser policy/);
+    expect(authorize).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+  });
+  it('does not return a tab that landed on a blocked destination', async () => {
+    const tools = connectorTools({
+      enabled: async () => ['google-drive'],
+      authorize: async () => true,
+      open: async () => ({ id: 'tab', url: BLOCKED, title: 'Search', active: true }),
+    });
+    await expect(tools[1]!.execute({ id: 'google-drive' })).rejects.toThrow(/blocked by BulleBrowser policy/);
+  });
+});
