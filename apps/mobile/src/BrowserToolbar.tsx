@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TabSummary } from '@bullebrowser/agent-core';
 import { Mobile } from './native';
+import { addressDestination } from './address';
 
 export function BrowserToolbar({
   tabs,
@@ -79,19 +80,11 @@ export function BrowserToolbar({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          const value = address.trim();
-          if (!value) return;
+          if (!address.trim()) return;
           try {
-            const destination = /^[a-z][a-z\d+.-]*:/i.test(value)
-              ? value
-              : /^[^\s/]+\.[a-z]{2,}(?:\/|$)/i.test(value)
-                ? `https://${value}`
-                : `https://www.google.com/search?q=${encodeURIComponent(value)}`;
-            const url = new URL(destination);
-            if (url.protocol !== 'https:' || url.username || url.password)
-              throw new Error('Enter an HTTPS website or a search.');
+            const destination = addressDestination(address);
             editing.current = false;
-            void action(active ? 'navigate' : 'new', url.href);
+            void action(active ? 'navigate' : 'new', destination);
           } catch (error) {
             onError((error as Error).message);
           }
