@@ -41,6 +41,15 @@ const PROVIDERS = {
   },
 };
 
+// The only upstream calls the app makes. Everything else on these accounts
+// (files, batches, fine-tuning, admin endpoints, other methods) stays closed,
+// because the gateway would otherwise lend its keys to any request.
+const ROUTES = new Set([
+  'anthropic:v1/messages',
+  'openai:v1/chat/completions',
+  'openai:v1/audio/transcriptions',
+]);
+
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -56,13 +65,14 @@ async function bump(env, key, ttlSeconds) {
 // One user prompt ("turn") drives many model calls; only the first call of a
 // new turn spends an allowance unit. Distinct turn ids are de-duplicated for
 // 24h so a long agent run never double-counts.
+// A request without a turn id is counted as a prompt of its own, so leaving
+// the header out cannot skip metering.
 async function consumeQuota(env, install, turn, limit) {
-  if (!turn) return { ok: true };
-  const seenKey = `seen:${install}:${turn}`;
-  if (await env.METER.get(seenKey)) return { ok: true };
+  const seenKey = turn ? `seen:${install}:${turn}` : '';
+  if (seenKey && (await env.METER.get(seenKey))) return { ok: true };
   const used = parseInt((await env.METER.get(`count:${install}`)) || '0', 10);
   if (used >= limit) return { ok: false, reason: 'trial_exhausted' };
-  await env.METER.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 });
+  if (seenKey) await env.METER.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 });
   await env.METER.put(`count:${install}`, String(used + 1));
   return { ok: true };
 }
@@ -89,6 +99,7 @@ export default {
     if (!match) return json({ error: 'not_found' }, 404);
     const provider = PROVIDERS[match[1]];
     const upstreamPath = match[2];
+    if (request.method !== 'POST' || !ROUTES.has(`${match[1]}:${upstreamPath}`)) return json({ error: 'not_found' }, 404);
     const key = env[provider.keyEnv];
     if (!key) return json({ error: 'gateway_unconfigured' }, 503);
 
