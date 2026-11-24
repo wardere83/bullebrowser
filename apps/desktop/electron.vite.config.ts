@@ -12,6 +12,10 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_DEPS })],
     build: {
       outDir: 'out/main',
+      // Ship minified code without source maps, so the installed app does not
+      // carry readable source.
+      minify: 'esbuild',
+      sourcemap: false,
       lib: { entry: resolve(__dirname, 'src/main/index.ts') },
     },
     resolve: {
@@ -27,6 +31,8 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_DEPS })],
     build: {
       outDir: 'out/preload',
+      minify: 'esbuild',
+      sourcemap: false,
       lib: {
         // index: the app window's bridge. tab: each web page's saved-password helper.
         entry: { index: resolve(__dirname, 'src/preload/index.ts'), tab: resolve(__dirname, 'src/preload/tab.ts') },
@@ -45,6 +51,8 @@ export default defineConfig({
     plugins: [react()],
     build: {
       outDir: 'out/renderer',
+      minify: 'esbuild',
+      sourcemap: false,
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
