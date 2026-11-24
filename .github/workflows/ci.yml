@@ -61,6 +61,8 @@ jobs:
         run: |
           node services/widget-backend/build.mjs
           node --test services/widget-backend/*.test.mjs
+      - name: Beta gateway routing and metering tests
+        run: node --test services/gateway/worker.test.mjs
       - name: Shared cloud authentication and billing safety tests
         run: |
           node --test services/cloud/cloud.test.mjs
@@ -70,7 +72,7 @@ jobs:
       - name: Web copy rules (terminology, translations, exported pages)
         run: pnpm --filter @bullebrowser/web test
       - name: Verify website walkthrough in desktop and mobile layouts
-        run: pnpm --filter @bullebrowser/desktop exec playwright test -c playwright.website.config.ts walkthrough.spec.ts
+        run: pnpm --filter @bullebrowser/desktop exec playwright test -c playwright.website.config.ts walkthrough.spec.ts widget.spec.ts hydration.spec.ts
       - name: Desktop build smoke
         run: pnpm --filter @bullebrowser/desktop build
       - name: Guard product language in shipped desktop bundles

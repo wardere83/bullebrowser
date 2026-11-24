@@ -340,10 +340,10 @@
       '</style>' +
       '<button class="launch" aria-label="Open assistant">' +
       '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" fill="#fff"/></svg></button>' +
-      '<section class="panel" role="dialog" aria-label="' + CFG.title + '">' +
-      '<div class="hd"><b>' + CFG.title + '</b><button class="x" aria-label="Close">×</button></div>' +
-      '<div class="msgs"><div class="greet">' + CFG.greeting + '</div></div>' +
-      '<div class="cmp"><textarea rows="1" placeholder="Ask ' + CFG.title + '…"></textarea>' +
+      '<section class="panel" role="dialog">' +
+      '<div class="hd"><b></b><button class="x" aria-label="Close">×</button></div>' +
+      '<div class="msgs"><div class="greet"></div></div>' +
+      '<div class="cmp"><textarea rows="1"></textarea>' +
       '<button class="send">Send</button></div>' +
       '</section>';
 
@@ -352,7 +352,13 @@
     var msgs = root.querySelector('.msgs');
     var ta = root.querySelector('textarea');
     var sendBtn = root.querySelector('.send');
-    var running = false, stopFns = [], queue = [];
+    var running = false, stopFns = [], queue = [], current = null;
+    // Configured text is text, never markup: a quote or an angle bracket in a
+    // title or greeting must not break (or inject into) the panel.
+    panel.setAttribute('aria-label', String(CFG.title));
+    root.querySelector('.hd b').textContent = String(CFG.title);
+    root.querySelector('.greet').textContent = String(CFG.greeting);
+    ta.setAttribute('placeholder', 'Ask ' + CFG.title + '…');
 
     function toggle(open) {
       var show = open == null ? !panel.classList.contains('open') : open;
@@ -366,24 +372,32 @@
     function scroll() { msgs.scrollTop = msgs.scrollHeight; }
 
     // A single run's UI handle.
+    // Once a run has ended (done, failed or stopped), anything it still
+    // reports, such as a /start reply that arrives after Stop, is ignored, so
+    // it cannot end the run that replaced it or start a queued one early.
     function makeRun() {
-      var actEl = null, ansEl = null;
-      return {
+      var actEl = null, ansEl = null, over = false;
+      function end() { if (over) return false; over = true; if (actEl) actEl.remove(); return true; }
+      current = {
         activity: function (t) {
+          if (over) return;
           if (!actEl) { actEl = el('div', 'act', '<span class="dot"></span><span></span>'); msgs.appendChild(actEl); }
           actEl.querySelector('span:last-child').textContent = t;
           scroll();
         },
         answer: function (t) {
+          if (over) return;
           if (actEl) { actEl.remove(); actEl = null; }
           if (!ansEl) { ansEl = el('div', 'a'); msgs.appendChild(ansEl); }
           ansEl.textContent = (ansEl.textContent || '') + t;
           scroll();
         },
-        error: function (m) { if (actEl) actEl.remove(); var n = el('div', 'a'); n.style.color = '#DC2626'; n.textContent = m; msgs.appendChild(n); scroll(); finish(); },
-        done: function () { if (actEl) actEl.remove(); finish(); },
+        error: function (m) { if (!end()) return; var n = el('div', 'a'); n.style.color = '#DC2626'; n.textContent = m; msgs.appendChild(n); scroll(); finish(); },
+        done: function () { if (end()) finish(); },
+        stop: function () { end(); },
         onStop: function (fn) { stopFns.push(fn); },
       };
+      return current;
     }
     function finish() {
       running = false;
@@ -408,7 +422,7 @@
       if (running) { queue.push(t); addUser(t + '  → queued'); return; }
       start(t);
     }
-    function stopRun() { stopFns.forEach(function (fn) { try { fn(); } catch (e) {} }); finish(); }
+    function stopRun() { stopFns.forEach(function (fn) { try { fn(); } catch (e) {} }); if (current) current.stop(); finish(); }
 
     sendBtn.addEventListener('click', function () { if (running && !ta.value.trim()) stopRun(); else submit(); });
     ta.addEventListener('keydown', function (e) {
@@ -427,6 +441,9 @@
       // Only override defaults with values that were actually given, so an
       // omitted (undefined) option doesn't wipe out its default.
       for (var k in opts) if (opts[k] != null && opts[k] !== '') CFG[k] = opts[k];
+      // The accent is written into the widget's stylesheet, so only a plain
+      // colour is accepted; anything else keeps the default.
+      if (!/^(#[0-9a-f]{3,8}|[a-z]+|(rgb|hsl)a?\([0-9.,%\s]+\))$/i.test(String(CFG.accent))) CFG.accent = '#2563EB';
       window.BulleBrowser.__mounted = true;
       var boot = function () {
         var api = mount();

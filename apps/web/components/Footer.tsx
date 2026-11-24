@@ -1,6 +1,7 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element */
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { product } from '@bullebrowser/brand-tokens';
 import { asset } from '@/lib/asset';
@@ -15,6 +16,11 @@ const LINKS: SectionId[] = ['app', 'guides', 'download', 'about', 'privacy'];
 export function Footer() {
   const t = useT();
   const { label, lang } = useSectionNames();
+  // The exported HTML carries its build year. The visitor's clock is read only
+  // after hydration: reading it during render made every page fail to hydrate
+  // once the calendar year had moved on from the build.
+  const [year, setYear] = useState(() => Number(process.env.NEXT_PUBLIC_BUILD_YEAR));
+  useEffect(() => setYear(new Date().getFullYear()), []);
   return (
     <footer className="bg-surface-dark text-ink-inverse">
       <div className="mx-auto max-w-7xl px-6 py-14">
@@ -50,7 +56,7 @@ export function Footer() {
           </nav>
         </div>
         <p className="mt-10 border-t border-white/10 pt-6 text-xs text-ink-inverse/70">
-          © {new Date().getFullYear()} {product.vendor}. {t('footer.rights')}
+          © {year} {product.vendor}. {t('footer.rights')}
         </p>
       </div>
     </footer>
