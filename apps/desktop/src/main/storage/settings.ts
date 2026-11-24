@@ -10,7 +10,10 @@ const store = createStore<AppSettings & Record<string, unknown>>(
 
 export function getSettings(): AppSettings {
   const storedSearchProvider = store.get('searchProvider') as string | undefined;
-  const storedHomepageUrl = store.get('homepageUrl') as string | undefined;
+  // Settings arrive from the renderer and from older files; a non-string here
+  // must fall back to the default rather than make every settings read throw.
+  const rawHomepageUrl: unknown = store.get('homepageUrl');
+  const storedHomepageUrl = typeof rawHomepageUrl === 'string' ? rawHomepageUrl : undefined;
 
   const allowedSearchProviders: AppSettings['searchProvider'][] = [
     'bullebrowser',
