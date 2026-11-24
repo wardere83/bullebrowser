@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   savedKey: 'test-api-key' as string | null,
   federated: null as null | (() => Promise<{ token: string; expiresAt: number | null }>),
   federationChecks: 0,
+  activeId: 'tab-1' as string | null,
+  create: vi.fn<() => Promise<{ id: string }>>(),
 }));
 
 vi.mock('@bullebrowser/agent-core', async (importOriginal) => ({
@@ -47,7 +49,8 @@ vi.mock('../storage/secrets.js', () => ({ getApiKey: () => mocks.savedKey }));
 vi.mock('./federated-credentials.js', () => ({ federatedAnthropicCredentials: () => { mocks.federationChecks += 1; return mocks.federated; } }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ defaultModel: 'gpt-4o', stepBudget: 40 }) }));
 vi.mock('../tabs/manager.js', () => ({ tabManager: {
-  getActiveId: () => 'tab-1',
+  getActiveId: () => mocks.activeId,
+  create: mocks.create,
   activate: mocks.activate,
   setBrowsingActivity: mocks.setBrowsingActivity,
   clearBrowsingActivity: mocks.clearBrowsingActivity,
@@ -61,7 +64,7 @@ vi.mock('./runtime.js', () => ({ DesktopToolRuntime: class {
 } }));
 vi.mock('./attachments.js', () => ({ buildAttachmentAppendix: () => '' }));
 
-const { startAgentRun, cancelAgentRun, replyAgentConfirm } = await import('./run.js');
+const { startAgentRun, cancelAgentRun, replyAgentConfirm, hasActiveAgentRuns } = await import('./run.js');
 
 const request: AgentRunRequest = {
   conversationId: 'conversation-1',
@@ -76,11 +79,12 @@ beforeEach(() => {
   mocks.savedKey = 'test-api-key';
   mocks.federated = null;
   mocks.federationChecks = 0;
+  mocks.activeId = 'tab-1';
 });
 
 async function runTask(overrides: Partial<AgentRunRequest> = {}) {
   const send = vi.fn();
-  const win = { webContents: { send } } as unknown as BrowserWindow;
+  const win = { isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow;
   const handle = await startAgentRun(win, { ...request, ...overrides });
   const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
   if (consent) replyAgentConfirm(handle.runId, consent.id, true);
@@ -192,7 +196,7 @@ describe('agent task results for live voice', () => {
       await search.execute({ query: 'What is a 501(c)(3)?' }).catch(() => {});
       return 'A 501(c)(3) is a tax-exempt nonprofit.';
     });
-    const win = { webContents: { send } } as unknown as BrowserWindow;
+    const win = { isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow;
     const handle = await startAgentRun(win, { ...request, userMessage: 'What is a 501(c)(3)?' });
     await vi.waitFor(() => expect(asked()).toBe(true));
     expect(askedBeforeSearch).toBe(false);
@@ -283,7 +287,7 @@ describe('agent task results for live voice', () => {
       throw new Error('cancelled');
     });
     const send = vi.fn();
-    const handle = await startAgentRun({ webContents: { send } } as unknown as BrowserWindow, request);
+    const handle = await startAgentRun({ isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow, request);
     const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)![1];
     replyAgentConfirm(handle.runId, consent.id, true);
     await vi.waitFor(() => expect(mocks.setBrowsingActivity).toHaveBeenCalledTimes(1));
@@ -327,7 +331,7 @@ describe('agent task results for live voice', () => {
 describe('session permission handshake', () => {
   it('does not start the agent before consent and records denial', async () => {
     const send = vi.fn();
-    const win = { webContents: { send } } as unknown as BrowserWindow;
+    const win = { isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow;
     const handle = await startAgentRun(win, request);
     expect(mocks.runAgent).not.toHaveBeenCalled();
     const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
@@ -376,5 +380,61 @@ describe('Claude access without a saved key', () => {
     const input = mocks.runAgent.mock.calls[0]![0];
     expect(input).not.toHaveProperty('anthropicCredentials');
     expect(input.planning).toBe(false);
+  });
+});
+
+describe('agent task lifetime', () => {
+  it('does not leave a task registered when it cannot start', async () => {
+    mocks.activeId = null;
+    mocks.create.mockRejectedValue(new Error('No window attached'));
+    const send = vi.fn();
+    const win = { isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow;
+    await expect(startAgentRun(win, request)).rejects.toThrow('No window attached');
+    // A leftover entry would hold back "Restart to update" as a running task.
+    expect(hasActiveAgentRuns()).toBe(false);
+
+    mocks.activeId = 'tab-1';
+    mocks.appendMessage.mockImplementation(() => { throw new Error('disk full'); });
+    await expect(startAgentRun(win, request)).rejects.toThrow('disk full');
+    expect(hasActiveAgentRuns()).toBe(false);
+  });
+
+  it('finishes quietly when the window closes during a task', async () => {
+    let destroyed = false;
+    const send = vi.fn();
+    const win = {
+      isDestroyed: () => destroyed,
+      get webContents() {
+        if (destroyed) throw new TypeError('Object has been destroyed');
+        return { send };
+      },
+    } as unknown as BrowserWindow;
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => { rejections.push(reason); };
+    process.on('unhandledRejection', onRejection);
+    try {
+      mocks.runAgent.mockImplementation(async (input) => {
+        destroyed = true;
+        input.onStep({ type: 'text', detail: 'Read one source.' });
+        return 'Read one source.';
+      });
+      await startAgentRun(win, { ...request, userMessage: 'Thank you so much!' });
+      await vi.waitFor(() => expect(hasActiveAgentRuns()).toBe(false));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(rejections).toEqual([]);
+      expect(mocks.appendMessage).toHaveBeenLastCalledWith(request.conversationId,
+        expect.objectContaining({ role: 'assistant', content: 'Read one source.' }));
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+  });
+
+  it('declines a browser-access prompt that a closed window can never answer', async () => {
+    const send = vi.fn();
+    const win = { isDestroyed: () => true, webContents: { send } } as unknown as BrowserWindow;
+    await startAgentRun(win, { ...request, userMessage: 'Find youth grants in New Jersey' });
+    await vi.waitFor(() => expect(hasActiveAgentRuns()).toBe(false));
+    expect(send).not.toHaveBeenCalled();
+    expect(mocks.runAgent).not.toHaveBeenCalled();
   });
 });
