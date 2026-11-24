@@ -50,3 +50,25 @@ export function parseAddressBarInput(
 
 /** Event dispatched by the address bar when the user submits an agent prompt. */
 export const AGENT_PROMPT_EVENT = 'bullebrowser:agent-prompt';
+
+// A prompt sent while the AI panel is closed has no listener yet: the panel
+// mounts on the next render, after the event has already fired. Such prompts
+// wait here until the panel takes them, instead of being dropped.
+let pendingPrompts: string[] = [];
+
+/**
+ * Hands a prompt to the AI panel. A listener that takes the prompt calls
+ * preventDefault(); otherwise it is kept for takePendingAgentPrompts().
+ */
+export function sendAgentPrompt(prompt: string, target: EventTarget = window): void {
+  const event = new CustomEvent<string>(AGENT_PROMPT_EVENT, { detail: prompt, cancelable: true });
+  target.dispatchEvent(event);
+  if (!event.defaultPrevented) pendingPrompts.push(prompt);
+}
+
+/** The prompts sent before the AI panel was listening, oldest first. */
+export function takePendingAgentPrompts(): string[] {
+  const taken = pendingPrompts;
+  pendingPrompts = [];
+  return taken;
+}

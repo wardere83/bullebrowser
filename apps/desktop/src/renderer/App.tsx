@@ -11,11 +11,11 @@ import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { AboutModal } from './components/AboutModal.js';
 import { Splash } from './components/Splash.js';
 import { BrowserPane } from './components/BrowserPane.js';
-import { useBrowserStore } from './state/browser-store.js';
+import { chromeCoversPageSelector, useBrowserStore } from './state/browser-store.js';
 import { useAgentStore } from './state/agent-store.js';
 import { isStartPageUrl, useWorkspaceConnection } from './state/workspace-store.js';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
-import { AGENT_PROMPT_EVENT } from './lib/url.js';
+import { sendAgentPrompt } from './lib/url.js';
 import { refreshVoiceConversation } from './lib/voice-agent.js';
 
 export function App() {
@@ -29,7 +29,7 @@ export function App() {
   const preferences = useAccessibilityStore((s) => s.preferences);
   const setAccessibility = useAccessibilityStore((s) => s.setPreferences);
   const zoom = accessibilityZoom(preferences);
-  const showUpdates = useBrowserStore((s) => s.showUpdates);
+  const chromeCoversPage = useBrowserStore(chromeCoversPageSelector);
   const showAbout = useBrowserStore((s) => s.showAbout);
   const appendStep = useAgentStore((s) => s.appendStep);
   const finishRun = useAgentStore((s) => s.finishRun);
@@ -44,7 +44,7 @@ export function App() {
   const activeTab = tabs.find((t) => t.active);
   const showIntro = !activeTab || isStartPageUrl(activeTab.url);
   const pendingConfirm = useAgentStore((s) => s.pendingConfirm);
-  const modalOpen = showUpdates || showSettings || showAbout || showAccessibility || pendingConfirm?.kind === 'destructive';
+  const modalOpen = chromeCoversPage || pendingConfirm?.kind === 'destructive';
 
   // Initial sync with main + first tab if none.
   useEffect(() => {
@@ -112,15 +112,11 @@ export function App() {
   }, [setPendingConfirm]);
 
   // Right-click → "Ask BulleBrowser" comes in over IPC. Open the AI
-  // panel (so AiPanel mounts) and re-emit the prompt as the in-window
-  // AGENT_PROMPT_EVENT — AiPanel already handles that channel with a
-  // queued-prompt fallback for the first-render race.
+  // panel and hand it the prompt; a closed panel takes it once it mounts.
   useEffect(() => {
     return window.bullebrowser.ui.onAskAgent((prompt) => {
       setAiPanelOpen(true);
-      window.dispatchEvent(
-        new CustomEvent<string>(AGENT_PROMPT_EVENT, { detail: prompt }),
-      );
+      sendAgentPrompt(prompt);
     });
   }, [setAiPanelOpen]);
 

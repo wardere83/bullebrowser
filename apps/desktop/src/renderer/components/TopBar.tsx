@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBrowserStore, activeTabSelector } from '../state/browser-store.js';
 import { useAgentStore } from '../state/agent-store.js';
-import { AGENT_PROMPT_EVENT, parseAddressBarInput } from '../lib/url.js';
+import { parseAddressBarInput, sendAgentPrompt } from '../lib/url.js';
 import { useInputActivity } from '../hooks/useInputActivity.js';
 import { FOCUS_AI_PANEL_EVENT } from './AiPanel.js';
 import brandIcon from '../assets/bullebrowser-icon.png';
@@ -26,7 +26,10 @@ export function TopBar() {
   const runId = useAgentStore((s) => s.runId);
   const searchProvider = useBrowserStore((s) => s.searchProvider);
   const [draftUrl, setDraftUrl] = useState('');
-  const [profileOpen, setProfileOpen] = useState(false);
+  // In the store: the page is hidden while the menu hangs over it (App).
+  const profileOpen = useBrowserStore((s) => s.profileMenuOpen);
+  const setProfileOpen = useBrowserStore((s) => s.setProfileMenuOpen);
+  const profileRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const addressActivity = useInputActivity();
 
@@ -90,6 +93,25 @@ export function TopBar() {
     };
   }, []);
 
+  // The menu closes on Escape or a click anywhere else, as menus do.
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setProfileOpen(false);
+      profileRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    };
+    const onDown = (e: MouseEvent) => {
+      if (!profileRef.current?.contains(e.target as Node)) setProfileOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [profileOpen, setProfileOpen]);
+
   useEffect(() => {
     const handler = () => inputRef.current?.select();
     window.addEventListener('bullebrowser:focus-address', handler);
@@ -102,11 +124,9 @@ export function TopBar() {
     const action = parseAddressBarInput(draftUrl, searchProvider);
     if (action.type === 'agent') {
       // BulleBrowser address bar → AI agent. Open the panel and hand
-      // the prompt off via a custom event so AiPanel can send it.
+      // the prompt off so AiPanel can send it, once mounted if it was closed.
       setAiPanelOpen(true);
-      window.dispatchEvent(
-        new CustomEvent<string>(AGENT_PROMPT_EVENT, { detail: action.prompt }),
-      );
+      sendAgentPrompt(action.prompt);
       setDraftUrl(!active || active.url === 'about:blank' ? '' : active.url);
       return;
     }
@@ -235,10 +255,11 @@ export function TopBar() {
           <path d="m14 7-1 6h6l3 6h-4l-2-4h-5l1-8M10 10a6 6 0 1 0 6 8" />
         </svg>
       </button>
-      <div className="no-drag relative">
+      <div ref={profileRef} className="no-drag relative">
         <button
           type="button"
-          onClick={() => setProfileOpen((v) => !v)}
+          onClick={() => setProfileOpen(!profileOpen)}
+          aria-expanded={profileOpen}
           className="grid h-7 w-7 place-items-center rounded-full bg-surface-muted text-xs font-semibold text-ink-primary hover:bg-line"
           aria-label="Profile menu"
         >
