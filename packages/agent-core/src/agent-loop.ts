@@ -7,6 +7,7 @@ import type { ResearchProgress } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 import { anthropicAuth, hasModelAccess } from './anthropic-auth.js';
 import { assertAllowedToolDestination } from './destinations.js';
+import { dateContext } from './assistant-tools.js';
 import { STRATEGY_INSTRUCTIONS, strategyTool } from './strategy.js';
 // The BulleBrowser agent loop.
 //
@@ -834,7 +835,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     'Respect destination policy blocks. Never bypass them through alternate URLs, redirects or fallbacks, ' +
     'even if earlier conversation history did so. Use web_search for discovery. ' +
     'If search is unavailable, explain the failure or inspect an allowed source supplied by the user.\n\n' +
-    `${RESPONSE_CRAFT}\n\n${input.strategyPanel === false ? '' : `${STRATEGY_INSTRUCTIONS}\n\n`}` +
+    `${dateContext(input.now)}\n\n${RESPONSE_CRAFT}\n\n${input.strategyPanel === false ? '' : `${STRATEGY_INSTRUCTIONS}\n\n`}` +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
   const budget = new StepBudget(input.budget);
   const sealedContext = [pageContext, ...referenceBlocks].filter(Boolean).join('\n\n');

@@ -328,6 +328,8 @@ export interface AgentInput {
   effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   /** Show the live strategy playbook while the task runs (default true). */
   strategyPanel?: boolean;
+  /** The current time, for the date line in the instructions (tests pin it). */
+  now?: Date;
   systemPrompt: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   userMessage: string;

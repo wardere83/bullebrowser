@@ -30,7 +30,8 @@ const EXPENSIVE = new Set([
 ]);
 
 // Bookkeeping the user sees, not browsing: never charged.
-const FREE = new Set(['share_strategy']);
+// Thinking aids that touch no page or network cost nothing.
+const FREE = new Set(['share_strategy', 'calculate', 'recall_notes']);
 
 export function stepCost(toolName: string): number {
   if (FREE.has(toolName)) return 0;

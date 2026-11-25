@@ -1,5 +1,5 @@
 import { TaskControl, type TaskCommand } from './task-control.js';
-import { type StrategyPlaybook, browserSearch, normalizeModelId, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError, type ApiTool } from '@bullebrowser/agent-core';
+import { type StrategyPlaybook, calculatorTool, notesTools, browserSearch, normalizeModelId, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError, type ApiTool } from '@bullebrowser/agent-core';
 import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
 // (skill-aware), wires the ToolContext to the active tab, runs the loop,
@@ -36,6 +36,7 @@ import { tabManager } from '../tabs/manager.js';
 import { getApiKey } from '../storage/secrets.js';
 import { federatedAnthropicCredentials } from './federated-credentials.js';
 import { getSettings } from '../storage/settings.js';
+import { assistantNotes } from '../storage/assistant-notes.js';
 import { addressText, typingDuration } from '../../shared/address-typing.js';
 import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError, isOutOfCredit } from './errors.js';
@@ -338,7 +339,7 @@ export async function startAgentRun(
           browserSearch: browserSearch({ runtime, activeTabId: () => ctx.activeTabId, signal: controller.signal, fundingOnly,
             presentAction: (tabId, action, signal) => runtime.presentAction(tabId, action, signal),
           }),
-        })), ...grounding.tools, ...connectorTools({
+        })), ...grounding.tools, calculatorTool(), ...notesTools(assistantNotes), ...connectorTools({
           enabled: async () => enabledConnectors(),
           catalog: async () => connectorCatalog(),
           authorize: () => ask('Allow this task to open an enabled connector in your browser?', 'browse_access'),

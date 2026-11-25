@@ -32,3 +32,4 @@ export * from './presentation.js';
 
 export * from './task-outcome.js';
 export * from './strategy.js';
+export * from './assistant-tools.js';

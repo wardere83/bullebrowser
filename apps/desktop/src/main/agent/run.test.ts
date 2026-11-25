@@ -45,6 +45,7 @@ vi.mock('../funding/grounding.js', () => ({
 }));
 vi.mock('../storage/session-files.js', () => ({ sessionFileStore: {} }));
 vi.mock('../storage/projects.js', () => ({ projectStore: {} }));
+vi.mock('../storage/assistant-notes.js', () => ({ assistantNotes: { list: () => [], add: () => ({ id: 'n1', text: '', savedAt: 0 }), remove: () => false } }));
 vi.mock('../storage/secrets.js', () => ({ getApiKey: () => mocks.savedKey }));
 vi.mock('./federated-credentials.js', () => ({ federatedAnthropicCredentials: () => { mocks.federationChecks += 1; return mocks.federated; } }));
 vi.mock('../storage/settings.js', () => ({ getSettings: () => ({ defaultModel: 'gpt-4o', stepBudget: 40 }) }));

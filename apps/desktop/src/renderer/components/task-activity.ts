@@ -51,6 +51,10 @@ const ACTIONS: Record<string, string> = {
   org_get_profile: "Reviewing your organization's profile",
   org_search_knowledge: "Searching your organization's documents",
   share_strategy: 'Updating your strategy playbook',
+  calculate: 'Checking the numbers',
+  remember_note: 'Saving a note for later',
+  recall_notes: 'Checking your saved notes',
+  forget_note: 'Removing a saved note',
 };
 
 function record(value: unknown): Record<string, unknown> | null {
