@@ -935,7 +935,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     await planner?.ensure();
     if (planner && planner.instructions !== plannerNote) {
       plannerNote = planner.instructions;
-      appendUserNote(messages, `BulleBrowser task plan update:${plannerNote}`);
+      appendUserNote(messages, `BulleBrowser task plan update:${plannerNote}`, { lead: true });
     }
     onStep({ type: 'thinking', detail: 'Thinking…' });
 
@@ -1125,14 +1125,18 @@ const TRUNCATED_CALL_NOTE =
   'Send it again if it is still needed, keeping its input short.';
 
 /** Add a note to the last user turn, or start one, so turns keep alternating. */
-function appendUserNote(messages: Anthropic.MessageParam[], note: string): void {
+function appendUserNote(messages: Anthropic.MessageParam[], note: string, opts: { lead?: boolean } = {}): void {
   const last = messages[messages.length - 1];
   if (last?.role !== 'user') {
     messages.push({ role: 'user', content: note });
     return;
   }
   const blocks: Anthropic.ContentBlockParam[] = typeof last.content === 'string' ? [{ type: 'text', text: last.content }] : last.content;
-  last.content = [...blocks, { type: 'text', text: note }];
+  // A lead note goes ahead of the turn's own request (such as the request for
+  // the final answer), so that request stays the last thing the model reads.
+  // Tool results must open their turn, so after them a note always follows.
+  const leads = opts.lead && !blocks.some((block) => block.type === 'tool_result');
+  last.content = leads ? [{ type: 'text', text: note }, ...blocks] : [...blocks, { type: 'text', text: note }];
 }
 
 // Shrink tool results from all but the last few tool-result turns, in place.

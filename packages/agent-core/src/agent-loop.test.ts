@@ -406,7 +406,11 @@ describe('runAgent Claude tool-use loop', () => {
     const [assistant, request] = last.messages.slice(-2);
     expect(assistant!.role).toBe('assistant');
     expect(JSON.stringify(assistant!.content)).toContain('facts');
-    expect(String(request!.content)).toMatch(/final answer in full[\s\S]*do not refer to earlier messages/);
+    const requestText = typeof request!.content === 'string'
+      ? request!.content
+      : (request!.content as Array<{ type: string; text?: string }>).map((block) => block.text ?? '').join('\n');
+    // The request for the final answer is the last thing the model reads.
+    expect(requestText).toMatch(/final answer in full[\s\S]*do not refer to earlier messages\.$/);
   });
 
   it('starts the answer over after the final check, without a draft cut off before it', async () => {
