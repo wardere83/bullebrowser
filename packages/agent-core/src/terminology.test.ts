@@ -173,12 +173,25 @@ describe('applyTerminology', () => {
   });
 });
 
+describe('exact copies', () => {
+  it('keeps a requested exact copy inside a code block while prose uses the acronym', () => {
+    const fence = '`'.repeat(3);
+    const reply = `The listing names ${MANY}.\n\n${fence}json\n{ "value": "Washington ${MANY}" }\n${fence}`;
+    const result = applyTerminology(reply);
+    expect(result.startsWith('The listing names CBOs.')).toBe(true);
+    expect(result).toContain(`"Washington ${MANY}"`);
+  });
+});
+
 describe('TERMINOLOGY_INSTRUCTIONS', () => {
   it('asks for the acronym, singular and plural, and names the audience', () => {
     expect(TERMINOLOGY_INSTRUCTIONS).toContain('"CBOs"');
     expect(TERMINOLOGY_INSTRUCTIONS).toContain('"CBO"');
     expect(TERMINOLOGY_INSTRUCTIONS).toContain('"businesses and CBOs"');
     expect(TERMINOLOGY_INSTRUCTIONS).toMatch(/never write out/);
+    // Exact copies the user asks for stay exact, inside code, which is never rewritten.
+    expect(TERMINOLOGY_INSTRUCTIONS).toMatch(/character for character/);
+    expect(TERMINOLOGY_INSTRUCTIONS).toMatch(/code block/);
   });
 
   it('does not itself contain the long form', () => {

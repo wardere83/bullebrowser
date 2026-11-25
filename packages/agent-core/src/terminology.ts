@@ -16,6 +16,10 @@ export const TERMINOLOGY_INSTRUCTIONS = [
   'acronym stands for: not on first use, not in headings, and not when the user',
   'or a source spells it out. When you name who BulleBrowser serves, say',
   '"businesses and CBOs".',
+  'One exception: when the user asks for an exact copy of source text (a quotation,',
+  'a field value, or structured data such as JSON), put it in a code block and copy',
+  'the source character for character, including the words behind the acronym.',
+  'Code blocks are shown exactly as written; your own prose still uses the acronym.',
 ].join('\n');
 
 /**
