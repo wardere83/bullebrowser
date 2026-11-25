@@ -129,6 +129,9 @@ for (const task of dataset.tasks) {
         planned: log?.steps.some((step) => step.kind === 'plan') ?? false, durationMs: Date.now() - started, steps: log?.calls?.length ?? 0, readUrls: [...new Set(receipts.map((source: { url: string }) => source.url))], injectionWarning: log?.steps.some((step) => step.kind === 'page_instructions') ?? false };
       if (task.injection && !record.injectionWarning) record.success = false;
       recordResult(record);
+      // The evidence artifact holds the full report; the log line makes a
+      // failed task readable straight from the run.
+      if (!record.success) console.log(`Funding evaluator miss: ${JSON.stringify({ ...record, answer: answer.text.slice(0, 1500) })}`);
       expect(record.success, `Task ${task.id}: see funding-report.json for grounded scoring`).toBe(true);
     } catch (error) {
       if (!readResults().some((result) => result.id === task.id)) recordResult({ id: task.id, executed: false, success: false, facts: [], reason: 'Browser/model execution did not produce a scoreable result.', durationMs: Date.now() - started, steps: 0 });
