@@ -5,6 +5,29 @@ import { Modal } from './Modal.js';
 import { useAgentStore } from '../state/agent-store.js';
 import { saveUpdateChat, SAVE_UPDATE_CHAT_EVENT, type UpdateChatSnapshot } from '../lib/update-session.js';
 
+// A check that never answers (a dead connection that does not error) must not
+// leave the button on "Checking…".
+const CHECK_TIMEOUT_MS = 2 * 60 * 1000;
+
+function withTimeout<T>(task: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), ms); });
+  return Promise.race([task, timeout]).finally(() => { if (timer) clearTimeout(timer); });
+}
+
+function saveChatForRestart(): void {
+  const snapshot = new CustomEvent<UpdateChatSnapshot>(SAVE_UPDATE_CHAT_EVENT, { detail: {} });
+  window.dispatchEvent(snapshot);
+  const current = useAgentStore.getState().current;
+  const chat = snapshot.detail.chat ?? (current ? { conversationId: current.id, draft: '' } : null);
+  if (chat) saveUpdateChat(chat);
+}
+
+function agentIsBusy(): boolean {
+  const agent = useAgentStore.getState();
+  return agent.status === 'running' || Object.values(agent.activities).some((activity) => activity.status === 'running');
+}
+
 // Always discoverable. Download completion means "prepared", not "running".
 export function UpdateBanner() {
   const [status, setStatus] = useState<UpdateStatus>({ state: 'idle' });
@@ -45,12 +68,13 @@ export function UpdateBanner() {
     setChecking(true);
     setError('');
     try {
-      await window.bullebrowser.updates.check();
+      await withTimeout(window.bullebrowser.updates.check(), CHECK_TIMEOUT_MS);
       setStatus(await window.bullebrowser.updates.status());
       setChecked(true);
       refreshDetails();
     } catch {
       setError('Could not check for updates. Check your connection and retry.');
+      void window.bullebrowser.updates.status().then(setStatus).catch(() => {});
     } finally { inFlight.current = false; setChecking(false); }
   }, [refreshDetails]);
   useEffect(() => {
@@ -61,12 +85,9 @@ export function UpdateBanner() {
 
   useEffect(() => {
     const save = () => {
-      if (status.state !== 'ready' && status.state !== 'deferred') return;
-      const snapshot = new CustomEvent<UpdateChatSnapshot>(SAVE_UPDATE_CHAT_EVENT, { detail: {} });
-      window.dispatchEvent(snapshot);
-      const current = useAgentStore.getState().current;
-      const chat = snapshot.detail.chat ?? (current ? { conversationId: current.id, draft: '' } : null);
-      if (chat) { try { saveUpdateChat(chat); } catch { /* A full disk must not block closing. */ } }
+      const needsRestart = status.state === 'ready' || status.state === 'deferred' || (status.state === 'error' && status.retryable === false);
+      if (!needsRestart) return;
+      try { saveChatForRestart(); } catch { /* A full disk must not block closing. */ }
     };
     window.addEventListener('beforeunload', save);
     return () => window.removeEventListener('beforeunload', save);
@@ -86,8 +107,7 @@ export function UpdateBanner() {
   };
   const finish = async () => {
     if (inFlight.current || (status.state !== 'ready' && status.state !== 'deferred')) return;
-    const agent = useAgentStore.getState();
-    if (agent.status === 'running' || Object.values(agent.activities).some((activity) => activity.status === 'running')) {
+    if (agentIsBusy()) {
       setError('Wait for the active task to finish before restarting.');
       return;
     }
@@ -95,16 +115,31 @@ export function UpdateBanner() {
     setFinishing(true);
     setError('');
     try {
-      const snapshot = new CustomEvent<UpdateChatSnapshot>(SAVE_UPDATE_CHAT_EVENT, { detail: {} });
-      window.dispatchEvent(snapshot);
-      const current = useAgentStore.getState().current;
-      const chat = snapshot.detail.chat ?? (current ? { conversationId: current.id, draft: '' } : null);
-      if (chat) saveUpdateChat(chat);
+      saveChatForRestart();
       await window.bullebrowser.updates.finish(status.state === 'ready' ? status.version : status.preparedVersion);
     } catch {
       setError('Could not finish installing the update. Your browser remains open. Retry or download the latest installer.');
     } finally { inFlight.current = false; setFinishing(false); }
   };
+  // Some updates can only finish on a fresh start. Quitting and reopening
+  // installs what is prepared and brings the tabs and chat back.
+  const relaunch = async () => {
+    if (inFlight.current) return;
+    if (agentIsBusy()) {
+      setError('Wait for the active task to finish before restarting.');
+      return;
+    }
+    inFlight.current = true;
+    setFinishing(true);
+    setError('');
+    try {
+      saveChatForRestart();
+      await window.bullebrowser.updates.relaunch();
+    } catch {
+      setError('Could not reopen BulleBrowser. Quit it from the menu and open it again to finish the update.');
+    } finally { inFlight.current = false; setFinishing(false); }
+  };
+  const needsRelaunch = status.state === 'error' && status.retryable === false;
   const downloading = status.state === 'downloading';
   const ready = status.state === 'ready' || status.state === 'deferred';
   const scheduled = status.state === 'ready' && status.scheduled;
@@ -113,10 +148,10 @@ export function UpdateBanner() {
     : undefined;
   const label = finishing ? 'Restarting…' : checking ? 'Checking…' : downloading
     ? status.phase === 'preparing' ? 'Preparing…' : `Updating${progress === undefined ? '…' : ` ${progress}%`}`
-    : ready ? 'Restart to update' : status.state === 'error' || error ? 'Update issue' : details?.completedVersion ? 'Update Completed' : 'Updates';
+    : ready ? 'Restart to update' : needsRelaunch ? 'Reopen to update' : status.state === 'error' || error ? 'Update issue' : details?.completedVersion ? 'Update Completed' : 'Updates';
   const show = () => {
     openUpdates();
-    if (status.state === 'idle' || status.state === 'error') void check();
+    if (status.state === 'idle' || (status.state === 'error' && !needsRelaunch)) void check();
     else if (ready) void finish();
   };
 
@@ -153,8 +188,10 @@ export function UpdateBanner() {
             className="rounded bg-primary px-3 py-2 font-medium text-surface-dark disabled:opacity-60">{finishing ? 'Restarting…' : 'Finish update and reopen'}</button>}
           {ready && !scheduled && <button type="button" disabled={staging} onClick={() => void prepare()}
             className="rounded bg-primary px-3 py-2 font-medium text-surface-dark disabled:opacity-60">{staging ? 'Preparing…' : 'Prepare update — restart later'}</button>}
-          <button type="button" disabled={checking || downloading || staging || (status.state === 'error' && status.retryable === false)}
-            onClick={() => void check()} className="rounded border border-line px-3 py-2 disabled:opacity-60">{checking ? 'Checking…' : 'Check for updates'}</button>
+          {needsRelaunch && <button type="button" disabled={finishing} onClick={() => void relaunch()}
+            className="rounded bg-primary px-3 py-2 font-medium text-surface-dark disabled:opacity-60">{finishing ? 'Reopening…' : 'Quit and reopen'}</button>}
+          {!needsRelaunch && <button type="button" disabled={checking || downloading || staging}
+            onClick={() => void check()} className="rounded border border-line px-3 py-2 disabled:opacity-60">{checking ? 'Checking…' : 'Check for updates'}</button>}
           <a href="https://bullebrowser.com/download" target="_blank" rel="noopener noreferrer" className="rounded border border-line px-3 py-2">Latest installer</a>
         </div>
         <p className="text-xs text-ink-secondary">Updates appear after a release is published. Changes to the native application require a normal relaunch; download progress does not change the running version.</p>

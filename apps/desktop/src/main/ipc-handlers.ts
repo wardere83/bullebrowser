@@ -4,7 +4,7 @@ import { accessibilityManager } from './accessibility.js';
 import { normalizeAccessibility } from '../shared/accessibility.js';
 import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { assertAllowedDestination, type ProviderId } from '@bullebrowser/agent-core';
-import { finishUpdate, applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
+import { finishUpdate, relaunchForUpdate, applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -131,6 +131,12 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
       throw new Error('Updates are only available from the app window.');
     }
     return finishUpdate(version, () => saveUpdateTabs(tabManager.list()), hasActiveAgentRuns);
+  });
+  handle(IPC.UPDATE_RELAUNCH, (event) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('Updates are only available from the app window.');
+    }
+    return relaunchForUpdate(() => saveUpdateTabs(tabManager.list()), hasActiveAgentRuns);
   });
   handle(IPC.UPDATE_GET_STATUS, () => getUpdateStatus());
   handle(IPC.UPDATE_PREPARE, (_e, version: string) => prepareUpdate(version));

@@ -159,6 +159,32 @@ describe('explicit update activation', () => {
     expect(updater.quitAndInstall).toHaveBeenCalledOnce();
   });
 
+  it('installs a prepared update in place for an AppImage on Linux', async () => {
+    process.env.APPIMAGE = '/home/user/BulleBrowser.AppImage';
+    try {
+      const api = await start();
+      events.emit('update-downloaded', { version: '0.2.38' });
+      const save = vi.fn();
+      api.finishUpdate('0.2.38', save);
+      expect(save).toHaveBeenCalledOnce();
+      expect(updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+    } finally {
+      delete process.env.APPIMAGE;
+    }
+  });
+
+  it('quits and reopens to finish an update only a fresh start can complete', async () => {
+    const api = await start();
+    expect(() => api.relaunchForUpdate(vi.fn(), () => true)).toThrow('active task');
+    expect(app.relaunch).not.toHaveBeenCalled();
+    const save = vi.fn();
+    api.relaunchForUpdate(save);
+    api.relaunchForUpdate(save);
+    expect(save).toHaveBeenCalledOnce();
+    expect(app.relaunch).toHaveBeenCalledOnce();
+    expect(app.quit).toHaveBeenCalledOnce();
+  });
+
   it('does not offer unsupported native installation on Linux', async () => {
     const api = await start();
     events.emit('update-downloaded', { version: '0.2.38' });
@@ -490,7 +516,7 @@ describe('background app updates', () => {
     events.emit('update-available', { version: '0.2.38' });
     events.emit('update-available', { version: '0.2.38' });
     events.emit('update-available', { version: '0.2.39' });
-    await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(80 * 1000);
     expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(updater.downloadUpdate).toHaveBeenCalledTimes(1);
     events.emit('update-downloaded', { version: '0.2.38' });
@@ -881,6 +907,65 @@ describe('background app updates', () => {
     updater.checkForUpdates.mockRejectedValueOnce(new Error('Offline'));
     await expect(api.checkForAppUpdates()).rejects.toThrow('Could not check');
     expect(app.quit).not.toHaveBeenCalled();
+  });
+
+  it('cancels a download that stops responding and retries it automatically', async () => {
+    const api = await start();
+    updater.downloadUpdate.mockImplementationOnce(() => new Promise(() => {}));
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.38' });
+    events.emit('download-progress', { percent: 40 });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.38', percent: 40 });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(api.getUpdateStatus()).toEqual({ state: 'error', version: '0.2.38', message: 'Connection interrupted. Retrying automatically; you can keep browsing.' });
+    updater.checkForUpdates.mockImplementationOnce(async () => {
+      events.emit('update-available', { version: '0.2.38' });
+      return null;
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(2);
+    events.emit('update-downloaded', { version: '0.2.38' });
+    expect(api.getUpdateStatus()).toEqual({ state: 'ready', version: '0.2.38' });
+  });
+
+  it('keeps trying now and then after its quick retries are spent', async () => {
+    updater.checkForUpdates.mockImplementation(async () => {
+      events.emit('update-available', { version: '0.2.38' });
+      return null;
+    });
+    updater.downloadUpdate.mockRejectedValue(Object.assign(new Error('socket failed'), { code: 'ECONNRESET' }));
+    await start();
+    for (const delay of [10_000, 20_000, 40_000]) await vi.advanceTimersByTimeAsync(delay);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(4);
+    updater.downloadUpdate.mockReset().mockResolvedValue([]);
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    expect(updater.downloadUpdate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+    expect(updater.downloadUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('never leaves a check waiting on a release server that does not answer', async () => {
+    const api = await start();
+    updater.checkForUpdates.mockImplementationOnce(() => new Promise(() => {}));
+    const pending = api.checkForAppUpdates();
+    const outcome = expect(pending).rejects.toThrow('Could not check');
+    await vi.advanceTimersByTimeAsync(90_000);
+    await outcome;
+    await api.checkForAppUpdates();
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not wait on a running download when the user checks again', async () => {
+    const api = await start();
+    updater.downloadUpdate.mockImplementationOnce(() => new Promise(() => {}));
+    events.emit('update-available', { version: '0.2.38' });
+    await flush();
+    const pending = api.checkForAppUpdates();
+    await vi.advanceTimersByTimeAsync(5_000);
+    await expect(pending).resolves.toBeUndefined();
+    expect(api.getUpdateStatus()).toEqual({ state: 'downloading', version: '0.2.38' });
   });
 
   it('does not start updater work in development builds', async () => {

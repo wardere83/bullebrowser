@@ -10,7 +10,26 @@ import { IPC, type UpdateStatus } from '../shared/ipc.js';
 import { getActivatedUpdateVersion, recordPreparedUpdate, reconcilePreparedUpdate } from './storage/update-receipt.js';
 
 const { autoUpdater } = electronUpdater;
+
+function isCancellation(err: unknown): boolean {
+  const e = err as { name?: string; message?: string } | undefined;
+  return e?.name === 'CancellationError' || /^cancell?ed$/i.test(String(e?.message ?? '').trim());
+}
+// The token that lets a stalled download be cancelled. Optional so a missing
+// export degrades to marking the download failed without cancelling it.
+const CancellationToken = (electronUpdater as unknown as { CancellationToken?: new () => { cancel(): void } }).CancellationToken;
 const CHECK_INTERVAL_MS = 60 * 1000;
+// A download that reports no progress for this long has stalled (a dropped
+// connection that never errors). It is cancelled and retried automatically.
+const DOWNLOAD_STALL_MS = 90 * 1000;
+// After a failure that has used its quick retries, routine checks keep trying
+// at this slower pace, so a passing outage never parks updates for good.
+const ERROR_RECHECK_MS = 10 * 60 * 1000;
+// How long a requested check waits for a finishing download to settle.
+const SETTLE_WAIT_MS = 5 * 1000;
+// A release feed request that never answers is treated as a timed-out
+// connection, so the next check is not stuck behind it.
+const CHECK_TIMEOUT_MS = 90 * 1000;
 const FOCUS_CHECK_INTERVAL_MS = 60 * 1000;
 const NATIVE_STAGING_TIMEOUT_MS = 5 * 60 * 1000;
 const MAX_CONNECTION_RETRIES = 3;
@@ -89,7 +108,9 @@ export function finishUpdate(version: string, saveSession: () => void, hasActive
   const status = getUpdateStatus();
   const prepared = status.state === 'ready' ? status.version : status.state === 'deferred' ? status.preparedVersion : null;
   if (!app.isPackaged || prepared !== version) throw new Error('This update is not ready to install.');
-  if (process.platform === 'linux') throw new Error('Automatic installation is not supported for this Linux package.');
+  // An AppImage replaces itself in place; other Linux packages update through
+  // the system's package manager.
+  if (process.platform === 'linux' && !process.env.APPIMAGE) throw new Error('Automatic installation is not supported for this Linux package.');
   if (hasActiveTasks()) throw new Error('Wait for the active task to finish before restarting.');
   // Save before handing control to the native installer: before-quit may run
   // after windows close. A failed snapshot must leave the current process alive.
@@ -103,6 +124,21 @@ export function finishUpdate(version: string, saveSession: () => void, hasActive
     autoUpdater.autoRunAppAfterInstall = false;
     throw error;
   }
+}
+
+/**
+ * The way out of an update that only a fresh start can finish (macOS could not
+ * finish preparing it in this session). Quitting lets the system install what
+ * is prepared; the app then opens again with the user's tabs and chat.
+ */
+export function relaunchForUpdate(saveSession: () => void, hasActiveTasks: () => boolean = () => false): void {
+  if (restartPending) return;
+  if (!app.isPackaged) throw new Error('Automatic updates are available in installed builds.');
+  if (hasActiveTasks()) throw new Error('Wait for the active task to finish before restarting.');
+  saveSession();
+  restartPending = true;
+  app.relaunch();
+  app.quit();
 }
 
 export function getUpdateDetails(): { installedVersion: string; activationIssue: string | null; completedVersion: string | null } {
@@ -150,6 +186,8 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   let connectionRetryVersion: string | undefined;
   let connectionRetryAttempts = 0;
   let lastCheckTime = -Infinity;
+  let stallTimer: ReturnType<typeof setTimeout> | undefined;
+  let downloadToken: { cancel(): void } | undefined;
   const isMac = process.platform === 'darwin';
   try {
     activationIssue = reconcilePreparedUpdate(app.getVersion(), app.getAppPath());
@@ -206,6 +244,27 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     stagingFeedUrl = undefined;
   };
 
+  const clearStallWatch = () => {
+    if (stallTimer) clearTimeout(stallTimer);
+    stallTimer = undefined;
+  };
+  // Restarted by every progress event. If a download goes quiet, cancel it and
+  // fail it as an interrupted connection, which retries on its own.
+  const watchForStall = (version: string) => {
+    clearStallWatch();
+    stallTimer = setTimeout(() => {
+      stallTimer = undefined;
+      if (disposed || downloadVersion !== version || stagingVersion) return;
+      try { downloadToken?.cancel(); } catch { /* the failure below still applies */ }
+      downloadToken = undefined;
+      // Let the retry start a fresh download; the stalled task settles on its own.
+      downloadPromise = undefined;
+      const stalled = new Error('The update download stopped responding (connection timed out).');
+      (stalled as Error & { code?: string }).code = 'ETIMEDOUT';
+      failed(stalled);
+    }, DOWNLOAD_STALL_MS);
+  };
+
   const clearConnectionRetry = () => {
     if (connectionRetryTimer) clearTimeout(connectionRetryTimer);
     connectionRetryTimer = undefined;
@@ -231,6 +290,8 @@ export function setupAutoUpdate(win: BrowserWindow): void {
 
   const failed = (err: Error) => {
     if (disposed) return;
+    // Only the stall watch cancels a download, and it has already reported why.
+    if (isCancellation(err)) return;
     if (checkPromise) checkFailure = err;
     console.warn('[updater] error:', err?.message ?? err);
     if (restartPending) {
@@ -240,6 +301,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
       publish();
       return;
     }
+    clearStallWatch();
     const phase = stagingVersion ? 'prepare' : downloadVersion ? 'download' : 'check';
     const version = stagingVersion ?? downloadVersion ?? (latest.state === 'error' ? latest.version : undefined);
     if (!version) return; // An unrelated feed failure cannot hide a ready update.
@@ -295,8 +357,11 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     // updateInfoAndProvider is set before update-available, so this uses the
     // same verified feed result. The promise also serializes native staging.
     const version = info.version;
+    downloadToken = CancellationToken ? new CancellationToken() : undefined;
+    const token = downloadToken;
+    watchForStall(version);
     const task = Promise.resolve()
-      .then(() => disposed ? [] : autoUpdater.downloadUpdate())
+      .then(() => disposed ? [] : token ? autoUpdater.downloadUpdate(token as never) : autoUpdater.downloadUpdate())
       .then(() => undefined)
       .catch((err: Error) => {
         // electron-updater emits error and rejects its promise for the same
@@ -305,8 +370,10 @@ export function setupAutoUpdate(win: BrowserWindow): void {
         failed(err);
       })
       .finally(() => {
+        if (downloadToken === token) downloadToken = undefined;
         if (downloadPromise === task) downloadPromise = undefined;
         if (downloadVersion === version) downloadVersion = undefined;
+        if (!downloadVersion) clearStallWatch();
       });
     downloadPromise = task;
   };
@@ -317,6 +384,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     if ((downloadVersion && downloadVersion !== info.version) || stagingVersion) return;
     if (latest.state === 'ready' && compare(info.version, latest.version) === 0) return;
     if (acknowledgedVersion && compare(info.version, acknowledgedVersion) <= 0) return;
+    clearStallWatch();
     highestVersion = info.version;
     if (isMac) {
       // MacUpdater emits this before Squirrel finishes checking and staging the
@@ -371,6 +439,7 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   };
   const progress = (info: { percent: number }) => {
     if (!downloadVersion || stagingVersion || latest.state !== 'downloading' || latest.version !== downloadVersion || !Number.isFinite(info.percent)) return;
+    watchForStall(downloadVersion);
     send({ state: 'downloading', version: downloadVersion, percent: Math.max(0, Math.min(100, Math.round(info.percent))) });
   };
   const unavailable = () => {
@@ -399,14 +468,23 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     lastCheckTime = Date.now();
     checkError = undefined;
     checkFailure = undefined;
+    let checkTimer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<never>((_, reject) => {
+      checkTimer = setTimeout(() => {
+        const err = new Error('The update server did not answer (connection timed out).');
+        (err as Error & { code?: string }).code = 'ETIMEDOUT';
+        reject(err);
+      }, CHECK_TIMEOUT_MS);
+    });
     const task = Promise.resolve()
-      .then(() => disposed ? null : autoUpdater.checkForUpdates())
+      .then(() => disposed ? null : Promise.race([autoUpdater.checkForUpdates(), timedOut]))
       .then(() => undefined)
       .catch((err: Error) => {
         checkError = err;
         if (err !== checkFailure) failed(err);
       })
       .finally(() => {
+        if (checkTimer) clearTimeout(checkTimer);
         if (checkPromise === task) checkPromise = undefined;
       });
     checkPromise = task;
@@ -416,8 +494,13 @@ export function setupAutoUpdate(win: BrowserWindow): void {
     clearConnectionRetry();
     connectionRetryAttempts = 0;
     // The error event arrives before the download promise settles. A click
-    // during that gap must wait for cleanup instead of silently doing nothing.
-    if (downloadPromise) await downloadPromise;
+    // during that gap must wait for cleanup instead of silently doing nothing,
+    // but never for a download that is still running: its progress is shown.
+    if (downloadPromise) {
+      let wait: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([downloadPromise, new Promise<void>((resolve) => { wait = setTimeout(resolve, SETTLE_WAIT_MS); })]);
+      if (wait) clearTimeout(wait);
+    }
     await check();
     if (checkError) throw new Error('Could not check for updates. Check your connection and try again.');
   };
@@ -444,14 +527,18 @@ export function setupAutoUpdate(win: BrowserWindow): void {
   void check();
   const timer = setInterval(() => {
     // Failed downloads use bounded backoff; native staging failures need an
-    // explicit retry. Routine discovery must not bypass either policy.
+    // explicit retry. Routine discovery must not bypass either policy, but once
+    // the quick retries are spent it tries again now and then, so an outage
+    // or a bad moment on the release server never leaves updates parked.
     if (latest.state !== 'error') void check();
+    else if (latest.retryable !== false && !connectionRetryTimer && Date.now() - lastCheckTime >= ERROR_RECHECK_MS) void check();
   }, CHECK_INTERVAL_MS);
   app.once('quit', () => {
     disposed = true;
     clearInterval(timer);
     clearStaging();
     clearConnectionRetry();
+    clearStallWatch();
     targetWindow?.removeListener('focus', focused);
     targetWindow = undefined;
     autoUpdater.removeListener('update-available', available);
