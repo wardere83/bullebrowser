@@ -3,7 +3,7 @@ import { GoalPlanner, parseGoals } from './planning.js';
 import type { AgentInput } from './types.js';
 import type { ToolCallRecord } from './agent-loop.js';
 
-const input = () => ({ model: 'claude-opus-4-7', onStep: vi.fn() }) as unknown as AgentInput;
+const input = () => ({ model: 'claude-opus-5-5', onStep: vi.fn() }) as unknown as AgentInput;
 const record = (ok: boolean) => ({ name: 'read_page', ok, errorCode: ok ? undefined : 'ELEMENT_NOT_FOUND' }) as ToolCallRecord;
 describe('separate goal planning', () => {
   it('rejects malformed or unbounded plans instead of executing their contents', () => {
@@ -47,10 +47,10 @@ describe('separate goal planning', () => {
     await planner.tool.execute({ id: '1' });
     expect(planner.goals.map((goal) => goal.status)).toEqual(['completed', 'active']);
   });
-  it('uses a fast executor and promotes final synthesis to the large model', async () => {
+  it('runs every Claude step and the final synthesis on the chosen assistant', async () => {
     const planner = new GoalPlanner(input(), async () => '["Read"]');
-    expect(planner.model).toBe('claude-haiku-4-5-20251001');
-    planner.beginSynthesis(); expect(planner.model).toBe('claude-opus-4-7');
+    expect(planner.model).toBe('claude-opus-5-5');
+    planner.beginSynthesis(); expect(planner.model).toBe('claude-opus-5-5');
     planner.requestReplan(); expect(planner.synthesis).toBe(false);
   });
   it('stops after repeated failed replans rather than looping indefinitely', async () => {

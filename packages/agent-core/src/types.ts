@@ -10,9 +10,25 @@ export type AnthropicCredentials = NonNullable<ClientOptions['credentials']>;
 export type ProviderId = 'anthropic' | 'openai';
 
 export type ClaudeModelId =
-  | 'claude-opus-4-7'
-  | 'claude-sonnet-4-6'
-  | 'claude-haiku-4-5-20251001';
+  | 'claude-opus-5-5'
+  | 'claude-sonnet-5-5'
+  | 'claude-haiku-5-5';
+
+/**
+ * Assistants saved by earlier versions, and what each one is now. Settings,
+ * conversations and requests from before the upgrade still name these, so
+ * every model id that arrives from storage or the renderer goes through
+ * normalizeModelId() first.
+ */
+const LEGACY_MODEL_IDS: Record<string, ClaudeModelId> = {
+  'claude-opus-4-7': 'claude-opus-5-5',
+  'claude-opus-4-8': 'claude-opus-5-5',
+  'claude-opus-5': 'claude-opus-5-5',
+  'claude-sonnet-4-6': 'claude-sonnet-5-5',
+  'claude-sonnet-5': 'claude-sonnet-5-5',
+  'claude-haiku-4-5-20251001': 'claude-haiku-5-5',
+  'claude-haiku-4-5': 'claude-haiku-5-5',
+};
 
 export type OpenAiModelId = 'gpt-4o' | 'gpt-4o-mini';
 
@@ -24,6 +40,13 @@ export type ModelId = ClaudeModelId | OpenAiModelId;
  */
 export const PLAN_STEP_TOOL = 'update_plan_step';
 
+/** The current id for a saved or requested assistant; unknown values get the default. */
+export function normalizeModelId(model: unknown, fallback: ModelId = 'claude-opus-5-5'): ModelId {
+  if (typeof model !== 'string') return fallback;
+  if (ASSISTANTS.some((assistant) => assistant.id === model)) return model as ModelId;
+  return LEGACY_MODEL_IDS[model] ?? fallback;
+}
+
 export function providerFor(model: ModelId): ProviderId {
   return model.startsWith('claude') ? 'anthropic' : 'openai';
 }
@@ -33,9 +56,9 @@ export function providerFor(model: ModelId): ProviderId {
 // swapped or upgraded without the product's surface changing. The `provider`
 // field is what actually routes the call; `label` is the only part a user sees.
 export const ASSISTANTS: { id: ModelId; label: string; provider: ProviderId }[] = [
-  { id: 'claude-opus-4-7', label: 'BulleBrowser Pro', provider: 'anthropic' },
-  { id: 'claude-sonnet-4-6', label: 'BulleBrowser Balanced', provider: 'anthropic' },
-  { id: 'claude-haiku-4-5-20251001', label: 'BulleBrowser Fastest', provider: 'anthropic' },
+  { id: 'claude-opus-5-5', label: 'BulleBrowser Pro', provider: 'anthropic' },
+  { id: 'claude-sonnet-5-5', label: 'BulleBrowser Balanced', provider: 'anthropic' },
+  { id: 'claude-haiku-5-5', label: 'BulleBrowser Fastest', provider: 'anthropic' },
   { id: 'gpt-4o', label: 'BulleBrowser Open', provider: 'openai' },
   { id: 'gpt-4o-mini', label: 'BulleBrowser Open Fast', provider: 'openai' },
 ];
@@ -237,7 +260,7 @@ export interface AgentMessage {
 export interface AgentStep {
   callId?: string;
   durationMs?: number;
-  type: 'source' | 'warning' | 'plan' | 'thinking' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget' | 'page_instructions';
+  type: 'source' | 'warning' | 'plan' | 'thinking' | 'strategy' | 'tool_call' | 'tool_result' | 'text' | 'error' | 'done' | 'budget' | 'page_instructions';
   toolName?: ToolName;
   detail?: string;
   data?: unknown;
@@ -297,6 +320,14 @@ export interface AgentInput {
   /** Native host transport: credentials remain in the OS vault, outside page JavaScript. */
   modelFetch?: typeof fetch;
   model: ModelId;
+  /**
+   * How hard the model thinks on each turn. Defaults to "high" for planned
+   * browsing tasks and "medium" otherwise. One value for the whole run, so the
+   * cached prompt stays valid from turn to turn.
+   */
+  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  /** Show the live strategy playbook while the task runs (default true). */
+  strategyPanel?: boolean;
   systemPrompt: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   userMessage: string;

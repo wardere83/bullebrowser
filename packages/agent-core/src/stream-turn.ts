@@ -16,10 +16,16 @@ type Turn = Pick<Anthropic.Message, 'content' | 'stop_reason'> & {
    */
   truncatedToolCalls?: number;
 };
-/** Consume complete content blocks, never partial JSON. Private thinking stays in the provider transcript. */
+/**
+ * Consume complete content blocks, never partial JSON. Private thinking stays
+ * in the provider transcript. With the "updates" display, a thinking block
+ * carries only the model's short progress note between tool calls, never its
+ * reasoning; `onNote` gets each completed, non-empty one as it ends.
+ */
 export async function consumeTurn(
   source: AsyncIterable<Anthropic.RawMessageStreamEvent> | Turn,
   onTool: (tool: Anthropic.ToolUseBlock) => void,
+  onNote?: (note: string) => void,
 ): Promise<Turn> {
   // Also supports non-streaming transports used by embedded hosts.
   if (!(Symbol.asyncIterator in source)) return source;
@@ -60,6 +66,9 @@ export async function consumeTurn(
       else if (delta.type === 'citations_delta' && block.type === 'text') (block.citations ??= []).push(delta.citation);
     } else if (event.type === 'content_block_stop') {
       const block = content[event.index];
+      if (block?.type === 'thinking' && block.thinking.trim()) {
+        try { onNote?.(block.thinking); } catch { /* a display hook never breaks the turn */ }
+      }
       if (block?.type === 'tool_use') {
         const raw = json.get(event.index);
         // A call with no arguments streams nothing, or one empty delta: its

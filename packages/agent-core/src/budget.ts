@@ -29,7 +29,11 @@ const EXPENSIVE = new Set([
   'replay',
 ]);
 
+// Bookkeeping the user sees, not browsing: never charged.
+const FREE = new Set(['share_strategy']);
+
 export function stepCost(toolName: string): number {
+  if (FREE.has(toolName)) return 0;
   if (CHEAP.has(toolName)) return 0.5;
   if (EXPENSIVE.has(toolName)) return 2;
   return 1;

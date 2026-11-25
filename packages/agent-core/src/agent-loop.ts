@@ -7,6 +7,7 @@ import type { ResearchProgress } from './research.js';
 import { runLocalAgent } from './local-agent.js';
 import { anthropicAuth, hasModelAccess } from './anthropic-auth.js';
 import { assertAllowedToolDestination } from './destinations.js';
+import { STRATEGY_INSTRUCTIONS, strategyTool } from './strategy.js';
 // The BulleBrowser agent loop.
 //
 // This is a real Claude tool-use loop: the model is given the browser tool
@@ -60,7 +61,7 @@ import {
   type ToolName,
 } from './types.js';
 
-export const DEFAULT_MODEL: ModelId = 'claude-opus-4-7';
+export const DEFAULT_MODEL: ModelId = 'claude-opus-5-5';
 
 // How much of the active tab's text is handed to the model up front.
 const PAGE_SNIPPET_CHARS = 6_000;
@@ -82,6 +83,37 @@ const ELIDED_RESULT_CHARS = 1_200;
 // Max tokens for each model turn. Well under the SDK's non-streaming HTTP
 // timeout while leaving room for a substantial final report.
 const MAX_TOKENS_PER_TURN = 4096;
+
+// Claude thinks on every turn, and thinking counts against max_tokens, so a
+// turn starts with ample room and is asked again with more when a tool call is
+// cut off. Streamed, so the size never trips an HTTP timeout.
+const CLAUDE_TURN_TOKENS = 32_000;
+const CLAUDE_TURN_TOKENS_CEILING = 64_000;
+
+// Request features newer than the installed SDK's types. Each is optional: if
+// the service turns one down, the run carries on without them (see below).
+//  - updates: the short notes the model writes between tool calls come back
+//    readable, so the panel shows what it is doing, never its private reasoning;
+//  - binding: older tool results are shortened to save space, which edits the
+//    history; earlier reasoning is then set aside instead of failing the turn;
+//  - fallback: a request a safety check declines is retried on the model the
+//    service recommends, instead of ending the task.
+const THINKING_UPDATES_BETA = 'thinking-display-updates-2026-08-18';
+const THINKING_BINDING_BETA = 'thinking-binding-controls-2026-08-01';
+const REFUSAL_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+
+// How the assistant answers. Stable text, so it stays in the cached prompt.
+const RESPONSE_CRAFT =
+  'How to answer: lead with the answer or the result, then only what the user needs to act on it. Match the ' +
+  'length to the question: a quick question gets a short reply, a real piece of work gets a complete, well ' +
+  'organized one with short headings, lists or a table where they make it easier to scan. Think about what the ' +
+  'user is trying to achieve, not only the literal words, and end with the one next step that moves them ' +
+  'forward when there is one. When a request is ambiguous and a wrong guess would waste their time, ask one ' +
+  'focused question; otherwise make a sensible assumption, say what it was and keep going. Check anything that ' +
+  'changes (dates, amounts, eligibility, contacts) against a source before stating it, cite the pages you used, ' +
+  'and say plainly what you could not confirm. Be warm and direct; skip filler, stock phrases and apologies.\n\n' +
+  'While you work, write a short note before a group of tool calls saying what you are about to do and why, ' +
+  'so the user can follow along; keep each note to one or two sentences.';
 
 // The tools we expose to the model. This is a curated subset of the registry:
 // the primary, well-described tools (using the same names referenced in the
@@ -802,6 +834,7 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     'Respect destination policy blocks. Never bypass them through alternate URLs, redirects or fallbacks, ' +
     'even if earlier conversation history did so. Use web_search for discovery. ' +
     'If search is unavailable, explain the failure or inspect an allowed source supplied by the user.\n\n' +
+    `${RESPONSE_CRAFT}\n\n${input.strategyPanel === false ? '' : `${STRATEGY_INSTRUCTIONS}\n\n`}` +
     `${UNTRUSTED_RULES}${contextNote}${referenceNote}`;
   const budget = new StepBudget(input.budget);
   const sealedContext = [pageContext, ...referenceBlocks].filter(Boolean).join('\n\n');
@@ -812,6 +845,12 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
     await planner.ensure();
     const previous = input.onToolRecord;
     input = { ...input, extraTools: [...(input.extraTools ?? []), planner.tool], onToolRecord: (record) => { planner.observe(record); previous?.(record); } };
+  }
+
+  // The strategy playbook is declared from the first request, like every other
+  // tool, so the tool list (part of the cached prompt) never changes mid-run.
+  if (input.strategyPanel !== false) {
+    input = { ...input, extraTools: [...(input.extraTools ?? []), strategyTool(onStep)] };
   }
 
   // Merge host-supplied API tools in with the built-in browser tools so the
@@ -832,19 +871,51 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
 
   const client = new Anthropic({ ...anthropicAuth(input), ...(input.modelFetch ? { fetch: input.modelFetch, dangerouslyAllowBrowser: true } : {}) });
 
-  // Adaptive thinking lets the model reason between tool calls, which markedly
-  // improves multi-step browsing. Supported on the Opus/Sonnet tiers but not on
-  // Haiku, so gate on the model. When on, give max_tokens extra headroom since
-  // thinking tokens count against it. A reply the limit cuts off inside a tool
-  // call is asked again with more room, up to the ceiling.
-  const supportsThinking = !input.model.startsWith('claude-haiku');
-  let maxTokens = supportsThinking ? 16000 : MAX_TOKENS_PER_TURN;
-  const maxTokensCeiling = supportsThinking ? 32000 : 16000;
+  // Every current assistant thinks adaptively between tool calls, which markedly
+  // improves multi-step browsing; effort sets how deeply. One effort for the
+  // whole run keeps the cached prompt valid from turn to turn. A reply the
+  // limit cuts off inside a tool call is asked again with more room.
+  const model = planner?.model ?? input.model;
+  const effort = input.effort ?? (input.planning ? 'high' : 'medium');
+  let maxTokens = CLAUDE_TURN_TOKENS;
+  const maxTokensCeiling = CLAUDE_TURN_TOKENS_CEILING;
   // Told to the model with the next tool results when a call was cut off.
   let truncatedNote = '';
-  const thinking: Anthropic.ThinkingConfigParam | undefined = supportsThinking
-    ? { type: 'adaptive' }
+  // The newer request features, until the service turns them down once.
+  let enhanced = true;
+  const refusalFallback = /^claude-(?:opus|sonnet)-5-5$/.test(model);
+  const requestBody = () => {
+    const body = {
+      model,
+      stream: true as const,
+      max_tokens: maxTokens,
+      system,
+      tools: toolDefs,
+      messages,
+      // Caches the stable prefix (tools, system prompt, earlier turns), so each
+      // turn of a long task pays for little more than what is new.
+      cache_control: { type: 'ephemeral' as const },
+      output_config: { effort },
+      thinking: enhanced
+        ? { type: 'adaptive', display: 'updates', block_binding: { prefix_mismatch_behavior: 'drop_block' } }
+        : { type: 'adaptive' },
+      ...(enhanced && refusalFallback ? { fallbacks: 'default' } : {}),
+    };
+    return body as unknown as Anthropic.MessageCreateParamsStreaming;
+  };
+  const requestHeaders = () => enhanced
+    ? { 'anthropic-beta': [THINKING_UPDATES_BETA, THINKING_BINDING_BETA, ...(refusalFallback ? [REFUSAL_FALLBACK_BETA] : [])].join(',') }
     : undefined;
+  // What the plan says now, added to the conversation (never the system prompt,
+  // which must not change mid-run) each time it changes.
+  let plannerNote = '';
+  // The model's notes between tool calls, shown as it works.
+  const showProgressNote = (note: string) => {
+    const clean = applyTerminology(note.trim());
+    // A stand-in for unfinished work, not something the user needs to read.
+    if (!clean || clean === INTERRUPTED_NOTE || protectAssistantIdentity(clean) !== clean) return;
+    onStep({ type: 'thinking', detail: clean, data: { kind: 'note' } });
+  };
 
   const messages: Anthropic.MessageParam[] = [
     ...input.history.map((m) => ({ role: m.role, content: m.content })),
@@ -861,12 +932,18 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
 
     if (input.shouldReplan?.()) planner?.requestReplan();
     await planner?.ensure();
+    if (planner && planner.instructions !== plannerNote) {
+      plannerNote = planner.instructions;
+      appendUserNote(messages, `BulleBrowser task plan update:${plannerNote}`);
+    }
     onStep({ type: 'thinking', detail: 'Thinking…' });
 
     // Pass the abort signal to the SDK so Stop interrupts a model call that's
     // already in flight. Without it, cancelling was only checked between turns
     // — the user hit Stop and then waited out the whole current response.
-    elideOldToolResults(messages);
+    // Shortening old results edits the history, which only the binding feature
+    // tolerates; without it the history is left exactly as it was sent.
+    if (enhanced) elideOldToolResults(messages);
     const dispatch = new ToolDispatchQueue<ToolCallOutcome>(async (toolUse) => {
       if (context.signal.aborted) throw new Error('cancelled');
       await planner?.ensure();
@@ -884,21 +961,17 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
         // request that failed outright has already had the SDK's retries.
         let streaming = false;
         try {
-          const source = await client.messages.create(
-            {
-              model: planner?.model ?? input.model,
-              stream: true,
-              max_tokens: maxTokens,
-              ...(!planner && thinking ? { thinking } : {}),
-              system: system + (planner?.instructions ?? ''),
-              tools: toolDefs,
-              messages,
-            },
-            { signal },
-          );
+          const headers = requestHeaders();
+          const source = await client.messages.create(requestBody(), { signal, ...(headers ? { headers } : {}) });
           streaming = true;
-          return await consumeTurn(source, (tool) => { dispatched += 1; void dispatch.enqueue(tool); });
+          return await consumeTurn(source, (tool) => { dispatched += 1; void dispatch.enqueue(tool); }, showProgressNote);
         } catch (error) {
+          // A service that turns down the newer request features: carry on
+          // without them, rather than fail the task over an optional extra.
+          if (enhanced && !streaming && enhancementRejected(error)) {
+            enhanced = false;
+            continue;
+          }
           const delay = TURN_RETRY_DELAYS_MS[attempt];
           if (!streaming || dispatched || delay === undefined || context.signal.aborted || !isInterruptedTurn(error)) throw error;
           onStep({ type: 'thinking', detail: 'The connection to the AI service dropped. Retrying…' });
@@ -909,6 +982,14 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
         }
       }
     });
+
+    // A safety check declined the request, and no fallback model took it.
+    if (response.stop_reason === 'refusal') {
+      terminalAnswer = true;
+      finalText = finalText || REFUSAL_REPLY;
+      onStep({ type: 'text', detail: finalText });
+      break;
+    }
 
     // The output limit cut a tool call off before its input was complete, so it
     // never ran. That used to end the task with "Unexpected end of JSON input".
@@ -1026,6 +1107,17 @@ async function runAgentTask(input: AgentInput, progress: TaskOutcomeTracker): Pr
 const FINAL_ANSWER_REQUEST =
   'Now write the final answer in full, citing the pages read. The user sees only this reply, so include every ' +
   'result in it, including any JSON or list that was asked for, and do not refer to earlier messages.';
+
+const INTERRUPTED_NOTE = 'This part of the response was interrupted before it finished.';
+
+const REFUSAL_REPLY =
+  "I can't help with that request as written. If I misread it, tell me more about what you need and I'll try again.";
+
+/** The service turned down one of the newer, optional request features. */
+function enhancementRejected(error: unknown): boolean {
+  return error instanceof APIError && error.status === 400 &&
+    /anthropic-beta|beta|fallbacks|display|block_binding|output_config|effort|cache_control/i.test(error.message);
+}
 
 const TRUNCATED_CALL_NOTE =
   'Your last tool call was cut off at the length limit before its input was complete, so it did not run. ' +
