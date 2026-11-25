@@ -1,4 +1,5 @@
 import { sanitizeAssistantText } from '@bullebrowser/agent-core/presentation';
+import type { StrategyPlaybook } from '@bullebrowser/agent-core';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 
 export type ActivityStatus = 'idle' | 'running' | 'error';
@@ -49,6 +50,7 @@ const ACTIONS: Record<string, string> = {
   funding_get_opportunity: 'Checking a funding listing',
   org_get_profile: "Reviewing your organization's profile",
   org_search_knowledge: "Searching your organization's documents",
+  share_strategy: 'Updating your strategy playbook',
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -133,4 +135,26 @@ export function pagesRead(steps: readonly AgentStepEvent[]): number {
     } catch { /* A malformed URL is not a read page. */ }
   }
   return pages.size;
+}
+
+/** The newest strategy playbook of the task, if the assistant has shared one. */
+export function latestPlaybook(steps: readonly AgentStepEvent[]): StrategyPlaybook | null {
+  for (let i = steps.length - 1; i >= 0; i -= 1) {
+    const step = steps[i];
+    if (step?.kind === 'strategy' && step.playbook?.headline) return step.playbook;
+  }
+  return null;
+}
+
+/**
+ * The assistant's newest short progress note while a task runs. Notes are
+ * written for the user to read; they are never the assistant's private reasoning.
+ */
+export function latestNote(steps: readonly AgentStepEvent[]): string {
+  for (let i = steps.length - 1; i >= 0; i -= 1) {
+    const step = steps[i];
+    if (step?.kind === 'thinking' && step.note && step.detail?.trim()) return sanitizeAssistantText(step.detail.trim()).slice(0, 280);
+    if (step?.kind === 'text' || step?.kind === 'done') return '';
+  }
+  return '';
 }

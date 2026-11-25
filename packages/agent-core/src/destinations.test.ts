@@ -268,7 +268,7 @@ describe('API-only host discovery failures', () => {
     const ctx = context();
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response('{}', { status: 503 }));
     await expect(runAgent({
-      model: 'claude-sonnet-4-6', systemPrompt: '', history: [], userMessage: 'Find grants for schools',
+      model: 'claude-sonnet-5-5', systemPrompt: '', history: [], userMessage: 'Find grants for schools',
       researchMode: true, context: ctx, onStep: () => {},
       extraTools: [webSearchTool({ ...(mode === 'provider failure' ? { apiKey: 'test' } : {}), fetch: request })],
     })).rejects.toThrow(mode === 'provider failure' ? 'HTTP 503' : 'Open Settings → Web search');

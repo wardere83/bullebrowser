@@ -115,7 +115,7 @@ export function AiPanel() {
   // Voice input overlay: null when off, otherwise the active mode.
   const [voiceMode, setVoiceMode] = useState<'once' | 'continuous' | null>(null);
   const [skillId, setSkillId] = useState<string>('');
-  const [model, setModel] = useState<ModelId>('claude-opus-4-7');
+  const [model, setModel] = useState<ModelId>('claude-opus-5-5');
   const [showHistory, setShowHistory] = useState(false);
   // False until this mount has chosen the chat to show. A prompt that arrives
   // earlier waits, so it is not sent into the chat about to be replaced.
@@ -167,7 +167,7 @@ export function AiPanel() {
         if (configuredProvider !== 'openai' && hasOpenAi) {
           effectiveSettings = await bridge.settings.set({ defaultModel: 'gpt-4o' });
         } else if (configuredProvider === 'openai' && hasAnthropic) {
-          effectiveSettings = await bridge.settings.set({ defaultModel: 'claude-opus-4-7' });
+          effectiveSettings = await bridge.settings.set({ defaultModel: 'claude-opus-5-5' });
         }
       }
       setModel(effectiveSettings.defaultModel);

@@ -93,7 +93,7 @@ for (const task of dataset.tasks) {
           callback({ cancel: /^https?:/.test(details.url) && !details.url.startsWith(allowedOrigin + '/') });
         });
       }, origin);
-      await win.evaluate((model: string) => window.bullebrowser.settings.set({ defaultModel: model as ModelId }), provider === 'openai' ? 'gpt-4o' : 'claude-opus-4-7');
+      await win.evaluate((model: string) => window.bullebrowser.settings.set({ defaultModel: model as ModelId }), provider === 'openai' ? 'gpt-4o' : 'claude-opus-5-5');
       await win.reload();
       await win.evaluate((url) => window.bullebrowser.tabs.create(url), origin + (task.injection ? '/?injection=1' : '/'));
       await win.evaluate(() => {

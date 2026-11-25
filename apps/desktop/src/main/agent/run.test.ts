@@ -355,7 +355,7 @@ describe('Claude access without a saved key', () => {
     mocks.savedKey = null;
     mocks.federated = credentials;
     mocks.runAgent.mockResolvedValue('Answered with federated access.');
-    await runTask({ model: 'claude-opus-4-7' });
+    await runTask({ model: 'claude-opus-5-5' });
     const input = mocks.runAgent.mock.calls[0]![0];
     expect(input.apiKey).toBeUndefined();
     expect(input.anthropicCredentials).toBe(credentials);
@@ -365,7 +365,7 @@ describe('Claude access without a saved key', () => {
   it('uses the saved key without consulting federation', async () => {
     mocks.federated = credentials;
     mocks.runAgent.mockResolvedValue('Answered with the saved key.');
-    await runTask({ model: 'claude-opus-4-7' });
+    await runTask({ model: 'claude-opus-5-5' });
     const input = mocks.runAgent.mock.calls[0]![0];
     expect(input.apiKey).toBe('test-api-key');
     expect(input).not.toHaveProperty('anthropicCredentials');

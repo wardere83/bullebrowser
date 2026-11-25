@@ -4,7 +4,7 @@ import { TaskOutcomeTracker } from './task-outcome.js';
 import { PLAN_STEP_TOOL, type AgentInput } from './types.js';
 
 const input = {
-  model: 'claude-opus-4-7',
+  model: 'claude-opus-5-5',
   systemPrompt: '',
   history: [],
   userMessage: 'What does this page say about eligibility?',

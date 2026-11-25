@@ -1,7 +1,7 @@
 import { normalizeAccessibility } from '../../shared/accessibility.js';
 import { DEFAULT_SETTINGS, type AppSettings } from '../../shared/ipc.js';
 import { createStore } from './store.js';
-import { isBlockedDestination } from '@bullebrowser/agent-core';
+import { isBlockedDestination, normalizeModelId } from '@bullebrowser/agent-core';
 
 const store = createStore<AppSettings & Record<string, unknown>>(
   'settings',
@@ -42,12 +42,14 @@ export function getSettings(): AppSettings {
 
   return {
     accessibility: normalizeAccessibility(store.get('accessibility')),
-    defaultModel: store.get('defaultModel'),
+    // Older installs saved retired model ids; map them to the current ones.
+    defaultModel: normalizeModelId(store.get('defaultModel'), DEFAULT_SETTINGS.defaultModel),
     aiPanelOpen: store.get('aiPanelOpen'),
     searchProvider: resolvedSearchProvider,
     homepageUrl: normalizedHomepageUrl ?? DEFAULT_SETTINGS.homepageUrl,
     autoDismissConsent: (store.get('autoDismissConsent') as boolean | undefined) ?? DEFAULT_SETTINGS.autoDismissConsent,
     stepBudget: clampBudget(store.get('stepBudget') as number | undefined),
+    browsingPace: normalizePace(store.get('browsingPace')),
   };
 }
 
@@ -63,4 +65,9 @@ export function setSettings(patch: Partial<AppSettings>): AppSettings {
 function clampBudget(v: number | undefined): number {
   if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_SETTINGS.stepBudget;
   return Math.max(5, Math.min(200, Math.round(v)));
+}
+
+
+function normalizePace(value: unknown): AppSettings['browsingPace'] {
+  return value === 'relaxed' || value === 'natural' || value === 'quick' ? value : DEFAULT_SETTINGS.browsingPace;
 }

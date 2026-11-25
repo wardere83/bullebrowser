@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { runAgent } from './agent-loop.js';
 import type { AgentStep, ClaudeModelId, ToolContext, ToolRuntime } from './types.js';
 
-const MODEL: ClaudeModelId = 'claude-sonnet-4-6';
+const MODEL: ClaudeModelId = 'claude-sonnet-5-5';
 
 const SYSTEM = [
   'You are the BulleBrowser agent with control of a web browser.',

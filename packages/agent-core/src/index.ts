@@ -31,3 +31,4 @@ export * from './funding-sources.js';
 export * from './presentation.js';
 
 export * from './task-outcome.js';
+export * from './strategy.js';

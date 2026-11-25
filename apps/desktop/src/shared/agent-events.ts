@@ -1,3 +1,5 @@
+import type { StrategyPlaybook } from '@bullebrowser/agent-core';
+
 export interface ReplayFrame {
   callId: string; tool: string; tabId: string; url: string; title: string; at: number;
   image: string; width: number; height: number;
@@ -15,7 +17,11 @@ export type AgentStepEvent = { callId?: string; durationMs?: number } & (
   | { kind: 'replay'; frame: ReplayFrame; ts: number }
   | { kind: 'scope'; granted: boolean; label: string; ts: number }
   | { kind: 'warning'; message: string; ts: number }
-  | { kind: 'thinking'; detail?: string; ts: number }
+  // note: a short progress note the assistant wrote while working, shown in
+  // the thinking area in place of a generic "Thinking" line.
+  | { kind: 'thinking'; detail?: string; note?: boolean; ts: number }
+  // The live strategy playbook for the opportunity being browsed.
+  | { kind: 'strategy'; playbook: StrategyPlaybook; ts: number }
   | { kind: 'tool_call'; toolName: string; detail: string; input: unknown; ts: number }
   | { kind: 'tool_result'; toolName: string; output: unknown; ts: number }
   | { kind: 'text'; text: string; ts: number }

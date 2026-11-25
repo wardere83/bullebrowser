@@ -38,7 +38,7 @@ describe('the connected assistant', () => {
   });
 
   it("uses the current model of the tier the user chose, with that provider's key", async () => {
-    const assistant = createAssistant({ selectedModel: () => 'claude-sonnet-4-6', apiKey: keys({ anthropic: 'key-a', openai: 'key-o' }) });
+    const assistant = createAssistant({ selectedModel: () => 'claude-sonnet-5-5', apiKey: keys({ anthropic: 'key-a', openai: 'key-o' }) });
     await assistant.complete(request());
     const sent = calls.structuredCompletion.mock.calls[0]?.[0];
     expect(sent.model).toBe('claude-sonnet-5-5');
@@ -46,7 +46,7 @@ describe('the connected assistant', () => {
   });
 
   it('falls back to the provider that does have a key', async () => {
-    const assistant = createAssistant({ selectedModel: () => 'claude-opus-4-7', apiKey: keys({ openai: 'key-o' }) });
+    const assistant = createAssistant({ selectedModel: () => 'claude-opus-5-5', apiKey: keys({ openai: 'key-o' }) });
     expect(assistant.connected()).toBe(true);
     await assistant.complete(request());
     const sent = calls.structuredCompletion.mock.calls[0]?.[0];

@@ -161,16 +161,24 @@ export interface AppSettings {
   autoDismissConsent: boolean;
   /** Default step budget per agent task (weighted; raise per task). */
   stepBudget: number;
+  /**
+   * How fast the visible cursor moves, scrolls and types while a task runs.
+   * Natural is an unhurried human tempo; reduced motion always wins.
+   */
+  browsingPace: BrowsingPace;
 }
+
+export type BrowsingPace = 'relaxed' | 'natural' | 'quick';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   accessibility: DEFAULT_ACCESSIBILITY,
-  defaultModel: 'claude-opus-4-7',
+  defaultModel: 'claude-opus-5-5',
   aiPanelOpen: true,
   searchProvider: 'bullebrowser',
   homepageUrl: 'about:blank',
   autoDismissConsent: true,
   stepBudget: 40,
+  browsingPace: 'natural',
 };
 
 export interface HistoryEntry {

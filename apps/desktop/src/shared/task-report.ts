@@ -1,3 +1,4 @@
+import type { StrategyPlaybook } from '@bullebrowser/agent-core';
 import type { TaskRunLog } from './ipc.js';
 import type { AgentStepEvent } from './agent-events.js';
 
@@ -61,7 +62,10 @@ export function pageInstructionWarnings(steps: readonly AgentStepEvent[]): PageI
   return [...warnings.values()];
 }
 export function taskReport(steps: readonly AgentStepEvent[], audit?: Pick<TaskRunLog, 'calls' | 'consents'>): string {
-  const lines = ['# BulleBrowser task report', '', '## Sources', ''];
+  const lines = ['# BulleBrowser task report', ''];
+  const playbook = [...steps].reverse().find((step) => step.kind === 'strategy');
+  if (playbook?.kind === 'strategy') lines.push(...playbookMarkdown(playbook.playbook), '');
+  lines.push('## Sources', '');
   for (const source of taskSources(steps)) lines.push(`- ${source.read ? 'Read' : 'Opened, unverified'}: <${source.url}>`, ...(source.excerpt ? ['', ...source.excerpt.split('\n').map((line) => '> ' + line), ''] : []));
   const warnings = pageInstructionWarnings(steps);
   if (warnings.length) {
@@ -100,4 +104,18 @@ export function taskAuditJson(steps: readonly AgentStepEvent[], audit: Pick<Task
         ...(step.kind === 'tool_result' ? { durationMs: step.durationMs } : {}) }]
       : []),
   }, null, 2) + '\n';
+}
+
+/** The strategy playbook as Markdown, for the exported task report. */
+export function playbookMarkdown(playbook: StrategyPlaybook): string[] {
+  const out = ['## Strategy playbook', '', `**${playbook.headline}**${playbook.outlook ? ` (${playbook.outlook})` : ''}`, ''];
+  if (playbook.fit) out.push(playbook.fit, '');
+  if (playbook.winThemes.length) out.push('### How to win', '', ...playbook.winThemes.map((theme) => `- ${theme}`), '');
+  if (playbook.actions.length) out.push('### Action plan', '', ...playbook.actions.map((action, index) =>
+    `${index + 1}. ${action.step}${action.owner || action.when ? ` (${[action.owner, action.when].filter(Boolean).join(', ')})` : ''}`), '');
+  if (playbook.deadlines?.length) out.push('### Key dates', '', ...playbook.deadlines.map((date) => `- ${date}`), '');
+  if (playbook.risks?.length) out.push('### Watch outs', '', ...playbook.risks.map((risk) => `- ${risk}`), '');
+  if (playbook.nextMove) out.push(`Next move: ${playbook.nextMove}`, '');
+  if (playbook.sources?.length) out.push('Sources: ' + playbook.sources.map((url) => `<${url}>`).join(', '));
+  return out;
 }

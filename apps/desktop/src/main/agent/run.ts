@@ -1,5 +1,5 @@
 import { TaskControl, type TaskCommand } from './task-control.js';
-import { browserSearch, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError, type ApiTool } from '@bullebrowser/agent-core';
+import { type StrategyPlaybook, browserSearch, normalizeModelId, connectorTools, webSearchTool, isFundingDiscoveryRequest, isGrantSearchService, ToolError, type ApiTool } from '@bullebrowser/agent-core';
 import { connectorCatalog, enabledConnectors } from '../connectors/service.js';
 // Coordinates one user-initiated agent task: builds the system prompt
 // (skill-aware), wires the ToolContext to the active tab, runs the loop,
@@ -101,7 +101,7 @@ export async function startAgentRun(
   // Resolve the model first: each assistant authenticates with its own
   // provider's key, so fetching the wrong provider's key would fail with a
   // confusing 401.
-  const model = req.model ?? getSettings().defaultModel ?? DEFAULT_MODEL;
+  const model = normalizeModelId(req.model ?? getSettings().defaultModel, DEFAULT_MODEL);
   const provider = providerFor(model);
   const apiKey = getApiKey(provider);
   // A test build in GitHub Actions has no saved key; it reaches Claude through
@@ -496,7 +496,14 @@ function stepToEvent(step: AgentStep): AgentStepEvent {
     case 'plan':
       return { kind: 'plan', detail: step.detail ?? '', goals: structuredClone((step.data as { goals?: { id: string; goal: string; status: string }[] })?.goals ?? []), ts };
     case 'thinking':
-      return { kind: 'thinking', detail: step.detail, ts };
+      return {
+        kind: 'thinking',
+        detail: step.detail,
+        ...((step.data as { kind?: string } | undefined)?.kind === 'note' ? { note: true } : {}),
+        ts,
+      };
+    case 'strategy':
+      return { kind: 'strategy', playbook: structuredClone(step.data as StrategyPlaybook), ts };
     case 'tool_call':
       return {
         kind: 'tool_call',

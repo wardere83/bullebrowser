@@ -11,9 +11,9 @@ describe('Claude authentication choice', () => {
   });
 
   it('counts credentials as access for Claude models only', () => {
-    expect(hasModelAccess({ model: 'claude-opus-4-7', anthropicCredentials: credentials })).toBe(true);
+    expect(hasModelAccess({ model: 'claude-opus-5-5', anthropicCredentials: credentials })).toBe(true);
     expect(hasModelAccess({ model: 'gpt-4o', anthropicCredentials: credentials })).toBe(false);
     expect(hasModelAccess({ model: 'gpt-4o', apiKey: 'test-key' })).toBe(true);
-    expect(hasModelAccess({ model: 'claude-opus-4-7' })).toBe(false);
+    expect(hasModelAccess({ model: 'claude-opus-5-5' })).toBe(false);
   });
 });

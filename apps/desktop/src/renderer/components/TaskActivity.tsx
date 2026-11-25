@@ -5,7 +5,8 @@ import { pageInstructionWarnings, taskSources, taskReport, taskAuditJson } from 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { AgentStepEvent } from '../../shared/agent-events.js';
 import { Icon } from '../workspace/ui/icons.js';
-import { activityActions, pagesRead, type ActivityStatus } from './task-activity.js';
+import { activityActions, latestNote, latestPlaybook, pagesRead, type ActivityStatus } from './task-activity.js';
+import { StrategyPlaybook } from './StrategyPlaybook.js';
 import { useBrowserStore } from '../state/browser-store.js';
 
 export function TaskActivity({
@@ -42,6 +43,8 @@ export function TaskActivity({
   const failed = status === 'error';
   const open = chosenOpen ?? (running || failed);
   const active = [...actions].reverse().find((action) => action.state === 'running');
+  const playbook = latestPlaybook(steps);
+  const note = running ? latestNote(steps) : '';
   const summary = failed ? 'Task stopped' : running ? active?.label ?? (readCount ? 'Reviewing sources…' : actions.length ? 'Working…' : 'Preparing your task…') : 'Task activity';
   return (
     <section
@@ -70,6 +73,11 @@ export function TaskActivity({
         {actions.length > 0 && <span className="shrink-0 text-[11px] text-ink-secondary">{actions.length} {actions.length === 1 ? 'step' : 'steps'}</span>}
         <Icon name={open ? 'chevron-down' : 'chevron-right'} size={13} className="text-ink-secondary" />
       </button>
+      {/* The assistant's latest note, in its own words, so the user can follow
+          what it is weighing without opening the step log. */}
+      {note && <p aria-live="polite" className="border-t border-line/40 px-3 py-1.5 text-ink-secondary">{note}</p>}
+      {/* The playbook stays in view while the task runs and after it ends. */}
+      {playbook && <StrategyPlaybook playbook={playbook} live={running} />}
       {/* Outside the collapsible log: a page that tried to steer the agent is
           something to see without opening anything. */}
       {warnings.length > 0 && (
