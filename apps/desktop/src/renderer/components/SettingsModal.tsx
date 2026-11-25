@@ -265,6 +265,24 @@ export function SettingsModal() {
           </label>
           <label className="mt-3 flex items-center justify-between gap-3 text-sm">
             <span>
+              Browsing pace
+              <span className="block text-xs text-ink-secondary">
+                How fast the cursor moves, scrolls and types while a task runs. Reduced motion always comes first.
+              </span>
+            </span>
+            <select
+              value={settings.browsingPace ?? 'natural'}
+              onChange={(e) => void update({ browsingPace: e.target.value as AppSettings['browsingPace'] })}
+              aria-label="Browsing pace"
+              className="rounded border border-line px-2 py-1 text-sm"
+            >
+              <option value="relaxed">Relaxed</option>
+              <option value="natural">Natural</option>
+              <option value="quick">Quick</option>
+            </select>
+          </label>
+          <label className="mt-3 flex items-center justify-between gap-3 text-sm">
+            <span>
               Dismiss cookie banners
               <span className="block text-xs text-ink-secondary">
                 Chooses the most private option (reject or necessary-only) on common consent banners.

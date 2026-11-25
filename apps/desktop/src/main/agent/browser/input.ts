@@ -51,11 +51,38 @@ export const KEY_DEFS: Record<KeyName, { key: string; code: string; keyCode: num
 };
 
 // Text as a typist enters it: line breaks are pressed as Enter.
-export async function insertLines(send: (method: string, params: object) => Promise<unknown>, text: string): Promise<void> {
+export async function insertLines(
+  send: (method: string, params: object) => Promise<unknown>,
+  text: string,
+  opts: { pace?: 'relaxed' | 'natural' | 'quick'; signal?: AbortSignal; random?: () => number } = {},
+): Promise<void> {
   const lines = text.split('\n');
+  // With a pace, text goes in a few characters at a time at a typist's
+  // rhythm, so the user can watch it appear in a document. The whole entry is
+  // capped at a few seconds however long the text; past that, each keystroke
+  // carries more characters.
+  const pace = opts.pace;
+  const perChar = pace === 'relaxed' ? 85 : pace === 'quick' ? 30 : 55;
+  const capMs = pace === 'relaxed' ? 5500 : pace === 'quick' ? 2000 : 4000;
+  const random = opts.random ?? Math.random;
+  const typed = text.replace(/\n/g, '').length;
+  const chunk = pace ? Math.max(1, Math.ceil(typed / Math.max(1, Math.floor(capMs / perChar)))) : Infinity;
   for (let i = 0; i < lines.length; i++) {
+    if (opts.signal?.aborted) throw new Error('cancelled');
     if (i > 0) await pressWith(send, KEY_DEFS.Enter);
-    if (lines[i]) await send('Input.insertText', { text: lines[i] });
+    const line = lines[i] ?? '';
+    if (!line) continue;
+    if (!Number.isFinite(chunk)) {
+      await send('Input.insertText', { text: line });
+      continue;
+    }
+    for (let at = 0; at < line.length; at += chunk) {
+      if (opts.signal?.aborted) throw new Error('cancelled');
+      const piece = line.slice(at, at + chunk);
+      await send('Input.insertText', { text: piece });
+      const pause = /[\s.,;:!?]$/.test(piece) ? perChar * 0.9 : 0;
+      await new Promise<void>((resolve) => setTimeout(resolve, Math.round(perChar * (0.55 + random() * 0.8) + pause)));
+    }
   }
 }
 

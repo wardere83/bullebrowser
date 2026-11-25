@@ -19,6 +19,8 @@ let field: Field;
 let page: { __bbDeepQuery: () => Field; __bbCursor: ReturnType<typeof vi.fn>; __bbCancelledRun?: string };
 beforeEach(() => {
   vi.useFakeTimers();
+  // Typing keeps a typist's uneven rhythm; pin it so timings are exact.
+  vi.spyOn(Math, 'random').mockReturnValue(0.5);
   field = new Field();
   page = { __bbDeepQuery: () => field, __bbCursor: vi.fn() };
   vi.stubGlobal('window', page);
@@ -28,7 +30,7 @@ beforeEach(() => {
   vi.stubGlobal('HTMLInputElement', Field);
   vi.stubGlobal('HTMLTextAreaElement', class {});
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 it('cancels the pending click before the dwell ends', async () => {
   const result = CLICK_FN('#confirm', 'run-1');
   const rejection = expect(result).rejects.toThrow('cancelled');
@@ -51,7 +53,8 @@ it('presses the element on the page when it was replaced during the dwell', asyn
 it('stops typing without writing remaining characters', async () => {
   const result = TYPE_FN('#input', 'abcdef', 'run-1');
   const rejection = expect(result).rejects.toThrow('cancelled');
-  await vi.advanceTimersByTimeAsync(180);
+  // 150 ms for the pointer, then about 52 ms for the first keystroke.
+  await vi.advanceTimersByTimeAsync(210);
   expect(field.value).toBe('a');
   page.__bbCancelledRun = 'run-1';
   await vi.advanceTimersByTimeAsync(1000);
@@ -73,7 +76,7 @@ it('shows the real target before typing and leaves the field unchanged during th
   expect(field.value).toBe('');
   await vi.advanceTimersByTimeAsync(1);
   expect(field.value).toBe('');
-  await vi.advanceTimersByTimeAsync(100);
+  await vi.advanceTimersByTimeAsync(300);
   await result;
   expect(field.value).toBe('abc');
 });

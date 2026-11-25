@@ -494,6 +494,96 @@ var __bb = (function () {
 // after read_page runs, and carries aria-hidden), and can be torn down by
 // removing one node.
 export const AGENT_CURSOR = `
+  window.__bbReduced = function () {
+    return !!window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  };
+
+  // The user's chosen browsing pace: relaxed, natural (default) or quick.
+  window.__bbPaceFactor = function () {
+    var pace = window.__bbPace;
+    return pace === 'relaxed' ? 1.4 : pace === 'quick' ? 0.6 : 1;
+  };
+
+  // Move the visible pointer the way a hand moves a mouse: along a gentle arc,
+  // speeding up and easing in, taking longer for longer trips (Fitts's law),
+  // and on a long trip running a hair past the target before settling on it.
+  // This is only the picture the user watches; it changes nothing on the page.
+  // Returns how long the trip takes, in milliseconds.
+  window.__bbGlide = function (ptr, x, y) {
+    var from = window.__bbPtrPos || { x: x, y: y };
+    cancelAnimationFrame(window.__bbGlideFrame);
+    var place = function (px, py) {
+      ptr.style.transform = 'translate(' + px + 'px,' + py + 'px)';
+      window.__bbPtrPos = { x: px, y: py };
+    };
+    var dx = x - from.x, dy = y - from.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 2 || window.__bbReduced() || document.hidden) {
+      place(x, y);
+      window.__bbGlideEnd = Date.now();
+      return 0;
+    }
+    var ms = (170 + 105 * Math.log2(1 + dist / 24)) * window.__bbPaceFactor();
+    ms = Math.round(Math.max(200, Math.min(ms, 1400)));
+    var bend = Math.min(dist * 0.16, 80) * (Math.random() < 0.5 ? -1 : 1);
+    var cx = from.x + dx / 2 - (dy / dist) * bend;
+    var cy = from.y + dy / 2 + (dx / dist) * bend;
+    var past = dist > 260 ? Math.min(9, dist * 0.02) : 0;
+    var tx = x + (dx / dist) * past, ty = y + (dy / dist) * past;
+    var travel = past ? 0.86 : 1;
+    var start = performance.now();
+    window.__bbGlideEnd = Date.now() + ms;
+    var frame = function (now) {
+      var t = Math.min(1, (now - start) / ms);
+      if (t < travel) {
+        var u = t / travel;
+        var e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+        var a = (1 - e) * (1 - e), b = 2 * (1 - e) * e, c = e * e;
+        place(a * from.x + b * cx + c * tx, a * from.y + b * cy + c * ty);
+      } else {
+        var s = (t - travel) / (1 - travel);
+        var k = 1 - (1 - s) * (1 - s);
+        place(tx + (x - tx) * k, ty + (y - ty) * k);
+      }
+      if (t < 1) window.__bbGlideFrame = requestAnimationFrame(frame);
+      else place(x, y);
+    };
+    window.__bbGlideFrame = requestAnimationFrame(frame);
+    return ms;
+  };
+
+  // Bring an element into view by scrolling the page smoothly, as a reader
+  // would, instead of jumping. Resolves once the page has come to rest.
+  window.__bbBringIntoView = function (el) {
+    return new Promise(function (resolve) {
+      try {
+        var r = el.getBoundingClientRect();
+        var margin = Math.min(80, innerHeight / 6);
+        if (r.top >= margin && r.bottom <= innerHeight - margin && r.left >= 0 && r.right <= innerWidth) return resolve();
+        if (window.__bbReduced() || document.hidden) {
+          el.scrollIntoView({ block: 'center', inline: 'nearest' });
+          return resolve();
+        }
+        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+        var last = null, still = 0, started = Date.now();
+        var check = function () {
+          var top = el.isConnected ? el.getBoundingClientRect().top : 0;
+          still = last !== null && Math.abs(top - last) < 0.5 ? still + 1 : 0;
+          last = top;
+          if (still >= 3 || !el.isConnected) return resolve();
+          if (Date.now() - started > 1500) {
+            el.scrollIntoView({ block: 'center', inline: 'nearest' });
+            return resolve();
+          }
+          setTimeout(check, 40);
+        };
+        setTimeout(check, 80);
+      } catch (e) {
+        resolve();
+      }
+    });
+  };
+
   window.__bbCursor = function (el, opts) {
     opts = opts || {};
     try {
@@ -509,7 +599,7 @@ export const AGENT_CURSOR = `
         var cursorStyle =
           ':host{all:initial}' +
           '.ptr{position:fixed;width:22px;height:22px;margin:-2px 0 0 -2px;' +
-            'transition:transform .45s cubic-bezier(.45,.05,.25,1);will-change:transform;' +
+            'will-change:transform;' +
             'filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}' +
           '.ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;' +
             'border:2px solid #20BAD1;opacity:0;pointer-events:none}' +
@@ -534,13 +624,14 @@ export const AGENT_CURSOR = `
         // bar is: it glides in to the first thing the agent acts on, never
         // appearing parked on the page (a site's logo) doing nothing.
         root.querySelector('.ptr').style.transform = 'translate(' + Math.round(innerWidth / 2) + 'px,-40px)';
+        window.__bbPtrPos = { x: Math.round(innerWidth / 2), y: -40 };
       }
       var root2 = host.shadowRoot;
       var ptr = root2.querySelector('.ptr');
       var ring = root2.querySelector('.ring');
       var halo = root2.querySelector('.halo');
-      var reduced = window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
-      ptr.style.transition = reduced ? 'none' : '';
+      var reduced = window.__bbReduced();
+      ptr.style.transition = 'none';
       ring.style.animation = reduced ? 'none' : '';
       halo.style.transition = reduced ? 'none' : '';
       // Only make sure the overlay exists (for a status toast): the pointer
@@ -558,12 +649,15 @@ export const AGENT_CURSOR = `
         y = r.top + r.height / 2;
       }
 
-      ptr.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      // Glide there at a person's tempo; the label waits for the pointer.
+      var travel = window.__bbGlide(ptr, x, y);
       var label = root2.querySelector('.label');
-      label.hidden = !opts.label;
+      label.hidden = true;
       label.textContent = opts.label || '';
       label.style.left = (x + 16) + 'px';
       label.style.top = (y + 16) + 'px';
+      clearTimeout(window.__bbLabelTimer);
+      if (opts.label) window.__bbLabelTimer = setTimeout(function () { label.hidden = false; }, travel);
       var glow = root2.querySelector('.scroll-glow');
       glow.hidden = !opts.scroll;
       if (opts.scroll) setTimeout(function () { glow.hidden = true; }, 500);
@@ -580,11 +674,16 @@ export const AGENT_CURSOR = `
 
       window.__bbLastCursor = { x: x, y: y, at: Date.now() };
       if (opts.click) {
-        ring.style.left = x + 'px';
-        ring.style.top = y + 'px';
-        ring.classList.remove('go');
-        void ring.offsetWidth; // restart the animation
-        ring.classList.add('go');
+        // The press ripple shows when the pointer has arrived and paused,
+        // which is when the press itself happens.
+        clearTimeout(window.__bbRingTimer);
+        window.__bbRingTimer = setTimeout(function () {
+          ring.style.left = x + 'px';
+          ring.style.top = y + 'px';
+          ring.classList.remove('go');
+          void ring.offsetWidth; // restart the animation
+          ring.classList.add('go');
+        }, reduced ? 0 : Math.max(0, window.__bbDwell() - 40));
       }
 
       clearTimeout(window.__bbCursorTimer);
@@ -593,7 +692,7 @@ export const AGENT_CURSOR = `
       // nowhere on the next one.
       window.__bbCursorTimer = setTimeout(function () {
         halo.classList.remove('go');
-      }, opts.hold || 1400);
+      }, (opts.hold || 1400) + travel);
     } catch (e) {
       /* never let the overlay break the action it is illustrating */
     }
@@ -613,10 +712,15 @@ export const AGENT_CURSOR = `
     window.__bbToastTimer = setTimeout(function () { toast.hidden = true; }, 1800);
   };
 
-  // How long an action waits once the pointer starts moving: long enough for
-  // its glide to land on the target, so the user sees where it went first.
+  // How long an action waits once the pointer starts moving: the rest of its
+  // glide, then the short pause a person makes over a target before pressing
+  // it, so the user always sees where it went first.
   window.__bbDwell = function () {
-    return window.__bbReduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 450;
+    if (window.__bbReduced()) return 150;
+    var left = Math.max(0, (window.__bbGlideEnd || 0) - Date.now());
+    var pace = window.__bbPace;
+    var settle = pace === 'relaxed' ? 380 : pace === 'quick' ? 110 : 240;
+    return left + settle + Math.round(Math.random() * 80);
   };
 
   // Move the pointer to a viewport point, no element involved.
@@ -640,6 +744,9 @@ type PageWindow = Window & {
   __bbCursor(el: Element | null, opts?: Record<string, unknown>): void;
   /** Pause for the pointer's glide; absent where the cursor script is not loaded. */
   __bbDwell?(): number;
+  /** Smoothly scroll an element into view; absent without the cursor script. */
+  __bbBringIntoView?(el: Element): Promise<void>;
+  __bbPace?: string;
 };
 
 export interface ClickSpot {
@@ -653,10 +760,11 @@ export interface ClickSpot {
   ref: string;
 }
 
-export function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
+export async function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
   const w = window as unknown as PageWindow;
   const first = __bb.FindClickable(target);
-  first.scrollIntoView({ block: 'center', inline: 'nearest' });
+  if (w.__bbBringIntoView) await w.__bbBringIntoView(first);
+  else first.scrollIntoView({ block: 'center', inline: 'nearest' });
   w.__bbCursor(first, { click: true, label: /^@/.test(target) ? target : undefined });
   // Dwell so the user sees where it's going before the page changes.
   return new Promise<ClickSpot>((resolve, reject) => {
@@ -692,11 +800,12 @@ export function CLICK_SPOT_FN(target: string): Promise<ClickSpot> {
   });
 }
 
-export function CLICK_FN(target: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<string> {
+export async function CLICK_FN(target: string, actionId = (window as unknown as { __bbRunId?: string }).__bbRunId): Promise<string> {
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
   const w = window as unknown as PageWindow;
   const first = __bb.FindClickable(target);
-  first.scrollIntoView({ block: 'center', inline: 'nearest' });
+  if (w.__bbBringIntoView) await w.__bbBringIntoView(first);
+  else first.scrollIntoView({ block: 'center', inline: 'nearest' });
   // Paint the cursor first, then dwell briefly before actually clicking.
   // Without the pause the click fires in the same frame the cursor appears, so
   // the page changes before the user's eye has anywhere to land — the whole
@@ -756,7 +865,8 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
   const label = __bb.Label(html).slice(0, 80);
   const described = label ? `${html.tagName.toLowerCase()} "${label}"` : html.tagName.toLowerCase();
 
-  html.scrollIntoView({ block: 'center' });
+  if (w.__bbBringIntoView) await w.__bbBringIntoView(html);
+  else html.scrollIntoView({ block: 'center' });
   w.__bbCursor(html, { click: true, hold: 4000, label: /^@/.test(target) ? target : undefined });
   await new Promise<void>((resolve) => setTimeout(resolve, w.__bbDwell?.() ?? 150));
   if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) throw new Error('cancelled');
@@ -775,8 +885,8 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
     return Promise.resolve({ matched: `${described} = "${chose}"`, native: false });
   }
 
-  html.scrollIntoView({ block: 'center' });
-  w.__bbCursor(html, { click: true, hold: 4000 });
+  html.scrollIntoView({ block: 'nearest' });
+  w.__bbCursor(html, { hold: 4000 });
   html.focus();
 
   // Rich editors (Word Online, Google Docs, Gmail, Notion) — and any other
@@ -804,21 +914,27 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
     'value',
   )?.set;
 
-  // Write the field one character at a time so the user can actually watch it
-  // being typed. Setting .value in one shot is instant and invisible — the
-  // field just changes, which is precisely the "what did it do?" problem the
-  // cursor exists to solve. Each keystroke dispatches its own input event, so
-  // controlled inputs (React et al) and live search suggestions behave exactly
-  // as they would for a human typist. Pace is capped so a long string doesn't
-  // turn into a wait.
+  // Write the field a keystroke at a time so the user can watch it being
+  // typed, at a typist's uneven rhythm: a little faster inside a word, a beat
+  // longer after a space or punctuation. Each keystroke dispatches its own
+  // input event, so controlled inputs (React et al) and live search
+  // suggestions behave as they would for a person.
   //
-  // At most ~60 visible steps (~1.5s) however long the text: typing a long
-  // email body a character at a time outran the page-call timeout, and the
-  // model's retry then typed into the field a second time. A hidden tab's
+  // The whole entry is capped (about 4s at the natural pace) however long the
+  // text: typing a long body a character at a time outran the page-call
+  // timeout, and the model's retry then typed into the field a second time.
+  // Past the cap it types a few characters per keystroke. A hidden tab's
   // timers are throttled to ~1s, so there it is written in one go.
-  const steps = document.hidden ? 1 : Math.min(text.length, 60);
-  const chunk = Math.max(1, Math.ceil(text.length / Math.max(1, steps)));
-  const perChar = 24;
+  const pace = w.__bbPace;
+  const perChar = pace === 'relaxed' ? 85 : pace === 'quick' ? 30 : 55;
+  const capMs = pace === 'relaxed' ? 5500 : pace === 'quick' ? 2000 : 4000;
+  const steps = document.hidden ? 1 : Math.max(1, Math.min(text.length, Math.floor(capMs / perChar)));
+  const chunk = Math.max(1, Math.ceil(text.length / steps));
+  const beat = (typed: string) => {
+    const last = typed.slice(-1);
+    const pause = /[\s.,;:!?]/.test(last) ? perChar * 0.9 : 0;
+    return Math.round(perChar * (0.55 + Math.random() * 0.8) + pause);
+  };
   const write = (value: string) => {
     if (nativeSetter) nativeSetter.call(input, value);
     else input.value = value;
@@ -838,10 +954,10 @@ export async function TYPE_FN(target: string, text: string, actionId = (window a
       if (actionId && (window as unknown as { __bbCancelledRun?: string }).__bbCancelledRun === actionId) return reject(new Error('cancelled'));
       i = Math.min(text.length, i + chunk);
       write(text.slice(0, i));
-      if (i < text.length) setTimeout(tick, perChar);
+      if (i < text.length) setTimeout(tick, beat(text.slice(0, i)));
       else finish();
     };
-    setTimeout(tick, perChar);
+    setTimeout(tick, beat(''));
   });
 }
 
@@ -850,36 +966,47 @@ export async function SCROLL_FN(
   amount: number,
 ): Promise<number> {
   const doc = document.scrollingElement || document.documentElement;
-  // Park the pointer mid-viewport and let it drift the way the page is going,
-  // so a scroll reads as the agent doing something rather than the page moving
-  // on its own. No halo — there's no element being acted on.
-  const to = (window as unknown as { __bbCursorTo?(x: number, y: number): void }).__bbCursorTo;
-  if (to) {
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    const drift = direction === 'up' || direction === 'top' ? -60 : 60;
-    const cursor = (window as unknown as PageWindow).__bbCursor;
-    if (cursor) cursor(null, { at: { x: cx, y: cy - drift }, scroll: true, label: drift < 0 ? '↑' : '↓', halo: false });
-    else to(cx, cy - drift);
-    setTimeout(() => to(cx, cy + drift), 60);
-  }
-  await new Promise<void>((resolve) => setTimeout(resolve, 150));
+  const w = window as unknown as PageWindow & { __bbReduced?(): boolean };
   const run = window as unknown as { __bbRunId?: string; __bbCancelledRun?: string };
-  if (run.__bbRunId && run.__bbCancelledRun === run.__bbRunId) throw new Error('cancelled');
-  switch (direction) {
-    case 'down':
-      window.scrollBy({ top: amount, behavior: 'smooth' });
-      break;
-    case 'up':
-      window.scrollBy({ top: -amount, behavior: 'smooth' });
-      break;
-    case 'top':
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      break;
-    case 'bottom':
-      window.scrollTo({ top: doc.scrollHeight, behavior: 'smooth' });
-      break;
+  const cancelled = () => !!run.__bbRunId && run.__bbCancelledRun === run.__bbRunId;
+  const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+  const reduced = w.__bbReduced ? w.__bbReduced() : matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pace = w.__bbPace;
+  const factor = pace === 'relaxed' ? 1.4 : pace === 'quick' ? 0.6 : 1;
+  const up = direction === 'up' || direction === 'top';
+  // The pointer moves to the reading column and drifts the way the page goes,
+  // so a scroll reads as the agent doing something rather than the page
+  // moving on its own. No halo: no element is being acted on.
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const cursor = w.__bbCursor;
+  if (cursor) cursor(null, { at: { x: cx, y: cy }, scroll: true, label: up ? '↑' : '↓', halo: false });
+  await sleep(w.__bbDwell ? Math.min(w.__bbDwell(), 900) : 150);
+  if (cancelled()) throw new Error('cancelled');
+
+  const distance = direction === 'top' ? -doc.scrollTop
+    : direction === 'bottom' ? doc.scrollHeight - window.innerHeight - doc.scrollTop
+      : up ? -amount : amount;
+  if (reduced || document.hidden || Math.abs(distance) < 4) {
+    window.scrollBy({ top: distance });
+    return doc.scrollTop;
   }
+  // Scroll the way a wheel or trackpad does: a run of notches that speed up
+  // and then ease off, with a brief pause between them, at the chosen pace.
+  // A very long trip (to the top or bottom of a long page) takes more notches
+  // but stays within a few seconds.
+  const notches = Math.max(3, Math.min(14, Math.round(Math.abs(distance) / 120)));
+  const weights = Array.from({ length: notches }, (_, i) => Math.sin(((i + 0.5) / notches) * Math.PI));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const drift = up ? -28 : 28;
+  for (let i = 0; i < notches; i += 1) {
+    if (cancelled()) throw new Error('cancelled');
+    window.scrollBy({ top: (distance * weights[i]!) / total });
+    if (cursor && i % 3 === 0) cursor(null, { at: { x: cx, y: cy + drift * Math.sin(((i + 1) / notches) * Math.PI) }, halo: false });
+    await sleep(Math.round((55 + Math.random() * 35) * factor));
+  }
+  // A beat to take in what came into view.
+  await sleep(Math.round(180 * factor));
   return doc.scrollTop;
 }
 

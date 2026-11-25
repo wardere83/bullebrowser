@@ -1,4 +1,5 @@
 import type { ReplayFrame } from '../../shared/agent-events.js';
+import type { BrowsingPace } from '../../shared/ipc.js';
 import { ElementMapCache } from './browser/element-cache.js';
 // ToolRuntime implementation that drives the active WebContentsView. Page
 // actions run as scripts injected with executeJavaScript (see the in-page
@@ -27,6 +28,7 @@ import { waitForNetworkIdle } from './browser/net-activity.js';
 import { dismissConsent, describeConsent } from './browser/consent.js';
 import { recordRefs, refPrelude } from './browser/refs.js';
 import { KEY_DEFS, insertLines, pressWith, withInput } from './browser/input.js';
+import { getSettings } from '../storage/settings.js';
 import {
   AGENT_CURSOR,
   CLICK_FN,
@@ -158,7 +160,21 @@ export class DesktopToolRuntime implements ToolRuntime {
   // state (numbering, and the fingerprint of a targeted ref) and the cursor.
   private prelude(wc: WebContents, withCursor = true) {
     return (frame: WebFrameMain, target: string) =>
-      `if (window.__bbRunId !== ${JSON.stringify(this.actionId)}) window.__bbBeforeValues = new Map(); window.__bbRunId = ${JSON.stringify(this.actionId)}; ${PAGE_HELPERS}; ${refPrelude(wc, frame, target)}${withCursor ? `; ${AGENT_CURSOR}` : ''}`;
+      `if (window.__bbRunId !== ${JSON.stringify(this.actionId)}) window.__bbBeforeValues = new Map(); window.__bbRunId = ${JSON.stringify(this.actionId)}; ${this.paceScript()}; ${PAGE_HELPERS}; ${refPrelude(wc, frame, target)}${withCursor ? `; ${AGENT_CURSOR}` : ''}`;
+  }
+
+  /** The user's browsing pace, read fresh so a change applies to the next action. */
+  private pace(): BrowsingPace {
+    try {
+      const pace = getSettings().browsingPace;
+      return pace === 'relaxed' || pace === 'quick' ? pace : 'natural';
+    } catch {
+      return 'natural';
+    }
+  }
+
+  private paceScript(): string {
+    return `window.__bbPace = ${JSON.stringify(this.pace())}`;
   }
 
   // After a page loads: clear any cookie banner, and say so.
@@ -293,10 +309,17 @@ export class DesktopToolRuntime implements ToolRuntime {
         if (this.signal?.aborted) throw new Error('cancelled');
         const x = offset.x + spot.x;
         const y = offset.y + spot.y;
+        // The pointer has already glided there on screen; the press itself
+        // takes the moment a finger does, so the page shows its hover and
+        // pressed states the way a person sees them.
+        const { hover, hold } = pressTiming(this.pace());
         await withInput(wc, async (send) => {
           if (this.signal?.aborted) throw new Error('cancelled');
           await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+          await delay(hover);
+          if (this.signal?.aborted) throw new Error('cancelled');
           await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await delay(hold);
           await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
         }, this.signal);
       } else {
@@ -344,7 +367,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     // "focused": type where the cursor already is — typically right after
     // clicking into a document — in whatever frame holds it.
     if (/^\s*(focused|cursor|caret)\s*$/i.test(target)) {
-      if (text) await withInput(wc, (send) => insertLines(send, text), this.signal);
+      if (text) await withInput(wc, (send) => insertLines(send, text, { pace: this.pace(), signal: this.signal }), this.signal);
       return { matched: 'the focused element' };
     }
     const { value } = await inFrames<{ matched: string; native: boolean }>(
@@ -358,7 +381,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     // This is real text input to the focused element, in whatever frame it
     // lives — it goes through the editor's own input handling, at the cursor
     // TYPE_FN placed. Line breaks are pressed as Enter, as a typist would.
-    if (value.native && text) await withInput(wc, (send) => insertLines(send, text), this.signal);
+    if (value.native && text) await withInput(wc, (send) => insertLines(send, text, { pace: this.pace(), signal: this.signal }), this.signal);
     return { matched: value.matched };
   }
 
@@ -623,7 +646,7 @@ export class DesktopToolRuntime implements ToolRuntime {
     const wc = this.wcFor(tabId);
     const amount = options.amount ?? 600;
     const y = (await wc.executeJavaScript(
-      `${AGENT_CURSOR}; (${SCROLL_FN.toString()})(${JSON.stringify(options.direction)}, ${amount})`,
+      `${this.paceScript()}; ${AGENT_CURSOR}; (${SCROLL_FN.toString()})(${JSON.stringify(options.direction)}, ${amount})`,
     )) as number;
     return { scrolledTo: y };
   }
@@ -721,4 +744,15 @@ export class DesktopToolRuntime implements ToolRuntime {
     }
     return { summary: 'Press a key on the page', pageUrl: wc.getURL() };
   }
+}
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** How long a press lingers over a target and holds the button, by pace. */
+export function pressTiming(pace: BrowsingPace, random: () => number = Math.random): { hover: number; hold: number } {
+  const factor = pace === 'relaxed' ? 1.4 : pace === 'quick' ? 0.6 : 1;
+  return {
+    hover: Math.round((60 + random() * 50) * factor),
+    hold: Math.round((55 + random() * 45) * factor),
+  };
 }
