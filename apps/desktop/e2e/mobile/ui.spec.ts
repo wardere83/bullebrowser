@@ -180,3 +180,31 @@ test('opening Settings stops an in-flight assistant and keeps the native browser
     await page.evaluate(() => (window as unknown as { requestCount: number }).requestCount),
   ).toBe(1);
 });
+
+test('iPhone layout keeps the Mac film and task controls usable at narrow widths', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(() => {
+    const fixture = window as unknown as Record<string, unknown>;
+    fixture.webkit = { messageHandlers: { bridge: {} } };
+    fixture.Capacitor = {
+      PluginHeaders: [{
+        name: 'MobileAgent',
+        methods: ['getState', 'viewport', 'browser'].map(name => ({ name, rtype: 'promise' })),
+      }],
+      nativePromise: async (_plugin: string, method: string) => {
+        if (method === 'getState') return { browsing: true, files: false, externalApps: false,
+          enabledConnectors: [], customConnectors: [], hasKeyAnthropic: false, hasKeyOpenai: false };
+        if (method === 'browser') return { tabs: [] };
+      },
+    };
+  });
+  await page.goto('http://127.0.0.1:4174');
+  await expect(page.getByRole('img', { name: 'BulleBrowser', exact: true })).toBeVisible();
+  await expect(page.locator('video')).toHaveAttribute('src', /bullebrowser-film/);
+  await page.getByRole('button', { name: 'Find grants for me' }).click();
+  await expect(page.getByText('Where are you based, and what needs funding?')).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 360 });
+  await page.getByRole('textbox', { name: 'Your goal' }).fill('Seattle youth programs');
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

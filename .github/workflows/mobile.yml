@@ -90,3 +90,13 @@ jobs:
         with:
           name: ios-simulator-for-qa-not-store-release
           path: /tmp/bullebrowser-ios/Build/Products/Debug-iphonesimulator/App.app
+      - name: Compile release archive for iPhone before distribution signing
+        working-directory: apps/mobile/ios/App
+        run: |
+          xcodebuild archive -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/BulleBrowser.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO
+          app="$RUNNER_TEMP/BulleBrowser.xcarchive/Products/Applications/App.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")" = com.bullebrowser.mobile
+          test -s "$app/public/index.html"
+          test -s "$app/PrivacyInfo.xcprivacy"
