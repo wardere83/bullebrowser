@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useT } from '@/lib/i18n';
 import { WORKFLOWS } from '@/lib/terms';
 import { Icon, type IconName } from './Icon';
+import { product } from '@bullebrowser/brand-tokens';
 import { keepCase } from './KeepCase';
 import { PAGES, SITES, SitePage, type PageId, type PageState, type SiteId } from './walkthrough/SitePages';
 
@@ -517,7 +518,7 @@ export function BrowserWalkthrough() {
       <div className="overflow-hidden rounded-2xl border border-brand-navy/10 bg-brand-ice shadow-[0_40px_100px_-55px_rgba(7,20,34,0.55)]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-navy/10 bg-white px-5 py-3 text-xs text-ink-secondary">
           <span className="flex items-center gap-2 font-semibold text-brand-navy">
-            Google Chrome
+            {product.name}
           </span>
           <span>{t('common.illustration')}</span>
         </div>

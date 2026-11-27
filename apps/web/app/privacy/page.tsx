@@ -38,9 +38,9 @@ export default function PrivacyPage() {
           </li>
         </ul>
         <p className="mt-4">
-          Model reasoning uses your connected cloud provider and sends the relevant context
-          to that provider. BulleBrowser does not bundle an on-device reasoning model. Its keyless
-          browser commands and extractive page summaries are rule-based.
+          Written analysis uses the AI provider you connect, and the relevant context is sent to
+          that provider. Without a provider key, browsing commands and page summaries still work,
+          and nothing is sent to an AI provider.
         </p>
         <p>
           Older installations may also hold organization profiles, documents, saved opportunities
@@ -84,8 +84,7 @@ export default function PrivacyPage() {
         <p>
           Our hosting provider may keep standard server logs, including your IP address, user agent
           and requested path. Our distribution provider receives requests when you download an
-          installer. The download page first loads the release list from this website. If that list
-          is unavailable, the page requests it from our distribution provider. Your browser stores
+          installer. The download page loads the release list from this website. Your browser stores
           your language choice locally.
         </p>
         <p>

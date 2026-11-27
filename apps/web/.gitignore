@@ -2,3 +2,4 @@
 # rebuilt from the GitHub Releases API on every deploy, so it must never be
 # committed (a stale committed copy would pin the site to an old version).
 /public/releases-manifest.json
+/.release-downloads.json

@@ -402,8 +402,12 @@ export const ptPT: Messages = {
   'download.action': 'Transferir',
   'download.unavailable': 'Indisponível',
   'download.guide': 'Guia de instalação e primeira utilização',
+  'get.h1': 'A sua transferência está a começar',
+  'get.sub': 'O BulleBrowser está a caminho do seu dispositivo. Se a transferência não começar dentro de alguns segundos, inicie-a novamente abaixo.',
+  'get.again': 'Iniciar a transferência',
+  'get.back': 'Voltar às transferências',
+  'get.unavailable': 'Este ficheiro não está disponível neste momento. Escolha um instalador na página de transferência.',
   'download.checksums': 'Somas de verificação SHA-256',
-  'download.releases': 'Todas as versões',
 
   'install.h1': 'Da transferência à navegação visível',
   'install.sub':

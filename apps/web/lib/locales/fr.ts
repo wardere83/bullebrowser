@@ -405,8 +405,12 @@ const text: Messages = {
   'download.action': 'Télécharger',
   'download.unavailable': 'Non disponible',
   'download.guide': 'Guide d’installation et de premier lancement',
+  'get.h1': 'Votre téléchargement commence',
+  'get.sub': 'BulleBrowser arrive sur votre appareil. Si le téléchargement ne démarre pas dans quelques secondes, relancez-le ci-dessous.',
+  'get.again': 'Lancer le téléchargement',
+  'get.back': 'Retour aux téléchargements',
+  'get.unavailable': 'Ce fichier n’est pas disponible pour le moment. Choisissez un programme d’installation sur la page de téléchargement.',
   'download.checksums': 'Sommes de contrôle SHA-256',
-  'download.releases': 'Toutes les versions',
 
   'install.h1': 'Du téléchargement à la navigation visible',
   'install.sub':

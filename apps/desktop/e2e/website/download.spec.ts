@@ -10,6 +10,8 @@ test('website presents truthful mobile availability without fake store links', a
   await expect(mobile.getByText('Android', { exact: true })).toBeVisible();
   await expect(mobile.getByText('Coming soon', { exact: true })).toHaveCount(2);
   await expect(mobile.getByRole('link')).toHaveCount(0);
+  // Every download stays on the site's own address.
+  await expect(page.locator('a[href*="github"]')).toHaveCount(0);
   await mobile.scrollIntoViewIfNeeded();
   await page.screenshot({ path: evidence('download-options.png') });
 });

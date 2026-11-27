@@ -1,49 +1,8 @@
-/*
- * BulleBrowser embed widget — a launcher bubble + chat panel you drop into a
- * web application of your own. The BulleBrowser agent then operates that
- * application in the user's own logged-in session, right on the page the
- * widget lives in.
- *
- * Embed:
- *   <script src="https://bullebrowser.com/widget.js"></script>
- *   <script>
- *     BulleBrowser.init({
- *       endpoint: 'https://YOUR-BACKEND',  // required — see the contract below
- *       title: 'BulleBrowser',             // optional
- *       accent: '#2563EB',                 // optional
- *       greeting: 'Ask me to do anything on this page.'  // optional
- *     });
- *   </script>
- *
- * Why a backend is required: an API key must never live in page JavaScript, so
- * the model loop runs on a small backend you host. The widget executes the
- * agent's tool calls against THIS page (that's the whole point — it drives the
- * page it is on), and streams results back. The transport is SSE + POST, no
- * WebSocket, so it works through corporate proxies.
- *
- * Backend contract (host these three; the agent loop uses @bullebrowser/agent-core):
- *   POST {endpoint}/start        body: { sessionId, prompt, url, title }
- *                                 -> 200; begins a run for this session
- *   GET  {endpoint}/stream?sessionId=…   Server-Sent Events, each `data:` a JSON:
- *          { type:'activity', text }             a human step label
- *          { type:'tool_call', id, name, input } run this tool on the page
- *          { type:'text', text }                 assistant prose (may stream)
- *          { type:'done' } | { type:'error', message }
- *   POST {endpoint}/tool-result  body: { sessionId, id, result }  (or { error })
- *                                 -> the run continues with this result
- *
- * The widget is self-contained: no framework, everything inside a shadow root
- * so the host page's CSS can't touch it and its CSS can't leak out.
- */
+/* BulleBrowser embed widget. */
 (function () {
   'use strict';
   if (window.BulleBrowser && window.BulleBrowser.__mounted) return;
 
-  // The script tag that loaded us — captured now, while it's the running
-  // script, so a single self-configuring tag can install the widget with no
-  // inline JS (the way a chat-widget snippet usually works):
-  //   <script src="https://bullebrowser.com/widget.js"
-  //           data-endpoint="https://your-backend" data-title="BulleBrowser"></script>
   var TAG =
     document.currentScript ||
     (function () {
@@ -54,7 +13,6 @@
 
   var CFG = { endpoint: '', token: '', title: 'BulleBrowser', accent: '#2563EB', greeting: 'Ask me to do anything on this page — I\'ll browse it for you.' };
 
-  // ---- tiny helpers ---------------------------------------------------------
   function el(tag, cls, html) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -67,9 +25,6 @@
   var reduceMotion =
     window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ---- the agent cursor drawn on the host page ------------------------------
-  // Same idea as the desktop app: a visible pointer so the user can see the
-  // agent move, click and type on the page. Lives in its own shadow host.
   function cursor(x, y, opts) {
     opts = opts || {};
     try {
@@ -105,7 +60,6 @@
         ring.classList.add('go');
       }
     } catch (e) {
-      /* an overlay must never break the action it illustrates */
     }
   }
   function cursorAt(el2, opts) {
@@ -113,7 +67,6 @@
     cursor(r.left + r.width / 2, r.top + r.height / 2, opts);
   }
 
-  // ---- inline DOM tool runtime (drives the host page) -----------------------
   function deepAll(sel) {
     var out = [];
     (function walk(node) {
@@ -162,7 +115,6 @@
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
-  // Execute one tool call from the backend. Returns a JSON-safe result or throws.
   function runTool(name, input) {
     input = input || {};
     switch (name) {
@@ -257,7 +209,6 @@
     }
   }
 
-  // ---- transport: run a task against the backend ----------------------------
   function runTask(sessionId, prompt, ui) {
     if (!CFG.endpoint) {
       ui.answer('The assistant is not connected yet (no backend endpoint configured).');
@@ -304,7 +255,6 @@
     }).catch(function () {});
   }
 
-  // ---- the widget UI (launcher + panel) -------------------------------------
   function mount() {
     var host = el('div');
     host.setAttribute('aria-live', 'polite');
@@ -353,8 +303,6 @@
     var ta = root.querySelector('textarea');
     var sendBtn = root.querySelector('.send');
     var running = false, stopFns = [], queue = [], current = null;
-    // Configured text is text, never markup: a quote or an angle bracket in a
-    // title or greeting must not break (or inject into) the panel.
     panel.setAttribute('aria-label', String(CFG.title));
     root.querySelector('.hd b').textContent = String(CFG.title);
     root.querySelector('.greet').textContent = String(CFG.greeting);
@@ -371,10 +319,6 @@
     function addUser(t) { var n = el('div', 'u'); n.textContent = t; msgs.appendChild(n); scroll(); }
     function scroll() { msgs.scrollTop = msgs.scrollHeight; }
 
-    // A single run's UI handle.
-    // Once a run has ended (done, failed or stopped), anything it still
-    // reports, such as a /start reply that arrives after Stop, is ignored, so
-    // it cannot end the run that replaced it or start a queued one early.
     function makeRun() {
       var actEl = null, ansEl = null, over = false;
       function end() { if (over) return false; over = true; if (actEl) actEl.remove(); return true; }
@@ -432,17 +376,12 @@
     return { open: function () { toggle(true); } };
   }
 
-  // ---- public API -----------------------------------------------------------
   window.BulleBrowser = {
     __mounted: false,
     init: function (opts) {
       if (window.BulleBrowser.__mounted) return;
       opts = opts || {};
-      // Only override defaults with values that were actually given, so an
-      // omitted (undefined) option doesn't wipe out its default.
       for (var k in opts) if (opts[k] != null && opts[k] !== '') CFG[k] = opts[k];
-      // The accent is written into the widget's stylesheet, so only a plain
-      // colour is accepted; anything else keeps the default.
       if (!/^(#[0-9a-f]{3,8}|[a-z]+|(rgb|hsl)a?\([0-9.,%\s]+\))$/i.test(String(CFG.accent))) CFG.accent = '#2563EB';
       window.BulleBrowser.__mounted = true;
       var boot = function () {
@@ -454,8 +393,6 @@
     },
   };
 
-  // Self-install from the script tag's data-* attributes, so the whole embed
-  // can be one line with no inline script to be stripped or blocked.
   if (TAG && TAG.getAttribute('data-endpoint')) {
     var d = function (k) {
       return TAG.getAttribute('data-' + k) || undefined;

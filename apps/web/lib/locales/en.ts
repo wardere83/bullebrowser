@@ -421,8 +421,12 @@ export const en = {
   'download.action': 'Download',
   'download.unavailable': 'Not available',
   'download.guide': 'Installation and first-run guide',
+  'get.h1': 'Your download is starting',
+  'get.sub': 'BulleBrowser is on its way to your device. If the download does not begin within a few seconds, start it again below.',
+  'get.again': 'Start the download',
+  'get.back': 'Back to downloads',
+  'get.unavailable': 'This file is not available right now. Choose an installer on the download page.',
   'download.checksums': 'SHA-256 checksums',
-  'download.releases': 'All releases',
 
   // Guides page. Names in quotation marks are the app's own labels.
   'install.h1': 'From download to visible browsing',
