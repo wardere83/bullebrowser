@@ -401,8 +401,12 @@ export const es419: Messages = {
   'download.action': 'Descargar',
   'download.unavailable': 'No disponible',
   'download.guide': 'Guía de instalación y primer inicio',
+  'get.h1': 'Tu descarga está comenzando',
+  'get.sub': 'BulleBrowser está en camino a tu dispositivo. Si la descarga no empieza en unos segundos, iníciala de nuevo abajo.',
+  'get.again': 'Iniciar la descarga',
+  'get.back': 'Volver a las descargas',
+  'get.unavailable': 'Este archivo no está disponible en este momento. Elige un instalador en la página de descarga.',
   'download.checksums': 'Sumas de verificación SHA-256',
-  'download.releases': 'Todas las versiones',
 
   'install.h1': 'De la descarga a la navegación visible',
   'install.sub':

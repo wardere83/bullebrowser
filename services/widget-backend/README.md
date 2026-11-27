@@ -75,3 +75,46 @@ Configure the proxy to omit URL queries so EventSource tokens are not logged.
 Run `node services/widget-backend/build.mjs` followed by
 `node --test services/widget-backend/*.test.mjs`. Hosting, TLS, CRM token issuance,
 and real role/model acceptance tests remain deployment prerequisites.
+
+
+## Embed contract for apps/web/public/widget.js
+
+The published widget carries no developer notes, so its contract lives here.
+
+```
+BulleBrowser embed widget — a launcher bubble + chat panel you drop into a
+web application of your own. The BulleBrowser agent then operates that
+application in the user's own logged-in session, right on the page the
+widget lives in.
+
+Embed:
+  <script src="https://bullebrowser.com/widget.js"></script>
+  <script>
+    BulleBrowser.init({
+      endpoint: 'https://YOUR-BACKEND',  // required — see the contract below
+      title: 'BulleBrowser',             // optional
+      accent: '#2563EB',                 // optional
+      greeting: 'Ask me to do anything on this page.'  // optional
+    });
+  </script>
+
+Why a backend is required: an API key must never live in page JavaScript, so
+the model loop runs on a small backend you host. The widget executes the
+agent's tool calls against THIS page (that's the whole point — it drives the
+page it is on), and streams results back. The transport is SSE + POST, no
+WebSocket, so it works through corporate proxies.
+
+Backend contract (host these three; the agent loop uses @bullebrowser/agent-core):
+  POST {endpoint}/start        body: { sessionId, prompt, url, title }
+                                -> 200; begins a run for this session
+  GET  {endpoint}/stream?sessionId=…   Server-Sent Events, each `data:` a JSON:
+         { type:'activity', text }             a human step label
+         { type:'tool_call', id, name, input } run this tool on the page
+         { type:'text', text }                 assistant prose (may stream)
+         { type:'done' } | { type:'error', message }
+  POST {endpoint}/tool-result  body: { sessionId, id, result }  (or { error })
+                                -> the run continues with this result
+
+The widget is self-contained: no framework, everything inside a shadow root
+so the host page's CSS can't touch it and its CSS can't leak out.
+```

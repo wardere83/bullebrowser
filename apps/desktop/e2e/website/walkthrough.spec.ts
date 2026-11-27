@@ -6,7 +6,8 @@ for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 850 });
     await page.goto('http://127.0.0.1:4177/features/');
     const demo = page.locator('section[aria-labelledby="walkthrough-title"]');
-    await expect(demo.getByText('Google Chrome', { exact: true })).toBeVisible();
+    await expect(demo.getByText('BulleBrowser', { exact: true }).first()).toBeVisible();
+    await expect(demo.getByText('Google Chrome', { exact: true })).toHaveCount(0);
     await expect(demo.getByText('Google', { exact: true })).toBeVisible();
     await expect(demo.getByRole('heading', { name: 'Your Assistant', exact: true })).toBeVisible();
     await expect(demo.getByText('Illustration — sample data, not a live listing')).toBeVisible();

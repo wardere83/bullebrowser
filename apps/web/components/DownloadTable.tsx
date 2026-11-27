@@ -4,7 +4,7 @@ import { MobileDownloads } from './MobileDownloads';
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useT, type MessageKey } from '@/lib/i18n';
-import { RELEASES_PAGE, fetchDownloads, formatBytes, type Downloads, type Platform } from '@/lib/releases';
+import { downloadHref, fetchDownloads, formatBytes, type Downloads, type Platform } from '@/lib/releases';
 import { button, link } from './styles';
 
 // The platform names are the same in every language; what each one needs is
@@ -103,7 +103,7 @@ export function DownloadTable() {
                   </td>
                   <td className="px-4 py-3 text-end">
                     {installer ? (
-                      <a href={installer.browserDownloadUrl} className={button.small} aria-label={`${t('download.action')} — ${platform.label}`}>
+                      <a href={downloadHref(platform.key)} className={button.small} aria-label={`${t('download.action')} — ${platform.label}`}>
                         {t('download.action')}
                       </a>
                     ) : (
@@ -123,15 +123,11 @@ export function DownloadTable() {
         <Link href="/install" className={link.onLight}>
           {t('download.guide')}
         </Link>
-        {dl?.checksumsUrl && (
-          <a href={dl.checksumsUrl} className={link.onLight}>
+        {dl?.hasChecksums && (
+          <a href={downloadHref('checksums')} className={link.onLight}>
             {t('download.checksums')}
           </a>
         )}
-        {/* A way forward even when the list above could not be loaded. */}
-        <a href={RELEASES_PAGE} className={link.onLight}>
-          {t('download.releases')}
-        </a>
       </div>
     </>
   );

@@ -27,10 +27,9 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  // connect-src must include api.github.com so the download page can fall
-  // back to the live release list; github.com for any other XHR to releases.
+  // The download page reads its release list from this site only.
   // No funding source is listed, on purpose: the site never queries one.
-  "connect-src 'self' https://api.github.com https://github.com",
+  "connect-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
