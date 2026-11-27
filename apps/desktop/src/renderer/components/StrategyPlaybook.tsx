@@ -2,6 +2,7 @@ import type { StrategyPlaybook as Playbook } from '@bullebrowser/agent-core';
 import { sanitizeAssistantText } from '@bullebrowser/agent-core/presentation';
 import { useId, useState } from 'react';
 import { Icon } from '../workspace/ui/icons.js';
+import { FeedbackBar } from './FeedbackBar.js';
 
 const OUTLOOK_TONE: Record<NonNullable<Playbook['outlook']>, string> = {
   strong: 'bg-emerald-100 text-emerald-800',
@@ -21,7 +22,7 @@ function hostOf(url: string): string {
  * the opportunity being browsed, rewritten as the task learns more. It is
  * written for the user and stays visible while the task runs.
  */
-export function StrategyPlaybook({ playbook, live = false }: { playbook: Playbook; live?: boolean }) {
+export function StrategyPlaybook({ playbook, live = false, feedbackKey }: { playbook: Playbook; live?: boolean; feedbackKey?: string }) {
   const [open, setOpen] = useState(true);
   const bodyId = useId();
   const sources = (playbook.sources ?? []).filter((url) => /^https?:\/\//i.test(url));
@@ -89,6 +90,12 @@ export function StrategyPlaybook({ playbook, live = false }: { playbook: Playboo
             <p className="text-[11px] text-ink-secondary">Based on {sources.map((url, index) => (
               <span key={url}>{index > 0 ? ', ' : ''}<button type="button" className="text-primary" onClick={() => { void window.bullebrowser.tabs.create(url).catch(() => {}); }}>{hostOf(url) || 'source'}</button></span>
             ))}</p>
+          )}
+          {!live && feedbackKey && (
+            <div className="flex items-start gap-2">
+              <span className="pt-1 text-[11px] text-ink-secondary">Was this playbook useful?</span>
+              <FeedbackBar feedbackKey={feedbackKey} kind="strategy" excerpt={playbook.headline} />
+            </div>
           )}
         </div>
       )}

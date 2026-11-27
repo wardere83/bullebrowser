@@ -5,7 +5,7 @@ import { normalizeAccessibility } from '../shared/accessibility.js';
 import { app, type BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { assertAllowedDestination, type ProviderId } from '@bullebrowser/agent-core';
 import { finishUpdate, relaunchForUpdate, applyUpdate, checkForAppUpdates, dismissUpdateNotice, getUpdateDetails, getUpdateStatus, prepareUpdate, retryUpdate } from './updater.js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -25,6 +25,9 @@ import { getSettings, setSettings } from './storage/settings.js';
 import { conversationStore } from './storage/conversations.js';
 import { sessionFileStore } from './storage/session-files.js';
 import { projectStore } from './storage/projects.js';
+import { feedbackStore } from './storage/feedback.js';
+import { assistantNotes } from './storage/assistant-notes.js';
+import { feedbackExport, feedbackMailto, normalizeFeedbackInput } from '../shared/feedback.js';
 import { identityService } from './identity/service.js';
 import { startFundingPlatform } from './funding/platform.js';
 import { transcribeAudio } from './voice.js';
@@ -282,6 +285,46 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     };
   });
   handle(IPC.APP_QUIT, () => app.quit());
+
+  // Feedback and saved notes are personal data managed only from the app's own
+  // window, never from a page or an embedded frame.
+  const appWindowOnly = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
+      throw new Error('This is only available from the app window.');
+    }
+  };
+  handle(IPC.FEEDBACK_LIST, (event) => { appWindowOnly(event); return feedbackStore.list(); });
+  handle(IPC.FEEDBACK_SET, (event, input: unknown) => {
+    appWindowOnly(event);
+    const valid = normalizeFeedbackInput(input);
+    if (!valid) throw new Error('That rating could not be saved.');
+    return feedbackStore.set(valid, app.getVersion());
+  });
+  handle(IPC.FEEDBACK_CLEAR, (event) => { appWindowOnly(event); feedbackStore.clear(); });
+  handle(IPC.FEEDBACK_EXPORT, async (event) => {
+    appWindowOnly(event);
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Save feedback',
+      defaultPath: join(app.getPath('documents'), 'bullebrowser-feedback.json'),
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (result.canceled || !result.filePath) return false;
+    writeFileSync(result.filePath, feedbackExport(feedbackStore.list(), app.getVersion(), Date.now()), 'utf-8');
+    return true;
+  });
+  handle(IPC.FEEDBACK_EMAIL, async (event) => {
+    appWindowOnly(event);
+    const entries = feedbackStore.list();
+    if (entries.length === 0) throw new Error('There is no feedback to email yet.');
+    await shell.openExternal(feedbackMailto(entries, app.getVersion()));
+  });
+  handle(IPC.NOTES_LIST, (event) => { appWindowOnly(event); return assistantNotes.list(); });
+  handle(IPC.NOTES_REMOVE, (event, id: unknown) => {
+    appWindowOnly(event);
+    if (typeof id !== 'string') throw new Error('That note could not be found.');
+    assistantNotes.remove(id);
+  });
+  handle(IPC.NOTES_CLEAR, (event) => { appWindowOnly(event); assistantNotes.clear(); });
 
   // Chrome is the app interface, never a browsing surface. Reply links and
   // window.open requests belong in the managed web pane, keeping chat intact.

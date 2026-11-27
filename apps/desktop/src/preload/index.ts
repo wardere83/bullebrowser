@@ -139,6 +139,18 @@ const bridge: BrowserBridge = {
     details: () => ipcRenderer.invoke(IPC.UPDATE_DETAILS),
     dismiss: (version) => ipcRenderer.invoke(IPC.UPDATE_DISMISS, version),
   },
+  feedback: {
+    list: () => ipcRenderer.invoke(IPC.FEEDBACK_LIST),
+    set: (input) => ipcRenderer.invoke(IPC.FEEDBACK_SET, input),
+    clear: () => ipcRenderer.invoke(IPC.FEEDBACK_CLEAR),
+    exportFile: () => ipcRenderer.invoke(IPC.FEEDBACK_EXPORT),
+    email: () => ipcRenderer.invoke(IPC.FEEDBACK_EMAIL),
+  },
+  notes: {
+    list: () => ipcRenderer.invoke(IPC.NOTES_LIST),
+    remove: (id) => ipcRenderer.invoke(IPC.NOTES_REMOVE, id),
+    clear: () => ipcRenderer.invoke(IPC.NOTES_CLEAR),
+  },
   app: {
     info: () => ipcRenderer.invoke(IPC.APP_GET_INFO),
     quit: () => ipcRenderer.invoke(IPC.APP_QUIT),

@@ -1,6 +1,8 @@
 import { ConnectorsSettings } from './ConnectorsSettings.js';
 import { SearchKeySettings } from './SearchKeySettings.js';
 import { PasswordSettings } from './PasswordSettings.js';
+import { FeedbackSettings } from './FeedbackSettings.js';
+import { SavedNotesSettings } from './SavedNotesSettings.js';
 import { useEffect, useRef, useState } from 'react';
 import { ASSISTANTS, providerFor, type ModelId } from '@bullebrowser/agent-core';
 import { useBrowserStore } from '../state/browser-store.js';
@@ -296,6 +298,10 @@ export function SettingsModal() {
             />
           </label>
         </div>
+
+        <SavedNotesSettings />
+
+        <FeedbackSettings />
 
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">

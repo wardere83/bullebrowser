@@ -25,6 +25,7 @@ import { BrowserProgress, TaskActivity } from './TaskActivity.js';
 import { AgentControls } from './AgentControls.js';
 import { SessionScratchpad } from './SessionScratchpad.js';
 import { liveAssistantText } from './task-activity.js';
+import { FeedbackBar } from './FeedbackBar.js';
 import type {
   AppSettings,
   BrowserBridge,
@@ -634,12 +635,12 @@ export function AiPanel() {
           }} />
         )}
         {current?.messages.map((m, i) => (
-          <Bubble key={i} role={m.role} content={m.content} />
+          <Bubble key={i} role={m.role} content={m.content} feedbackKey={current.id ? `${current.id}:${i}` : undefined} />
         ))}
         {(activityStatus !== 'idle' || steps.some((step) => step.kind === 'tool_call' || step.kind === 'page_instructions')) && (
-          <TaskActivity onRetry={() => void sendMessage(lastUserMessage, [])} key={activity?.runId ?? 'pending'} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
+          <TaskActivity onRetry={() => void sendMessage(lastUserMessage, [])} key={activity?.runId ?? 'pending'} runId={activity?.runId ?? undefined} steps={steps} status={activityStatus} currentStep={currentStep} audit={current?.taskRuns?.find((run) => run.id === activity?.runId)} />
         )}
-        {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity archived key={run.id} steps={run.steps}
+        {current?.taskRuns?.filter((run) => run.id !== activity?.runId).map((run) => <TaskActivity archived key={run.id} runId={run.id} steps={run.steps}
           status={run.status === 'failed' ? 'error' : 'idle'} currentStep="" audit={run} />)}
         {liveReply && <Bubble role="assistant" content={liveReply} live />}
         {status !== 'running' && <BudgetSpent steps={steps} onContinue={(b) => void sendMessage('Continue the task from where you stopped.', [], b)} />}
@@ -1057,7 +1058,7 @@ function MarkdownLink({ href, title, children }: React.ComponentProps<'a'>) {
 // refreshes, so an update cannot replace the anchor the keyboard user focused.
 const CHAT_MARKDOWN_COMPONENTS = { a: MarkdownLink };
 
-function Bubble({ role, content, live = false }: { role: 'user' | 'assistant'; content: string; live?: boolean }) {
+function Bubble({ role, content, live = false, feedbackKey }: { role: 'user' | 'assistant'; content: string; live?: boolean; feedbackKey?: string }) {
   const prose = useRef<HTMLDivElement>(null);
   if (role === 'user') {
     return (
@@ -1079,7 +1080,12 @@ function Bubble({ role, content, live = false }: { role: 'user' | 'assistant'; c
           components={CHAT_MARKDOWN_COMPONENTS}
         >{sanitizeAssistantText(content)}</ReactMarkdown>
       </div>
-      {!live && <CopyButton source={prose} />}
+      {!live && (
+        <div className="mt-1.5 flex flex-wrap items-start gap-1">
+          <CopyButton source={prose} />
+          {feedbackKey && <FeedbackBar feedbackKey={feedbackKey} kind="reply" excerpt={content} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -1121,7 +1127,7 @@ function CopyButton({ source }: { source: React.RefObject<HTMLDivElement | null>
       type="button"
       onClick={() => void copy()}
       aria-label="Copy reply"
-      className="mt-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-ink-secondary opacity-70 transition-opacity hover:bg-surface-muted hover:opacity-100 group-hover:opacity-100"
+      className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-ink-secondary opacity-70 transition-opacity hover:bg-surface-muted hover:opacity-100 group-hover:opacity-100"
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
         <rect x="9" y="9" width="12" height="12" rx="2" />

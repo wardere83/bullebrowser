@@ -1,4 +1,4 @@
-import type { ToolCallRecord, ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
+import type { AssistantNote, ToolCallRecord, ConnectorId, ConnectorState } from '@bullebrowser/agent-core';
 import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessibility.js';
 // Single source of truth for IPC channel names and the typed bridge
 // surface. Both the preload script and the renderer consume this so we
@@ -7,6 +7,7 @@ import { DEFAULT_ACCESSIBILITY, type AccessibilityPreferences } from './accessib
 import type { BrowserTaskId, ModelId, ProviderId } from '@bullebrowser/agent-core';
 import type { AgentStepEvent } from './agent-events.js';
 import type { FundingBridge } from './funding.js';
+import type { FeedbackEntry, FeedbackInput } from './feedback.js';
 
 export const IPC = {
   // Tabs
@@ -95,6 +96,16 @@ export const IPC = {
   UPDATE_CHECK: 'update:check',
   UPDATE_DETAILS: 'update:details',
   UPDATE_DISMISS: 'update:dismiss',
+  // Feedback on replies and strategy playbooks (stays on the device)
+  FEEDBACK_LIST: 'feedback:list',
+  FEEDBACK_SET: 'feedback:set',
+  FEEDBACK_CLEAR: 'feedback:clear',
+  FEEDBACK_EXPORT: 'feedback:export',
+  FEEDBACK_EMAIL: 'feedback:email',
+  // Notes the assistant keeps between conversations
+  NOTES_LIST: 'notes:list',
+  NOTES_REMOVE: 'notes:remove',
+  NOTES_CLEAR: 'notes:clear',
   // UI events from main → renderer
   UI_ASK_AGENT: 'ui:ask-agent', // right-click context menu hands a prompt to the AI panel
   // Funding platform. One typed call channel instead of one channel per method:
@@ -440,6 +451,20 @@ export interface BrowserBridge {
   };
   ui: {
     onAskAgent(cb: (prompt: string) => void): () => void;
+  };
+  feedback: {
+    list(): Promise<FeedbackEntry[]>;
+    set(input: FeedbackInput): Promise<FeedbackEntry | null>;
+    clear(): Promise<void>;
+    // Opens a save dialog; false when the user cancels.
+    exportFile(): Promise<boolean>;
+    // Opens the user's own mail app with the ratings filled in. Nothing is sent by the app.
+    email(): Promise<void>;
+  };
+  notes: {
+    list(): Promise<AssistantNote[]>;
+    remove(id: string): Promise<void>;
+    clear(): Promise<void>;
   };
   // Organizations, the Knowledge Hub, opportunities, RFP analysis and the guide.
   funding: FundingBridge;

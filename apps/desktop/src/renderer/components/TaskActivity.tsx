@@ -16,12 +16,14 @@ export function TaskActivity({
   audit,
   archived = false,
   onRetry,
+  runId,
 }: {
   steps: readonly AgentStepEvent[];
   status: ActivityStatus;
   currentStep: string;
   archived?: boolean;
   onRetry?: () => void;
+  runId?: string;
   audit?: Pick<TaskRunLog, 'calls' | 'consents'>;
 }) {
   const [chosenOpen, setChosenOpen] = useState<boolean | null>(null);
@@ -77,7 +79,7 @@ export function TaskActivity({
           what it is weighing without opening the step log. */}
       {note && <p aria-live="polite" className="border-t border-line/40 px-3 py-1.5 text-ink-secondary">{note}</p>}
       {/* The playbook stays in view while the task runs and after it ends. */}
-      {playbook && <StrategyPlaybook playbook={playbook} live={running} />}
+      {playbook && <StrategyPlaybook playbook={playbook} live={running} feedbackKey={runId ? `strategy:${runId}` : undefined} />}
       {/* Outside the collapsible log: a page that tried to steer the agent is
           something to see without opening anything. */}
       {warnings.length > 0 && (
