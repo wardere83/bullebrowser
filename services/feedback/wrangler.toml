@@ -1,0 +1,22 @@
+name = "bullebrowser-feedback"
+main = "src/worker.mjs"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# The app sends ratings to https://feedback.bullebrowser.com/v1/feedback.
+# Needs bullebrowser.com to be a zone on the same Cloudflare account.
+routes = [{ pattern = "feedback.bullebrowser.com", custom_domain = true }]
+
+[vars]
+DAILY_IP_LIMIT = "60"          # ratings one address may send per day
+DAILY_GLOBAL_LIMIT = "5000"    # ratings accepted per day across everyone
+
+# The deploy workflow (.github/workflows/deploy-feedback.yml) creates the
+# database on first run and puts its id here before deploying.
+[[d1_databases]]
+binding = "DB"
+database_name = "bullebrowser-feedback"
+database_id = "DATABASE_ID_SET_BY_DEPLOY"
+
+# Optional, for the CSV export at /v1/feedback/export:
+#   wrangler secret put ADMIN_TOKEN

@@ -102,6 +102,8 @@ export const IPC = {
   FEEDBACK_CLEAR: 'feedback:clear',
   FEEDBACK_EXPORT: 'feedback:export',
   FEEDBACK_EMAIL: 'feedback:email',
+  FEEDBACK_SHARING_GET: 'feedback:sharing-get',
+  FEEDBACK_SHARING_SET: 'feedback:sharing-set',
   // Notes the assistant keeps between conversations
   NOTES_LIST: 'notes:list',
   NOTES_REMOVE: 'notes:remove',
@@ -458,8 +460,11 @@ export interface BrowserBridge {
     clear(): Promise<void>;
     // Opens a save dialog; false when the user cancels.
     exportFile(): Promise<boolean>;
-    // Opens the user's own mail app with the ratings filled in. Nothing is sent by the app.
+    // Opens the user's own mail app with the ratings filled in; the user sends it.
     email(): Promise<void>;
+    // Whether ratings and comments are shared with the BulleBrowser team.
+    sharing(): Promise<boolean>;
+    setSharing(on: boolean): Promise<void>;
   };
   notes: {
     list(): Promise<AssistantNote[]>;

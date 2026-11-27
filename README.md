@@ -46,6 +46,7 @@ browser task. Without a cloud key, spoken browser commands use the rule-based co
 - The keyless command engine runs explicit browser commands and extractive page summaries on the device. It is rule-based, not a local reasoning model.
 - Optional provider keys are encrypted and stored on your device.
 - History, bookmarks, and conversations stay on your device.
+- Thumbs up or down ratings, with any comment you add, are sent to the BulleBrowser team unless you turn sharing off in Settings. The rated reply is not sent.
 - No analytics. No telemetry.
 
 Full privacy policy: [bullebrowser.com/privacy](https://bullebrowser.com/privacy/)

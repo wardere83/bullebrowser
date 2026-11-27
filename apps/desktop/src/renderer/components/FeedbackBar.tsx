@@ -16,8 +16,8 @@ function Thumb({ down = false, filled = false }: { down?: boolean; filled?: bool
 
 /**
  * Thumbs up and down on a reply or a playbook, with an optional comment after
- * a press. Ratings stay on this device; Settings lets the user email them to
- * the team or save them as a file.
+ * a press. Ratings are kept on this device and, unless sharing is off in
+ * Settings, sent to the BulleBrowser team without the reply's text.
  */
 export function FeedbackBar({ feedbackKey, kind, excerpt, className = '' }: {
   feedbackKey: string;
@@ -28,6 +28,7 @@ export function FeedbackBar({ feedbackKey, kind, excerpt, className = '' }: {
   const entry = useFeedbackStore((state) => state.entries[feedbackKey]);
   const load = useFeedbackStore((state) => state.load);
   const rate = useFeedbackStore((state) => state.rate);
+  const sharing = useFeedbackStore((state) => state.sharing);
   const [asking, setAsking] = useState(false);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
@@ -84,6 +85,11 @@ export function FeedbackBar({ feedbackKey, kind, excerpt, className = '' }: {
             onChange={(e) => setComment(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Escape') setAsking(false); }}
             className="mt-1 w-full resize-none rounded border border-line px-2 py-1 text-sm text-ink-primary focus:border-primary focus:outline-none" />
+          <p className="mt-1 text-[11px] text-ink-secondary">
+            {sharing
+              ? 'Your rating and comment go to the BulleBrowser team. The reply itself is not sent.'
+              : 'Kept on this device. Sharing is off in Settings.'}
+          </p>
           <div className="mt-1.5 flex items-center justify-end gap-2">
             <button type="button" onClick={() => { setAsking(false); setNote('Thanks for the feedback.'); }}
               className="rounded px-2 py-1 text-xs text-ink-secondary hover:bg-surface-muted">Skip</button>

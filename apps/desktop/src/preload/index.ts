@@ -145,6 +145,8 @@ const bridge: BrowserBridge = {
     clear: () => ipcRenderer.invoke(IPC.FEEDBACK_CLEAR),
     exportFile: () => ipcRenderer.invoke(IPC.FEEDBACK_EXPORT),
     email: () => ipcRenderer.invoke(IPC.FEEDBACK_EMAIL),
+    sharing: () => ipcRenderer.invoke(IPC.FEEDBACK_SHARING_GET),
+    setSharing: (on) => ipcRenderer.invoke(IPC.FEEDBACK_SHARING_SET, on),
   },
   notes: {
     list: () => ipcRenderer.invoke(IPC.NOTES_LIST),

@@ -22,4 +22,25 @@ describe('feedback store', () => {
     feedbackStore.clear();
     expect(feedbackStore.list()).toEqual([]);
   });
+
+  it('queues removal of ratings the team already has when one is taken back or cleared', () => {
+    feedbackStore.set({ key: 'k:1', kind: 'reply', rating: 'up' }, '0.2.106', 20);
+    feedbackStore.set({ key: 'k:2', kind: 'strategy', rating: 'down' }, '0.2.106', 21);
+    feedbackStore.set({ key: 'k:3', kind: 'reply', rating: 'down' }, '0.2.106', 22);
+    feedbackStore.markSynced('k:1', 20);
+    feedbackStore.markSynced('k:2', 21);
+    feedbackStore.markSynced('k:2', 999);
+    feedbackStore.set({ key: 'k:1', kind: 'reply', rating: null }, '0.2.106', 23);
+    expect(feedbackStore.removals()).toEqual([{ key: 'k:1', kind: 'reply' }]);
+    feedbackStore.clear();
+    expect(feedbackStore.removals()).toEqual([{ key: 'k:1', kind: 'reply' }, { key: 'k:2', kind: 'strategy' }]);
+    feedbackStore.removalDone('k:1');
+    expect(feedbackStore.removals()).toEqual([{ key: 'k:2', kind: 'strategy' }]);
+  });
+
+  it('shares by default and remembers when sharing is turned off', () => {
+    expect(feedbackStore.sharing()).toBe(true);
+    feedbackStore.setSharing(false);
+    expect(feedbackStore.sharing()).toBe(false);
+  });
 });

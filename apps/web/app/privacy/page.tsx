@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <div className="bg-surface-light">
       <div className="prose-lite mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight">Privacy</h1>
-        <p className="mt-4 text-sm text-ink-secondary">Updated November 21, 2026</p>
+        <p className="mt-4 text-sm text-ink-secondary">Updated November 27, 2026</p>
         <p>
           BulleBrowser is a desktop browser by {product.vendor}. Your browsing and assistant
           requests are made from your device. We do not operate a proxy that receives your browsing
@@ -73,6 +73,16 @@ export default function PrivacyPage() {
           may retain or process that information according to your account settings.{' '}
           {product.vendor} does not receive those requests.
         </p>
+        <h2>Feedback you give</h2>
+        <p>
+          You can rate an assistant reply or a strategy playbook with a thumbs up or down and add a
+          comment. Ratings are kept on your device. Unless you turn sharing off in Settings, each
+          rating is also sent to {product.vendor} with the comment you typed, the app version and
+          your operating system. The reply or playbook itself is not sent, and a rating carries no
+          account or contact details. To limit abuse, our feedback service keeps a hash of the
+          sending network address for one day. Clearing feedback in Settings also removes the copies
+          we received. You can also email your feedback or save it as a file instead.
+        </p>
         <h2>Updates, downloads and voice</h2>
         <p>
           The app contacts our distribution provider to check for and download updates. A ready
@@ -94,7 +104,7 @@ export default function PrivacyPage() {
         </p>
         <h2>Removing data</h2>
         <p>
-          You can remove a provider key and clear browsing history in Settings. To remove all app
+          You can remove a provider key, clear browsing history and clear feedback in Settings. To remove all app
           data, quit BulleBrowser and delete its application data folder listed above. This removes
           local settings and records, including records created by earlier versions. Uninstalling
           the app alone does not remove that folder. Copies held in backups or by websites and

@@ -16,6 +16,8 @@ export interface FeedbackEntry {
   excerpt: string;
   version: string;
   at: number;
+  /** True once the team's copy matches this entry. */
+  synced?: boolean;
 }
 
 export interface FeedbackInput {
@@ -31,6 +33,8 @@ export const FEEDBACK_COMMENT_MAX = 1000;
 export const FEEDBACK_EXCERPT_MAX = 240;
 export const FEEDBACK_MAX_ENTRIES = 500;
 export const FEEDBACK_ADDRESS = 'support@bullebrowser.com';
+/** Where shared ratings go: the team's feedback receiver (services/feedback). */
+export const FEEDBACK_ENDPOINT = 'https://feedback.bullebrowser.com/v1/feedback';
 // Mail apps cut long mailto links, so the email holds the newest ratings that
 // fit and points to the saved file for the rest.
 const MAILTO_BODY_MAX = 1800;
@@ -65,6 +69,7 @@ export function applyFeedback(entries: readonly FeedbackEntry[], input: Feedback
   if (input.rating === null) return rest;
   const previous = entries.find((entry) => entry.key === input.key);
   const entry: FeedbackEntry = {
+    synced: false,
     key: input.key,
     kind: input.kind,
     rating: input.rating,
@@ -104,4 +109,14 @@ export function feedbackMailto(entries: readonly FeedbackEntry[], version: strin
 
 export function feedbackExport(entries: readonly FeedbackEntry[], version: string, now: number): string {
   return JSON.stringify({ app: 'BulleBrowser', version, exportedAt: new Date(now).toISOString(), entries }, null, 2);
+}
+
+/** What the receiver gets for one rating: no reply text and nothing that names the user. */
+export interface FeedbackPayload {
+  item: string;
+  kind: FeedbackKind;
+  rating: FeedbackRating | null;
+  comment: string;
+  version: string;
+  platform: 'darwin' | 'win32' | 'linux';
 }

@@ -26,6 +26,7 @@ import { conversationStore } from './storage/conversations.js';
 import { sessionFileStore } from './storage/session-files.js';
 import { projectStore } from './storage/projects.js';
 import { feedbackStore } from './storage/feedback.js';
+import { createFeedbackSyncer } from './feedback-sync.js';
 import { assistantNotes } from './storage/assistant-notes.js';
 import { feedbackExport, feedbackMailto, normalizeFeedbackInput } from '../shared/feedback.js';
 import { identityService } from './identity/service.js';
@@ -288,6 +289,10 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
 
   // Feedback and saved notes are personal data managed only from the app's own
   // window, never from a page or an embedded frame.
+  // Shared ratings go to the team's feedback receiver in the background; any
+  // that could not be sent are retried on the next change or next launch.
+  const syncFeedbackSoon = createFeedbackSyncer(() => ({ store: feedbackStore, version: app.getVersion(), platform: process.platform }));
+  setTimeout(() => { void syncFeedbackSoon(); }, 20_000).unref?.();
   const appWindowOnly = (event: Electron.IpcMainInvokeEvent) => {
     if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) {
       throw new Error('This is only available from the app window.');
@@ -298,9 +303,18 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
     appWindowOnly(event);
     const valid = normalizeFeedbackInput(input);
     if (!valid) throw new Error('That rating could not be saved.');
-    return feedbackStore.set(valid, app.getVersion());
+    const saved = feedbackStore.set(valid, app.getVersion());
+    void syncFeedbackSoon();
+    return saved;
   });
-  handle(IPC.FEEDBACK_CLEAR, (event) => { appWindowOnly(event); feedbackStore.clear(); });
+  handle(IPC.FEEDBACK_CLEAR, (event) => { appWindowOnly(event); feedbackStore.clear(); void syncFeedbackSoon(); });
+  handle(IPC.FEEDBACK_SHARING_GET, (event) => { appWindowOnly(event); return feedbackStore.sharing(); });
+  handle(IPC.FEEDBACK_SHARING_SET, (event, on: unknown) => {
+    appWindowOnly(event);
+    if (typeof on !== 'boolean') throw new Error('Choose on or off.');
+    feedbackStore.setSharing(on);
+    void syncFeedbackSoon();
+  });
   handle(IPC.FEEDBACK_EXPORT, async (event) => {
     appWindowOnly(event);
     const result = await dialog.showSaveDialog(win, {
