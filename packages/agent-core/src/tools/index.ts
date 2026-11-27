@@ -271,6 +271,7 @@ const toolDefinitions = {
     name: 'read_page',
     description:
       'Read the readable text of a page (the active tab, or any tab by tabId). ' +
+      'A PDF open in the tab is read too, with [Page N] markers so you can cite pages. ' +
       'Use find_elements instead when you need to act on buttons, fields or menus.',
     inputSchema: TabIdInput,
     outputSchema: z.object({ title: z.string(), url: z.string(), text: z.string() }),

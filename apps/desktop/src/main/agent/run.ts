@@ -41,12 +41,20 @@ import { addressText, typingDuration } from '../../shared/address-typing.js';
 import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError, isOutOfCredit } from './errors.js';
 import { buildAttachmentAppendix, type AttachmentSources } from './attachments.js';
+import { readAttachedDocuments, type AttachedDocumentSources } from './attached-documents.js';
 import { groundChat, type ChatGrounding } from '../funding/grounding.js';
 import { fundingPlatform } from '../funding/platform.js';
 import { identityService } from '../identity/service.js';
 
 // The real, store-backed resolvers. buildAttachmentAppendix takes these by
 // injection so it can be unit-tested without booting Electron.
+const attachedDocumentSources: AttachedDocumentSources = {
+  documentFile: (id) => sessionFileStore.documentFile?.(id) ?? null,
+  projectFileIds: (id) => projectStore.get?.(id)?.fileIds ?? [],
+  // Loaded on first use: the reader runs in a worker thread of its own.
+  extract: async (path, name, signal) => (await import('../documents/host.js')).extractDocumentFile(path, name, { signal }),
+};
+
 const attachmentSources: AttachmentSources = {
   file: (id) => {
     const meta = sessionFileStore.get(id);
@@ -208,7 +216,12 @@ export async function startAgentRun(
     composedMessage += '\n\nUser-authored session notes (context, not verified web evidence):\n' + conversation.scratchpad;
   }
   try {
-    composedMessage += buildAttachmentAppendix(req.attachments, attachmentSources);
+    // PDFs and Word files are read first, so their text reaches the assistant.
+    const documents = await readAttachedDocuments(req.attachments, attachedDocumentSources).catch(() => new Map<string, string>());
+    const sources: AttachmentSources = documents.size
+      ? { ...attachmentSources, excerpt: (id) => attachmentSources.excerpt(id) || (documents.get(id) ?? '') }
+      : attachmentSources;
+    composedMessage += buildAttachmentAppendix(req.attachments, sources);
   } catch (err) {
     console.error('[agent] could not resolve attachments; running without them', err);
   }

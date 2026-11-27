@@ -121,3 +121,20 @@ export async function extractDocumentFile(
   if (options.signal?.aborted) throw new FundingError('CANCELLED', 'Cancelled.');
   return runWorker({ format, bytes }, options.timeoutMs ?? DEFAULT_LIMITS.timeoutMs, options.signal);
 }
+
+/**
+ * Reads a document that is already in memory, such as a PDF opened in a tab.
+ * The same size, format, memory and time limits apply as for a file.
+ */
+export async function extractDocumentBytes(
+  bytes: Uint8Array,
+  fileName: string,
+  options: ExtractFileOptions = {},
+): Promise<ExtractedDocument> {
+  if (options.signal?.aborted) throw new FundingError('CANCELLED', 'Cancelled.');
+  if (bytes.byteLength > DEFAULT_LIMITS.maxFileBytes) throw tooLarge(DEFAULT_LIMITS);
+  const format = requireFormat(fileName, bytes);
+  // The worker takes the buffer over, so hand it a copy of its own.
+  return runWorker({ format, bytes: bytes.slice() }, options.timeoutMs ?? DEFAULT_LIMITS.timeoutMs, options.signal);
+}
+

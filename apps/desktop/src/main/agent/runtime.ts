@@ -29,6 +29,7 @@ import { dismissConsent, describeConsent } from './browser/consent.js';
 import { recordRefs, refPrelude } from './browser/refs.js';
 import { KEY_DEFS, insertLines, pressWith, withInput } from './browser/input.js';
 import { getSettings } from '../storage/settings.js';
+import { documentToText } from '../documents/plain-text.js';
 import {
   AGENT_CURSOR,
   CLICK_FN,
@@ -62,6 +63,11 @@ export interface ConfirmDelegate {
 // Screenshots go to the model as images; a full-resolution Retina capture can
 // pass the API's per-image size limit and fail the whole request.
 const SCREENSHOT_MAX_WIDTH = 1280;
+
+/** An address whose path names a PDF file. */
+export function isPdfAddress(url: string): boolean {
+  try { return /\.pdf$/i.test(new URL(url).pathname); } catch { return false; }
+}
 
 export class DesktopToolRuntime implements ToolRuntime {
   private readonly elementMaps = new ElementMapCache<{ elements: string[] }>();
@@ -252,8 +258,31 @@ export class DesktopToolRuntime implements ToolRuntime {
     return { url: wc.getURL(), title: wc.getTitle() };
   }
 
+  /**
+   * A PDF open in a tab is read through the document reader: the same file the
+   * tab shows, fetched with the tab's own session, with page markers kept.
+   */
+  private async readPdfTab(wc: WebContents): Promise<{ title: string; url: string; text: string }> {
+    const url = wc.getURL();
+    assertAllowedDestination(url);
+    let bytes: Uint8Array;
+    try {
+      const response = await wc.session.fetch(url);
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      bytes = new Uint8Array(await response.arrayBuffer());
+    } catch {
+      throw new Error('This PDF could not be downloaded for reading. Reload the tab and try again.');
+    }
+    const { extractDocumentBytes } = await import('../documents/host.js');
+    const doc = await extractDocumentBytes(bytes, 'document.pdf');
+    const text = documentToText(doc);
+    if (!text.trim()) throw new Error('This PDF has no readable text (it may be a scanned image).');
+    return { title: wc.getTitle(), url, text };
+  }
+
   async readPage(tabId: string) {
     const wc = this.wcFor(tabId);
+    if (isPdfAddress(wc.getURL())) return this.readPdfTab(wc);
     if (this.onViewport) {
       const first = await wc.executeJavaScript(`(${FIRST_VIEWPORT_FN.toString()})()`) as { url: string; title: string; text: string };
       assertAllowedDestination(first.url);
@@ -275,9 +304,12 @@ export class DesktopToolRuntime implements ToolRuntime {
       }
     }
     if ('error' in result && framed.length === 0) {
+      let contentType = '';
+      try { contentType = String(await wc.executeJavaScript('document.contentType')); } catch { /* not a readable document */ }
+      if (contentType === 'application/pdf') return this.readPdfTab(wc);
       throw new Error(
-        `${result.error} The read_page tool only supports HTML pages. ` +
-          `For PDFs or other documents, ask the user to convert to HTML or paste the text directly.`,
+        `${result.error} read_page reads web pages and PDFs. ` +
+          `For other documents, ask the user to attach the file or paste the text directly.`,
       );
     }
     const text = (('text' in result ? result.text : '') + framed.join('')).slice(0, 40_000);

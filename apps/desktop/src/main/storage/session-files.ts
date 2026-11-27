@@ -135,6 +135,13 @@ class SessionFileStore {
     }
   }
 
+  /** Where a stored PDF or Word file lives on disk, for the document reader. */
+  documentFile(id: string): { path: string; name: string } | null {
+    const meta = this.get(id);
+    if (!meta || !/\.(pdf|docx)$/i.test(meta.name)) return null;
+    return { path: this.pathFor(id), name: meta.name };
+  }
+
   // Inline text for agent context, capped. Empty string for binary/missing.
   excerpt(id: string): string {
     const meta = this.get(id);
