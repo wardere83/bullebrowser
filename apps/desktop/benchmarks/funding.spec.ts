@@ -110,7 +110,6 @@ for (const task of dataset.tasks) {
       await expect(composer).toBeEnabled();
       await composer.fill(prompt);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
-      await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect.poll(() => win.evaluate(() => (window as unknown as { __evalResult?: AgentResultEvent }).__evalResult), { timeout: 150_000 }).toBeTruthy();
       const answer = (await win.evaluate(() => (window as unknown as { __evalResult?: AgentResultEvent }).__evalResult))!;
       const conversation = await win.evaluate((id) => window.bullebrowser.conversations.get(id), answer.conversationId);

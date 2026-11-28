@@ -30,7 +30,7 @@ export const es419: Messages = {
     'Explora fuentes relevantes en distintas pestañas. Revisa elegibilidad, fechas y prioridades en las páginas originales antes de decidir qué oportunidades merecen tu tiempo.',
   'app.benefit.strengths.t': 'Decide tu siguiente paso',
   'app.benefit.strengths.d':
-    'Detén una tarea con Stop, vuelve a las fuentes y revisa los hallazgos. El asistente pide permiso antes de acciones importantes; tú decides qué seguir y enviar.',
+    'Detén una tarea con Stop, vuelve a las fuentes y revisa los hallazgos. El asistente encuentra y lee financiamiento, pero nunca envía ni paga; tú decides qué seguir y enviar.',
   'app.audiences.eyebrow': 'Para empresas y CBOs',
   'app.audiences.h2': 'Objetivos distintos. Una estrategia basada en tu trabajo.',
   'app.audiences.body':
@@ -327,12 +327,12 @@ export const es419: Messages = {
     'La propuesta pertenece al solicitante, que responde por todo lo que contiene. Verifica cada dato, cifra y requisito con su fuente antes de enviarla.',
 
   'browser.eyebrow': 'Navegador y asistente',
-  'browser.h2': 'Un navegador completo, con un asistente que pregunta primero.',
+  'browser.h2': 'Un navegador completo, con un asistente que encuentra financiamiento por ti.',
   'browser.body':
     'BulleBrowser es un navegador de escritorio con pestañas, marcadores e historial. Su asistente integrado puede leer páginas y navegar por sitios oficiales por ti, y permanece bajo tu control.',
-  'browser.access.t': 'Pregunta antes de navegar',
+  'browser.access.t': 'Encuentra y lee, nunca envía',
   'browser.access.d':
-    'Cada tarea pide permiso una vez para usar tus pestañas y dice lo que quiere hacer.',
+    'Busca, abre convocatorias y lee páginas oficiales por su cuenta. Nunca envía una solicitud, un mensaje ni un pago; esos pasos quedan en tus manos.',
   'browser.steps.t': 'Muestra cada paso',
   'browser.steps.d': 'Ves cada paso mientras ocurre, y el botón Stop detiene la tarea.',
   'browser.budget.t': 'Trabaja dentro de un presupuesto de pasos',

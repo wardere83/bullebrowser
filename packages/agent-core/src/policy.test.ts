@@ -14,14 +14,16 @@ describe('policy decisions and redaction', () => {
     expect(decision.allowed).toBe(false);
   });
 
-  it('requires confirmation for risky clicks', () => {
+  it('blocks risky clicks outright, with no prompt', () => {
     const decision = policy.evaluateToolStep({
       id: '1',
       toolName: 'clickElement',
       input: { target: 'submit payment' },
       expected: 'clicked',
     });
-    expect(decision.requiresConfirmation).toBe(true);
+    expect(decision.allowed).toBe(false);
+    expect(decision.requiresConfirmation).toBe(false);
+    expect(decision.reason).toMatch(/finds and reads funding only/);
   });
 
   it('judges a click by the element it really hits, not the selector', () => {
@@ -31,34 +33,38 @@ describe('policy decisions and redaction', () => {
         toolName: 'click',
         input: { target: '#btn-2', ...(facts ? { _facts: facts } : {}) },
         expected: '',
-      }).requiresConfirmation;
-    // Missing inspected facts must fail safe rather than trust an opaque selector.
-    expect(click()).toBe(true);
+      }).allowed === false;
+    // Research clicks always run, even when the page could not be inspected.
+    expect(click()).toBe(false);
     expect(click({ label: 'Next page', submitsForm: false })).toBe(false);
+    expect(click({ label: 'Search', submitsForm: false })).toBe(false);
+    expect(click({ label: 'Remove filter', submitsForm: false })).toBe(false);
+    expect(click({ label: 'Pay now', submitsForm: false })).toBe(true);
+    expect(click({ label: 'Send message', submitsForm: false })).toBe(true);
     expect(click({ label: 'Delete account', submitsForm: false })).toBe(true);
     expect(click({ label: 'Continue', submitsForm: true })).toBe(true);
   });
 
-  it('asks before Enter submits a data form, but not a search box', () => {
+  it('blocks Enter that submits a data form, but not a search box', () => {
     const enter = (submitsForm: boolean) =>
       policy.evaluateToolStep({
         id: '1',
         toolName: 'press_key',
         input: { key: 'Enter', _facts: { label: '', submitsForm } },
         expected: '',
-      }).requiresConfirmation;
+      }).allowed === false;
     expect(enter(false)).toBe(false);
     expect(enter(true)).toBe(true);
   });
 
-  it('asks before Space or Enter presses a risky focused button', () => {
+  it('blocks Space or Enter on a risky focused button', () => {
     const press = (key: string, label: string, activates: boolean) =>
       policy.evaluateToolStep({
         id: '1',
         toolName: 'press_key',
         input: { key, _facts: { label, submitsForm: false, activates } },
         expected: '',
-      }).requiresConfirmation;
+      }).allowed === false;
     expect(press('Space', 'Delete account', true)).toBe(true);
     expect(press('Enter', 'Delete account', true)).toBe(true);
     expect(press('Enter', 'Send to', false)).toBe(false);
@@ -77,15 +83,25 @@ describe('policy decisions and redaction', () => {
     expect(redacted.safe).toBe('ok');
   });
 
-  it('cannot bypass confirmation with opaque selectors or Enter', () => {
-    for (const target of ['#confirm', '.primary', '[data-action="x"]', 'Continue']) {
+  it('never stops steps that only find information', () => {
+    for (const target of ['#confirm', '.primary', '[data-action="x"]', 'Continue', 'Apply filters', 'Submit search']) {
       expect(policy.evaluateToolStep({ id: 'x', toolName: 'click', input: { target }, expected: '' })
-        .requiresConfirmation).toBe(true);
+        .allowed).toBe(true);
     }
     expect(policy.evaluateToolStep({ id: 'x', toolName: 'press_key', input: { key: 'Enter' }, expected: '' })
-      .requiresConfirmation).toBe(true);
-    expect(policy.evaluateToolStep({ id: 'x', toolName: 'press_key', input: { key: 'Tab' }, expected: '' })
-      .requiresConfirmation).toBe(false);
+      .allowed).toBe(true);
+    expect(policy.evaluateToolStep({ id: 'x', toolName: 'close_tab', input: { tabId: 't' }, expected: '' })
+      .allowed).toBe(true);
+  });
+
+  it('blocks paying, sending, deleting, submitting an application or opening an account', () => {
+    for (const target of ['submit payment', 'Place order', 'Delete account', 'Send', 'Sign up', 'Upload file', 'Create an account', 'Submit application', 'Submit my proposal']) {
+      expect(policy.evaluateToolStep({ id: 'x', toolName: 'click', input: { target }, expected: '' })
+        .allowed, target).toBe(false);
+    }
+    const upload = policy.evaluateToolStep({ id: 'x', toolName: 'upload_file', input: {}, expected: '' });
+    expect(upload.allowed).toBe(false);
+    for (const decision of [upload]) expect(decision.requiresConfirmation).toBe(false);
   });
 });
 

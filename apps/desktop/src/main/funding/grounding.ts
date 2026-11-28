@@ -401,3 +401,137 @@ export async function groundChat(
 
   return { organizationId: organization.id, referenceContext, tools, systemNote: notes.join('\n') };
 }
+
+// ---------------------------------------------------------------------------
+// A fresh chat: every request stands on its own.
+//
+// The assistant panel does not read any saved organization profile, documents
+// or settings. Each request is answered from what the person says in the
+// conversation, so nobody is locked into one organization's profile. Searching
+// official funding sources needs no setup: where to look comes from the
+// request itself.
+
+const FRESH_START =
+  'No organization profile is saved or used here. Treat each request on its own: work only from what the user says in this conversation ' +
+  '(who is applying, where, what for). When a detail that changes the answer is missing, such as the applicant type or the place, make a sensible ' +
+  'assumption, say which one you made, and keep going rather than stopping to ask.';
+
+const PLACE_PROPERTIES = {
+  country: { type: 'string', description: 'Country of the applicant, for example "United States". Leave empty when the request does not say.' },
+  region: { type: 'string', description: 'State or region, for example "Washington" or "WA".' },
+  county: { type: 'string', description: 'County, when the request names one.' },
+  city: { type: 'string', description: 'City, when the request names one.' },
+} as const;
+
+const placeFrom = (args: Record<string, unknown>) => ({
+  country: typeof args.country === 'string' ? args.country.slice(0, 80) : '',
+  region: typeof args.region === 'string' ? args.region.slice(0, 80) : '',
+  county: typeof args.county === 'string' ? args.county.slice(0, 80) : '',
+  city: typeof args.city === 'string' ? args.city.slice(0, 80) : '',
+});
+
+export async function groundFreshChat(
+  platform: Pick<GroundingSources, 'opportunities'> | null,
+  input: { signal: AbortSignal; now: number },
+): Promise<ChatGrounding> {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const notes = [`Today's date on the user's device is ${todayIn(zone, input.now)}.`, FRESH_START];
+  const tools: ApiTool[] = [];
+  if (!platform) return { organizationId: null, referenceContext: [], tools, systemNote: notes.join('\n') };
+  const { opportunities } = platform;
+
+  tools.push({
+    name: 'funding_search_opportunities',
+    description:
+      'Searches official funding sources (federal, state, city, county and international) and returns listings with the status the app worked out for each (Active, Expired or Unverified) and the reason. ' +
+      'Repeat each status exactly as returned. Every keyword in `query` must appear in a listing, so use one to three plain words. ' +
+      'Set the place only from what the user said in this conversation. ' +
+      'Funding means business grants and nonprofit grants alike: set `applicantTypes` only when the user says who is applying, and leave `kinds` at its default (grants) unless the user asks for contracts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'One to three keywords, for example "workforce training".' },
+        ...PLACE_PROPERTIES,
+        levels: { type: 'array', items: { type: 'string', enum: Object.keys(GEO_LEVEL_LABELS) } },
+        categories: { type: 'array', items: { type: 'string', enum: Object.keys(FUNDING_CATEGORY_LABELS) } },
+        applicantTypes: { type: 'array', items: { type: 'string', enum: Object.keys(APPLICANT_TYPE_LABELS) } },
+        kinds: {
+          type: 'array',
+          items: { type: 'string', enum: Object.keys(OPPORTUNITY_KIND_LABELS) },
+          description: 'Defaults to grants only. Add contract_solicitation only when the user asks for contracts or solicitations.',
+        },
+        statuses: {
+          type: 'array',
+          items: { type: 'string', enum: Object.keys(OPPORTUNITY_STATUS_LABELS) },
+          description: 'Defaults to active only.',
+        },
+        amountMin: { type: 'number' },
+        amountMax: { type: 'number' },
+        deadlineFrom: { type: 'string', description: 'YYYY-MM-DD' },
+        deadlineTo: { type: 'string', description: 'YYYY-MM-DD' },
+      },
+      additionalProperties: false,
+    },
+    execute: async (args) => {
+      try {
+        const place = placeFrom(args);
+        const filters = readFilters({
+          ...DEFAULT_OPPORTUNITY_FILTERS,
+          query: typeof args.query === 'string' ? args.query.slice(0, 200) : '',
+          levels: stringList(args.levels),
+          categories: stringList(args.categories),
+          applicantTypes: stringList(args.applicantTypes),
+          kinds: Array.isArray(args.kinds) && args.kinds.length > 0 ? stringList(args.kinds) : ['grant'],
+          ...(Array.isArray(args.statuses) && args.statuses.length > 0 ? { statuses: stringList(args.statuses) } : {}),
+          amountMin: typeof args.amountMin === 'number' ? args.amountMin : null,
+          amountMax: typeof args.amountMax === 'number' ? args.amountMax : null,
+          deadlineFrom: typeof args.deadlineFrom === 'string' ? args.deadlineFrom : null,
+          deadlineTo: typeof args.deadlineTo === 'string' ? args.deadlineTo : null,
+          place,
+        });
+        const result = await opportunities.search({ filters, organization: place, profileTerms: [], signal: input.signal });
+        return {
+          listings: result.opportunities.slice(0, MAX_LISTINGS).map(listing),
+          found: result.opportunities.length,
+          shown: Math.min(result.opportunities.length, MAX_LISTINGS),
+          sources: result.reports.map((report) => ({
+            source: report.sourceName,
+            state: report.state,
+            matched: report.matched,
+            message: report.message,
+          })),
+          note: 'These came from the official sources named, read just now. A source marked failed could not be read, so the list may be incomplete: say so. Never describe a listing as open unless its status is Active.',
+        };
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  });
+
+  tools.push({
+    name: 'funding_get_opportunity',
+    description:
+      'Re-reads one listing from its official source by the id that funding_search_opportunities returned, with its fuller description, the facts the source states and its official links.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'The listing id, for example "grants-gov:355824".' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+    execute: async (args) => {
+      try {
+        const detail = await opportunities.detail(assertOpportunityId(args.id), input.signal);
+        return {
+          listing: listing(detail.opportunity),
+          description: detail.description.slice(0, MAX_DESCRIPTION_CHARS),
+          facts: detail.facts.slice(0, 60),
+          links: detail.links.slice(0, 20),
+        };
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  });
+
+  return { organizationId: null, referenceContext: [], tools, systemNote: notes.join('\n') };
+}

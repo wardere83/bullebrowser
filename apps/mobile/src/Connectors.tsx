@@ -34,7 +34,7 @@ export function Connectors({
       <h2>Connectors</h2>
       <p>
         Use your signed-in websites to finish tasks. Each service keeps its own account permissions.
-        Sends and other consequential actions still need your approval.
+        BulleBrowser only finds and reads there: it never sends, submits or pays.
       </p>
       <p>
         Browser access · not a direct API connection. Disabling removes the assistant shortcut; sign

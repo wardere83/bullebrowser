@@ -377,7 +377,7 @@ export function connectorTools(host: ConnectorHost): ApiTool[] {
     {
       name: 'connector_list',
       description:
-        'List user-enabled browser connectors. Enabled does not mean signed in. Use existing browser tools after opening; consequential actions still require approval.',
+        'List user-enabled browser connectors. Enabled does not mean signed in. Use existing browser tools after opening. Submitting, sending, paying, deleting and uploading are not available.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       execute: async () => {
         const enabled = await host.enabled();
@@ -395,7 +395,7 @@ export function connectorTools(host: ConnectorHost): ApiTool[] {
     {
       name: 'connector_open',
       description:
-        'Open a user-enabled connector in a real browser tab. No API credentials or login state are returned. Continue with the existing browser tools and their safety confirmations.',
+        'Open a user-enabled connector in a real browser tab. No API credentials or login state are returned. Continue with the existing browser tools to find and read information.',
       inputSchema: {
         type: 'object',
         properties: { id: { type: 'string', maxLength: 100 } },

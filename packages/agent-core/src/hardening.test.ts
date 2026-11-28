@@ -4,7 +4,7 @@ import { PrivacyPolicyEngine } from './policy.js';
 import { ToolError, toToolError, TOOL_ERRORS } from './errors.js';
 import { UNTRUSTED_RULES, detectPageInstructions, neutralize, wrapUntrusted } from './untrusted.js';
 import { StepBudget, stepCost } from './budget.js';
-import { levelAllows, requiredLevel } from './permissions.js';
+import { DEFAULT_SITE_LEVEL, levelAllows, requiredLevel } from './permissions.js';
 import type { AgentStep, ToolContext, ToolRuntime } from './types.js';
 
 function runtime(over: Partial<ToolRuntime> = {}): ToolRuntime {
@@ -49,7 +49,7 @@ describe('typed errors (13)', () => {
   });
 
   it('returns code, retryable flag and next step to the model', async () => {
-    const out = await run('click', { target: 'Buy' }, runtime({ click: vi.fn(async () => { throw new Error('No element matched: Buy'); }) }));
+    const out = await run('click', { target: 'Guidelines' }, runtime({ click: vi.fn(async () => { throw new Error('No element matched: Guidelines'); }) }));
     expect(out.isError).toBe(true);
     expect(out.errorCode).toBe('ELEMENT_NOT_FOUND');
     expect(out.text).toContain('"code":"ELEMENT_NOT_FOUND"');
@@ -369,12 +369,20 @@ describe('per-site permissions (10)', () => {
     expect(out.errorCode).toBe('PERMISSION_DENIED');
   });
 
-  it('does not confirm twice when the permission prompt already confirmed', async () => {
+  it('blocks a commit before any site permission or confirmation is asked', async () => {
     const confirmDestructive = vi.fn(async () => true);
     const checkPermission = vi.fn(async () => 'confirmed' as const);
+    const click = vi.fn(async () => ({ matched: 'button' }));
     const inspectTarget = vi.fn(async () => ({ label: 'Send message', submitsForm: true, activates: true }));
-    await run('click', { target: '@9' }, runtime({ confirmDestructive, checkPermission, inspectTarget }));
-    expect(checkPermission).toHaveBeenCalledWith('1', 'full', expect.anything());
+    const out = await run('click', { target: '@9' }, runtime({ click, confirmDestructive, checkPermission, inspectTarget }));
+    expect(out.errorCode).toBe('BLOCKED_BY_POLICY');
+    expect(checkPermission).not.toHaveBeenCalled();
     expect(confirmDestructive).not.toHaveBeenCalled();
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it('lets research typing run on a new site without asking', () => {
+    expect(levelAllows(DEFAULT_SITE_LEVEL, requiredLevel('type', { target: 'q' }, null))).toBe(true);
+    expect(levelAllows(DEFAULT_SITE_LEVEL, requiredLevel('click', { target: '#x' }, { label: 'Remove filter', submitsForm: false, activates: true }))).toBe(true);
   });
 });

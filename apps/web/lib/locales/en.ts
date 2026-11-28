@@ -34,7 +34,7 @@ export const en = {
     'Explore relevant sources across tabs. Check eligibility, deadlines and funder priorities on the original pages before deciding which opportunities deserve your time.',
   'app.benefit.strengths.t': 'Keep the next move yours',
   'app.benefit.strengths.d':
-    'Pause a task with Stop, revisit the source tabs and review the findings. The assistant asks before consequential actions; you decide what to pursue and submit.',
+    'Pause a task with Stop, revisit the source tabs and review the findings. The assistant finds and reads funding but never submits, sends or pays; you decide what to pursue and submit.',
   'app.audiences.eyebrow': 'For businesses and CBOs',
   'app.audiences.h2': 'Different goals. A strategy rooted in your work.',
   'app.audiences.body':
@@ -344,12 +344,12 @@ export const en = {
 
   // Browser and assistant
   'browser.eyebrow': 'Browser and assistant',
-  'browser.h2': 'A full browser, with an assistant that asks first.',
+  'browser.h2': 'A full browser, with an assistant that finds funding for you.',
   'browser.body':
     'BulleBrowser is a desktop browser with tabs, bookmarks and history. Its built-in assistant can read pages and browse official sites for you, and it stays under your control.',
-  'browser.access.t': 'Asks before it browses',
+  'browser.access.t': 'Finds and reads, never submits',
   'browser.access.d':
-    'Each task asks once for permission to use your tabs, and says what it wants to do.',
+    'It searches, opens listings and reads official pages on its own. It never submits an application, sends a message or pays; those steps stay with you.',
   'browser.steps.t': 'Shows every step',
   'browser.steps.d': 'You see each step as it happens, and Stop halts the task.',
   'browser.budget.t': 'Works within a step budget',

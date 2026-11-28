@@ -29,7 +29,8 @@ import { feedbackStore } from './storage/feedback.js';
 import { createFeedbackSyncer } from './feedback-sync.js';
 import { assistantNotes } from './storage/assistant-notes.js';
 import { feedbackExport, feedbackMailto, normalizeFeedbackInput } from '../shared/feedback.js';
-import { identityService } from './identity/service.js';
+import { briefHtml, buildBrief, collectPlaybooks } from '../shared/strategy-brief.js';
+import { renderPdf } from './render-pdf.js';
 import { startFundingPlatform } from './funding/platform.js';
 import { transcribeAudio } from './voice.js';
 import { prepareSpeech, synthesizeAudio } from './speech.js';
@@ -50,14 +51,11 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Chats and projects can hold what an organization's documents say, so they
-// are listed, opened and changed only under the organization they belong to.
-async function activeOrganizationId(): Promise<string | null> {
-  try {
-    return (await identityService.currentSession()).organizationId;
-  } catch {
-    return null;
-  }
+// Chats and projects are not tied to any organization: every prompt starts
+// fresh, so no one is locked into one organization's profile. Every chat and
+// project on this device is listed and can be continued.
+async function activeOrganizationId(): Promise<undefined> {
+  return undefined;
 }
 
 export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow | null = () => win) {
@@ -169,6 +167,24 @@ export function registerIpc(win: BrowserWindow, getWindow: () => BrowserWindow |
 
   handle(IPC.CONVERSATION_SCRATCHPAD, async (_e, id: string, text: string) => {
     conversationStore.setScratchpad(id, text, await activeOrganizationId());
+  });
+  // The Session Scratchpad's strategy brief as a one or two page PDF.
+  handle(IPC.CONVERSATION_BRIEF_PDF, async (event, id: string) => {
+    appWindowOnly(event);
+    const conversation = typeof id === 'string' ? conversationStore.get(id) : null;
+    if (!conversation) throw new Error('Conversation not found');
+    const playbooks = collectPlaybooks(conversation.taskRuns ?? []);
+    if (playbooks.length === 0) throw new Error('There is no strategy to download yet. Ask BulleBrowser to find funding first.');
+    const now = Date.now();
+    const brief = buildBrief(playbooks, now);
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Save strategy brief',
+      defaultPath: join(app.getPath('documents'), `Funding Strategy Brief ${new Date(now).toISOString().slice(0, 10)}.pdf`),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (result.canceled || !result.filePath) return false;
+    writeFileSync(result.filePath, await renderPdf(briefHtml(brief, product.name)));
+    return true;
   });
 
   // agent

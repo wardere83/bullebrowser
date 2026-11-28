@@ -319,23 +319,17 @@ test('bare hostnames and search settings navigate real pages through the address
   }
 });
 
-test('the keyless address-bar assistant browses only after approval and reads the loaded source', async () => {
+test('the keyless address-bar assistant browses straight away and reads the loaded source', async () => {
   const site = await fixture();
   const { app, win, close } = await launch();
   try {
     await enterAddress(win, `go to ${site.url}/one`);
-    const allow = win.getByRole('button', { name: 'Allow Access', exact: true });
-    await expect(allow).toBeVisible();
-    expect((await pageState(app)).visible).toBe(false);
-    expect((await pageState(app)).url).toBe('about:blank');
-    await allow.click();
+    await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toHaveCount(0);
     await expectPage(app, win, `${site.url}/one`, 'Community funding source');
     await expect(win.locator('.md-prose')).toContainText('Community funding source');
     await expect(win.locator('aside').getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
     await holdActualPageRead(app);
     await enterAddress(win, 'summarize this page');
-    await expect(allow).toBeVisible();
-    await allow.click();
     await expect.poll(() => app.evaluate(() => (globalThis as unknown as { __browsingRead: ReadProbe }).__browsingRead.entered)).toBe(1);
     const activity = win.getByRole('region', { name: 'Task activity', exact: true });
     const steps = activity.getByRole('log', { name: 'Browser task steps', exact: true });
@@ -439,9 +433,6 @@ test('follow-up retries remember the task without asking the user to repeat it',
     for (const [index, prompt] of ['Summarize this page', 'Try again', 'Continue'].entries()) {
       await win.locator('aside textarea.prompt-input-field').fill(prompt);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
-      const allow = win.getByRole('button', { name: 'Allow Access', exact: true });
-      await expect(allow).toBeVisible();
-      await allow.click();
       await expect(win.locator('.md-prose')).toHaveCount(index + 1);
       await expect(win.locator('.md-prose').last()).toContainText('Community funding source');
       await expect(win.locator('aside').getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
@@ -470,7 +461,6 @@ for (const layout of ['classic', 'semantic', 'contents', 'delayed']) {
       }, { base: source.url, layout });
       await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
-      await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
       await expect(win.getByRole('button', { name: 'Configure web search', exact: true })).toHaveCount(0);
       await expect(win.getByRole('region', { name: 'Task activity' })).not.toContainText('untrusted_page_data');
@@ -508,7 +498,6 @@ test('no search key searches Startpage first and reads its direct result links',
     });
     await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
     const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());
     // The query was typed into the box and submitted, not loaded as a URL.
@@ -557,7 +546,6 @@ test('an AI account out of credit still browses, and the chat never mentions cre
     }, { base: source.url, apiUrl });
     await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(win.locator('.md-prose')).toContainText('2 source pages', { timeout: 30000 });
     // The model really was asked, and refused for billing.
     expect(modelCalls).toBeGreaterThan(0);
@@ -898,9 +886,6 @@ test('a research prompt browses multiple real pages and shows live page counts',
     }, base);
     await win.locator('aside textarea.prompt-input-field').fill('Find grants for California schools');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
-    await expect(win.getByRole('status', { name: 'Browser progress' })).toContainText('Waiting for browsing access');
-    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     const activity = win.getByRole('region', { name: 'Task activity' });
     await expect(activity).toBeVisible();
     await expect(activity.getByText(/pages? read/)).toBeVisible();
@@ -948,8 +933,6 @@ for (const option of [
       await win.locator('aside textarea.prompt-input-field').fill(option.answer);
       await holdActualPageRead(app, true);
       await win.getByRole('button', { name: 'Send', exact: true }).click();
-      await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
-      await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect.poll(() => app.evaluate(async () => {
         const manager = (globalThis as unknown as { __bbTest: Hooks }).__bbTest.tabManager;
         return manager.getView(manager.getActiveId()).webContents.executeJavaScript("Boolean(document.getElementById('__bb_agent_cursor__')?.shadowRoot?.querySelector('.ptr'))");
@@ -978,7 +961,6 @@ test('live Bing search discovers and reads Seattle funding sources', async () =>
     await app.evaluate(() => { process.env.BRAVE_SEARCH_API_KEY = ''; });
     await win.locator('aside textarea.prompt-input-field').fill('Find open grants funding Seattle');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect(win.locator('.md-prose')).toContainText('source pages', { timeout: 90_000 });
     await expect(win.locator('.md-prose')).not.toContainText('could not finish');
     const tabs = await win.evaluate(() => window.bullebrowser.tabs.list());

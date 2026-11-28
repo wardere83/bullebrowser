@@ -436,9 +436,10 @@ describe('the keyless assistant', () => {
       expect(reply).toBe('Entered text into "Search".');
     });
 
-    it('still asks before a consequential click', async () => {
-      const context = makeContext({ confirmDestructive: vi.fn(async () => false) });
-      await expect(ask('click "Submit application"', { context })).rejects.toThrow(/declined/);
+    it('blocks a consequential click with no prompt', async () => {
+      const context = makeContext({ confirmDestructive: vi.fn(async () => true) });
+      await expect(ask('click "Submit application"', { context })).rejects.toThrow(/finds and reads funding only/);
+      expect(context.runtime.confirmDestructive).not.toHaveBeenCalled();
       expect(context.runtime.click).not.toHaveBeenCalled();
     });
   });

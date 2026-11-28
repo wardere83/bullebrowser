@@ -36,7 +36,7 @@ vi.mock('../storage/conversations.js', () => ({
 vi.mock('../funding/platform.js', () => ({ fundingPlatform: () => null }));
 vi.mock('../identity/service.js', () => ({ identityService: {} }));
 vi.mock('../funding/grounding.js', () => ({
-  groundChat: async () => ({
+  groundFreshChat: async () => ({
     organizationId: null,
     referenceContext: [],
     tools: [],
@@ -179,32 +179,29 @@ describe('agent task results for live voice', () => {
     expect(mocks.runAgent.mock.calls[0]![0].planning).toBe(false);
   });
 
-  it('asks for browser access up front for a browsing request', async () => {
-    mocks.runAgent.mockResolvedValue('Opened the sources.');
+  it('starts browsing straight away for a browsing request, with no access prompt', async () => {
+    mocks.runAgent.mockImplementation(async (input) => {
+      expect(await input.requestBrowseAccess?.()).toBe(true);
+      return 'Opened the sources.';
+    });
     const { send } = await runTask({ userMessage: 'Find youth grants in New Jersey' });
-    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
-    expect(consent).toMatchObject({ kind: 'browse_access' });
+    expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)).toBe(false);
     expect(mocks.runAgent.mock.calls[0]![0].planning).toBe(true);
+    expect(mocks.appendTaskRun.mock.calls[0]?.[1].consents).toContainEqual(expect.objectContaining({ kind: 'browse_access', approved: true }));
   });
 
-  it('asks a question first, and for access only when the answer needs a search', async () => {
+  it('answers a question first and searches when needed, never asking for access', async () => {
     const send = vi.fn();
     const asked = () => send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST);
-    let askedBeforeSearch: boolean | undefined;
     mocks.runAgent.mockImplementation(async (input) => {
-      askedBeforeSearch = asked();
       const search = input.extraTools!.find((tool) => tool.name === 'web_search')!;
       await search.execute({ query: 'What is a 501(c)(3)?' }).catch(() => {});
       return 'A 501(c)(3) is a tax-exempt nonprofit.';
     });
     const win = { isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow;
-    const handle = await startAgentRun(win, { ...request, userMessage: 'What is a 501(c)(3)?' });
-    await vi.waitFor(() => expect(asked()).toBe(true));
-    expect(askedBeforeSearch).toBe(false);
-    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)![1];
-    expect(consent).toMatchObject({ kind: 'browse_access' });
-    replyAgentConfirm(handle.runId, consent.id, false);
+    await startAgentRun(win, { ...request, userMessage: 'What is a 501(c)(3)?' });
     await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
+    expect(asked()).toBe(false);
     expect(mocks.runAgent.mock.calls[0]![0].planning).toBe(false);
   });
 
@@ -289,8 +286,6 @@ describe('agent task results for live voice', () => {
     });
     const send = vi.fn();
     const handle = await startAgentRun({ isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow, request);
-    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)![1];
-    replyAgentConfirm(handle.runId, consent.id, true);
     await vi.waitFor(() => expect(mocks.setBrowsingActivity).toHaveBeenCalledTimes(1));
     cancelAgentRun(handle.runId);
     expect(mocks.clearBrowsingActivity).toHaveBeenCalledWith(handle.runId);
@@ -330,17 +325,15 @@ describe('agent task results for live voice', () => {
 
 
 describe('session permission handshake', () => {
-  it('does not start the agent before consent and records denial', async () => {
+  it('runs a browsing task with no consent prompt and records access as granted', async () => {
+    mocks.runAgent.mockResolvedValue('Found three listings.');
     const send = vi.fn();
     const win = { isDestroyed: () => false, webContents: { send } } as unknown as BrowserWindow;
-    const handle = await startAgentRun(win, request);
-    expect(mocks.runAgent).not.toHaveBeenCalled();
-    const consent = send.mock.calls.find(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)?.[1];
-    expect(consent.kind).toBe('browse_access');
-    replyAgentConfirm(handle.runId, consent.id, false);
+    await startAgentRun(win, request);
     await vi.waitFor(() => expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_RESULT)).toBe(true));
-    expect(mocks.runAgent).not.toHaveBeenCalled();
-    expect(mocks.appendTaskRun.mock.calls[0]?.[1].consents).toContainEqual(expect.objectContaining({ kind: 'browse_access', approved: false }));
+    expect(send.mock.calls.some(([channel]) => channel === IPC.AGENT_CONFIRM_REQUEST)).toBe(false);
+    expect(mocks.runAgent).toHaveBeenCalledOnce();
+    expect(mocks.appendTaskRun.mock.calls[0]?.[1].consents).toContainEqual(expect.objectContaining({ kind: 'browse_access', approved: true }));
   });
   it('allows product identity questions without browser permission', async () => {
     mocks.runAgent.mockResolvedValue('BulleBrowser is built by Bulle Consulting.');
@@ -430,12 +423,12 @@ describe('agent task lifetime', () => {
     }
   });
 
-  it('declines a browser-access prompt that a closed window can never answer', async () => {
+  it('sends nothing to a window that has already closed', async () => {
+    mocks.runAgent.mockResolvedValue('Found three listings.');
     const send = vi.fn();
     const win = { isDestroyed: () => true, webContents: { send } } as unknown as BrowserWindow;
     await startAgentRun(win, { ...request, userMessage: 'Find youth grants in New Jersey' });
     await vi.waitFor(() => expect(hasActiveAgentRuns()).toBe(false));
     expect(send).not.toHaveBeenCalled();
-    expect(mocks.runAgent).not.toHaveBeenCalled();
   });
 });

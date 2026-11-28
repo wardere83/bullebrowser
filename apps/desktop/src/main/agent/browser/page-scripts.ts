@@ -333,7 +333,9 @@ var __bb = (function () {
     return clean(o.text);
   };
 
-  // A form "carries the user's data" unless it is only a search box.
+  // A form "carries the user's data" when it holds personal details: a
+  // message box, an email, phone, password or a file. Search and filter forms
+  // (keywords, agency, category, dates) do not, however many fields they have.
   var dataForm = function (form) {
     if (!form || form.getAttribute('role') === 'search') return false;
     var fields = Array.prototype.filter.call(form.elements || [], function (f) {
@@ -342,8 +344,7 @@ var __bb = (function () {
     for (var i = 0; i < fields.length; i++) {
       if (fields[i].tagName === 'TEXTAREA' || /^(password|email|tel|file)$/i.test(fields[i].type || '')) return true;
     }
-    if (fields.length === 1 && /^(search|text)$/i.test(fields[0].type || 'text')) return false;
-    return fields.length >= 2;
+    return false;
   };
   // How = 'click', 'Enter' or 'Space'. Enter and Space on a focused button
   // press it exactly like a click; Enter in a text field also submits its

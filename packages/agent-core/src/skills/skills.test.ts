@@ -73,11 +73,11 @@ describe('funding workflows', () => {
   // would let a workflow guess, blur fact and advice, or overstate a listing.
   it.each(WORKFLOWS)('%s carries every non-negotiable rule', (id) => {
     const text = prompt(id);
-    // grounded only in the approved profile and the organization's own passages
-    expect(text).toMatch(/comes only from its approved profile and passages of its\s+own documents/);
-    expect(text).toContain('org_get_profile');
-    expect(text).toContain('org_search_knowledge');
-    expect(text).toMatch(/When those tools are offered, use them/);
+    // every request starts fresh: the applicant is who the user describes now
+    expect(text).toMatch(/Every request starts fresh/);
+    expect(text).toMatch(/comes only from what the user\s+says in this conversation and the files they attach/);
+    expect(text).toMatch(/No saved profile is assumed/);
+    expect(text).not.toContain('org_get_profile');
     // listings from the host tools, otherwise official sources only
     expect(text).toContain('funding_search_opportunities');
     expect(text).toContain('funding_get_opportunity');
@@ -123,9 +123,10 @@ describe('funding workflows', () => {
     for (const [id] of WORKFLOWS) expect(prompt(id)).toMatch(/The funder decides\s+who is eligible and who is funded/);
   });
 
-  it('refuses to fill in a missing side or a missing profile', () => {
-    expect(prompt('find_opportunities')).toMatch(/If there is no approved profile, say so/);
-    expect(prompt('assess_alignment')).toMatch(/If either\s+side is missing, say which one and stop there/);
+  it('starts each search fresh and asks only for a missing applicant side', () => {
+    expect(prompt('find_opportunities')).toMatch(/No saved profile is used/);
+    expect(prompt('find_opportunities')).toMatch(/make a sensible assumption, say which one,\s+and search/);
+    expect(prompt('assess_alignment')).toMatch(/If\s+the applicant side is missing, ask for a short description in one question/);
     expect(prompt('funder_priorities')).toMatch(/Do not\s+describe a funder from memory/);
   });
 

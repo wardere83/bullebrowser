@@ -82,6 +82,7 @@ export const IPC = {
   PASSWORD_DELETE: 'password:delete',
   PASSWORD_IMPORT: 'password:import',
   CONVERSATION_SCRATCHPAD: 'conversation:scratchpad',
+  CONVERSATION_BRIEF_PDF: 'conversation:brief-pdf',
   // App
   APP_GET_INFO: 'app:get-info',
   APP_QUIT: 'app:quit',
@@ -391,6 +392,8 @@ export interface BrowserBridge {
     get(id: string): Promise<ConversationDetail | null>;
     create(): Promise<ConversationDetail>;
     setScratchpad(id: string, text: string): Promise<void>;
+    /** Saves the Session Scratchpad's strategy brief as a PDF. False when the save was cancelled. */
+    downloadBrief(id: string): Promise<boolean>;
     delete(id: string): Promise<void>;
     /** Every chat in History; resolves to how many were deleted. */
     deleteAll(): Promise<number>;

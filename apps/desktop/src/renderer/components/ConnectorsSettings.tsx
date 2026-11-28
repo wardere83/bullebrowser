@@ -38,8 +38,8 @@ export function ConnectorsSettings() {
       </summary>
       <p className="mt-2 text-xs text-ink-secondary">
         Search services or add your own. These connectors work through the service’s real website,
-        using your signed-in browser session. Sends, submissions and other consequential actions
-        still ask for approval.
+        using your signed-in browser session. BulleBrowser only finds and reads there: it never
+        sends, submits or pays.
       </p>
       <p className="mt-2 text-xs text-ink-secondary">
         Turning one off removes its assistant shortcut. It does not sign you out or block ordinary

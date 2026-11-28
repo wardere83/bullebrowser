@@ -17,12 +17,21 @@ export interface StrategyAction {
 }
 
 export interface StrategyPlaybook {
+  /** The opportunity's own name, as the source gives it. One playbook per opportunity. */
+  opportunity?: string;
+  /** Who funds it. */
+  funder?: string;
+  /** The award as the source states it ("Up to $250,000"). */
+  award?: string;
   /** One line: the opportunity and the angle that wins it. */
   headline: string;
   /** How well the organization fits, and why, in a sentence or two. */
   fit?: string;
   /** A rough read of the chance of success. */
   outlook?: 'strong' | 'promising' | 'long shot' | 'not a fit';
+  /** What a successful proposal must have: eligibility, required documents,
+   *  match, letters, data, registrations. */
+  requirements?: string[];
   /** The creative angles that would make this application stand out. */
   winThemes: string[];
   /** Concrete, ordered steps the user can execute. */
@@ -68,9 +77,13 @@ export function normalizeStrategy(input: Record<string, unknown>): StrategyPlayb
     .slice(0, MAX_ITEMS);
   const sources = list(input.sources).filter((url) => /^https?:\/\//i.test(url));
   return {
+    ...(text(input.opportunity, 160) ? { opportunity: text(input.opportunity, 160) } : {}),
+    ...(text(input.funder, 160) ? { funder: text(input.funder, 160) } : {}),
+    ...(text(input.award, 120) ? { award: text(input.award, 120) } : {}),
     headline,
     ...(text(input.fit) ? { fit: text(input.fit) } : {}),
     ...(outlook ? { outlook } : {}),
+    ...(list(input.requirements).length ? { requirements: list(input.requirements) } : {}),
     winThemes: list(input.winThemes),
     actions,
     ...(list(input.deadlines).length ? { deadlines: list(input.deadlines) } : {}),
@@ -85,8 +98,12 @@ export const STRATEGY_INSTRUCTIONS =
   'Strategy playbook: while you work on an opportunity (a grant, RFP, contract, solicitation, partnership, ' +
   `sponsorship, market or client), call ${STRATEGY_TOOL} to show the user how to win it. Call it as soon as you ` +
   'have a first real picture of the opportunity, and again whenever something you read changes the picture ' +
-  '(an eligibility rule, a deadline, a scoring criterion, a funder priority). Each call replaces the last one. ' +
-  'Write it for the user, not as notes to yourself: be specific to this opportunity and this organization, ' +
+  '(an eligibility rule, a deadline, a scoring criterion, a funder priority). Name the opportunity in ' +
+  '`opportunity`: a call for the same opportunity replaces its earlier playbook, and a call for another ' +
+  'opportunity adds one, so when you find several promising opportunities, share a playbook for each of the ' +
+  'best ones (up to five). In `requirements`, list what a successful proposal must have: eligibility, required ' +
+  'documents and registrations, match, letters of support, data and outcomes to show. ' +
+  'Write it for the user, not as notes to yourself: be specific to this opportunity and to the applicant as the user describes them, ' +
   'name concrete angles a reviewer would remember, and turn each idea into a step someone can do this week. ' +
   'Ground every claim in what you have read and never invent dates, amounts or requirements. Skip the ' +
   'playbook for small talk, quick facts and tasks with nothing to win.';
@@ -97,16 +114,21 @@ export function strategyTool(onStep: AgentStepHandler): ApiTool {
     description:
       'Show the user a live strategy playbook for the opportunity you are working on: the winning angle, fit, ' +
       'win themes, concrete action steps, deadlines, risks and the best next move. It appears in the panel ' +
-      'beside the browser while you keep working, and each call replaces the previous playbook. It changes ' +
+      'beside the browser while you keep working and collects in the Session Scratchpad. A call for the same ' +
+      'opportunity replaces its playbook; a call for another opportunity adds one. It changes ' +
       'nothing on any website.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
       required: ['headline', 'winThemes', 'actions'],
       properties: {
+        opportunity: { type: 'string', description: 'The opportunity\'s name as the source gives it.' },
+        funder: { type: 'string', description: 'Who funds it.' },
+        award: { type: 'string', description: 'The award amount or range exactly as the source states it.' },
         headline: { type: 'string', description: 'One line: the opportunity and the angle that wins it.' },
         fit: { type: 'string', description: 'How well the organization fits and why, in one or two sentences.' },
         outlook: { type: 'string', enum: ['strong', 'promising', 'long shot', 'not a fit'] },
+        requirements: { type: 'array', items: { type: 'string' }, description: 'What a successful proposal must have: eligibility, required documents and registrations, match, letters, data to show. Each as the source states it.' },
         winThemes: { type: 'array', items: { type: 'string' }, description: 'Two to five creative angles that would make this stand out to the reviewer.' },
         actions: {
           type: 'array',

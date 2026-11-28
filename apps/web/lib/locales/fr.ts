@@ -30,7 +30,7 @@ const text: Messages = {
     'Explorez les sources pertinentes dans plusieurs onglets. Vérifiez les critères, les échéances et les priorités sur les pages originales avant de choisir les opportunités à approfondir.',
   'app.benefit.strengths.t': 'Gardez la maîtrise de la suite',
   'app.benefit.strengths.d':
-    'Interrompez une tâche avec Stop, consultez les sources et examinez les résultats. L’assistant demande votre accord avant les actions importantes ; vous décidez des démarches et des envois.',
+    'Interrompez une tâche avec Stop, consultez les sources et examinez les résultats. L’assistant trouve et lit les financements, mais ne soumet, n’envoie et ne paie jamais rien ; vous décidez des démarches et des envois.',
   'app.audiences.eyebrow': 'Pour les entreprises et les CBOs',
   'app.audiences.h2': 'Des objectifs différents. Une stratégie ancrée dans votre travail.',
   'app.audiences.body':
@@ -330,12 +330,12 @@ const text: Messages = {
     'La proposition appartient à l’organisation qui la dépose, et celle-ci répond de tout ce qu’elle contient. Vérifiez chaque fait, chaque chiffre et chaque exigence auprès de sa source avant l’envoi.',
 
   'browser.eyebrow': 'Navigateur et assistant',
-  'browser.h2': 'Un navigateur complet, avec un assistant qui demande d’abord.',
+  'browser.h2': 'Un navigateur complet, avec un assistant qui trouve des financements pour vous.',
   'browser.body':
     'BulleBrowser est un navigateur de bureau avec onglets, favoris et historique. Son assistant intégré peut lire des pages et parcourir des sites officiels pour vous, et il reste sous votre contrôle.',
-  'browser.access.t': 'Demande avant de naviguer',
+  'browser.access.t': 'Trouve et lit, n’envoie jamais',
   'browser.access.d':
-    'Chaque tâche demande une fois l’autorisation d’utiliser vos onglets et précise ce qu’elle veut faire.',
+    'Il recherche, ouvre les appels et lit les pages officielles de lui-même. Il ne soumet jamais de candidature, n’envoie aucun message et ne paie rien ; ces étapes restent les vôtres.',
   'browser.steps.t': 'Montre chaque étape',
   'browser.steps.d':
     'Vous voyez chaque étape au fur et à mesure, et le bouton Stop interrompt la tâche.',

@@ -30,7 +30,7 @@ export const ptPT: Messages = {
     'Explore fontes relevantes em vários separadores. Verifique elegibilidade, prazos e prioridades nas páginas originais antes de decidir quais oportunidades merecem o seu tempo.',
   'app.benefit.strengths.t': 'Decida o passo seguinte',
   'app.benefit.strengths.d':
-    'Interrompa uma tarefa com Stop, volte às fontes e reveja as conclusões. O assistente pede autorização antes de ações importantes; decide o que prosseguir e submeter.',
+    'Interrompa uma tarefa com Stop, volte às fontes e reveja as conclusões. O assistente encontra e lê financiamento, mas nunca submete, envia ou paga; decide o que prosseguir e submeter.',
   'app.audiences.eyebrow': 'Para empresas e CBOs',
   'app.audiences.h2': 'Objetivos diferentes. Uma estratégia assente no seu trabalho.',
   'app.audiences.body':
@@ -328,12 +328,12 @@ export const ptPT: Messages = {
     'A proposta pertence ao candidato, que responde por tudo o que ela contém. Verifique cada facto, número e requisito junto da respetiva fonte antes de a enviar.',
 
   'browser.eyebrow': 'Navegador e assistente',
-  'browser.h2': 'Um navegador completo, com um assistente que pergunta primeiro.',
+  'browser.h2': 'Um navegador completo, com um assistente que encontra financiamento por si.',
   'browser.body':
     'O BulleBrowser é um navegador para computador com separadores, marcadores e histórico. O assistente integrado consegue ler páginas e navegar em sítios oficiais por si, e mantém-se sob o seu controlo.',
-  'browser.access.t': 'Pergunta antes de navegar',
+  'browser.access.t': 'Encontra e lê, nunca submete',
   'browser.access.d':
-    'Cada tarefa pede autorização uma vez para usar os seus separadores e diz o que pretende fazer.',
+    'Pesquisa, abre concursos e lê páginas oficiais por conta própria. Nunca submete uma candidatura, envia uma mensagem ou faz um pagamento; esses passos ficam consigo.',
   'browser.steps.t': 'Mostra cada passo',
   'browser.steps.d': 'Vê cada passo à medida que acontece, e o botão Stop interrompe a tarefa.',
   'browser.budget.t': 'Trabalha dentro de um orçamento de passos',

@@ -9,7 +9,6 @@ import { BROWSER_TASKS, providerFor, type BrowserTaskId, type ModelId } from '@b
 import { useAgentStore } from '../state/agent-store.js';
 import { useBrowserStore } from '../state/browser-store.js';
 import {
-  activeOrganization,
   focusedRfpId,
   useWorkspaceStore,
 } from '../state/workspace-store.js';
@@ -29,7 +28,6 @@ import { FeedbackBar } from './FeedbackBar.js';
 import type {
   AppSettings,
   BrowserBridge,
-  ConversationDetail,
   ConversationSummary,
   RunAttachment,
 } from '../../shared/ipc.js';
@@ -485,50 +483,6 @@ export function AiPanel() {
     setSkillId('');
   }, [conversationId]);
 
-  // A chat belongs to the organization it was used in: main only lists, reads
-  // and continues it under that organization. So when the user moves from one
-  // organization to another (or the one they were in is deleted), the chat that
-  // was open must not stay on screen. Land on a new session for the
-  // organization now active, exactly as opening the app does: the newest chat
-  // when it is still empty, a fresh one otherwise. What was queued or attached
-  // for the previous organization goes with it. Creating the first organization
-  // is not a move: the chat open then belongs to none yet.
-  const activeOrganizationId = useWorkspaceStore(
-    (state) => activeOrganization(state.identity)?.id ?? null,
-  );
-  const identityConfirmed = useWorkspaceStore((state) => state.identityStatus === 'ready');
-  const chatOrganization = useRef<string | null | undefined>(undefined);
-  const sessionRequest = useRef(0);
-  useEffect(() => {
-    if (!identityConfirmed) return;
-    const previous = chatOrganization.current;
-    chatOrganization.current = activeOrganizationId;
-    if (typeof previous !== 'string' || previous === activeOrganizationId) return;
-    sessionRequest.current += 1;
-    const request = sessionRequest.current;
-    queuedRef.current = [];
-    setQueued([]);
-    setAttachments([]);
-    setShowHistory(false);
-    // Keep focus where the user left it; loading a session is not an input action.
-    const show = (conversation: ConversationDetail) => setCurrent(conversation);
-    void (async () => {
-      const bridge = browserBridge();
-      const list = await bridge.conversations.list();
-      const newest = list[0];
-      const newestDetail = newest ? await bridge.conversations.get(newest.id) : null;
-      if (request !== sessionRequest.current) return;
-      if (newestDetail && newestDetail.messages.length === 0) {
-        setConversations(list);
-        show(newestDetail);
-        return;
-      }
-      const fresh = await bridge.conversations.create();
-      if (request !== sessionRequest.current) return;
-      show(fresh);
-      setConversations(await bridge.conversations.list());
-    })();
-  }, [identityConfirmed, activeOrganizationId, setConversations, setCurrent]);
 
   const createConversation = async () => {
     const bridge = browserBridge();
@@ -617,7 +571,7 @@ export function AiPanel() {
       )}
 
       {runId && <AgentControls runId={runId} steps={steps} />}
-      {current && <SessionScratchpad key={current.id} conversation={current} />}
+      {current && <SessionScratchpad key={current.id} conversation={current} liveSteps={steps} />}
       <div className="relative flex flex-1 flex-col overflow-hidden">
       <div
         ref={messagesRef}
@@ -992,7 +946,7 @@ function AllowAccess({ task }: { task: string }) {
         Allow Access
       </div>
       <p className="mt-1 text-xs leading-relaxed text-ink-secondary">
-        Allow this session to access agent tabs and page scripting, request downloads and notifications, and use clipboard access when requested. Purchases, submissions, sending, deleting, uploads and downloads still require individual approval. Page-state replay is saved locally with this conversation for 30 days.
+        Allow this task to open the sites you have connected so it can keep finding funding. BulleBrowser only finds and reads: it never submits, sends, pays, deletes or uploads. Page-state replay is saved locally with this conversation for 30 days.
         Task:
         <span className="mt-1 block italic text-ink-primary">“{task}”</span>
       </p>

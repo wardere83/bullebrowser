@@ -17,6 +17,24 @@ const REDACT_KEY_RE = /(password|passcode|token|secret|ssn|social|credit|card|cv
 
 export const HIGH_RISK_TARGET_RE = /(submit|purchase|buy|pay|delete|remove|send|upload|publish)/i;
 
+// BulleBrowser finds and reads funding. It never commits the user to anything
+// outside the app: no money spent, no message or post sent, nothing deleted or
+// uploaded, no account opened, no application submitted. Those steps are
+// blocked outright, with no prompt; finding and reading never asks (search
+// forms, filters, Next and Continue, opening and closing tabs run straight
+// through). A form that carries personal details (an application, a contact
+// form) counts as a commit through submitsForm.
+export const COMMIT_TARGET_RE =
+  /\b(pay|payment|purchase|buy|checkout|check out|place (?:my |your |the |an )?order|order now|donate|send|publish|post|delete|upload|e-?sign|sign and submit|sign up|register|create (?:an |my |your )?account|submit (?:my |your |the |this |an? )?(?:application|proposal|payment|order|form))\b/i;
+
+export const COMMIT_BLOCKED_MESSAGE =
+  'BulleBrowser finds and reads funding only. It does not submit applications, send messages, pay, delete, upload or open accounts; the user takes that step themselves.';
+
+const blockCommit = (commit: boolean): PolicyDecision =>
+  commit
+    ? { allowed: false, reason: COMMIT_BLOCKED_MESSAGE, requiresConfirmation: false }
+    : { allowed: true, requiresConfirmation: false };
+
 export interface PolicyEngine {
   evaluateToolStep(step: PlanStep): PolicyDecision;
   allowExternalProvider(context: { url?: string; text?: string }): PolicyDecision;
@@ -52,31 +70,29 @@ export class PrivacyPolicyEngine implements PolicyEngine {
 
     if (step.toolName === 'clickElement' || step.toolName === 'click') {
       const target = String(step.input.target ?? '');
-      return {
-        allowed: true,
-        requiresConfirmation:
-          !facts ||
-          HIGH_RISK_TARGET_RE.test(target) ||
-          HIGH_RISK_TARGET_RE.test(facts?.label ?? '') ||
-          facts?.submitsForm === true,
-      };
+      // A plain "Submit" is a search button as often as an application's, so it
+      // is judged by the form it sends; when the page could not be inspected,
+      // it is treated as the application's.
+      return blockCommit(
+        COMMIT_TARGET_RE.test(target) ||
+        COMMIT_TARGET_RE.test(facts?.label ?? '') ||
+        facts?.submitsForm === true ||
+        (!facts && /^\W*submit\W*$/i.test(target)),
+      );
     }
 
     // Enter in a sign-up, checkout or message form submits it just as the
     // button would, and Enter or Space on a focused button presses it. A lone
     // search box does not count (submitsForm is false).
     if (step.toolName === 'press_key' && (step.input.key === 'Enter' || step.input.key === 'Space')) {
-      return {
-        allowed: true,
-        requiresConfirmation:
-          !facts ||
-          facts?.submitsForm === true ||
-          (facts?.activates === true && HIGH_RISK_TARGET_RE.test(facts.label)),
-      };
+      return blockCommit(
+        facts?.submitsForm === true ||
+        (facts?.activates === true && COMMIT_TARGET_RE.test(facts.label)),
+      );
     }
 
-    if (step.toolName === 'close_tab') {
-      return { allowed: true, requiresConfirmation: true };
+    if (step.toolName === 'upload_file') {
+      return { allowed: false, reason: COMMIT_BLOCKED_MESSAGE, requiresConfirmation: false };
     }
 
     return { allowed: true, requiresConfirmation: false };

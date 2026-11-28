@@ -82,6 +82,7 @@ const bridge: BrowserBridge = {
     get: (id) => ipcRenderer.invoke(IPC.CONVERSATION_GET, id),
     create: () => ipcRenderer.invoke(IPC.CONVERSATION_NEW),
     setScratchpad: (id, text) => ipcRenderer.invoke(IPC.CONVERSATION_SCRATCHPAD, id, text),
+    downloadBrief: (id) => ipcRenderer.invoke(IPC.CONVERSATION_BRIEF_PDF, id),
     delete: (id) => ipcRenderer.invoke(IPC.CONVERSATION_DELETE, id),
     deleteAll: () => ipcRenderer.invoke(IPC.CONVERSATION_DELETE_ALL),
   },

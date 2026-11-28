@@ -3,13 +3,15 @@
 // A task that only reads Wikipedia used to hold the same powers as one that
 // could post to the user's bank. Each site (origin) now has a level, and an
 // action needs at least the level below to run there. New sites start at
-// read + click; anything more is asked for when the task needs it.
+// read + click + type, which is everything finding and reading funding needs,
+// so research never stops to ask. Steps that commit the user (submit, send,
+// pay, upload) are blocked by the policy before a level is ever checked.
 
-import { HIGH_RISK_TARGET_RE } from './policy.js';
+import { COMMIT_TARGET_RE } from './policy.js';
 import type { PermissionLevel, TargetFacts, ToolName } from './types.js';
 
 export const PERMISSION_LEVELS: PermissionLevel[] = ['read', 'click', 'type', 'full'];
-export const DEFAULT_SITE_LEVEL: PermissionLevel = 'click';
+export const DEFAULT_SITE_LEVEL: PermissionLevel = 'type';
 
 export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   read: 'Read only',
@@ -35,7 +37,7 @@ export function requiredLevel(
 ): PermissionLevel {
   if (FULL_TOOLS.has(name)) return 'full';
   if (TYPE_TOOLS.has(name)) return 'type';
-  const risky = !!facts && (facts.submitsForm || (facts.activates !== false && HIGH_RISK_TARGET_RE.test(facts.label)));
+  const risky = !!facts && (facts.submitsForm || (facts.activates !== false && COMMIT_TARGET_RE.test(facts.label)));
   if (CLICK_TOOLS.has(name)) return risky ? 'full' : 'click';
   if (name === 'press_key') {
     if ((input.key === 'Enter' || input.key === 'Space') && risky) return 'full';

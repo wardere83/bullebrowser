@@ -91,7 +91,7 @@ class ConversationStore {
     return conv;
   }
 
-  setScratchpad(id: string, text: string, organizationId: string | null): void {
+  setScratchpad(id: string, text: string, organizationId?: string | null): void {
     if (typeof id !== 'string' || typeof text !== 'string' || text.length > 12000) {
       throw new Error('Session notes must be text of at most 12,000 characters.');
     }

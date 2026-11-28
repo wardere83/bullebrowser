@@ -483,9 +483,6 @@ test('chat and spoken browser tasks use the real local assistant without any key
     await expect(win.getByText('Add your key to start — it stays on this device.', { exact: true })).toBeHidden();
     await win.locator('aside textarea.prompt-input-field').fill('summarize this page');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
-    const approval = win.getByRole('button', { name: 'Allow Access', exact: true });
-    await expect(approval).toBeVisible();
-    await approval.click();
     const replies = () => win.evaluate(async () => {
       const conversations = await window.bullebrowser.conversations.list();
       const conversation = await window.bullebrowser.conversations.get(conversations[0]!.id);
@@ -503,8 +500,6 @@ test('chat and spoken browser tasks use the real local assistant without any key
     await expect(win.getByRole('button', { name: 'Mute microphone', exact: true })).toBeEnabled();
     await win.evaluate('new Promise(resolve => setTimeout(resolve, 800))');
     await win.evaluate('window.__voiceProbe.recorder.stop()');
-    await expect(approval).toBeVisible();
-    await approval.click();
     await expect(win.getByRole('region', { name: 'Live Voice Mode' }).getByText(/Grant applications close on December 15/)).toBeVisible();
     await win.getByRole('button', { name: 'Stop Voice Mode', exact: true }).click();
   } finally {
@@ -630,7 +625,6 @@ test('an unexecuted action is reported incomplete across chat and task result ev
     });
     await win.locator('aside textarea.prompt-input-field').fill('Click "Save"');
     await win.getByRole('button', { name: 'Send', exact: true }).click();
-    await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
     await expect.poll(() => win.evaluate(() => (window as unknown as { __taskResults: Array<{ status: string }> }).__taskResults[0]?.status)).toBe('failed');
     await expect(win.locator('.md-prose')).toContainText('Task incomplete');
     await expect(win.locator('.md-prose')).not.toContainText('Everything completed successfully');
@@ -639,20 +633,26 @@ test('an unexecuted action is reported incomplete across chat and task result ev
 });
 
 
-test('session scratchpad saves, reloads, and forgets notes without a model call', async () => {
+test('session scratchpad shows the strategy area and saves, reloads, and forgets notes without a model call', async () => {
   const { app, win, userData } = await launch({ withoutKeys: true });
   try {
-    await win.getByText('Session scratchpad', { exact: true }).click();
+    const open = async () => {
+      await win.getByText('Session Scratchpad', { exact: true }).click();
+      await win.getByText('Your notes for this conversation', { exact: true }).click();
+    };
+    await win.getByText('Session Scratchpad', { exact: true }).click();
+    await expect(win.getByTestId('session-scratchpad')).toContainText('what a successful proposal needs');
+    await win.getByText('Your notes for this conversation', { exact: true }).click();
     await win.getByRole('textbox', { name: 'Session notes', exact: true }).fill('Focus on workforce grants.');
     await win.getByRole('button', { name: 'Save notes', exact: true }).click();
     await expect(win.getByText('Saved for later tasks in this conversation.', { exact: true })).toBeVisible();
     await win.reload();
-    await win.getByText('Session scratchpad', { exact: true }).click();
+    await open();
     await expect(win.getByRole('textbox', { name: 'Session notes', exact: true })).toHaveValue('Focus on workforce grants.');
     await win.getByRole('button', { name: 'Forget this', exact: true }).click();
     await expect(win.getByText('Session notes forgotten.', { exact: true })).toBeVisible();
     await win.reload();
-    await win.getByText('Session scratchpad', { exact: true }).click();
+    await open();
     await expect(win.getByRole('textbox', { name: 'Session notes', exact: true })).toHaveValue('');
   } finally {
     await app.close();

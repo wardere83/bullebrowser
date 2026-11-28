@@ -42,9 +42,8 @@ import { DesktopToolRuntime } from './runtime.js';
 import { describeAgentError, isOutOfCredit } from './errors.js';
 import { buildAttachmentAppendix, type AttachmentSources } from './attachments.js';
 import { readAttachedDocuments, type AttachedDocumentSources } from './attached-documents.js';
-import { groundChat, type ChatGrounding } from '../funding/grounding.js';
+import { groundFreshChat, type ChatGrounding } from '../funding/grounding.js';
 import { fundingPlatform } from '../funding/platform.js';
-import { identityService } from '../identity/service.js';
 
 // The real, store-backed resolvers. buildAttachmentAppendix takes these by
 // injection so it can be unit-tested without booting Electron.
@@ -156,36 +155,37 @@ export async function startAgentRun(
     send(IPC.AGENT_STEP, { runId, step: event });
   };
 
-  // What the run may know about the active organization. A failure here must
-  // not stop the chat: the run then simply has no organization material.
-  const grounding = await groundChat(fundingPlatform(), identityService, {
-    ...(req.focusRfpId ? { focusRfpId: req.focusRfpId } : {}),
+  // Every request starts fresh: no saved organization profile is read, so no
+  // one is locked into a single organization's details. Official funding
+  // sources can still be searched, for the place the request names.
+  const grounding = await groundFreshChat(fundingPlatform(), {
     signal: controller.signal,
     now: Date.now(),
   }).catch((err: unknown) => {
-    console.error('[agent] could not ground the run in the organization', err);
+    console.error('[agent] could not prepare the funding tools', err);
     return NO_GROUNDING(Date.now());
   });
 
-  // A chat belongs to the organization it was first used under, and is not
-  // continued under another one.
-  const conversation = conversationStore.get(req.conversationId, grounding.organizationId);
+  const conversation = conversationStore.get(req.conversationId);
   if (!conversation) { cancelAgentRun(runId); throw new Error('Conversation not found'); }
-  if (grounding.organizationId) conversationStore.bind(req.conversationId, grounding.organizationId);
   // Snapshot before appending. Storage adapters may return shared objects;
   // history must contain prior turns exactly once, not the new message too.
   const history = conversation.messages.map((message) => ({ role: message.role, content: message.content }));
   const productOnly = !!productQuestionReply(req.userMessage, history);
-  // Conversation and questions are answered in the chat; browser access is
-  // asked for only if the answer turns out to need the browser. A request to
-  // browse asks for it up front, as soon as the task starts.
+  // Conversation and questions are answered in the chat. Finding funding means
+  // browsing, so a task that needs the browser gets it straight away, with no
+  // prompt: BulleBrowser only finds and reads, and every step that would
+  // submit, send, pay, delete or upload is blocked by the policy instead.
   const intent = productOnly ? 'chat' : requestIntent(req.userMessage, req.browserTask ? { browserTask: req.browserTask } : {});
   let sessionConsent: Promise<boolean> | undefined;
-  const browseAccess = (): Promise<boolean> => sessionConsent ??= (productOnly ? Promise.resolve(true) : ask(req.userMessage, 'browse_access'))
+  const browseAccess = (): Promise<boolean> => sessionConsent ??= Promise.resolve(true)
     .then((approved) => {
-      if (!productOnly) publishEvent({ kind: 'scope', granted: approved, label: approved ? 'Session • Agent tabs' : 'Browser access denied', ts: Date.now() });
+      if (!productOnly) {
+        taskLog.consents.push({ kind: 'browse_access', approved, at: Date.now() });
+        publishEvent({ kind: 'scope', granted: approved, label: 'Session • Agent tabs', ts: Date.now() });
+      }
       // Per-site prompts are not repeated once the session is allowed.
-      if (approved) runtime.authorizeSession();
+      runtime.authorizeSession();
       return approved;
     });
 

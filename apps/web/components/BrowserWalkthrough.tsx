@@ -151,7 +151,7 @@ const OPTION_SCRIPTS: Script[] = [
           { status: 'match', title: 'You can apply', detail: 'Nonprofits and fiscally sponsored community groups in New Jersey and Southern California', source: 'harborline-foundation.example' },
           { status: 'info', title: 'Grant range and timing', detail: '$25,000–$100,000 · Letter of inquiry due February 1, 2027', source: 'harborline-foundation.example' },
         ],
-        next: 'Next step: start a letter of inquiry. I stopped at the button; nothing is submitted without your approval.',
+        next: 'Next step: start a letter of inquiry. I stopped at the button; submitting is yours to do.',
       } },
     ],
   },

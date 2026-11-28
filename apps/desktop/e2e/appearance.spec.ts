@@ -182,9 +182,6 @@ test('the browsing cloud follows real keyless consent, completion and Stop witho
     const begin = async () => {
       await win.locator('aside textarea.prompt-input-field').fill('summarize this page');
       await win.getByRole('button', { name: 'Send', exact: true }).click();
-      await expect(win.getByRole('button', { name: 'Allow Access', exact: true })).toBeVisible();
-      expect(await readPage(app, tabId, cloudProbe)).toBeNull();
-      await win.getByRole('button', { name: 'Allow Access', exact: true }).click();
       await expect.poll(() => readPage(app, tabId, cloudProbe)).toMatchObject({ position: 'fixed', pointerEvents: 'none', inert: true, hidden: 'true', closedShadow: true, count: 1 });
     };
     await begin();
